@@ -1,0 +1,51 @@
+{
+  "name": "@cloudcounsel/sf-plugin-audit",
+  "version": "0.1.0",
+  "description": "CloudCounsel Salesforce Security Audit — native sf plugin",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": "./lib/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src --ext .ts",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest test/unit",
+    "prepack": "npm run build",
+    "clean": "rm -rf lib"
+  },
+  "dependencies": {
+    "@oclif/core": "^4",
+    "@salesforce/core": "^8",
+    "@salesforce/sf-plugins-core": "^12",
+    "zod": "^3"
+  },
+  "devDependencies": {
+    "@types/jest": "^29",
+    "@types/node": "^22",
+    "@typescript-eslint/eslint-plugin": "^8",
+    "@typescript-eslint/parser": "^8",
+    "jest": "^29",
+    "ts-jest": "^29",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "oclif": {
+    "bin": "sf",
+    "dirname": "sf",
+    "commands": "./lib/commands",
+    "devPlugins": [],
+    "topics": {
+      "audit": {
+        "description": "Salesforce security audit commands"
+      }
+    }
+  },
+  "files": [
+    "/lib",
+    "/messages",
+    "/config",
+    "!/lib/**/*.map"
+  ]
+}
