@@ -1,3 +1,6 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Finding } from './Finding.js';
 import type { OrgMetrics } from '../context/OrgMetrics.js';
 import type { AuditResult } from './AuditResult.js';
@@ -5,13 +8,11 @@ import type { AuditContext } from '../context/AuditContext.js';
 import type { RiskLevel } from './RiskLevel.js';
 import { EMPTY_METRICS } from '../context/OrgMetrics.js';
 
-const RISK_SCORES: Record<RiskLevel, number> = {
-  CRITICAL: 10,
-  HIGH: 7,
-  MEDIUM: 4,
-  LOW: 1,
-  INFO: 0,
+const pluginRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const scoringConfig = JSON.parse(fs.readFileSync(path.join(pluginRoot, 'config', 'scoring.json'), 'utf-8')) as {
+  riskScores: Record<RiskLevel, number>;
 };
+const RISK_SCORES = scoringConfig.riskScores;
 
 export function buildAuditResult(
   ctx: AuditContext,
