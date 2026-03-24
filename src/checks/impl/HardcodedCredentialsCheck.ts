@@ -48,11 +48,11 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
       'SELECT Id, Name, Body, LengthWithoutComments, NamespacePrefix FROM ApexClass WHERE NamespacePrefix = null'
     );
 
-    // Cache apex bodies for downstream checks
-    ctx.cache.apexBodies = records.map((r) => ({ name: r.Name, body: r.Body }));
+    // Cache apex bodies for downstream checks (filter null bodies — large/restricted classes)
+    ctx.cache.apexBodies = records.map((r) => ({ name: r.Name, body: r.Body ?? '' }));
 
-    const namedCredentialEndpoints = ctx.cache.namedCredentialEndpoints ?? [];
-    const remoteSiteUrls = ctx.cache.remoteSiteUrls ?? [];
+    const namedCredentialEndpoints = (ctx.cache.namedCredentialEndpoints ?? []).filter(Boolean);
+    const remoteSiteUrls = (ctx.cache.remoteSiteUrls ?? []).filter(Boolean);
     const allCoveredEndpoints = [...namedCredentialEndpoints, ...remoteSiteUrls];
 
     const classesWithCredentials: string[] = [];
