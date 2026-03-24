@@ -1,8 +1,12 @@
 import type { Connection } from '@salesforce/core';
 import type { QueryResult, SoqlClient } from './SoqlClient.js';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyConn = Connection & { query(soql: string): Promise<any>; queryAll(soql: string): Promise<any> };
+// AnyConn widens the return types of Connection methods to avoid
+// complex jsforce generic overloads in this layer
+type AnyConn = Connection & {
+  query(soql: string): Promise<any>;
+  autoFetchQuery(soql: string): Promise<any>;
+};
 
 export class SoqlClientImpl implements SoqlClient {
   private readonly anyConn: AnyConn;
@@ -21,7 +25,7 @@ export class SoqlClientImpl implements SoqlClient {
   }
 
   async queryAll<T>(soql: string): Promise<T[]> {
-    const result = await this.anyConn.queryAll(soql);
+    const result = await this.anyConn.autoFetchQuery(soql);
     return (result.records ?? []) as T[];
   }
 }

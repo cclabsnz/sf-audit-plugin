@@ -8,7 +8,7 @@ describe('SoqlClientImpl', () => {
   beforeEach(() => {
     fakeConn = {
       query: jest.fn(),
-      queryAll: jest.fn(),
+      autoFetchQuery: jest.fn(),
     };
     client = new SoqlClientImpl(fakeConn);
   });
@@ -37,8 +37,8 @@ describe('SoqlClientImpl', () => {
   });
 
   describe('queryAll()', () => {
-    it('returns flattened records from Connection.queryAll', async () => {
-      fakeConn.queryAll.mockResolvedValue({
+    it('returns flattened records from Connection.autoFetchQuery', async () => {
+      fakeConn.autoFetchQuery.mockResolvedValue({
         totalSize: 3,
         done: true,
         records: [{ Id: 'a' }, { Id: 'b' }, { Id: 'c' }],
@@ -51,7 +51,7 @@ describe('SoqlClientImpl', () => {
     });
 
     it('returns empty array when no records', async () => {
-      fakeConn.queryAll.mockResolvedValue({ totalSize: 0, done: true, records: undefined });
+      fakeConn.autoFetchQuery.mockResolvedValue({ totalSize: 0, done: true, records: undefined });
       const result = await client.queryAll('SELECT Id FROM User');
       expect(result).toEqual([]);
     });

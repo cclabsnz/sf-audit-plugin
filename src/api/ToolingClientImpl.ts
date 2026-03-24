@@ -16,7 +16,8 @@ export class ToolingClientImpl implements ToolingClient {
     let records: T[] = (result.records ?? []) as T[];
     let nextUrl: string | undefined = result.nextRecordsUrl as string | undefined;
 
-    // conn.tooling does not expose queryMore — use conn.request() directly for pagination
+    // Using conn.request() directly avoids the complex Query<> overload typings
+    // on tooling.queryMore — the nextRecordsUrl is a plain string handled cleanly here
     while (nextUrl) {
       const next = await this.conn.request<{ records: T[]; nextRecordsUrl?: string; done: boolean }>(nextUrl);
       records = records.concat(next.records ?? []);
