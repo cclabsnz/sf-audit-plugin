@@ -2,16 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { QueryFileSchema, type QueryDefinition } from './QueryDefinition.js';
 import type { QueryResult } from '../api/SoqlClient.js';
-
-// Minimal context type — full AuditContext defined in Task 5
-interface QueryContext {
-  soql: {
-    queryAll<T>(soql: string): Promise<T[]>;
-    query<T>(soql: string): Promise<QueryResult<T>>;
-  };
-  tooling: { query<T>(soql: string): Promise<T[]> };
-  rest: { get<T>(path: string): Promise<T> };
-}
+import type { AuditContext } from '../context/AuditContext.js';
 
 function warnFallback(id: string, err: unknown): void {
   const msg = err instanceof Error ? err.message : String(err);
@@ -69,7 +60,7 @@ export class QueryRegistry {
     return def;
   }
 
-  async execute<T>(id: string, ctx: QueryContext): Promise<T[] | null> {
+  async execute<T>(id: string, ctx: AuditContext): Promise<T[] | null> {
     const def = this.get(id);
     try {
       if (def.api === 'soql') {
@@ -93,7 +84,7 @@ export class QueryRegistry {
     }
   }
 
-  async executeQuery<T>(id: string, ctx: QueryContext): Promise<QueryResult<T> | null> {
+  async executeQuery<T>(id: string, ctx: AuditContext): Promise<QueryResult<T> | null> {
     const def = this.get(id);
     if (def.api !== 'soql') {
       throw new Error(`QueryRegistry.executeQuery: query '${id}' must have api='soql'`);
