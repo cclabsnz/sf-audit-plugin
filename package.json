@@ -4,12 +4,10 @@
   "description": "CloudCounsel Salesforce Security Audit — native sf plugin",
   "type": "module",
   "main": "lib/index.js",
-  "exports": "./lib/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "lint": "eslint src --ext .ts",
-    "test": "node --experimental-vm-modules node_modules/.bin/jest",
-    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest test/unit",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --passWithNoTests",
+    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest test/unit --passWithNoTests",
     "prepack": "npm run build",
     "clean": "rm -rf lib"
   },
@@ -22,10 +20,9 @@
   "devDependencies": {
     "@types/jest": "^29",
     "@types/node": "^22",
-    "@typescript-eslint/eslint-plugin": "^8",
-    "@typescript-eslint/parser": "^8",
     "jest": "^29",
     "ts-jest": "^29",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   },
   "engines": {
@@ -35,6 +32,8 @@
     "bin": "sf",
     "dirname": "sf",
     "commands": "./lib/commands",
+    "pluginType": "jit",
+    "flexibleTaxonomy": true,
     "devPlugins": [],
     "topics": {
       "audit": {
