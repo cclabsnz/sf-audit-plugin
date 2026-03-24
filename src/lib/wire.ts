@@ -1,10 +1,10 @@
 import type { Connection } from '@salesforce/core';
-import { SoqlClientImpl } from '../../api/SoqlClientImpl.js';
-import { ToolingClientImpl } from '../../api/ToolingClientImpl.js';
-import { RestClientImpl } from '../../api/RestClientImpl.js';
-import type { AuditContext } from '../../context/AuditContext.js';
-import type { OrgInfo } from '../../context/OrgInfo.js';
-import type { QueryRegistry } from '../../queries/QueryRegistry.js';
+import { SoqlClientImpl } from '../api/SoqlClientImpl.js';
+import { ToolingClientImpl } from '../api/ToolingClientImpl.js';
+import { RestClientImpl } from '../api/RestClientImpl.js';
+import type { AuditContext } from '../context/AuditContext.js';
+import type { OrgInfo } from '../context/OrgInfo.js';
+import type { QueryRegistry } from '../queries/QueryRegistry.js';
 
 export function buildApiClients(conn: Connection) {
   return {

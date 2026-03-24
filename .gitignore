@@ -1,5 +1,5 @@
 node_modules/
-lib/
+/lib/
 *.js.map
 .DS_Store
 *.tsbuildinfo

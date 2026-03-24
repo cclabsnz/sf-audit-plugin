@@ -1,5 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import type { AuditResult } from '../../findings/AuditResult.js';
 import type { RiskLevel } from '../../findings/RiskLevel.js';
@@ -10,7 +11,7 @@ import { JsonRenderer } from '../../renderers/JsonRenderer.js';
 import { HtmlRenderer } from '../../renderers/HtmlRenderer.js';
 import { MarkdownRenderer } from '../../renderers/MarkdownRenderer.js';
 import type { AuditRenderer } from '../../renderers/AuditRenderer.js';
-import { buildAuditContext, resolveOrgInfo } from './wire.js';
+import { buildAuditContext, resolveOrgInfo } from '../../lib/wire.js';
 
 const RENDERERS: Record<string, AuditRenderer> = {
   html: new HtmlRenderer(),
@@ -50,7 +51,9 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     const { flags } = await this.parse(SecurityAuditCommand);
 
     const conn = flags['target-org'].getConnection('62.0') as any;
-    const queries = QueryRegistry.load(this.config.root);
+    // Resolve plugin root from compiled file location (lib/commands/audit/security.js → 3 levels up)
+    const pluginRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+    const queries = QueryRegistry.load(pluginRoot);
     const orgInfo = await resolveOrgInfo(conn);
     const ctx = buildAuditContext(conn, queries, orgInfo);
 
