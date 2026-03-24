@@ -1,0 +1,24 @@
+{
+  "activeStandardUsers": {
+    "api": "soql",
+    "soql": "SELECT Id, Username, ProfileId FROM User WHERE IsActive = true AND UserType = 'Standard'",
+    "description": "All active standard users — used by MFA, admin, and inactive checks"
+  },
+  "profileIpRanges": {
+    "api": "soql",
+    "soql": "SELECT ProfileId, StartAddress, EndAddress FROM ProfileLoginIpRange",
+    "description": "Profile login IP ranges — not queryable in all org configurations",
+    "fallbackOnError": true
+  },
+  "orgLimits": {
+    "api": "rest",
+    "path": "/limits",
+    "description": "Org API governor limits — fetched via ctx.rest.get('/limits')"
+  },
+  "sobjectDescribe": {
+    "api": "rest",
+    "path": "/sobjects/{sobjectType}/describe/",
+    "description": "SObject describe for OWD/sharing model — called per object via ctx.rest.get(). Used by SharingModelCheck.",
+    "fallbackOnError": true
+  }
+}

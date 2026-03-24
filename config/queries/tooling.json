@@ -1,0 +1,28 @@
+{
+  "apexClasses": {
+    "api": "tooling",
+    "soql": "SELECT Id, Name, Body, LengthWithoutComments, NamespacePrefix FROM ApexClass WHERE NamespacePrefix = null",
+    "description": "All custom Apex classes — used by HardcodedCredentialsCheck (populates apexBodies cache) and ApexSharingCheck"
+  },
+  "activeFlows": {
+    "api": "tooling",
+    "soql": "SELECT Id, MasterLabel, ProcessType, Status, RunInMode FROM Flow WHERE Status = 'Active'",
+    "description": "Active Flow versions — used by FlowSecurityCheck"
+  },
+  "connectedAppsBasic": {
+    "api": "tooling",
+    "soql": "SELECT Id, Name FROM ConnectedApplication",
+    "description": "Connected App ID list — used by IpRestrictionsCheck to fetch per-record Metadata blobs"
+  },
+  "connectedAppDetail": {
+    "api": "rest",
+    "path": "tooling/sobjects/ConnectedApplication/{id}/",
+    "description": "Per-record Connected App metadata — call via ctx.tooling.getRecord('ConnectedApplication', id).",
+    "fallbackOnError": true
+  },
+  "connectedAppsStandard": {
+    "api": "soql",
+    "soql": "SELECT Id, Name, Status, StartUrl FROM ConnectedApplication",
+    "description": "Connected Apps basic info — used by ConnectedAppsCheck via standard SOQL"
+  }
+}
