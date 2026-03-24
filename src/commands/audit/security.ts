@@ -60,7 +60,9 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     this.log(`Auditing org: ${orgInfo.name} (${orgInfo.id})`);
 
     const engine = new CheckEngine(CHECKS, ctx);
-    const result = await engine.run();
+    const result = await engine.run((current, total, checkName) => {
+      this.log(`[${String(current).padStart(2)}/${total}] ${checkName}`);
+    });
 
     const formats = flags.format.split(',').map((f) => f.trim());
     for (const format of formats) {
@@ -73,18 +75,34 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
       const filename = `sf-audit-${orgInfo.id}-${Date.now()}${renderer.fileExtension}`;
       const outputPath = path.join(flags.output, filename);
       fs.writeFileSync(outputPath, output, 'utf-8');
-      this.log(`Report written: ${outputPath}`);
+      this.log(`\nReport written: ${outputPath}`);
     }
 
-    this.log(
-      `\nAudit complete — ${result.findings.length} findings | Score: ${result.healthScore}/100 | Grade: ${result.grade}`,
-    );
+    this.log('');
+    this.printSummary(result);
 
     if (flags['fail-on']) {
       this.handleFailOn(result, flags['fail-on'] as RiskLevel);
     }
 
     return result;
+  }
+
+  private printSummary(result: AuditResult): void {
+    const levels: RiskLevel[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+    const counts = Object.fromEntries(
+      levels.map((l) => [l, result.findings.filter((f) => f.riskLevel === l).length]),
+    ) as Record<RiskLevel, number>;
+
+    this.log('─────────────────────────────');
+    this.log('  Audit Summary');
+    this.log('─────────────────────────────');
+    for (const level of levels) {
+      this.log(`  ${level.padEnd(10)}  ${String(counts[level]).padStart(3)} finding${counts[level] !== 1 ? 's' : ''}`);
+    }
+    this.log('─────────────────────────────');
+    this.log(`  Score: ${result.healthScore}/100   Grade: ${result.grade}`);
+    this.log('─────────────────────────────');
   }
 
   private handleFailOn(result: AuditResult, failOn: RiskLevel): void {

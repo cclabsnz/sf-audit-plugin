@@ -27,11 +27,16 @@ export class CheckEngine {
     this.validateCacheOrdering();
   }
 
-  async run(): Promise<AuditResult> {
+  async run(
+    onProgress?: (current: number, total: number, checkName: string) => void,
+  ): Promise<AuditResult> {
     const findings: Finding[] = [];
     let metrics: Partial<OrgMetrics> = {};
+    const total = this.checks.length;
 
-    for (const check of this.checks) {
+    for (let i = 0; i < total; i++) {
+      const check = this.checks[i];
+      onProgress?.(i + 1, total, check.name);
       try {
         const result = await check.run(this.ctx);
         findings.push(...result.findings);
