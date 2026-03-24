@@ -30,9 +30,9 @@ This runs all 22 security checks against the target org and writes a report to t
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--target-org` / `-o` | *(required)* | Org alias or username to audit |
+| `--target-org` | *(required)* | Org alias or username to audit |
 | `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json` |
-| `--output` | `.` | Directory to write the report file |
+| `--output` / `-o` | `.` | Directory to write the report file |
 | `--fail-on` | — | Exit with code 1 if any finding is at or above this severity: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
 
 ### Examples
@@ -51,7 +51,7 @@ sf audit security --target-org myOrg --output ./reports
 sf audit security --target-org myOrg --fail-on HIGH
 ```
 
-The report file is written as `sf-audit-<orgId>-<timestamp>.<ext>` in the output directory.
+The report file is written as `sf-audit-<orgId>-<timestamp>.<ext>` in the output directory (e.g. `sf-audit-00D000000000001-1711234567890.html`).
 
 ## What It Checks
 
@@ -105,7 +105,19 @@ The audit runs 22 checks across 6 categories:
 
 ## Scoring
 
-Each finding is assigned a risk level: `CRITICAL`, `HIGH`, `MEDIUM`, or `LOW`.
+Each finding is assigned a risk level with a corresponding weight:
+
+| Risk Level | Weight |
+|------------|--------|
+| CRITICAL | 10 |
+| HIGH | 7 |
+| MEDIUM | 4 |
+| LOW | 1 |
+| INFO | 0 |
+
+The health score is calculated as `100 - (total weight / max possible weight) * 100`, capped at 0.
+
+Weights are configurable in [`config/scoring.json`](config/scoring.json) — no recompile needed.
 
 The audit produces a **Health Score** (0–100) and a **Grade** (A–F):
 
