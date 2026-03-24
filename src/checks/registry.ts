@@ -1,6 +1,12 @@
 import type { SecurityCheck } from './SecurityCheck.js';
+import { HealthCheckCheck } from './impl/HealthCheckCheck.js';
+import { UsersAndAdminsCheck } from './impl/UsersAndAdminsCheck.js';
+import { PermissionsCheck } from './impl/PermissionsCheck.js';
 
-// Sub-project 2 adds all check implementations to this array.
 // Order matters: a check's dependsOnCache must be satisfied by a preceding check's populatesCache.
 // CheckEngine.validateCacheOrdering() enforces this at construction time.
-export const CHECKS: SecurityCheck[] = [];
+export const CHECKS: SecurityCheck[] = [
+  new HealthCheckCheck(),
+  new UsersAndAdminsCheck(),
+  new PermissionsCheck(),
+];
