@@ -22,6 +22,7 @@ export class CustomSettingsCheck implements SecurityCheck {
   readonly id = 'custom-settings';
   readonly name = 'Custom Settings and Credentials';
   readonly category = 'Code Security';
+  readonly description = 'Flags custom settings with credential-like names that may store secrets';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];

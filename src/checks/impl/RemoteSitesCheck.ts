@@ -13,6 +13,7 @@ export class RemoteSitesCheck implements SecurityCheck {
   readonly id = 'remote-sites';
   readonly name = 'Remote Site Settings';
   readonly category = 'External Connectivity';
+  readonly description = 'Inventories remote site settings and flags those not covered by Named Credentials';
 
   readonly populatesCache = ['remoteSiteUrls'] as const;
 

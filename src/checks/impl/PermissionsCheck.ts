@@ -8,6 +8,7 @@ export class PermissionsCheck implements SecurityCheck {
   readonly id = 'permissions';
   readonly name = 'Permissions';
   readonly category = 'Permissions';
+  readonly description = 'Reports unassigned permission sets and high profile counts that increase the attack surface';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];

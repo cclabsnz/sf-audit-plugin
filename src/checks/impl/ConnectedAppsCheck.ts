@@ -12,6 +12,7 @@ export class ConnectedAppsCheck implements SecurityCheck {
   readonly id = 'connected-apps';
   readonly name = 'Connected Apps';
   readonly category = 'App Security';
+  readonly description = 'Flags connected apps not restricted to admin-approved users';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];

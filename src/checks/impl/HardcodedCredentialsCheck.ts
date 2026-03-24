@@ -37,6 +37,7 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
   readonly id = 'hardcoded-credentials';
   readonly name = 'Hardcoded Credentials';
   readonly category = 'Code Security';
+  readonly description = 'Scans Apex code for hardcoded Bearer tokens, Basic auth, API keys, and raw callout URLs';
 
   readonly dependsOnCache = ['namedCredentialEndpoints', 'remoteSiteUrls'] as const;
   readonly populatesCache = ['apexBodies'] as const;

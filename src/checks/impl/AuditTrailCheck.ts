@@ -14,6 +14,7 @@ export class AuditTrailCheck implements SecurityCheck {
   readonly id = 'audit-trail';
   readonly name = 'Audit Trail';
   readonly category = 'Security Controls';
+  readonly description = 'Reviews setup audit trail for permission changes and Login-As events';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];

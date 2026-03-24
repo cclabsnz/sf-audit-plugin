@@ -45,6 +45,10 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
       summary: 'Exit with code 1 if any finding is at or above this severity.',
       options: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
     }),
+    checks: Flags.string({
+      summary: 'Comma-separated check IDs to run. Omit to run all checks.',
+      helpValue: 'hardcoded-credentials,apex-sharing',
+    }),
   };
 
   public async run(): Promise<AuditResult> {
@@ -57,9 +61,21 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     const orgInfo = await resolveOrgInfo(conn);
     const ctx = buildAuditContext(conn, queries, orgInfo);
 
-    this.log(`Auditing org: ${orgInfo.name} (${orgInfo.id})`);
+    const checksToRun = flags.checks
+      ? (() => {
+          const ids = new Set(flags.checks.split(',').map((s) => s.trim()));
+          const unknown = [...ids].filter((id) => !CHECKS.some((c) => c.id === id));
+          if (unknown.length > 0) {
+            this.warn(`Unknown check ID(s): ${unknown.join(', ')}. Run 'sf audit list' to see available checks.`);
+          }
+          return CHECKS.filter((c) => ids.has(c.id));
+        })()
+      : CHECKS;
 
-    const engine = new CheckEngine(CHECKS, ctx);
+    this.log(`Auditing org: ${orgInfo.name} (${orgInfo.id})`);
+    if (flags.checks) this.log(`Running ${checksToRun.length} of ${CHECKS.length} checks`);
+
+    const engine = new CheckEngine(checksToRun, ctx);
     const result = await engine.run((current, total, checkName) => {
       this.log(`[${String(current).padStart(2)}/${total}] ${checkName}`);
     });
@@ -108,11 +124,12 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
   private handleFailOn(result: AuditResult, failOn: RiskLevel): void {
     const ORDER: RiskLevel[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
     const threshold = ORDER.indexOf(failOn);
-    const hasViolation = result.findings.some(
-      (f) => ORDER.indexOf(f.riskLevel) <= threshold,
-    );
-    if (hasViolation) {
-      this.log(`Audit failed: one or more findings at or above ${failOn} severity.`);
+    const violations = result.findings.filter((f) => ORDER.indexOf(f.riskLevel) <= threshold);
+    if (violations.length > 0) {
+      this.log(`\nFail-on threshold: ${failOn} — ${violations.length} finding${violations.length !== 1 ? 's' : ''} at or above threshold:`);
+      for (const f of violations) {
+        this.log(`  [${f.riskLevel}] ${f.title}`);
+      }
       this.exit(1);
     }
   }

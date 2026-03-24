@@ -12,6 +12,7 @@ export interface SecurityCheck {
   readonly id: string;
   readonly name: string;
   readonly category: string;
+  readonly description: string;
 
   readonly dependsOnCache?: ReadonlyArray<keyof AuditCache>;
   readonly populatesCache?: ReadonlyArray<keyof AuditCache>;

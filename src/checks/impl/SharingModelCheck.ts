@@ -10,6 +10,7 @@ export class SharingModelCheck implements SecurityCheck {
   readonly id = 'sharing-model';
   readonly name = 'Org-Wide Defaults (OWD) Sharing Model';
   readonly category = 'Data Access Control';
+  readonly description = 'Checks OWD sharing settings for Account, Contact, Opportunity, Case, and Lead';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];

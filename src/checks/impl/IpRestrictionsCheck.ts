@@ -30,6 +30,7 @@ export class IpRestrictionsCheck implements SecurityCheck {
   readonly id = 'ip-restrictions';
   readonly name = 'Login IP Restrictions';
   readonly category = 'Identity & Access';
+  readonly description = 'Checks admin profiles for missing IP range restrictions and connected apps with relaxed IP policies';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];

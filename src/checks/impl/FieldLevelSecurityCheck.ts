@@ -22,6 +22,7 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
   readonly id = 'field-level-security';
   readonly name = 'Field-Level Security';
   readonly category = 'Data Access';
+  readonly description = 'Detects sensitive custom fields (SSN, credit card, tax ID) exposed to broad permission sets';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];

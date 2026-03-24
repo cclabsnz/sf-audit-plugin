@@ -14,6 +14,7 @@ export class CodeSecurityCheck implements SecurityCheck {
   readonly id = 'code-security';
   readonly name = 'Code Security and Coverage';
   readonly category = 'Code Security';
+  readonly description = 'Reports org-wide Apex test coverage percentage and class/trigger counts';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
