@@ -11,6 +11,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
   readonly id = 'users-and-admins';
   readonly name = 'Users and Admins';
   readonly category = 'Users & Admins';
+  readonly description = 'Identifies users with dangerous system-wide permissions (ModifyAllData, ViewAllData, AuthorApex, CustomizeApplication)';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];

@@ -21,6 +21,7 @@ function makeCheck(id: string, result: Partial<CheckResult> = {}): SecurityCheck
     id,
     name: `Check ${id}`,
     category: 'Test',
+    description: `Test check ${id}`,
     run: fn,
   };
 }

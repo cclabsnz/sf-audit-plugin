@@ -12,6 +12,7 @@ export class NamedCredentialsCheck implements SecurityCheck {
   readonly id = 'named-credentials';
   readonly name = 'Named Credentials';
   readonly category = 'External Connectivity';
+  readonly description = 'Inventories Named Credentials available for secure external callouts';
 
   readonly populatesCache = ['namedCredentialEndpoints'] as const;
 

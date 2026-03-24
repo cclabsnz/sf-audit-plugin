@@ -14,6 +14,7 @@ export class FlowsWithoutSharingCheck implements SecurityCheck {
   readonly id = 'flows-without-sharing';
   readonly name = 'Flows Without Sharing Context';
   readonly category = 'Flow Security';
+  readonly description = 'Identifies active flows running in system context without sharing enforcement';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];

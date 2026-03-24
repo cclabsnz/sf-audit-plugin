@@ -14,6 +14,7 @@ export class PublicGroupSharingCheck implements SecurityCheck {
   readonly id = 'public-group-sharing';
   readonly name = 'Public Group Sharing Exposure';
   readonly category = 'Sharing & Visibility';
+  readonly description = 'Finds sharing rules that grant broad access to All Internal Users';
 
   readonly dependsOnCache = ['healthCloudInstalled'] as const;
 

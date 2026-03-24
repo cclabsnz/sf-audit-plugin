@@ -28,6 +28,7 @@ export class PasswordSessionPolicyCheck implements SecurityCheck {
   readonly id = 'password-session-policy';
   readonly name = 'Password and Session Policy';
   readonly category = 'Identity & Access';
+  readonly description = 'Evaluates password complexity, session timeout, and MFA enforcement from Health Check data';
   readonly dependsOnCache: ReadonlyArray<keyof AuditCache> = ['healthCheckRisks'];
 
   async run(ctx: AuditContext): Promise<CheckResult> {

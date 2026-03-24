@@ -13,6 +13,7 @@ export class HealthCheckCheck implements SecurityCheck {
   readonly id = 'health-check';
   readonly name = 'Security Health Check';
   readonly category = 'Health Check';
+  readonly description = 'Reads the Salesforce Health Check score and flags individual risk items';
   readonly populatesCache = ['healthCheckRisks', 'healthCloudInstalled'] as const;
 
   async run(ctx: AuditContext): Promise<CheckResult> {

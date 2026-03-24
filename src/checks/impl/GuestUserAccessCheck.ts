@@ -23,6 +23,7 @@ export class GuestUserAccessCheck implements SecurityCheck {
   readonly id = 'guest-user-access';
   readonly name = 'Guest User Access';
   readonly category = 'Access Control';
+  readonly description = 'Audits object permissions and sharing rules granted to unauthenticated guest users';
 
   readonly dependsOnCache = ['healthCloudInstalled'] as const;
 

@@ -20,6 +20,7 @@ export class ScheduledApexCheck implements SecurityCheck {
   readonly id = 'scheduled-apex';
   readonly name = 'Scheduled and Batch Apex';
   readonly category = 'Code Security';
+  readonly description = 'Lists active scheduled and batch Apex jobs running in the org';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];

@@ -30,6 +30,7 @@ export class ApexSharingCheck implements SecurityCheck {
   readonly id = 'apex-sharing';
   readonly name = 'Apex Sharing Declarations';
   readonly category = 'Code Security';
+  readonly description = 'Classifies Apex classes by sharing declaration (with sharing, without sharing, inherited, omitted)';
 
   readonly dependsOnCache = ['apexBodies'] as const;
 

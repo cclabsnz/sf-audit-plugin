@@ -17,6 +17,7 @@ export class LoginSessionCheck implements SecurityCheck {
   readonly id = 'login-session';
   readonly name = 'Login Session';
   readonly category = 'Session Security';
+  readonly description = 'Analyses login history for failed login trends, Login-As events, and access from diverse IPs';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];

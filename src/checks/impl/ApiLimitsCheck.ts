@@ -20,6 +20,7 @@ export class ApiLimitsCheck implements SecurityCheck {
   readonly id = 'api-limits';
   readonly name = 'API and Resource Limits';
   readonly category = 'Resource Management';
+  readonly description = 'Monitors API request consumption against daily and concurrent limits';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];

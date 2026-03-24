@@ -14,6 +14,7 @@ export class InactiveUsersCheck implements SecurityCheck {
   readonly id = 'inactive-users';
   readonly name = 'Inactive Users';
   readonly category = 'Users & Admins';
+  readonly description = 'Finds active licensed users with no login in the past 90 days';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
