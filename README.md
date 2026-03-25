@@ -1,17 +1,17 @@
-# @cloudcounsel/sf-plugin-audit
+# @cclabsnz/sf-audit
 
 A Salesforce CLI (`sf`) plugin that runs a comprehensive security audit against any Salesforce org and produces an HTML, Markdown, or JSON report.
 
 ## Installation
 
 ```bash
-sf plugins install @cloudcounsel/sf-plugin-audit
+sf plugins install @cclabsnz/sf-audit
 ```
 
 Or, for local development:
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/cclabsnz/sf-audit-plugin.git
 cd cloudcounsel-sf-plugin-audit
 npm install
 npm run build

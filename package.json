@@ -1,5 +1,5 @@
 {
-  "name": "@cloudcounsel/sf-plugin-audit",
+  "name": "@cclabsnz/sf-audit",
   "version": "0.1.0",
   "description": "CloudCounsel Salesforce Security Audit — native sf plugin",
   "type": "module",
@@ -24,6 +24,10 @@
     "ts-jest": "^29",
     "ts-node": "^10.9.2",
     "typescript": "^5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cclabsnz/sf-audit-plugin.git"
   },
   "engines": {
     "node": ">=18.0.0"
