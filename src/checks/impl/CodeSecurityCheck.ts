@@ -21,7 +21,7 @@ export class CodeSecurityCheck implements SecurityCheck {
 
     // Query class and trigger counts using Tooling API
     const classCountResults = await ctx.tooling.query<CountResult>(
-      'SELECT COUNT() FROM ApexClass WHERE NamespacePrefix = null'
+      "SELECT COUNT() FROM ApexClass WHERE NamespacePrefix = null AND IsTest = false"
     );
     const classCount = classCountResults[0]?.expr0 ?? 0;
 
