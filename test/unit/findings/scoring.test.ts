@@ -8,7 +8,7 @@ function makeCtx(): AuditContext {
     tooling: {} as any,
     rest: {} as any,
     queries: {} as any,
-    orgInfo: { id: 'orgId', name: 'Test Org', type: 'Developer Edition', isSandbox: false, instance: 'NA1' },
+    orgInfo: { id: 'orgId', name: 'Test Org', type: 'Developer Edition', isSandbox: false, instance: 'NA1', instanceUrl: 'https://test.salesforce.com' },
     cache: {},
   };
 }
