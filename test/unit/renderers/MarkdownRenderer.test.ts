@@ -52,4 +52,47 @@ describe('MarkdownRenderer', () => {
     const output = renderer.render(makeResult());
     expect(output).toContain('No findings');
   });
+
+  it('renders affectedItems as a markdown table with label, url, and note columns', () => {
+    const result = makeResult({
+      findings: [{
+        id: 'f1', category: 'Auth', riskLevel: 'HIGH', title: 'Inactive users', detail: 'd', remediation: 'r',
+        affectedItems: [
+          { label: 'user@example.com', url: 'https://org.salesforce.com/005abc', note: 'Last login: never' },
+          { label: 'other@example.com', url: 'https://org.salesforce.com/005def', note: 'Last login: 2024-01-01' },
+        ],
+      }],
+    });
+    const output = renderer.render(result);
+    expect(output).toContain('| Item | Setup Link | Notes |');
+    expect(output).toContain('user@example.com');
+    expect(output).toContain('[Open ↗](https://org.salesforce.com/005abc)');
+    expect(output).toContain('Last login: never');
+  });
+
+  it('omits Setup Link column when no items have urls', () => {
+    const result = makeResult({
+      findings: [{
+        id: 'f1', category: 'Code', riskLevel: 'MEDIUM', title: 'Apex classes', detail: 'd', remediation: 'r',
+        affectedItems: [{ label: 'MyClass', note: 'Add with sharing' }],
+      }],
+    });
+    const output = renderer.render(result);
+    expect(output).toContain('| Item | Notes |');
+    expect(output).not.toContain('Setup Link');
+    expect(output).toContain('MyClass');
+  });
+
+  it('omits Notes column when no items have notes', () => {
+    const result = makeResult({
+      findings: [{
+        id: 'f1', category: 'Auth', riskLevel: 'LOW', title: 'PS check', detail: 'd', remediation: 'r',
+        affectedItems: [{ label: 'My PS', url: 'https://org.salesforce.com/0PS123' }],
+      }],
+    });
+    const output = renderer.render(result);
+    expect(output).toContain('| Item | Setup Link |');
+    expect(output).not.toContain('Notes');
+    expect(output).toContain('[Open ↗](https://org.salesforce.com/0PS123)');
+  });
 });

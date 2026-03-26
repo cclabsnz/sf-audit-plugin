@@ -34,6 +34,7 @@ export class IpRestrictionsCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
 
     // 1. Admin users (Modify All Data via profile)
     const adminUsers = await ctx.soql.queryAll<AdminUserRecord>(
@@ -68,7 +69,7 @@ export class IpRestrictionsCheck implements SecurityCheck {
       connectedApps = [];
     }
 
-    const ipBypassingApps: string[] = [];
+    const ipBypassingApps: Array<{ name: string; id: string }> = [];
     for (const app of connectedApps) {
       try {
         const detail = await ctx.tooling.getRecord<ConnectedAppDetailRecord>(
@@ -77,7 +78,7 @@ export class IpRestrictionsCheck implements SecurityCheck {
         );
         const relaxation = detail.Metadata?.ipRelaxation;
         if (relaxation === 'BYPASS' || relaxation === 'RELAX_IP') {
-          ipBypassingApps.push(app.Name);
+          ipBypassingApps.push({ name: app.Name, id: app.Id });
         }
       } catch {
         // Skip apps whose detail record cannot be fetched
@@ -98,9 +99,11 @@ export class IpRestrictionsCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'HIGH',
         title: `${unrestrictedAdmins.length} admin user(s) have profiles without login IP restrictions`,
-        affectedItems: unrestrictedAdmins.map(
-          (u) => `${u.Username} [profile: ${u.Profile.Name}]`
-        ),
+        affectedItems: unrestrictedAdmins.map((u) => ({
+          label: u.Username,
+          url: `${baseUrl}/${u.Id}`,
+          note: `Profile: ${u.Profile.Name} — add IP ranges in Setup → Profiles → Login IP Ranges`,
+        })),
         detail:
           'Administrator accounts without IP login restrictions can be accessed from any network, increasing exposure to credential-stuffing attacks.',
         remediation:
@@ -114,7 +117,11 @@ export class IpRestrictionsCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'MEDIUM',
         title: `${ipBypassingApps.length} connected app(s) bypass login IP enforcement`,
-        affectedItems: ipBypassingApps,
+        affectedItems: ipBypassingApps.map((app) => ({
+          label: app.name,
+          url: `${baseUrl}/lightning/setup/ConnectedApplication/page`,
+          note: 'Set IP Relaxation to "Enforce IP restrictions" unless remote access is required',
+        })),
         detail:
           "Connected apps configured to relax IP restrictions allow API access from any IP address, even when the user's profile has IP restrictions.",
         remediation:

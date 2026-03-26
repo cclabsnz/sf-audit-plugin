@@ -37,6 +37,8 @@ export class ApexSharingCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
+    const apexClassesUrl = `${baseUrl}/lightning/setup/ApexClasses/page`;
 
     let apexBodies = ctx.cache.apexBodies;
 
@@ -94,7 +96,11 @@ export class ApexSharingCheck implements SecurityCheck {
         title: `${count} Apex class(es) explicitly use "without sharing"`,
         detail: "Classes declared \"without sharing\" ignore the running user's record access and can access all data in the org.",
         remediation: 'Replace "without sharing" with "with sharing" or "inherited sharing" unless there is a documented business requirement.',
-        affectedItems: withoutSharingClasses,
+        affectedItems: withoutSharingClasses.map((name) => ({
+          label: name,
+          url: apexClassesUrl,
+          note: 'Change to "with sharing" or "inherited sharing" and test thoroughly',
+        })),
       });
     }
 
@@ -107,7 +113,11 @@ export class ApexSharingCheck implements SecurityCheck {
         title: `${count} Apex class(es) have no sharing declaration`,
         detail: "Apex classes without a sharing declaration default to \"without sharing\" behavior when called from a context that doesn't enforce sharing.",
         remediation: 'Add explicit sharing declarations to all Apex classes. Use "with sharing" as the default, or "inherited sharing" for utility classes.',
-        affectedItems: noDeclarationClasses.slice(0, 20),
+        affectedItems: noDeclarationClasses.slice(0, 20).map((name) => ({
+          label: name,
+          url: apexClassesUrl,
+          note: 'Add "with sharing" or "inherited sharing" declaration',
+        })),
       });
     }
 

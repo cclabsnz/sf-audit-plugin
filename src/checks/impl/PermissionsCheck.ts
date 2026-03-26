@@ -4,6 +4,36 @@ import type { Finding } from '../../findings/Finding.js';
 
 interface PermissionSetRecord { Id: string; Name: string; }
 
+// Standard Salesforce built-in profiles present in every org — excluded from custom profile counts.
+// Profile SOQL does not expose an IsCustom field; this list covers the known standard set.
+const STANDARD_PROFILE_NAMES = [
+  'System Administrator',
+  'Standard User',
+  'Read Only',
+  'Solution Manager',
+  'Marketing User',
+  'Contract Manager',
+  'Standard Platform User',
+  'Standard Platform One App User',
+  'Chatter Free User',
+  'Chatter External User',
+  'Chatter Moderator User',
+  'High Volume Customer Portal User',
+  'Authenticated Website',
+  'Customer Portal Manager Standard',
+  'Partner App Subscription User',
+  'Analytics Cloud Explorer User',
+  'Identity User',
+  'Work.com Only User',
+  'Force.com - App Subscription User',
+  'Force.com - One App User',
+  'Force.com - Free User',
+  'Guest User',
+  'External Apps Login User',
+  'External Identity User',
+  'Minimum Access - Salesforce',
+];
+
 export class PermissionsCheck implements SecurityCheck {
   readonly id = 'permissions';
   readonly name = 'Permissions';
@@ -12,10 +42,11 @@ export class PermissionsCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
 
-    // Permission set count (custom, not owned by profile)
+    // Custom permission sets only: IsCustom = true excludes profile-owned and Salesforce system-managed sets
     const psCountResult = await ctx.soql.query<{ expr0: number }>(
-      'SELECT COUNT() FROM PermissionSet WHERE IsOwnedByProfile = false'
+      'SELECT COUNT() FROM PermissionSet WHERE IsCustom = true'
     );
     const permissionSetCount = psCountResult.totalSize;
 
@@ -29,9 +60,9 @@ export class PermissionsCheck implements SecurityCheck {
       remediation: 'Review and consolidate permission sets. Excessive numbers increase administrative complexity and expand the attack surface.',
     });
 
-    // Unassigned permission sets — exclude direct assignments AND membership in a permission set group
+    // Unassigned custom permission sets — exclude direct assignments AND membership in a permission set group
     const unassignedResult = await ctx.soql.query<PermissionSetRecord>(
-      'SELECT Id, Name FROM PermissionSet WHERE IsOwnedByProfile = false AND Id NOT IN (SELECT PermissionSetId FROM PermissionSetAssignment) AND Id NOT IN (SELECT PermissionSetId FROM PermissionSetGroupComponent)'
+      'SELECT Id, Name FROM PermissionSet WHERE IsCustom = true AND Id NOT IN (SELECT PermissionSetId FROM PermissionSetAssignment) AND Id NOT IN (SELECT PermissionSetId FROM PermissionSetGroupComponent)'
     );
     const unassignedSets = unassignedResult.records;
     const unassignedCount = unassignedSets.length;
@@ -44,13 +75,17 @@ export class PermissionsCheck implements SecurityCheck {
         title: `${unassignedCount} permission set(s) are defined but never assigned`,
         detail: 'Permission sets that are defined but never assigned to any user (directly or via a permission set group) represent configuration bloat and may indicate outdated or orphaned access configurations.',
         remediation: 'Unused permission sets should be reviewed and deleted to reduce configuration bloat.',
-        affectedItems: unassignedSets.map((r) => r.Name),
+        affectedItems: unassignedSets.map((r) => ({
+          label: r.Name,
+          url: `${baseUrl}/${r.Id}`,
+        })),
       });
     }
 
-    // Profile count
+    // Custom profile count: exclude managed-package profiles (NamespacePrefix = null) and known standard Salesforce profiles
+    const standardProfileList = STANDARD_PROFILE_NAMES.map((n) => `'${n}'`).join(', ');
     const profileCountResult = await ctx.soql.query<{ expr0: number }>(
-      'SELECT COUNT() FROM Profile'
+      `SELECT COUNT() FROM Profile WHERE NamespacePrefix = null AND Name NOT IN (${standardProfileList})`
     );
     const profileCount = profileCountResult.totalSize;
 
@@ -59,8 +94,8 @@ export class PermissionsCheck implements SecurityCheck {
         id: 'permissions-high-profile-count',
         category: this.category,
         riskLevel: 'MEDIUM',
-        title: `${profileCount} profiles exist in this org`,
-        detail: 'A high number of profiles increases the complexity of access management and makes it harder to maintain a clear security model.',
+        title: `${profileCount} custom profiles exist in this org`,
+        detail: 'A high number of custom profiles increases the complexity of access management and makes it harder to maintain a clear security model.',
         remediation: 'Consider migrating access control from profiles to permission sets for more granular and auditable access management.',
       });
     }

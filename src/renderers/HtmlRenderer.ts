@@ -66,9 +66,21 @@ export class HtmlRenderer implements AuditRenderer {
             <strong>Remediation</strong>
             <p>${esc(f.remediation)}</p>
           </div>
-          ${f.affectedItems?.length
-            ? `<div class="affected-items"><strong>Affected items (${f.affectedItems.length})</strong><ul>${f.affectedItems.map((i) => `<li>${esc(i)}</li>`).join('')}</ul></div>`
-            : ''}
+          ${f.affectedItems?.length ? (() => {
+            const hasUrls = f.affectedItems!.some((i) => i.url);
+            const hasNotes = f.affectedItems!.some((i) => i.note);
+            const headers = ['Item', ...(hasUrls ? ['Setup Link'] : []), ...(hasNotes ? ['Notes'] : [])];
+            const thead = `<tr>${headers.map((h) => `<th>${esc(h)}</th>`).join('')}</tr>`;
+            const tbody = f.affectedItems!.map((item) => {
+              const cells = [
+                `<td>${esc(item.label)}</td>`,
+                ...(hasUrls ? [`<td>${item.url ? `<a href="${esc(item.url)}" target="_blank" rel="noopener">Open ↗</a>` : '—'}</td>`] : []),
+                ...(hasNotes ? [`<td>${esc(item.note ?? '')}</td>`] : []),
+              ];
+              return `<tr>${cells.join('')}</tr>`;
+            }).join('');
+            return `<div class="affected-items"><strong>Affected items (${f.affectedItems!.length})</strong><table class="affected-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
+          })() : ''}
         </div>
       </details>`).join('\n');
 
@@ -195,11 +207,33 @@ export class HtmlRenderer implements AuditRenderer {
   .affected-items {
     margin-top: 0.75rem;
     font-size: 0.82rem;
-    color: #8b949e;
   }
-  .affected-items strong { color: #c9d1d9; display: block; margin-bottom: 0.35rem; }
-  .affected-items ul { padding-left: 1.25rem; }
-  .affected-items li { margin-bottom: 0.2rem; font-family: 'Menlo', 'Consolas', monospace; }
+  .affected-items strong { color: #c9d1d9; display: block; margin-bottom: 0.5rem; }
+  .affected-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    font-family: 'Menlo', 'Consolas', monospace;
+  }
+  .affected-table th {
+    background: #1c2128;
+    color: #8b949e;
+    text-align: left;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid #30363d;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .affected-table td {
+    padding: 0.35rem 0.6rem;
+    border-bottom: 1px solid #21262d;
+    color: #c9d1d9;
+    vertical-align: top;
+    word-break: break-word;
+  }
+  .affected-table tr:last-child td { border-bottom: none; }
+  .affected-table a { color: #58a6ff; text-decoration: none; white-space: nowrap; }
+  .affected-table a:hover { text-decoration: underline; }
   /* Empty state */
   .no-findings { color: #8b949e; text-align: center; padding: 3rem 0; }
 </style>

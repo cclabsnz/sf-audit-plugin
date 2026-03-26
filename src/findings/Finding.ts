@@ -1,5 +1,11 @@
 import type { RiskLevel } from './RiskLevel.js';
 
+export interface AffectedItem {
+  label: string;
+  url?: string;
+  note?: string;
+}
+
 export interface Finding {
   id: string;
   category: string;
@@ -7,5 +13,5 @@ export interface Finding {
   title: string;
   detail: string;
   remediation: string;
-  affectedItems?: string[];
+  affectedItems?: AffectedItem[];
 }

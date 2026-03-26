@@ -1,6 +1,6 @@
 import type { AuditContext } from '../../context/AuditContext.js';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
-import type { Finding } from '../../findings/Finding.js';
+import type { Finding, AffectedItem } from '../../findings/Finding.js';
 
 interface PsaRecord {
   Assignee: { Id: string; Username: string; Name?: string; Profile?: { Name: string } };
@@ -17,10 +17,11 @@ export class UsersAndAdminsCheck implements SecurityCheck {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
 
-    const userLink = (r: PsaRecord): string => {
-      const profile = r.Assignee.Profile?.Name ?? 'Unknown Profile';
-      return `[${r.Assignee.Username} (${profile})](${baseUrl}/${r.Assignee.Id})`;
-    };
+    const userItem = (r: PsaRecord): AffectedItem => ({
+      label: `${r.Assignee.Username} (${r.Assignee.Profile?.Name ?? 'Unknown Profile'})`,
+      url: `${baseUrl}/${r.Assignee.Id}`,
+      note: `via: ${r.PermissionSet.IsOwnedByProfile ? 'Profile' : r.PermissionSet.Name}`,
+    });
 
     // Total active users
     const activeUsersResult = await ctx.soql.query<{ expr0: number }>(
@@ -43,7 +44,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
       title: `${modifyAllCount} user(s) have Modify All Data permission`,
       detail: 'Modify All Data grants unrestricted write access across all objects. This is one of the most powerful permissions in Salesforce.',
       remediation: 'Limit Modify All Data to essential system administrators only. Review each user and remove the permission from any non-essential accounts.',
-      affectedItems: modifyAllUsers.map(userLink),
+      affectedItems: modifyAllUsers.map(userItem),
     });
 
     // View All Data
@@ -61,7 +62,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
       title: `${viewAllCount} user(s) have View All Data permission`,
       detail: 'View All Data grants unrestricted read access across all objects, bypassing sharing rules and record-level security.',
       remediation: 'Limit View All Data to essential users. Consider using permission sets scoped to specific objects instead.',
-      affectedItems: viewAllUsers.map(userLink),
+      affectedItems: viewAllUsers.map(userItem),
     });
 
     // Customize Application
@@ -79,13 +80,13 @@ export class UsersAndAdminsCheck implements SecurityCheck {
         title: `${customizeAppCount} user(s) have Customize Application permission`,
         detail: 'Customize Application allows users to make metadata changes, including modifying page layouts, custom fields, and application settings.',
         remediation: 'Customize Application allows metadata changes. Review and reduce to essential configuration administrators.',
-        affectedItems: customizeAppUsers.map(userLink),
+        affectedItems: customizeAppUsers.map(userItem),
       });
     }
 
     // Author Apex
     const authorApexResult = await ctx.soql.query<PsaRecord>(
-      'SELECT Assignee.Id, Assignee.Username, Assignee.Profile.Name, PermissionSet.Name FROM PermissionSetAssignment WHERE PermissionSet.PermissionsAuthorApex = true AND Assignee.IsActive = true'
+      'SELECT Assignee.Id, Assignee.Username, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.IsOwnedByProfile FROM PermissionSetAssignment WHERE PermissionSet.PermissionsAuthorApex = true AND Assignee.IsActive = true'
     );
     const authorApexUsers = authorApexResult.records;
     const authorApexCount = authorApexUsers.length;
@@ -98,7 +99,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
         title: `${authorApexCount} user(s) have Author Apex permission`,
         detail: 'Author Apex allows users to write and deploy Apex code, which can execute server-side logic with elevated privileges.',
         remediation: 'Author Apex allows code deployment. Limit to developers with a genuine need.',
-        affectedItems: authorApexUsers.map(userLink),
+        affectedItems: authorApexUsers.map(userItem),
       });
     }
 

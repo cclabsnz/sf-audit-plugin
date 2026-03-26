@@ -18,6 +18,8 @@ export class HealthCheckCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
+    const healthCheckUrl = `${baseUrl}/lightning/setup/HealthCheck/page`;
 
     // Health Cloud detection
     const pkgRows = await ctx.soql.queryAll<PackageLicenseRecord>(
@@ -57,7 +59,11 @@ export class HealthCheckCheck implements SecurityCheck {
         title: `Security Health Check: ${highRisks.length} High-Risk Setting(s) Require Attention`,
         detail: 'One or more settings deviate from Salesforce security recommendations at the high-risk level.',
         remediation: 'Address each highlighted setting in Setup → Security Center → Health Check.',
-        affectedItems: highRisks.map((r) => `${r.Setting}: org=${r.OrgValue}, recommended=${r.StandardValue}`),
+        affectedItems: highRisks.map((r) => ({
+          label: r.Setting,
+          url: healthCheckUrl,
+          note: `Current: ${r.OrgValue} — Recommended: ${r.StandardValue}`,
+        })),
       });
     }
 
@@ -78,7 +84,11 @@ export class HealthCheckCheck implements SecurityCheck {
         title: `Security Health Check: ${mediumRisks.length} Medium-Risk Setting(s) Need Review`,
         detail: 'One or more settings deviate from Salesforce security recommendations at the medium-risk level.',
         remediation: 'Review and address medium-risk settings in Setup → Security Center → Health Check.',
-        affectedItems: mediumRisks.map((r) => `${r.Setting}: org=${r.OrgValue}, recommended=${r.StandardValue}`),
+        affectedItems: mediumRisks.map((r) => ({
+          label: r.Setting,
+          url: healthCheckUrl,
+          note: `Current: ${r.OrgValue} — Recommended: ${r.StandardValue}`,
+        })),
       });
     }
 

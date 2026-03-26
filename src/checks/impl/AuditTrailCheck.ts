@@ -18,6 +18,8 @@ export class AuditTrailCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
+    const auditTrailUrl = `${baseUrl}/lightning/setup/AuditTrail/page`;
 
     // Query audit trail for the last 7 days
     const auditRecords = await ctx.soql.queryAll<AuditTrailRecord>(
@@ -50,14 +52,6 @@ export class AuditTrailCheck implements SecurityCheck {
           ? 'MEDIUM'
           : 'LOW';
 
-    // Format affected items (up to 10)
-    const securityAffectedItems = securityChanges
-      .slice(0, 10)
-      .map(
-        (r) =>
-          `${new Date(r.CreatedDate).toISOString().split('T')[0]} — ${r.CreatedBy.Username}: ${r.Display}`
-      );
-
     findings.push({
       id: 'permission-security-changes',
       category: this.category,
@@ -67,7 +61,11 @@ export class AuditTrailCheck implements SecurityCheck {
         'Frequent permission and security changes can indicate privilege escalation activity or risky configuration drift.',
       remediation:
         'Review each change in Setup → Audit Trail. Investigate unexpected changes, especially outside change-management windows.',
-      affectedItems: securityAffectedItems,
+      affectedItems: securityChanges.slice(0, 10).map((r) => ({
+        label: `${r.CreatedBy.Username}: ${r.Display}`,
+        url: auditTrailUrl,
+        note: new Date(r.CreatedDate).toISOString().split('T')[0],
+      })),
     });
 
     // Query for Login-As events
@@ -80,14 +78,6 @@ export class AuditTrailCheck implements SecurityCheck {
     );
 
     if (loginAsRecords.length > 0) {
-      // Format affected items (up to 10)
-      const loginAsAffectedItems = loginAsRecords
-        .slice(0, 10)
-        .map(
-          (r) =>
-            `${new Date(r.CreatedDate).toISOString().split('T')[0]} — ${r.CreatedBy.Username}: ${r.Display}`
-        );
-
       findings.push({
         id: 'login-as-events',
         category: this.category,
@@ -97,7 +87,11 @@ export class AuditTrailCheck implements SecurityCheck {
           'Administrators logging in as other users can access their data and perform actions on their behalf.',
         remediation:
           'Review Login-As usage. Ensure it is used only for legitimate support purposes and is logged and approved.',
-        affectedItems: loginAsAffectedItems,
+        affectedItems: loginAsRecords.slice(0, 10).map((r) => ({
+          label: `${r.CreatedBy.Username}: ${r.Display}`,
+          url: auditTrailUrl,
+          note: new Date(r.CreatedDate).toISOString().split('T')[0],
+        })),
       });
     }
 

@@ -1,6 +1,10 @@
 import type { AuditResult } from '../findings/AuditResult.js';
 import type { AuditRenderer } from './AuditRenderer.js';
 
+function escapeMdCell(s: string): string {
+  return s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+}
+
 export class MarkdownRenderer implements AuditRenderer {
   readonly format = 'md';
   readonly fileExtension = '.md';
@@ -27,8 +31,22 @@ export class MarkdownRenderer implements AuditRenderer {
         lines.push('');
         lines.push(`**Remediation:** ${f.remediation}`);
         if (f.affectedItems?.length) {
+          const hasUrls = f.affectedItems.some((i) => i.url);
+          const hasNotes = f.affectedItems.some((i) => i.note);
+          const headers = ['Item', ...(hasUrls ? ['Setup Link'] : []), ...(hasNotes ? ['Notes'] : [])];
           lines.push('');
-          lines.push(`**Affected items:** ${f.affectedItems.join(', ')}`);
+          lines.push(`**Affected items (${f.affectedItems.length}):**`);
+          lines.push('');
+          lines.push(`| ${headers.join(' | ')} |`);
+          lines.push(`| ${headers.map(() => '---').join(' | ')} |`);
+          for (const item of f.affectedItems) {
+            const cells = [
+              escapeMdCell(item.label),
+              ...(hasUrls ? [item.url ? `[Open ↗](${item.url})` : '—'] : []),
+              ...(hasNotes ? [escapeMdCell(item.note ?? '')] : []),
+            ];
+            lines.push(`| ${cells.join(' | ')} |`);
+          }
         }
         lines.push('');
         lines.push('---');

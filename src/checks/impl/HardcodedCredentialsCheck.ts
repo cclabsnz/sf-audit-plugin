@@ -46,6 +46,8 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
+    const apexClassesUrl = `${baseUrl}/lightning/setup/ApexClasses/page`;
 
     const records = await ctx.tooling.query<ApexClassRecord>(
       'SELECT Id, Name, Body, LengthWithoutComments, NamespacePrefix FROM ApexClass WHERE NamespacePrefix = null'
@@ -118,7 +120,11 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
         title: `${count} Apex class(es) contain potential hardcoded credentials`,
         detail: 'Hardcoded Bearer tokens, Basic auth, or API keys in Apex source code expose credentials to anyone with metadata read access.',
         remediation: 'Replace hardcoded credentials with Named Credentials. Rotate any exposed credentials immediately.',
-        affectedItems: classesWithCredentials,
+        affectedItems: classesWithCredentials.map((name) => ({
+          label: name,
+          url: apexClassesUrl,
+          note: 'Replace hardcoded credential with a Named Credential and rotate the exposed secret',
+        })),
       });
     }
 
@@ -131,7 +137,11 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
         title: `${count} Apex class(es) contain raw callout endpoints not covered by Named Credentials`,
         detail: 'Raw HTTPS endpoints in setEndpoint() calls are not protected by Named Credentials, which means authentication details may be hardcoded nearby.',
         remediation: 'Migrate raw endpoints to Named Credentials to centralise credential management and reduce hardcoding.',
-        affectedItems: classesWithRawEndpointsUncovered,
+        affectedItems: classesWithRawEndpointsUncovered.map((name) => ({
+          label: name,
+          url: apexClassesUrl,
+          note: 'Migrate setEndpoint() URL to a Named Credential',
+        })),
       });
     }
 
@@ -144,7 +154,11 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
         title: `${count} Apex class(es) use raw endpoints covered by Remote Site Settings`,
         detail: 'These classes use raw callout URLs but the endpoints are registered as Remote Sites. Consider migrating to Named Credentials for better credential management.',
         remediation: 'Named Credentials provide better security than Remote Site Settings for authenticated callouts.',
-        affectedItems: classesWithRawEndpointsCoveredOnly,
+        affectedItems: classesWithRawEndpointsCoveredOnly.map((name) => ({
+          label: name,
+          url: apexClassesUrl,
+          note: 'Consider migrating to a Named Credential for better credential management',
+        })),
       });
     }
 
