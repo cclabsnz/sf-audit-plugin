@@ -27,6 +27,7 @@ export async function resolveOrgInfo(conn: Connection): Promise<OrgInfo> {
     type: rec.OrganizationType,
     isSandbox: rec.IsSandbox,
     instance: rec.InstanceName,
+    instanceUrl: conn.instanceUrl,
   };
 }
 

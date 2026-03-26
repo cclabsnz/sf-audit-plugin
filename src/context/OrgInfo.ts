@@ -4,4 +4,5 @@ export interface OrgInfo {
   type: string;
   isSandbox: boolean;
   instance: string;
+  instanceUrl: string;
 }
