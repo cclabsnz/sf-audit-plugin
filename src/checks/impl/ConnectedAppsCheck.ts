@@ -16,6 +16,7 @@ export class ConnectedAppsCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
 
     // Query all connected applications
     const connectedApps = await ctx.soql.queryAll<ConnectedAppRecord>(
@@ -40,7 +41,10 @@ export class ConnectedAppsCheck implements SecurityCheck {
           'Connected apps not restricted to admin-approved users can allow any org user to authorize the app, potentially exposing data.',
         remediation:
           'In each connected app settings, set "Permitted Users" to "Admin approved users are pre-authorized".',
-        affectedItems: unrestrictedApps.map((app) => app.Name),
+        affectedItems: unrestrictedApps.map((app) => ({
+          label: app.Name,
+          url: `${baseUrl}/${app.Id}`,
+        })),
       });
     } else {
       // All apps are properly restricted

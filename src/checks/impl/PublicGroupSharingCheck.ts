@@ -20,6 +20,8 @@ export class PublicGroupSharingCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
+    const sharingRulesUrl = `${baseUrl}/lightning/setup/SecuritySharingRules/page`;
 
     const groups = await ctx.soql.queryAll<GroupRecord>(
       "SELECT Id, Name, Type FROM Group WHERE Type = 'AllInternal'"
@@ -70,9 +72,11 @@ export class PublicGroupSharingCheck implements SecurityCheck {
         category: this.category,
         riskLevel,
         title: `All Internal Users group shares records across ${objectCount} object type(s)`,
-        affectedItems: exposures.map(
-          (e) => `${e.shareTable} → ${e.groupName}: ${e.count} sharing rule(s)`
-        ),
+        affectedItems: exposures.map((e) => ({
+          label: `${e.shareTable} → ${e.groupName}`,
+          url: sharingRulesUrl,
+          note: `${e.count} sharing rule(s) — replace with targeted group or role-based sharing`,
+        })),
         detail:
           'Sharing rules targeting "All Internal Users" expose records to every active internal user in the org.',
         remediation:

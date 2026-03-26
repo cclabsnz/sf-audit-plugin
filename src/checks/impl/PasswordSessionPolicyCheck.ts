@@ -33,6 +33,7 @@ export class PasswordSessionPolicyCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
 
     const risks = ctx.cache.healthCheckRisks;
 
@@ -60,7 +61,11 @@ export class PasswordSessionPolicyCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'MEDIUM',
         title: `${passwordRisks.length} password policy setting(s) do not meet security recommendations`,
-        affectedItems: passwordRisks.map((r) => `${r.setting}: current=${r.value}`),
+        affectedItems: passwordRisks.map((r) => ({
+          label: r.setting,
+          url: `${baseUrl}/lightning/setup/SecurityPasswordPolicies/page`,
+          note: `Current: ${r.value} — update in Setup → Password Policies`,
+        })),
         detail:
           'Password policy settings deviate from CIS Salesforce Benchmark recommendations. Weak password policies increase the risk of credential-based attacks.',
         remediation:
@@ -74,7 +79,11 @@ export class PasswordSessionPolicyCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'MEDIUM',
         title: `${sessionRisks.length} session security setting(s) need attention`,
-        affectedItems: sessionRisks.map((r) => `${r.setting}: current=${r.value}`),
+        affectedItems: sessionRisks.map((r) => ({
+          label: r.setting,
+          url: `${baseUrl}/lightning/setup/SessionSettings/page`,
+          note: `Current: ${r.value} — update in Setup → Session Settings`,
+        })),
         detail:
           'Session security settings deviate from recommended values. This can expose users to session hijacking or cross-site request forgery attacks.',
         remediation:
@@ -88,7 +97,11 @@ export class PasswordSessionPolicyCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'HIGH',
         title: 'Multi-factor authentication is not fully enforced',
-        affectedItems: mfaRisks.map((r) => `${r.setting}: current=${r.value}`),
+        affectedItems: mfaRisks.map((r) => ({
+          label: r.setting,
+          url: `${baseUrl}/lightning/setup/MultiFactorAuthentication/page`,
+          note: `Current: ${r.value} — enable MFA in Setup → Identity → Multi-Factor Authentication`,
+        })),
         detail:
           'MFA enforcement protects against credential-based attacks. Gaps in MFA policy leave accounts vulnerable even if passwords are compromised.',
         remediation:

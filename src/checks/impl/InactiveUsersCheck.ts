@@ -3,6 +3,7 @@ import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
 interface InactiveUserRecord {
+  Id: string;
   Username: string;
   Name: string;
   LastLoginDate: string | null;
@@ -18,14 +19,15 @@ export class InactiveUsersCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
 
     const inactiveUsers = await ctx.soql.queryAll<InactiveUserRecord>(`
-      SELECT Username, Name, Profile.Name, LastLoginDate, UserType 
-      FROM User 
-      WHERE IsActive = true 
-        AND (LastLoginDate < LAST_N_DAYS:90 OR LastLoginDate = null) 
-        AND UserType = 'Standard' 
-      ORDER BY LastLoginDate ASC 
+      SELECT Id, Username, Name, Profile.Name, LastLoginDate, UserType
+      FROM User
+      WHERE IsActive = true
+        AND (LastLoginDate < LAST_N_DAYS:90 OR LastLoginDate = null)
+        AND UserType = 'Standard'
+      ORDER BY LastLoginDate ASC
       LIMIT 50
     `);
 
@@ -38,10 +40,6 @@ export class InactiveUsersCheck implements SecurityCheck {
       riskLevel = 'MEDIUM';
     }
 
-    const affectedItems = inactiveUsers.map(
-      (u: InactiveUserRecord) => `${u.Username} (${u.Name}) — last login: ${u.LastLoginDate ?? 'never'}`
-    );
-
     findings.push({
       id: 'inactive-users-90d',
       category: this.category,
@@ -49,7 +47,11 @@ export class InactiveUsersCheck implements SecurityCheck {
       title: `${count} active user(s) have not logged in for 90+ days`,
       detail: 'Active accounts with no recent login represent stale credentials that may be compromised without detection.',
       remediation: 'Deactivate or review accounts that have been inactive for 90+ days. Establish a regular user access review process.',
-      affectedItems,
+      affectedItems: inactiveUsers.map((u: InactiveUserRecord) => ({
+        label: `${u.Username} (${u.Name})`,
+        url: `${baseUrl}/${u.Id}`,
+        note: `Last login: ${u.LastLoginDate ?? 'never'}`,
+      })),
     });
 
     return {

@@ -14,6 +14,9 @@ export class SharingModelCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
+    const owdUrl = `${baseUrl}/lightning/setup/OrgWideDefaultSettings/page`;
+
     const publicReadWriteObjects: Array<{ name: string; sharingModel: string }> = [];
 
     for (const objectName of OBJECTS_TO_CHECK) {
@@ -45,7 +48,11 @@ export class SharingModelCheck implements SecurityCheck {
         title: `${count} object(s) have Public Read/Write org-wide defaults`,
         detail: 'Org-wide defaults of Public Read/Write mean any user can read and edit all records of these objects regardless of ownership.',
         remediation: 'Set org-wide defaults to Private or Public Read Only for sensitive objects and use sharing rules to grant specific access.',
-        affectedItems: publicReadWriteObjects.map((obj) => `${obj.name}: ${obj.sharingModel}`),
+        affectedItems: publicReadWriteObjects.map((obj) => ({
+          label: obj.name,
+          url: owdUrl,
+          note: `Current OWD: ${obj.sharingModel} — change to Private or Public Read Only`,
+        })),
       });
     } else {
       findings.push({

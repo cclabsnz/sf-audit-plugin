@@ -29,6 +29,7 @@ export class GuestUserAccessCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
 
     const guestUsers = await ctx.soql.queryAll<UserRecord>(
       "SELECT Id, ProfileId, Username FROM User WHERE UserType = 'Guest' AND IsActive = true"
@@ -56,6 +57,7 @@ export class GuestUserAccessCheck implements SecurityCheck {
 
     // Collect write access violations
     interface WriteViolation {
+      userId: string;
       username: string;
       sobjectType: string;
       canCreate: boolean;
@@ -67,9 +69,8 @@ export class GuestUserAccessCheck implements SecurityCheck {
     const profileIds = [...new Set(guestUsers.map((u) => u.ProfileId))];
 
     for (const profileId of profileIds) {
-      // Find which username(s) belong to this profile
+      // Find which user(s) belong to this profile
       const profileUsers = guestUsers.filter((u) => u.ProfileId === profileId);
-      const usernames = profileUsers.map((u) => u.Username);
 
       // Query standard objects for this profile
       const standardObjectList = STANDARD_OBJECTS.map((o) => `'${o}'`).join(',');
@@ -79,9 +80,10 @@ export class GuestUserAccessCheck implements SecurityCheck {
         );
         for (const perm of perms) {
           if (perm.PermissionsCreate || perm.PermissionsEdit) {
-            for (const username of usernames) {
+            for (const u of profileUsers) {
               writeViolations.push({
-                username,
+                userId: u.Id,
+                username: u.Username,
                 sobjectType: perm.SobjectType,
                 canCreate: perm.PermissionsCreate,
                 canEdit: perm.PermissionsEdit,
@@ -102,9 +104,10 @@ export class GuestUserAccessCheck implements SecurityCheck {
             );
             for (const perm of perms) {
               if (perm.PermissionsCreate || perm.PermissionsEdit) {
-                for (const username of usernames) {
+                for (const u of profileUsers) {
                   writeViolations.push({
-                    username,
+                    userId: u.Id,
+                    username: u.Username,
                     sobjectType: perm.SobjectType,
                     canCreate: perm.PermissionsCreate,
                     canEdit: perm.PermissionsEdit,
@@ -133,7 +136,6 @@ export class GuestUserAccessCheck implements SecurityCheck {
             `SELECT COUNT() FROM ${shareTable} WHERE UserOrGroupId = '${user.Id}' AND RowCause = 'SharingRule'`
           );
           if (result.totalSize > 0) {
-            // Accumulate per share table
             const existing = sharingExposures.find((e) => e.shareTable === shareTable);
             if (existing) {
               existing.count += result.totalSize;
@@ -158,7 +160,11 @@ export class GuestUserAccessCheck implements SecurityCheck {
           const actions = [v.canCreate && 'Create', v.canEdit && 'Edit']
             .filter(Boolean)
             .join('/');
-          return `${v.username} can ${actions} ${v.sobjectType}`;
+          return {
+            label: `${v.username} — ${v.sobjectType}`,
+            url: `${baseUrl}/${v.userId}`,
+            note: `Can ${actions} — remove immediately`,
+          };
         }),
         detail:
           'Unauthenticated users (guests) with write access to standard objects represents a critical misconfiguration.',
@@ -174,7 +180,11 @@ export class GuestUserAccessCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'HIGH',
         title: `${count} object sharing rule(s) expose records to guest users`,
-        affectedItems: sharingExposures.map((e) => `${e.shareTable}: ${e.count} rules`),
+        affectedItems: sharingExposures.map((e) => ({
+          label: e.shareTable,
+          url: `${baseUrl}/lightning/setup/SecuritySharingRules/page`,
+          note: `${e.count} sharing rule(s) — review and remove guest-targeting rules`,
+        })),
         detail:
           'Sharing rules targeting guest users can expose internal records to unauthenticated visitors.',
         remediation:
@@ -189,7 +199,11 @@ export class GuestUserAccessCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'MEDIUM',
         title: `${count} active guest user(s) have live site access`,
-        affectedItems: guestUsers.map((u) => u.Username),
+        affectedItems: guestUsers.map((u) => ({
+          label: u.Username,
+          url: `${baseUrl}/${u.Id}`,
+          note: 'Periodically review guest permissions and sharing configuration',
+        })),
         detail:
           'Guest users are present in this org. While no write access or overly permissive sharing rules were found, guest access should be periodically reviewed.',
         remediation:

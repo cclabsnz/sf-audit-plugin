@@ -26,6 +26,7 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
 
     // 1. Find sensitive custom fields
     let sensitiveFields: CustomFieldRecord[] = [];
@@ -82,9 +83,8 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
     );
 
     // Build field API names: {ObjectApiName}.{DeveloperName}__c
-    // Only include fields where we can resolve the object name
     const fieldApiNames: string[] = [];
-    const fieldApiNameMap = new Map<string, string>(); // fieldApiName → original for display
+    const fieldApiNameMap = new Map<string, string>();
 
     for (const field of sensitiveFields) {
       const objectApiName = objectApiNameById.get(field.TableEnumOrId);
@@ -123,7 +123,6 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
           : 0,
       }));
     } catch {
-      // If permissions query fails, we cannot assess — return low finding
       findings.push({
         id: 'field-level-security-ok',
         category: this.category,
@@ -145,7 +144,14 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'HIGH',
         title: `${highExposure.length} sensitive field(s) are readable by more than 15 permission sets`,
-        affectedItems: highExposure.map((r) => `${r.Field} (${r.cnt} permission sets)`),
+        affectedItems: highExposure.map((r) => {
+          const objectApiName = r.Field.split('.')[0];
+          return {
+            label: r.Field,
+            url: `${baseUrl}/lightning/setup/ObjectManager/${objectApiName}/FieldsAndRelationships/view`,
+            note: `Readable by ${r.cnt} permission sets — restrict to minimum required`,
+          };
+        }),
         detail:
           'Widely-accessible sensitive fields increase the risk of data exposure. These fields may contain PII, PHI, or financial data.',
         remediation:
@@ -159,7 +165,14 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'MEDIUM',
         title: `${mediumExposure.length} sensitive field(s) are readable by 10-15 permission sets`,
-        affectedItems: mediumExposure.map((r) => `${r.Field} (${r.cnt} permission sets)`),
+        affectedItems: mediumExposure.map((r) => {
+          const objectApiName = r.Field.split('.')[0];
+          return {
+            label: r.Field,
+            url: `${baseUrl}/lightning/setup/ObjectManager/${objectApiName}/FieldsAndRelationships/view`,
+            note: `Readable by ${r.cnt} permission sets — review and reduce access`,
+          };
+        }),
         detail:
           'Widely-accessible sensitive fields increase the risk of data exposure. These fields may contain PII, PHI, or financial data.',
         remediation:

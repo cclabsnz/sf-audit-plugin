@@ -26,11 +26,12 @@ export class CustomSettingsCheck implements SecurityCheck {
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
+    const baseUrl = ctx.orgInfo.instanceUrl;
 
     const customObjects = await ctx.tooling.query<CustomObjectRecord>(`
-      SELECT Id, DeveloperName, Description FROM CustomObject 
-      WHERE DeveloperName LIKE '%Setting%' 
-        OR DeveloperName LIKE '%Config%' 
+      SELECT Id, DeveloperName, Description FROM CustomObject
+      WHERE DeveloperName LIKE '%Setting%'
+        OR DeveloperName LIKE '%Config%'
         OR DeveloperName LIKE '%Credential%'
     `);
 
@@ -43,8 +44,6 @@ export class CustomSettingsCheck implements SecurityCheck {
     });
 
     if (matches.length > 0) {
-      const affectedItems = matches.map((obj: CustomObjectRecord) => obj.DeveloperName);
-
       findings.push({
         id: 'custom-settings-credentials',
         category: this.category,
@@ -52,7 +51,11 @@ export class CustomSettingsCheck implements SecurityCheck {
         title: `${matches.length} custom object(s) may store sensitive credentials`,
         detail: 'Custom objects named with credential-related terms may be storing API keys, passwords, or other secrets in plaintext Salesforce records.',
         remediation: 'Replace credential storage in custom objects with Named Credentials or a dedicated secrets management solution.',
-        affectedItems,
+        affectedItems: matches.map((obj: CustomObjectRecord) => ({
+          label: `${obj.DeveloperName}__c`,
+          url: `${baseUrl}/lightning/setup/ObjectManager/${obj.DeveloperName}__c/Details/view`,
+          note: 'Review records for stored secrets and migrate to Named Credentials',
+        })),
       });
     } else {
       findings.push({

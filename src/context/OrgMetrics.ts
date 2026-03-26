@@ -11,7 +11,9 @@ export interface OrgMetrics {
   inactiveUsers90d: number;
   connectedAppsCount: number;
   remoteSitesCount: number;
+  insecureRemoteSitesCount: number;
   namedCredentialsCount: number;
+  unusedNamedCredentialsCount: number;
   healthCheckScore: number;
 }
 
@@ -29,6 +31,8 @@ export const EMPTY_METRICS: OrgMetrics = {
   inactiveUsers90d: 0,
   connectedAppsCount: 0,
   remoteSitesCount: 0,
+  insecureRemoteSitesCount: 0,
   namedCredentialsCount: 0,
+  unusedNamedCredentialsCount: 0,
   healthCheckScore: 0,
 };
