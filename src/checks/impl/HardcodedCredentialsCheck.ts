@@ -11,13 +11,15 @@ interface ApexClassRecord {
 }
 
 const HIGH_RISK_PATTERNS = [
-  /Bearer\s+[A-Za-z0-9\-_.~+/]+=*/gi,           // Bearer tokens
-  /Basic\s+[A-Za-z0-9+/]+=*/gi,                  // Basic auth
-  /Authorization['":\s]+['"](Bearer|Basic)/gi,     // Auth headers
-  /'[A-Za-z0-9]{20,}'/g,                          // Long string literals (potential API keys)
+  /Bearer\s+[A-Za-z0-9\-_.~+/]{20,}=*/gi,        // Bearer tokens (min length to avoid test stubs)
+  /Basic\s+[A-Za-z0-9+/]{20,}=*/gi,               // Basic auth (min length)
+  /Authorization['":\s]+['"](Bearer|Basic)/gi,     // Auth header construction
+  // Credential variable assignments with a string literal RHS
+  /(?:password|passwd|secret|apiKey|api_key|clientSecret|client_secret|accessToken|access_token|authToken|auth_token)\s*[=+]\s*'[^']{8,}'/gi,
 ];
 
 const ENDPOINT_PATTERN = /\.setEndpoint\s*\(\s*'(https?:\/\/[^']+)'/gi;
+const IS_TEST_CLASS = /@IsTest\b/i;
 
 function extractBase(url: string): string {
   try {
@@ -49,8 +51,9 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
       'SELECT Id, Name, Body, LengthWithoutComments, NamespacePrefix FROM ApexClass WHERE NamespacePrefix = null'
     );
 
-    // Cache apex bodies for downstream checks (filter null bodies — large/restricted classes)
-    ctx.cache.apexBodies = records.map((r) => ({ name: r.Name, body: r.Body ?? '' }));
+    // Cache apex bodies for downstream checks — exclude test classes and filter null bodies
+    const nonTestRecords = records.filter((r) => !IS_TEST_CLASS.test(r.Body ?? ''));
+    ctx.cache.apexBodies = nonTestRecords.map((r) => ({ name: r.Name, body: r.Body ?? '' }));
 
     const namedCredentialEndpoints = (ctx.cache.namedCredentialEndpoints ?? []).filter(Boolean);
     const remoteSiteUrls = (ctx.cache.remoteSiteUrls ?? []).filter(Boolean);
@@ -60,7 +63,7 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
     const classesWithRawEndpointsUncovered: string[] = [];
     const classesWithRawEndpointsCoveredOnly: string[] = [];
 
-    for (const record of records) {
+    for (const record of nonTestRecords) {
       const body = record.Body ?? '';
 
       // Check for hardcoded credential patterns
@@ -104,7 +107,7 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
       }
     }
 
-    const total = records.length;
+    const total = nonTestRecords.length;
 
     if (classesWithCredentials.length > 0) {
       const count = classesWithCredentials.length;

@@ -13,6 +13,7 @@ const INHERITED_SHARING = /\binherited\s+sharing\b/i;
 const WITHOUT_SHARING = /\bwithout\s+sharing\b/i;
 const WITH_SHARING = /\bwith\s+sharing\b/i;
 const CLASS_PATTERN = /\bclass\s+\w+/i;
+const IS_TEST_CLASS = /@IsTest\b/i;
 
 type SharingDeclaration = 'with' | 'without' | 'inherited' | 'none';
 
@@ -54,6 +55,10 @@ export class ApexSharingCheck implements SecurityCheck {
 
     for (const apexClass of apexBodies) {
       const body = apexClass.body ?? '';
+
+      // Test classes run as sysadmin — sharing declarations are not applicable
+      if (IS_TEST_CLASS.test(body)) continue;
+
       const declaration = getSharingDeclaration(body);
 
       if (declaration === null) continue; // Not a class definition

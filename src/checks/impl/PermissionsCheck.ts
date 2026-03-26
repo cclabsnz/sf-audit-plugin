@@ -29,9 +29,9 @@ export class PermissionsCheck implements SecurityCheck {
       remediation: 'Review and consolidate permission sets. Excessive numbers increase administrative complexity and expand the attack surface.',
     });
 
-    // Unassigned permission sets
+    // Unassigned permission sets — exclude direct assignments AND membership in a permission set group
     const unassignedResult = await ctx.soql.query<PermissionSetRecord>(
-      'SELECT Id, Name FROM PermissionSet WHERE IsOwnedByProfile = false AND Id NOT IN (SELECT PermissionSetId FROM PermissionSetAssignment)'
+      'SELECT Id, Name FROM PermissionSet WHERE IsOwnedByProfile = false AND Id NOT IN (SELECT PermissionSetId FROM PermissionSetAssignment) AND Id NOT IN (SELECT PermissionSetId FROM PermissionSetGroupComponent)'
     );
     const unassignedSets = unassignedResult.records;
     const unassignedCount = unassignedSets.length;
@@ -42,7 +42,7 @@ export class PermissionsCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         title: `${unassignedCount} permission set(s) are defined but never assigned`,
-        detail: 'Permission sets that are defined but never assigned to any user represent configuration bloat and may indicate outdated or orphaned access configurations.',
+        detail: 'Permission sets that are defined but never assigned to any user (directly or via a permission set group) represent configuration bloat and may indicate outdated or orphaned access configurations.',
         remediation: 'Unused permission sets should be reviewed and deleted to reduce configuration bloat.',
         affectedItems: unassignedSets.map((r) => r.Name),
       });
