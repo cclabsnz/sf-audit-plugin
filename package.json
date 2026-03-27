@@ -1,6 +1,6 @@
 {
   "name": "@cclabsnz/sf-audit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CloudCounsel Salesforce Security Audit — native sf plugin",
   "type": "module",
   "main": "lib/index.js",
