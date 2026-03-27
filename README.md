@@ -12,7 +12,7 @@ Or, for local development:
 
 ```bash
 git clone https://github.com/cclabsnz/sf-audit-plugin.git
-cd cloudcounsel-sf-plugin-audit
+cd sf-audit-plugin
 npm install
 npm run build
 sf plugins link .
