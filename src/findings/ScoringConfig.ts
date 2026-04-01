@@ -3,7 +3,16 @@ import type { RiskLevel } from './RiskLevel.js';
 
 const nonNegativeInt = z.number().int().nonnegative();
 
+const gradeConditionsSchema = z.object({
+  minScore: nonNegativeInt.optional(),
+  maxCritical: nonNegativeInt.optional(),
+  maxHigh: nonNegativeInt.optional(),
+  maxMedium: nonNegativeInt.optional(),
+});
+
 export const scoringConfigSchema = z.object({
+  /** When provided, ALL five risk levels (CRITICAL, HIGH, MEDIUM, LOW, INFO) must be present.
+   * The entire object is replaced atomically during merge, not key-by-key. */
   riskScores: z
     .object({
       CRITICAL: nonNegativeInt,
@@ -16,11 +25,11 @@ export const scoringConfigSchema = z.object({
   checkWeights: z.record(z.string(), nonNegativeInt).optional(),
   gradeThresholds: z
     .object({
-      A: z.object({ minScore: nonNegativeInt.optional(), maxCritical: nonNegativeInt.optional(), maxHigh: nonNegativeInt.optional(), maxMedium: nonNegativeInt.optional() }).optional(),
-      B: z.object({ minScore: nonNegativeInt.optional(), maxCritical: nonNegativeInt.optional(), maxHigh: nonNegativeInt.optional(), maxMedium: nonNegativeInt.optional() }).optional(),
-      C: z.object({ minScore: nonNegativeInt.optional(), maxCritical: nonNegativeInt.optional(), maxHigh: nonNegativeInt.optional(), maxMedium: nonNegativeInt.optional() }).optional(),
-      D: z.object({ minScore: nonNegativeInt.optional(), maxCritical: nonNegativeInt.optional(), maxHigh: nonNegativeInt.optional(), maxMedium: nonNegativeInt.optional() }).optional(),
-      F: z.object({ minScore: nonNegativeInt.optional(), maxCritical: nonNegativeInt.optional(), maxHigh: nonNegativeInt.optional(), maxMedium: nonNegativeInt.optional() }).optional(),
+      A: gradeConditionsSchema.optional(),
+      B: gradeConditionsSchema.optional(),
+      C: gradeConditionsSchema.optional(),
+      D: gradeConditionsSchema.optional(),
+      F: gradeConditionsSchema.optional(),
     })
     .optional(),
 });

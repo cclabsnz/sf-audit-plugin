@@ -45,4 +45,22 @@ describe('scoringConfigSchema', () => {
     expect(DEFAULT_SCORING_CONFIG.riskScores.LOW).toBe(1);
     expect(DEFAULT_SCORING_CONFIG.riskScores.INFO).toBe(0);
   });
+
+  it('rejects partial riskScores (all five levels required when present)', () => {
+    expect(() =>
+      scoringConfigSchema.parse({ riskScores: { CRITICAL: 10 } }),
+    ).toThrow();
+  });
+
+  it('DEFAULT_SCORING_CONFIG has correct grade thresholds', () => {
+    expect(DEFAULT_SCORING_CONFIG.gradeThresholds.A.minScore).toBe(85);
+    expect(DEFAULT_SCORING_CONFIG.gradeThresholds.B.minScore).toBe(70);
+    expect(DEFAULT_SCORING_CONFIG.gradeThresholds.C.minScore).toBe(55);
+    expect(DEFAULT_SCORING_CONFIG.gradeThresholds.D.minScore).toBe(40);
+    expect(DEFAULT_SCORING_CONFIG.gradeThresholds.F).toEqual({});
+  });
+
+  it('DEFAULT_SCORING_CONFIG has empty checkWeights', () => {
+    expect(DEFAULT_SCORING_CONFIG.checkWeights).toEqual({});
+  });
 });
