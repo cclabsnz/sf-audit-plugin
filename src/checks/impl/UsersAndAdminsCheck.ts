@@ -23,15 +23,15 @@ export class UsersAndAdminsCheck implements SecurityCheck {
       note: `via: ${r.PermissionSet.IsOwnedByProfile ? 'Profile' : r.PermissionSet.Name}`,
     });
 
-    // Total active users
+    // Total active, non-frozen users
     const activeUsersResult = await ctx.soql.query<{ expr0: number }>(
-      'SELECT COUNT() FROM User WHERE IsActive = true'
+      'SELECT COUNT() FROM User WHERE IsActive = true AND Id NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)'
     );
     const totalActiveUsers = activeUsersResult.totalSize;
 
     // Modify All Data
     const modifyAllResult = await ctx.soql.query<PsaRecord>(
-      'SELECT Assignee.Id, Assignee.Username, Assignee.Name, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.IsOwnedByProfile FROM PermissionSetAssignment WHERE PermissionSet.PermissionsModifyAllData = true AND Assignee.IsActive = true'
+      'SELECT Assignee.Id, Assignee.Username, Assignee.Name, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.IsOwnedByProfile FROM PermissionSetAssignment WHERE PermissionSet.PermissionsModifyAllData = true AND Assignee.IsActive = true AND Assignee.Id NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)'
     );
     const modifyAllUsers = modifyAllResult.records;
     const modifyAllCount = modifyAllUsers.length;
@@ -49,7 +49,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
 
     // View All Data
     const viewAllResult = await ctx.soql.query<PsaRecord>(
-      'SELECT Assignee.Id, Assignee.Username, Assignee.Name, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.IsOwnedByProfile FROM PermissionSetAssignment WHERE PermissionSet.PermissionsViewAllData = true AND Assignee.IsActive = true'
+      'SELECT Assignee.Id, Assignee.Username, Assignee.Name, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.IsOwnedByProfile FROM PermissionSetAssignment WHERE PermissionSet.PermissionsViewAllData = true AND Assignee.IsActive = true AND Assignee.Id NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)'
     );
     const viewAllUsers = viewAllResult.records;
     const viewAllCount = viewAllUsers.length;
@@ -67,7 +67,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
 
     // Customize Application
     const customizeAppResult = await ctx.soql.query<PsaRecord>(
-      'SELECT Assignee.Id, Assignee.Username, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.IsOwnedByProfile FROM PermissionSetAssignment WHERE PermissionSet.PermissionsCustomizeApplication = true AND Assignee.IsActive = true'
+      'SELECT Assignee.Id, Assignee.Username, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.IsOwnedByProfile FROM PermissionSetAssignment WHERE PermissionSet.PermissionsCustomizeApplication = true AND Assignee.IsActive = true AND Assignee.Id NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)'
     );
     const customizeAppUsers = customizeAppResult.records;
     const customizeAppCount = customizeAppUsers.length;
@@ -86,7 +86,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
 
     // Author Apex
     const authorApexResult = await ctx.soql.query<PsaRecord>(
-      'SELECT Assignee.Id, Assignee.Username, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.IsOwnedByProfile FROM PermissionSetAssignment WHERE PermissionSet.PermissionsAuthorApex = true AND Assignee.IsActive = true'
+      'SELECT Assignee.Id, Assignee.Username, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.IsOwnedByProfile FROM PermissionSetAssignment WHERE PermissionSet.PermissionsAuthorApex = true AND Assignee.IsActive = true AND Assignee.Id NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)'
     );
     const authorApexUsers = authorApexResult.records;
     const authorApexCount = authorApexUsers.length;

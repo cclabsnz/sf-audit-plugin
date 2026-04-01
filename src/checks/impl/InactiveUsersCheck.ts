@@ -25,6 +25,7 @@ export class InactiveUsersCheck implements SecurityCheck {
       SELECT Id, Username, Name, Profile.Name, LastLoginDate, UserType
       FROM User
       WHERE IsActive = true
+        AND Id NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)
         AND (LastLoginDate < LAST_N_DAYS:90 OR LastLoginDate = null)
         AND UserType = 'Standard'
       ORDER BY LastLoginDate ASC
