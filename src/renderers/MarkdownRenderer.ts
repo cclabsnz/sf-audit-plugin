@@ -2,7 +2,7 @@ import type { AuditResult } from '../findings/AuditResult.js';
 import type { AuditRenderer } from './AuditRenderer.js';
 
 function escapeMdCell(s: string): string {
-  return s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+  return s.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
 }
 
 export class MarkdownRenderer implements AuditRenderer {
