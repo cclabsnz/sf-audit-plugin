@@ -21,7 +21,7 @@ export class CodeSecurityCheck implements SecurityCheck {
 
     // Query class and trigger counts using Tooling API
     const classCountResults = await ctx.tooling.query<CountResult>(
-      "SELECT COUNT() FROM ApexClass WHERE NamespacePrefix = null AND IsTest = false"
+      "SELECT COUNT() FROM ApexClass WHERE NamespacePrefix = null"
     );
     const classCount = classCountResults[0]?.expr0 ?? 0;
 
@@ -59,7 +59,7 @@ export class CodeSecurityCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         title: `Apex code inventory: ${classCount} class(es), ${triggerCount} trigger(s)`,
-        detail: `Code coverage data is not available for this org. The org has ${classCount} custom Apex classes and ${triggerCount} custom Apex triggers.`,
+        detail: `Code coverage data is not available for this org. The org has ${classCount} custom Apex classes (including test classes) and ${triggerCount} custom Apex triggers.`,
         remediation: 'Run Apex tests in this org to generate coverage data. Ensure all Apex code has adequate test coverage.',
       });
     }
