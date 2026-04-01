@@ -24,4 +24,6 @@ export interface Finding {
   detail: string;
   remediation: string;
   affectedItems?: AffectedItem[];
+  /** True when the finding represents a passing check (everything is correctly configured). */
+  passed?: boolean;
 }

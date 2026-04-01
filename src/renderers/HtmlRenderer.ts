@@ -17,6 +17,9 @@ const RISK_BG: Record<string, string> = {
   INFO:     'rgba(100,116,139,0.12)',
 };
 
+const PASS_COLOR = '#22c55e';
+const PASS_BG    = 'rgba(34,197,94,0.10)';
+
 function esc(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -52,10 +55,15 @@ export class HtmlRenderer implements AuditRenderer {
 
     const findingsHtml = result.findings.length === 0
       ? '<p style="color:#64748b;text-align:center;padding:2rem 0">No findings.</p>'
-      : result.findings.map((f) => `
-      <details class="finding-card" data-risk="${esc(f.riskLevel)}" style="--card-accent:${RISK_COLORS[f.riskLevel]};--card-bg:${RISK_BG[f.riskLevel] ?? 'rgba(100,116,139,0.12)'}">
+      : result.findings.map((f) => {
+        const cardAccent = f.passed ? PASS_COLOR : (RISK_COLORS[f.riskLevel] ?? '#64748b');
+        const cardBg     = f.passed ? PASS_BG    : (RISK_BG[f.riskLevel]    ?? 'rgba(100,116,139,0.12)');
+        const badgeStyle = f.passed ? PASS_COLOR : (RISK_COLORS[f.riskLevel] ?? '#64748b');
+        const badgeLabel = f.passed ? '✓ PASS'   : esc(f.riskLevel);
+        return `
+      <details class="finding-card" data-risk="${esc(f.riskLevel)}" style="--card-accent:${cardAccent};--card-bg:${cardBg}">
         <summary class="finding-summary">
-          <span class="risk-badge" style="background:${RISK_COLORS[f.riskLevel]}">${esc(f.riskLevel)}</span>
+          <span class="risk-badge" style="background:${badgeStyle}">${badgeLabel}</span>
           <span class="finding-title">${esc(f.title)}</span>
           <span class="finding-category">${esc(f.category)}</span>
           <span class="chevron">›</span>
@@ -82,7 +90,8 @@ export class HtmlRenderer implements AuditRenderer {
             return `<div class="affected-items"><strong>Affected items (${f.affectedItems!.length})</strong><table class="affected-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
           })() : ''}
         </div>
-      </details>`).join('\n');
+      </details>`;
+      }).join('\n');
 
     return `<!DOCTYPE html>
 <html lang="en">

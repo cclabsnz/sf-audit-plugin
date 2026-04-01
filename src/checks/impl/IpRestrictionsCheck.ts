@@ -134,6 +134,7 @@ export class IpRestrictionsCheck implements SecurityCheck {
         id: 'ip-restrictions-ok',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'Login IP restrictions appear appropriately configured',
         detail:
           'All checked admin profiles have login IP ranges configured and no connected apps bypass IP enforcement.',

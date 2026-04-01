@@ -114,6 +114,7 @@ export class PasswordSessionPolicyCheck implements SecurityCheck {
         id: 'password-session-policy-compliant',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'Password and session policies appear compliant with security recommendations',
         detail:
           'No password, session, or MFA-related deviations were detected in the Security Health Check results.',

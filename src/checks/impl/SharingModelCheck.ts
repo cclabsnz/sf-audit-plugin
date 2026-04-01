@@ -59,6 +59,7 @@ export class SharingModelCheck implements SecurityCheck {
         id: 'sharing-model-secure',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'No objects have Public Read/Write org-wide defaults',
         detail: 'All checked standard objects have appropriately restrictive org-wide default sharing settings.',
         remediation: 'Continue monitoring OWD settings as new objects and customizations are introduced.',
