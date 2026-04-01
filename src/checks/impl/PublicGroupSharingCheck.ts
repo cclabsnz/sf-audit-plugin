@@ -21,7 +21,7 @@ export class PublicGroupSharingCheck implements SecurityCheck {
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
-    const sharingRulesUrl = `${baseUrl}/lightning/setup/SecuritySharingRules/page`;
+    const sharingRulesUrl = `${baseUrl}/lightning/setup/SecuritySharing/page`;
 
     const groups = await ctx.soql.queryAll<GroupRecord>(
       "SELECT Id, Name, Type FROM Group WHERE Type = 'AllInternal'"
