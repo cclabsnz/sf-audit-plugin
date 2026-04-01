@@ -2,17 +2,14 @@ import * as fs from 'node:fs';
 import { scoringConfigSchema, DEFAULT_SCORING_CONFIG } from './ScoringConfig.js';
 import type { ScoringConfig } from './ScoringConfig.js';
 
-type FileReader = (path: string, encoding: BufferEncoding) => string;
-
 export function loadScoringConfig(
   filePath: string | undefined,
   knownCheckIds: Set<string>,
   warn: (msg: string) => void,
-  readFile: FileReader = (path, encoding) => fs.readFileSync(path, encoding),
 ): ScoringConfig {
   if (!filePath) return DEFAULT_SCORING_CONFIG;
 
-  const raw = readFile(filePath, 'utf-8');
+  const raw = fs.readFileSync(filePath, 'utf-8');
   const parsed: unknown = JSON.parse(raw);
   const validated = scoringConfigSchema.parse(parsed); // throws ZodError on failure
 

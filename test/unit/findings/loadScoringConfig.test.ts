@@ -1,6 +1,13 @@
-import { expect, describe, it, beforeEach, jest } from '@jest/globals';
-import { loadScoringConfig } from '../../../src/findings/loadScoringConfig.js';
-import { DEFAULT_SCORING_CONFIG } from '../../../src/findings/ScoringConfig.js';
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+
+const mockReadFileSync = jest.fn();
+
+jest.unstable_mockModule('node:fs', () => ({
+  readFileSync: mockReadFileSync,
+}));
+
+const { loadScoringConfig } = await import('../../../src/findings/loadScoringConfig.js');
+const { DEFAULT_SCORING_CONFIG } = await import('../../../src/findings/ScoringConfig.js');
 
 const KNOWN_CHECK_IDS = new Set([
   'apex-sharing', 'api-limits', 'audit-trail', 'code-security', 'connected-apps',
@@ -24,33 +31,33 @@ describe('loadScoringConfig', () => {
   });
 
   it('deep-merges overrides onto defaults', () => {
-    const mockRead = jest.fn(() => JSON.stringify({ riskScores: { CRITICAL: 15, HIGH: 7, MEDIUM: 4, LOW: 1, INFO: 0 } }));
-    const result = loadScoringConfig('./custom.json', KNOWN_CHECK_IDS, warn, mockRead);
+    mockReadFileSync.mockReturnValue(JSON.stringify({ riskScores: { CRITICAL: 15, HIGH: 7, MEDIUM: 4, LOW: 1, INFO: 0 } }));
+    const result = loadScoringConfig('./custom.json', KNOWN_CHECK_IDS, warn);
     expect(result.riskScores.CRITICAL).toBe(15);
-    expect(result.riskScores.HIGH).toBe(7); // unchanged default
-    expect(result.checkWeights).toEqual({}); // default preserved
+    expect(result.riskScores.HIGH).toBe(7);
+    expect(result.checkWeights).toEqual({});
   });
 
   it('merges checkWeights onto empty default', () => {
-    const mockRead = jest.fn(() => JSON.stringify({ checkWeights: { 'apex-sharing': 12 } }));
-    const result = loadScoringConfig('./custom.json', KNOWN_CHECK_IDS, warn, mockRead);
+    mockReadFileSync.mockReturnValue(JSON.stringify({ checkWeights: { 'apex-sharing': 12 } }));
+    const result = loadScoringConfig('./custom.json', KNOWN_CHECK_IDS, warn);
     expect(result.checkWeights['apex-sharing']).toBe(12);
   });
 
   it('warns on unknown check IDs but continues', () => {
-    const mockRead = jest.fn(() => JSON.stringify({ checkWeights: { 'not-a-check': 5 } }));
-    const result = loadScoringConfig('./custom.json', KNOWN_CHECK_IDS, warn, mockRead);
+    mockReadFileSync.mockReturnValue(JSON.stringify({ checkWeights: { 'not-a-check': 5 } }));
+    const result = loadScoringConfig('./custom.json', KNOWN_CHECK_IDS, warn);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('not-a-check'));
-    expect(result.checkWeights['not-a-check']).toBeUndefined(); // unknown keys are dropped
+    expect(result.checkWeights['not-a-check']).toBeUndefined();
   });
 
   it('throws on invalid JSON', () => {
-    const mockRead = jest.fn(() => 'not valid json');
-    expect(() => loadScoringConfig('./bad.json', KNOWN_CHECK_IDS, warn, mockRead)).toThrow();
+    mockReadFileSync.mockReturnValue('not valid json');
+    expect(() => loadScoringConfig('./bad.json', KNOWN_CHECK_IDS, warn)).toThrow();
   });
 
   it('throws on schema validation failure', () => {
-    const mockRead = jest.fn(() => JSON.stringify({ riskScores: { CRITICAL: -1, HIGH: 7, MEDIUM: 4, LOW: 1, INFO: 0 } }));
-    expect(() => loadScoringConfig('./bad.json', KNOWN_CHECK_IDS, warn, mockRead)).toThrow();
+    mockReadFileSync.mockReturnValue(JSON.stringify({ riskScores: { CRITICAL: -1, HIGH: 7, MEDIUM: 4, LOW: 1, INFO: 0 } }));
+    expect(() => loadScoringConfig('./bad.json', KNOWN_CHECK_IDS, warn)).toThrow();
   });
 });
