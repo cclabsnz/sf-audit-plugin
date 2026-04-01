@@ -12,6 +12,7 @@ import { HtmlRenderer } from '../../renderers/HtmlRenderer.js';
 import { MarkdownRenderer } from '../../renderers/MarkdownRenderer.js';
 import type { AuditRenderer } from '../../renderers/AuditRenderer.js';
 import { buildAuditContext, resolveOrgInfo } from '../../lib/wire.js';
+import { loadScoringConfig } from '../../findings/loadScoringConfig.js';
 
 const RENDERERS: Record<string, AuditRenderer> = {
   html: new HtmlRenderer(),
@@ -49,6 +50,10 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
       summary: 'Comma-separated check IDs to run. Omit to run all checks.',
       helpValue: 'hardcoded-credentials,apex-sharing',
     }),
+    'scoring-config': Flags.string({
+      summary: 'Path to a custom scoring config JSON file. Merges with defaults.',
+      helpValue: './hnz-scoring.json',
+    }),
   };
 
   public async run(): Promise<AuditResult> {
@@ -72,10 +77,17 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
         })()
       : CHECKS;
 
+    const knownCheckIds = new Set(CHECKS.map((c) => c.id));
+    const scoringConfig = loadScoringConfig(
+      flags['scoring-config'],
+      knownCheckIds,
+      (msg) => this.warn(msg),
+    );
+
     this.log(`Auditing org: ${orgInfo.name} (${orgInfo.id})`);
     if (flags.checks) this.log(`Running ${checksToRun.length} of ${CHECKS.length} checks`);
 
-    const engine = new CheckEngine(checksToRun, ctx);
+    const engine = new CheckEngine(checksToRun, ctx, scoringConfig);
     const result = await engine.run((current, total, checkName) => {
       this.log(`[${String(current).padStart(2)}/${total}] ${checkName}`);
     });
