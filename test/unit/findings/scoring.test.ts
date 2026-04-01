@@ -14,7 +14,7 @@ function makeCtx(): AuditContext {
 }
 
 function finding(riskLevel: Finding['riskLevel'], id = 'f1'): Finding {
-  return { id, category: 'Test', riskLevel, title: 'T', detail: 'd', remediation: 'r' };
+  return { id, checkId: 'test-check', category: 'Test', riskLevel, title: 'T', detail: 'd', remediation: 'r' };
 }
 
 describe('buildAuditResult', () => {
