@@ -5,5 +5,13 @@
     "MEDIUM": 4,
     "LOW": 1,
     "INFO": 0
+  },
+  "checkWeights": {},
+  "gradeThresholds": {
+    "A": { "minScore": 85, "maxHigh": 0 },
+    "B": { "minScore": 70, "maxHigh": 1 },
+    "C": { "minScore": 55, "maxHigh": 3 },
+    "D": { "minScore": 40, "maxCritical": 0 },
+    "F": {}
   }
 }
