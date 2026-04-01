@@ -25,8 +25,8 @@ export class ScheduledApexCheck implements SecurityCheck {
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
-    const apexJobsUrl = `${baseUrl}/lightning/setup/ScheduledJobs/page`;
-    const apexClassesUrl = `${baseUrl}/lightning/setup/ApexClasses/page`;
+    const apexJobsUrl = `${baseUrl}/lightning/setup/ScheduledJobs/home`;
+    const apexClassesUrl = `${baseUrl}/lightning/setup/ApexClasses/home`;
 
     // Query all active scheduled/batch Apex jobs
     const jobs = await ctx.soql.queryAll<ApexJobRecord>(`

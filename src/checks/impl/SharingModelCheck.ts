@@ -15,7 +15,7 @@ export class SharingModelCheck implements SecurityCheck {
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
-    const owdUrl = `${baseUrl}/lightning/setup/OrgWideDefaultSettings/page`;
+    const owdUrl = `${baseUrl}/lightning/setup/SecuritySharing/page`;
 
     const publicReadWriteObjects: Array<{ name: string; sharingModel: string }> = [];
 

@@ -19,7 +19,7 @@ export class HealthCheckCheck implements SecurityCheck {
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
-    const healthCheckUrl = `${baseUrl}/lightning/setup/HealthCheck/page`;
+    const healthCheckUrl = `${baseUrl}/lightning/setup/HealthCheck/home`;
 
     // Health Cloud detection
     const pkgRows = await ctx.soql.queryAll<PackageLicenseRecord>(

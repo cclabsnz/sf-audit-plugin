@@ -21,7 +21,7 @@ export class RemoteSitesCheck implements SecurityCheck {
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
-    const setupUrl = `${baseUrl}/lightning/setup/SecurityWhitelistPage/page`;
+    const setupUrl = `${baseUrl}/lightning/setup/SecurityRemoteProxy/home`;
 
     // Query active remote site settings using Tooling API
     const records = await ctx.tooling.query<RemoteProxyRecord>(

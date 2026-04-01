@@ -25,7 +25,7 @@ export class NamedCredentialsCheck implements SecurityCheck {
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
-    const setupUrl = `${baseUrl}/lightning/setup/NamedCredential/page`;
+    const setupUrl = `${baseUrl}/lightning/setup/NamedCredential/home`;
 
     // Query named credentials using Tooling API
     const records = await ctx.tooling.query<NamedCredentialRecord>(

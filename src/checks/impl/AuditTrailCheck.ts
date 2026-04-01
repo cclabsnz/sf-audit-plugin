@@ -19,7 +19,7 @@ export class AuditTrailCheck implements SecurityCheck {
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
-    const auditTrailUrl = `${baseUrl}/lightning/setup/AuditTrail/page`;
+    const auditTrailUrl = `${baseUrl}/lightning/setup/AuditTrail/home`;
 
     // Query audit trail for the last 7 days
     const auditRecords = await ctx.soql.queryAll<AuditTrailRecord>(

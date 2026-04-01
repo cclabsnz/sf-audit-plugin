@@ -182,7 +182,7 @@ export class GuestUserAccessCheck implements SecurityCheck {
         title: `${count} object sharing rule(s) expose records to guest users`,
         affectedItems: sharingExposures.map((e) => ({
           label: e.shareTable,
-          url: `${baseUrl}/lightning/setup/SecuritySharingRules/page`,
+          url: `${baseUrl}/lightning/setup/SecuritySharing/page`,
           note: `${e.count} sharing rule(s) — review and remove guest-targeting rules`,
         })),
         detail:

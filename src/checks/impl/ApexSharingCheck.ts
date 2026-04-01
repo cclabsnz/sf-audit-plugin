@@ -38,7 +38,7 @@ export class ApexSharingCheck implements SecurityCheck {
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
-    const apexClassesUrl = `${baseUrl}/lightning/setup/ApexClasses/page`;
+    const apexClassesUrl = `${baseUrl}/lightning/setup/ApexClasses/home`;
 
     let apexBodies = ctx.cache.apexBodies;
 
