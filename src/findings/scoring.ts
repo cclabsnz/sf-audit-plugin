@@ -29,7 +29,7 @@ export function buildAuditResult(
   config: ScoringConfig = DEFAULT_SCORING_CONFIG,
 ): AuditResult {
   const totalScore = findings.reduce(
-    (sum, f) => sum + (config.checkWeights[f.checkId ?? ''] ?? config.riskScores[f.riskLevel]),
+    (sum, f) => sum + (f.checkId !== undefined ? (config.checkWeights[f.checkId] ?? config.riskScores[f.riskLevel]) : config.riskScores[f.riskLevel]),
     0,
   );
   const maxPossible = findings.length * 10;

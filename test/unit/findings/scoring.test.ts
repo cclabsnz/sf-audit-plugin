@@ -24,7 +24,7 @@ describe('buildAuditResult', () => {
     expect(result.grade).toBe('A');
   });
 
-  it('returns grade=F when any CRITICAL finding exists', () => {
+  it('returns grade=F when the sole finding is CRITICAL', () => {
     const result = buildAuditResult(makeCtx(), [finding('CRITICAL')], {});
     expect(result.grade).toBe('F');
   });
@@ -112,6 +112,24 @@ describe('buildAuditResult', () => {
       const f: Finding = { id: 'f1', checkId: 'other-check', category: 'Test', riskLevel: 'INFO', title: 'T', detail: 'd', remediation: 'r' };
       const result = buildAuditResult(makeCtx(), [f], {}, config);
       expect(result.healthScore).toBe(100); // INFO=0, no penalty
+    });
+
+    it('falls back to riskScores when checkId is undefined', () => {
+      const config = {
+        riskScores: { CRITICAL: 10, HIGH: 7, MEDIUM: 4, LOW: 1, INFO: 0 },
+        checkWeights: { 'my-check': 99 },
+        gradeThresholds: {
+          A: { minScore: 85, maxHigh: 0 },
+          B: { minScore: 70, maxHigh: 1 },
+          C: { minScore: 55, maxHigh: 3 },
+          D: { minScore: 40, maxCritical: 0 },
+          F: {},
+        },
+      };
+      // Finding with no checkId — should NOT use checkWeights, should use riskScores
+      const f: Finding = { id: 'f1', category: 'Test', riskLevel: 'INFO', title: 'T', detail: 'd', remediation: 'r' };
+      const result = buildAuditResult(makeCtx(), [f], {}, config);
+      expect(result.healthScore).toBe(100); // INFO=0, not checkWeights[undefined]=99
     });
 
     it('applies config-driven grade thresholds', () => {
