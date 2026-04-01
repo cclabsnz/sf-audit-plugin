@@ -92,6 +92,7 @@ describe('CheckEngine', () => {
       const result = await engine.run();
 
       expect(result.findings).toHaveLength(2);
+      expect(result.findings[0].checkId).toBe('c1');
     });
 
     it('catches per-check errors and adds an INFO error finding instead of aborting', async () => {
@@ -115,6 +116,7 @@ describe('CheckEngine', () => {
       expect(errorFinding).toBeDefined();
       expect(errorFinding!.riskLevel).toBe('INFO');
       expect(errorFinding!.detail).toContain('SOQL error');
+      expect(errorFinding!.checkId).toBe('bad');
     });
 
     it('merges metrics from all checks', async () => {
