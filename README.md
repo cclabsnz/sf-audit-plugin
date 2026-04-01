@@ -34,6 +34,8 @@ This runs all 22 security checks against the target org and writes a report to t
 | `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json` |
 | `--output` / `-o` | `.` | Directory to write the report file |
 | `--fail-on` | — | Exit with code 1 if any finding is at or above this severity: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
+| `--checks` | *(all)* | Comma-separated check IDs to run instead of all 22 (e.g. `hardcoded-credentials,apex-sharing`) |
+| `--scoring-config` | — | Path to a custom scoring config JSON file to override weights and grade thresholds |
 
 ### Examples
 
@@ -49,6 +51,12 @@ sf audit security --target-org myOrg --output ./reports
 
 # Fail CI pipeline on HIGH or CRITICAL findings
 sf audit security --target-org myOrg --fail-on HIGH
+
+# Run only specific checks
+sf audit security --target-org myOrg --checks hardcoded-credentials,apex-sharing,guest-user-access
+
+# Use a custom scoring config (e.g. stricter weights for your org)
+sf audit security --target-org myOrg --scoring-config ./my-scoring.json
 ```
 
 The report file is written as `sf-audit-<orgId>-<timestamp>.<ext>` in the output directory (e.g. `sf-audit-00D000000000001-1711234567890.html`).
@@ -107,8 +115,8 @@ The audit runs 22 checks across 6 categories:
 
 Each finding is assigned a risk level with a corresponding weight:
 
-| Risk Level | Weight |
-|------------|--------|
+| Risk Level | Default Weight |
+|------------|---------------|
 | CRITICAL | 10 |
 | HIGH | 7 |
 | MEDIUM | 4 |
@@ -116,8 +124,6 @@ Each finding is assigned a risk level with a corresponding weight:
 | INFO | 0 |
 
 The health score is calculated as `100 - (total weight / max possible weight) * 100`, capped at 0.
-
-Weights are configurable in [`config/scoring.json`](config/scoring.json) — no recompile needed.
 
 The audit produces a **Health Score** (0–100) and a **Grade** (A–F):
 
@@ -128,6 +134,53 @@ The audit produces a **Health Score** (0–100) and a **Grade** (A–F):
 | C | Score ≥ 55, ≤ 3 HIGH findings |
 | D | Score ≥ 40, no CRITICAL findings |
 | F | Score < 40 or any CRITICAL finding |
+
+### Custom Scoring Config
+
+All weights and grade thresholds are configurable — no recompile needed. This is useful when your org has a different risk appetite (e.g. you want to penalise hardcoded credentials more heavily, or set stricter grade thresholds).
+
+**Step 1** — Copy the sample config as your starting point:
+
+```bash
+cp config/scoring.sample.json my-scoring.json
+```
+
+**Step 2** — Edit the values. All three sections (`riskScores`, `checkWeights`, `gradeThresholds`) are optional — omit any section to keep the defaults.
+
+```json
+{
+  "riskScores": {
+    "CRITICAL": 10,
+    "HIGH": 7,
+    "MEDIUM": 4,
+    "LOW": 1,
+    "INFO": 0
+  },
+  "checkWeights": {
+    "hardcoded-credentials": 10,
+    "guest-user-access": 10,
+    "users-and-admins": 10,
+    "apex-sharing": 7
+  },
+  "gradeThresholds": {
+    "A": { "minScore": 90, "maxHigh": 0 },
+    "B": { "minScore": 75, "maxHigh": 1 },
+    "C": { "minScore": 60, "maxHigh": 3 },
+    "D": { "minScore": 40, "maxCritical": 0 },
+    "F": {}
+  }
+}
+```
+
+The full list of valid `checkWeights` keys (one per check) is in [`config/scoring.sample.json`](config/scoring.sample.json).
+
+**Step 3** — Pass it when running the audit:
+
+```bash
+sf audit security --target-org myOrg --scoring-config ./my-scoring.json
+```
+
+Your config is deep-merged with the defaults, so you only need to include the values you want to change.
 
 ## Requirements
 
