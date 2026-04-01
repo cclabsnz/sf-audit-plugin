@@ -4,6 +4,7 @@ import type { AuditCache } from '../context/AuditCache.js';
 import type { OrgMetrics } from '../context/OrgMetrics.js';
 import type { Finding } from '../findings/Finding.js';
 import type { AuditResult } from '../findings/AuditResult.js';
+import type { ScoringConfig } from '../findings/ScoringConfig.js';
 import { buildAuditResult } from '../findings/scoring.js';
 
 function buildErrorFinding(check: SecurityCheck, err: unknown): Finding {
@@ -24,6 +25,7 @@ export class CheckEngine {
   constructor(
     private readonly checks: SecurityCheck[],
     private readonly ctx: AuditContext,
+    private readonly scoringConfig?: ScoringConfig,
   ) {
     this.validateCacheOrdering();
   }
@@ -49,7 +51,7 @@ export class CheckEngine {
       }
     }
 
-    return buildAuditResult(this.ctx, findings, metrics);
+    return buildAuditResult(this.ctx, findings, metrics, this.scoringConfig);
   }
 
   private validateCacheOrdering(): void {
