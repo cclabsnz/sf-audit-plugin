@@ -10,6 +10,7 @@ function buildErrorFinding(check: SecurityCheck, err: unknown): Finding {
   const msg = err instanceof Error ? err.message : String(err);
   return {
     id: `${check.id}-error`,
+    checkId: check.id,
     category: check.category,
     riskLevel: 'INFO',
     title: `${check.name}: check failed`,
@@ -39,7 +40,7 @@ export class CheckEngine {
       onProgress?.(i + 1, total, check.name);
       try {
         const result = await check.run(this.ctx);
-        findings.push(...result.findings);
+        findings.push(...result.findings.map((f) => ({ ...f, checkId: check.id })));
         if (result.metrics) {
           metrics = { ...metrics, ...result.metrics };
         }

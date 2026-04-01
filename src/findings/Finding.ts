@@ -8,6 +8,8 @@ export interface AffectedItem {
 
 export interface Finding {
   id: string;
+  /** The ID of the check that produced this finding. Set by CheckEngine; not required of individual check implementations. */
+  checkId?: string;
   category: string;
   riskLevel: RiskLevel;
   title: string;
