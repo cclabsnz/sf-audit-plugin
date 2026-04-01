@@ -45,6 +45,9 @@
       }
     }
   },
+  "overrides": {
+    "handlebars": "^4.7.9"
+  },
   "files": [
     "/lib",
     "/messages",
