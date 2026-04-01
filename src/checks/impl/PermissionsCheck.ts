@@ -82,10 +82,11 @@ export class PermissionsCheck implements SecurityCheck {
       });
     }
 
-    // Custom profile count: exclude managed-package profiles (NamespacePrefix = null) and known standard Salesforce profiles
+    // Custom profile count: exclude known standard Salesforce profiles by name.
+    // Profile does not expose NamespacePrefix, so managed-package profiles cannot be filtered that way.
     const standardProfileList = STANDARD_PROFILE_NAMES.map((n) => `'${n}'`).join(', ');
     const profileCountResult = await ctx.soql.query<{ expr0: number }>(
-      `SELECT COUNT() FROM Profile WHERE NamespacePrefix = null AND Name NOT IN (${standardProfileList})`
+      `SELECT COUNT() FROM Profile WHERE Name NOT IN (${standardProfileList})`
     );
     const profileCount = profileCountResult.totalSize;
 
