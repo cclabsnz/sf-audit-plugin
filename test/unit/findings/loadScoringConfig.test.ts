@@ -60,4 +60,13 @@ describe('loadScoringConfig', () => {
     mockReadFileSync.mockReturnValue(JSON.stringify({ riskScores: { CRITICAL: -1, HIGH: 7, MEDIUM: 4, LOW: 1, INFO: 0 } }));
     expect(() => loadScoringConfig('./bad.json', KNOWN_CHECK_IDS, warn)).toThrow();
   });
+
+  it('throws with a descriptive message when the file does not exist', () => {
+    mockReadFileSync.mockImplementation(() => {
+      throw Object.assign(new Error('no such file or directory'), { code: 'ENOENT' });
+    });
+    expect(() => loadScoringConfig('./missing.json', KNOWN_CHECK_IDS, warn)).toThrow(
+      /Cannot read scoring config file.*missing\.json/,
+    );
+  });
 });

@@ -9,7 +9,12 @@ export function loadScoringConfig(
 ): ScoringConfig {
   if (!filePath) return DEFAULT_SCORING_CONFIG;
 
-  const raw = fs.readFileSync(filePath, 'utf-8');
+  let raw: string;
+  try {
+    raw = fs.readFileSync(filePath, 'utf-8');
+  } catch (err) {
+    throw new Error(`Cannot read scoring config file '${filePath}': ${err instanceof Error ? err.message : String(err)}`);
+  }
   const parsed: unknown = JSON.parse(raw);
   const validated = scoringConfigSchema.parse(parsed); // throws ZodError on failure
 
@@ -24,7 +29,7 @@ export function loadScoringConfig(
   }
 
   return {
-    riskScores: { ...DEFAULT_SCORING_CONFIG.riskScores, ...(validated.riskScores ?? {}) },
+    riskScores: validated.riskScores ?? DEFAULT_SCORING_CONFIG.riskScores,
     checkWeights: safeCheckWeights,
     gradeThresholds: {
       A: { ...DEFAULT_SCORING_CONFIG.gradeThresholds.A, ...(validated.gradeThresholds?.A ?? {}) },
