@@ -1,0 +1,42 @@
+{
+  "_comment": "Copy this file, adjust values to fit your org's risk appetite, and pass it with --scoring-config <path>. All sections are optional — omit any section to keep the default.",
+  "riskScores": {
+    "CRITICAL": 10,
+    "HIGH": 7,
+    "MEDIUM": 4,
+    "LOW": 1,
+    "INFO": 0
+  },
+  "checkWeights": {
+    "_comment": "Override the weight for a specific check regardless of its riskLevel. To use: remove this _comment key.",
+    "apex-sharing": 7,
+    "api-limits": 4,
+    "audit-trail": 4,
+    "code-security": 4,
+    "connected-apps": 7,
+    "custom-settings": 4,
+    "field-level-security": 7,
+    "flows-without-sharing": 7,
+    "guest-user-access": 10,
+    "hardcoded-credentials": 10,
+    "health-check": 7,
+    "inactive-users": 4,
+    "ip-restrictions": 7,
+    "login-session": 4,
+    "named-credentials": 1,
+    "password-session-policy": 7,
+    "permissions": 4,
+    "public-group-sharing": 4,
+    "remote-sites": 4,
+    "scheduled-apex": 1,
+    "sharing-model": 7,
+    "users-and-admins": 10
+  },
+  "gradeThresholds": {
+    "A": { "minScore": 85, "maxHigh": 0 },
+    "B": { "minScore": 70, "maxHigh": 1 },
+    "C": { "minScore": 55, "maxHigh": 3 },
+    "D": { "minScore": 40, "maxCritical": 0 },
+    "F": {}
+  }
+}
