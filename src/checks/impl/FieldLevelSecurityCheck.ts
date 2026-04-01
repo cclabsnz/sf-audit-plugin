@@ -59,6 +59,7 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
         id: 'field-level-security-ok',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'Sensitive custom fields appear appropriately restricted',
         detail: 'No sensitive custom fields with excessive permission set access were found.',
         remediation:
@@ -100,6 +101,7 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
         id: 'field-level-security-ok',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'Sensitive custom fields appear appropriately restricted',
         detail: 'No sensitive custom fields with excessive permission set access were found.',
         remediation:
@@ -127,6 +129,7 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
         id: 'field-level-security-ok',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'Sensitive custom fields appear appropriately restricted',
         detail: 'No sensitive custom fields with excessive permission set access were found.',
         remediation:
@@ -185,6 +188,7 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
         id: 'field-level-security-ok',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'Sensitive custom fields appear appropriately restricted',
         detail: 'No sensitive custom fields with excessive permission set access were found.',
         remediation:

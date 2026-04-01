@@ -61,6 +61,7 @@ export class RemoteSitesCheck implements SecurityCheck {
         id: 'remote-sites-inventory',
         category: this.category,
         riskLevel: insecureSites.length === 0 ? 'LOW' : 'INFO',
+        passed: insecureSites.length === 0 ? true : undefined,
         title: `${count} active remote site setting(s) registered (${insecureSites.length} insecure, ${secureSites.length} secure)`,
         detail:
           'Remote Site Settings control which external URLs Apex code can call. Entries should be reviewed periodically to remove unused entries.',
@@ -77,6 +78,7 @@ export class RemoteSitesCheck implements SecurityCheck {
         id: 'no-remote-sites',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'No active remote site settings found',
         detail:
           'No active Remote Site Settings are registered in this org.',

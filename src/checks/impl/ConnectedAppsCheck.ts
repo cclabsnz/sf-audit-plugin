@@ -52,6 +52,7 @@ export class ConnectedAppsCheck implements SecurityCheck {
         id: 'restricted-connected-apps',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'All connected apps restrict user access appropriately',
         detail: `All ${count} connected app(s) are configured to require admin pre-authorization.`,
         remediation: 'Continue monitoring as new connected apps are added.',

@@ -65,6 +65,7 @@ export class ApiLimitsCheck implements SecurityCheck {
         id: 'api-limits-healthy',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'All monitored API limits are within acceptable thresholds',
         detail: 'All monitored API and resource limits are below 50% utilization.',
         remediation: 'Continue monitoring limits as org activity grows.',

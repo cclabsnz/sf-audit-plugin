@@ -62,6 +62,7 @@ export class CustomSettingsCheck implements SecurityCheck {
         id: 'custom-settings-clean',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'No obviously credential-related custom objects detected',
         detail: 'No custom objects with credential-related naming patterns were found.',
         remediation: 'Continue to avoid storing secrets in custom objects or custom settings. Use Named Credentials for external authentication.',

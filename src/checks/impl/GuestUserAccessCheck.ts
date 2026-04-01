@@ -40,6 +40,7 @@ export class GuestUserAccessCheck implements SecurityCheck {
         id: 'guest-user-none',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'No active guest users found',
         detail:
           'There are no active guest users in this org, so guest user security misconfiguration is not a concern.',

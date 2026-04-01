@@ -32,6 +32,7 @@ export class PublicGroupSharingCheck implements SecurityCheck {
         id: 'public-group-sharing-none',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'No records shared to All Internal Users groups via sharing rules',
         detail: 'No sharing rules were found targeting the "All Internal Users" group on key objects.',
         remediation:
@@ -87,6 +88,7 @@ export class PublicGroupSharingCheck implements SecurityCheck {
         id: 'public-group-sharing-none',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'No records shared to All Internal Users groups via sharing rules',
         detail: 'No sharing rules were found targeting the "All Internal Users" group on key objects.',
         remediation:

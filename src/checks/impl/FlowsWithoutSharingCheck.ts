@@ -81,6 +81,7 @@ export class FlowsWithoutSharingCheck implements SecurityCheck {
         id: 'flows-without-sharing-none',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'No active flows running without sharing context identified',
         detail: `All ${total} active flows either enforce user sharing context or are not autolaunched/screen flow types.`,
         remediation: 'Continue to review flow settings when new flows are activated.',

@@ -171,6 +171,7 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
         id: 'no-hardcoded-credentials',
         category: this.category,
         riskLevel: 'LOW',
+        passed: true,
         title: 'No hardcoded credentials or unprotected endpoints detected in Apex classes',
         detail: `Scanned ${total} custom Apex classes. No obvious hardcoded credential patterns or unprotected callout endpoints were found.`,
         remediation: 'Continue using Named Credentials for all external callouts and periodically re-scan as new code is added.',
