@@ -182,6 +182,81 @@ sf audit security --target-org myOrg --scoring-config ./my-scoring.json
 
 Your config is deep-merged with the defaults, so you only need to include the values you want to change.
 
+## History & Diff
+
+Every `sf audit security` run automatically archives a JSON copy of the report to:
+
+```
+~/.sf/audit-history/{orgId}/sf-audit-{orgId}-{timestamp}.json
+```
+
+No configuration needed — archiving happens silently after each run.
+
+### View Audit History
+
+Show how your org's security posture has changed across multiple runs:
+
+```bash
+sf audit history --target-org myOrg
+```
+
+Prints a terminal table with score trends and writes an HTML timeline to the current directory.
+
+**Flags:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--target-org` | Org alias or username | required |
+| `--reports-dir` | Custom directory containing archived reports | `~/.sf/audit-history/{orgId}` |
+| `--output` | Directory to write the HTML timeline | `.` (cwd) |
+| `--limit` | Maximum number of most-recent runs to show | all |
+
+**Example output:**
+
+```
+Audit History: My Org (00D000000000001)
+────────────────────────────────────────────────────────────────────────────────
+  #   Date                  Score   Grade   CRIT   HIGH    MED    LOW   Δ Score
+────────────────────────────────────────────────────────────────────────────────
+   1  2026-03-23 15:10       64      D          1      5      8      3        —
+   2  2026-04-09 11:22       81      B          0      2      5      3      +17
+────────────────────────────────────────────────────────────────────────────────
+  Trend: ▲ +17 over 2 audits   Best: 81 (2026-04-09 11:22)   Worst: 64 (2026-03-23 15:10)
+```
+
+### Diff Two Reports
+
+Compare any two audit JSON files to see exactly what changed:
+
+```bash
+sf audit diff baseline.json current.json
+```
+
+Writes an HTML and JSON diff report to the current directory.
+
+**Flags:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--output` | Directory to write diff reports | `.` (cwd) |
+| `--format` | Comma-separated formats: `html`, `json` | `html,json` |
+
+**Example output:**
+
+```
+Diff report written: ./sf-audit-diff-00D000000000001-...-vs-....html
+Diff report written: ./sf-audit-diff-00D000000000001-...-vs-....json
+
+─────────────────────────────
+  Diff Summary
+─────────────────────────────
+  Score delta     +17
+  Grade        D → B
+  New               0
+  Resolved          1
+─────────────────────────────
+```
+
 ## Requirements
 
 - Node.js 18+
