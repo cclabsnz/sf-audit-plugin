@@ -13,6 +13,7 @@ import { MarkdownRenderer } from '../../renderers/MarkdownRenderer.js';
 import type { AuditRenderer } from '../../renderers/AuditRenderer.js';
 import { buildAuditContext, resolveOrgInfo } from '../../lib/wire.js';
 import { loadScoringConfig } from '../../findings/loadScoringConfig.js';
+import { HistoryStore } from '../../history/HistoryStore.js';
 
 const RENDERERS: Record<string, AuditRenderer> = {
   html: new HtmlRenderer(),
@@ -105,6 +106,10 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
       fs.writeFileSync(outputPath, output, 'utf-8');
       this.log(`\nReport written: ${outputPath}`);
     }
+
+    // Auto-archive: silently save a copy for history tracking
+    const store = new HistoryStore();
+    store.archive(result);
 
     this.log('');
     this.printSummary(result);
