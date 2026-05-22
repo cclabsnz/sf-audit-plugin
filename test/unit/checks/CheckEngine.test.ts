@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 import { CheckEngine } from '../../../src/checks/CheckEngine.js';
 import type { SecurityCheck, CheckResult } from '../../../src/checks/SecurityCheck.js';
 import type { AuditContext } from '../../../src/context/AuditContext.js';
+import { COMPLIANCE_MAP, getComplianceTags } from '../../../src/findings/ComplianceMapping.js';
 
 function makeCtx(): AuditContext {
   return {
@@ -128,6 +129,24 @@ describe('CheckEngine', () => {
 
       expect(result.metrics.totalActiveUsers).toBe(10);
       expect(result.metrics.apexClassCount).toBe(50);
+    });
+  });
+
+  describe('ComplianceMapping', () => {
+    it('COMPLIANCE_MAP covers every registered check ID', async () => {
+      const { CHECKS } = await import('../../../src/checks/registry.js');
+      for (const check of CHECKS) {
+        expect(COMPLIANCE_MAP).toHaveProperty(check.id);
+      }
+    });
+
+    it('getComplianceTags returns tags for a known check ID', () => {
+      expect(getComplianceTags('users-and-admins')).toContain('OWASP-A01');
+      expect(getComplianceTags('users-and-admins')).toContain('SOC2-CC6.1');
+    });
+
+    it('getComplianceTags returns empty array for unknown check ID', () => {
+      expect(getComplianceTags('nonexistent-check')).toEqual([]);
     });
   });
 });
