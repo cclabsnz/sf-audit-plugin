@@ -149,6 +149,27 @@ describe('CheckEngine', () => {
       const result = await engine.run();
       expect(result.findings[0].complianceTags).toEqual([]);
     });
+
+    it('marks findings inconclusive when check throws a permission error', async () => {
+      const check = makeCheck('c-perm');
+      const permError = new Error('INSUFFICIENT_ACCESS_RIGHTS: cannot query') as Error & { errorCode?: string };
+      permError.errorCode = 'INSUFFICIENT_ACCESS_RIGHTS';
+      (check.run as any).mockRejectedValue(permError);
+      const engine = new CheckEngine([check], makeCtx());
+      const result = await engine.run();
+      expect(result.findings).toHaveLength(1);
+      expect(result.findings[0].inconclusive).toBe(true);
+      expect(result.findings[0].riskLevel).toBe('INFO');
+    });
+
+    it('does NOT mark findings inconclusive for non-permission errors', async () => {
+      const check = makeCheck('c-err');
+      (check.run as any).mockRejectedValue(new Error('Network timeout'));
+      const engine = new CheckEngine([check], makeCtx());
+      const result = await engine.run();
+      expect(result.findings[0].inconclusive).toBeUndefined();
+      expect(result.findings[0].riskLevel).toBe('INFO');
+    });
   });
 
   describe('ComplianceMapping', () => {
