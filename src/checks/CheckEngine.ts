@@ -8,17 +8,43 @@ import type { ScoringConfig } from '../findings/ScoringConfig.js';
 import { buildAuditResult } from '../findings/scoring.js';
 import { getComplianceTags } from '../findings/ComplianceMapping.js';
 
+const PERMISSION_ERROR_CODES = new Set([
+  'INSUFFICIENT_ACCESS_RIGHTS',
+  'INVALID_CROSS_REFERENCE_KEY',
+  'ENTITY_IS_INACCESSIBLE',
+  'INVALID_FIELD',
+  'INVALID_TYPE',
+]);
+
+function isPermissionError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const code = (err as Error & { errorCode?: string }).errorCode ?? '';
+  const msg = err.message ?? '';
+  return (
+    PERMISSION_ERROR_CODES.has(code) ||
+    msg.includes('INSUFFICIENT_ACCESS') ||
+    msg.includes('insufficient access') ||
+    msg.includes('INVALID_FIELD') ||
+    msg.includes('entity type cannot be queried')
+  );
+}
+
 function buildErrorFinding(check: SecurityCheck, err: unknown): Finding {
   const msg = err instanceof Error ? err.message : String(err);
+  const inconclusive = isPermissionError(err);
   return {
     id: `${check.id}-error`,
     checkId: check.id,
     category: check.category,
     riskLevel: 'INFO',
-    title: `${check.name}: check failed`,
-    detail: `This check encountered an error and could not complete: ${msg}`,
-    remediation:
-      'Review the error message and verify the running user has the required permissions.',
+    title: `${check.name}: ${inconclusive ? 'insufficient permissions' : 'check failed'}`,
+    detail: inconclusive
+      ? `This check could not gather evidence because the running user lacks the required permissions: ${msg}`
+      : `This check encountered an error and could not complete: ${msg}`,
+    remediation: inconclusive
+      ? 'Grant the audit user the permissions listed in the tool documentation, then re-run the audit.'
+      : 'Review the error message and verify the running user has the required permissions.',
+    inconclusive: inconclusive || undefined,
   };
 }
 
