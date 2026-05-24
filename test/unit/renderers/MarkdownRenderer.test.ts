@@ -95,4 +95,36 @@ describe('MarkdownRenderer', () => {
     expect(output).not.toContain('Notes');
     expect(output).toContain('[Open ↗](https://org.salesforce.com/0PS123)');
   });
+
+  it('renders compliance tags after remediation', () => {
+    const result = makeResult({
+      findings: [{
+        id: 'f1', checkId: 'users-and-admins', category: 'Access', riskLevel: 'HIGH',
+        title: 'Test', detail: 'detail', remediation: 'fix',
+        complianceTags: ['OWASP-A01', 'SOC2-CC6.1'],
+      }],
+    });
+    const md = renderer.render(result);
+    expect(md).toContain('OWASP-A01');
+    expect(md).toContain('SOC2-CC6.1');
+    expect(md).toContain('Compliance');
+  });
+
+  it('labels inconclusive findings with [INCONCLUSIVE]', () => {
+    const result = makeResult({
+      findings: [{
+        id: 'f2', checkId: 'check', category: 'Access', riskLevel: 'INFO',
+        title: 'No Perms', detail: 'd', remediation: 'r',
+        inconclusive: true,
+      }],
+    });
+    const md = renderer.render(result);
+    expect(md).toContain('[INCONCLUSIVE]');
+  });
+
+  it('includes offline-first note in the footer', () => {
+    const md = renderer.render(makeResult());
+    expect(md).toContain('Offline-first');
+    expect(md).toContain('no data');
+  });
 });
