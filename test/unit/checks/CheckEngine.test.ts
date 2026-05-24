@@ -130,6 +130,25 @@ describe('CheckEngine', () => {
       expect(result.metrics.totalActiveUsers).toBe(10);
       expect(result.metrics.apexClassCount).toBe(50);
     });
+
+    it('enriches findings with compliance tags from ComplianceMapping', async () => {
+      const check = makeCheck('users-and-admins', {
+        findings: [{ id: 'f1', category: 'Access', riskLevel: 'HIGH' as const, title: 'Test', detail: 'x', remediation: 'y' }],
+      });
+      const engine = new CheckEngine([check], makeCtx());
+      const result = await engine.run();
+      expect(result.findings[0].complianceTags).toContain('OWASP-A01');
+      expect(result.findings[0].complianceTags).toContain('SOC2-CC6.1');
+    });
+
+    it('sets empty complianceTags array for unknown check IDs', async () => {
+      const check = makeCheck('unknown-check-xyz', {
+        findings: [{ id: 'f1', category: 'Test', riskLevel: 'INFO' as const, title: 'T', detail: 'd', remediation: 'r' }],
+      });
+      const engine = new CheckEngine([check], makeCtx());
+      const result = await engine.run();
+      expect(result.findings[0].complianceTags).toEqual([]);
+    });
   });
 
   describe('ComplianceMapping', () => {
