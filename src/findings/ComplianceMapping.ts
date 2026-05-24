@@ -15,6 +15,7 @@ export const COMPLIANCE_MAP: Record<string, string[]> = {
   'flows-without-sharing':   ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.9.4', 'GDPR-Art.32'],
   'connected-apps':          ['OWASP-A05', 'SOC2-CC6.6', 'ISO-A.9.4', 'GDPR-Art.32'],
   'remote-sites':            ['OWASP-A05', 'SOC2-CC6.4', 'ISO-A.14.1', 'GDPR-Art.32'],
+  // Pre-declared for CspTrustedSitesCheck (added in registry separately)
   'csp-trusted-sites':       ['OWASP-A05', 'SOC2-CC6.4', 'ISO-A.14.1', 'GDPR-Art.32'],
   'named-credentials':       ['OWASP-A02', 'SOC2-CC6.7', 'ISO-A.9.4', 'GDPR-Art.32'],
   'hardcoded-credentials':   ['OWASP-A02', 'SOC2-CC6.7', 'ISO-A.9.4', 'HIPAA-164.312d', 'GDPR-Art.32'],
