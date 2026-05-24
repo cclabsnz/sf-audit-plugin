@@ -1,4 +1,5 @@
 import type { AuditResult } from '../findings/AuditResult.js';
+import type { OrgMetrics } from '../context/OrgMetrics.js';
 import type { AuditRenderer } from './AuditRenderer.js';
 
 const RISK_COLORS: Record<string, string> = {
@@ -20,6 +21,10 @@ const RISK_BG: Record<string, string> = {
 const PASS_COLOR = '#22c55e';
 const PASS_BG    = 'rgba(34,197,94,0.10)';
 
+const GRADE_COLOR: Record<string, string> = {
+  A: '#22c55e', B: '#84cc16', C: '#eab308', D: '#f97316', F: '#ef4444',
+};
+
 function esc(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -27,6 +32,184 @@ function esc(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+
+// ── Dashboard helpers ────────────────────────────────────────────────────────
+
+function statusColor(value: number, warnThreshold: number, dangerThreshold: number): string {
+  if (value <= warnThreshold) return '#22c55e';
+  if (value <= dangerThreshold) return '#d97706';
+  return '#dc2626';
+}
+
+function progressBar(value: number, max: number, color: string): string {
+  if (max === 0) return '';
+  const pct = Math.min(100, Math.round((value / max) * 100));
+  return `<div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${color}"></div></div>`;
+}
+
+function metricRow(label: string, value: string | number, color?: string, bar?: string): string {
+  const val = color
+    ? `<span style="color:${color};font-weight:700">${esc(String(value))}</span>`
+    : `<span class="metric-value">${esc(String(value))}</span>`;
+  return `<div class="metric-row"><span class="metric-label">${esc(label)}</span><div class="metric-right">${val}${bar ?? ''}</div></div>`;
+}
+
+function inventoryCard(title: string, rows: string[]): string {
+  return `<div class="inv-card"><div class="inv-card-title">${esc(title)}</div>${rows.join('')}</div>`;
+}
+
+function buildGaugeSvg(score: number, color: string): string {
+  const cx = 80, cy = 78, r = 60;
+  const startX = cx - r, startY = cy;
+  const endX   = cx + r, endY   = cy;
+
+  // Arc travels counterclockwise from left to right through the TOP
+  // angle from 180° → 360° maps to score 0% → 100%
+  const theta = Math.PI + (score / 100) * Math.PI;
+  const fillX = (cx + r * Math.cos(theta)).toFixed(2);
+  const fillY = (cy + r * Math.sin(theta)).toFixed(2);
+
+  const fillArc = score === 0
+    ? ''
+    : score >= 100
+      ? `<path d="M ${startX} ${startY} A ${r} ${r} 0 0 0 ${endX} ${endY}" stroke="${color}" stroke-width="10" fill="none" stroke-linecap="round" />`
+      : `<path d="M ${startX} ${startY} A ${r} ${r} 0 0 0 ${fillX} ${fillY}" stroke="${color}" stroke-width="10" fill="none" stroke-linecap="round" />`;
+
+  return `<svg width="160" height="88" viewBox="0 0 160 88" aria-hidden="true">
+    <path d="M ${startX} ${startY} A ${r} ${r} 0 0 0 ${endX} ${endY}" stroke="#21262d" stroke-width="10" fill="none" stroke-linecap="round" />
+    ${fillArc}
+  </svg>`;
+}
+
+function buildDonutSvg(counts: Record<string, number>): string {
+  const levels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
+  const total = levels.reduce((s, l) => s + (counts[l] ?? 0), 0);
+  const cx = 60, cy = 60, R = 44;
+  const CIRC = 2 * Math.PI * R;
+
+  if (total === 0) {
+    return `<svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#21262d" stroke-width="14" />
+      <text x="${cx}" y="${cy + 5}" text-anchor="middle" fill="#22c55e" font-size="12" font-family="system-ui,sans-serif">Clean</text>
+    </svg>`;
+  }
+
+  let offset = CIRC / 4; // Start from 12 o'clock
+  const arcs = levels.map(l => {
+    const count = counts[l] ?? 0;
+    if (count === 0) return '';
+    const dash = (count / total) * CIRC;
+    const arc = `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${RISK_COLORS[l]}" stroke-width="14" stroke-dasharray="${dash.toFixed(2)} ${CIRC.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}" />`;
+    offset -= dash;
+    return arc;
+  });
+
+  return `<svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
+    <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#21262d" stroke-width="14" />
+    ${arcs.join('')}
+    <text x="${cx}" y="${cy - 5}" text-anchor="middle" fill="#f0f6fc" font-size="20" font-weight="700" font-family="system-ui,sans-serif">${total}</text>
+    <text x="${cx}" y="${cy + 14}" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui,sans-serif">findings</text>
+  </svg>`;
+}
+
+function buildDashboard(result: AuditResult, counts: Record<string, number>): string {
+  const m: OrgMetrics = result.metrics;
+  const gradeColor = GRADE_COLOR[result.grade] ?? '#64748b';
+
+  const gauge = buildGaugeSvg(result.healthScore, gradeColor);
+  const donut = buildDonutSvg(counts);
+
+  const kpiCards = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(l =>
+    `<div class="kpi-card" style="border-top:3px solid ${RISK_COLORS[l]}">
+      <div class="kpi-value" style="color:${RISK_COLORS[l]}">${counts[l] ?? 0}</div>
+      <div class="kpi-label">${l}</div>
+    </div>`,
+  ).join('');
+
+  // Users & Access
+  const modifyColor  = statusColor(m.modifyAllDataUsersCount, 2, 5);
+  const viewColor    = statusColor(m.viewAllDataUsersCount, 5, 15);
+  const inactiveColor = statusColor(m.inactiveUsers90d, 0, 5);
+  const usersCard = inventoryCard('Users & Access', [
+    metricRow('Active Users', m.totalActiveUsers),
+    metricRow('Modify All Data', m.modifyAllDataUsersCount, modifyColor,
+      m.totalActiveUsers > 0 ? progressBar(m.modifyAllDataUsersCount, m.totalActiveUsers, modifyColor) : ''),
+    metricRow('View All Data', m.viewAllDataUsersCount, viewColor,
+      m.totalActiveUsers > 0 ? progressBar(m.viewAllDataUsersCount, m.totalActiveUsers, viewColor) : ''),
+    metricRow('Inactive 90d', m.inactiveUsers90d, inactiveColor),
+    metricRow('Profiles', m.profileCount),
+    metricRow('Permission Sets', m.permissionSetCount),
+  ]);
+
+  // Code Quality
+  const covColor = m.codeCoveragePercent >= 75 ? '#22c55e' : m.codeCoveragePercent >= 50 ? '#d97706' : '#dc2626';
+  const codeCard = inventoryCard('Code Quality', [
+    metricRow('Apex Classes', m.apexClassCount),
+    metricRow('Apex Triggers', m.apexTriggerCount),
+    metricRow('Code Coverage', `${m.codeCoveragePercent}%`, covColor,
+      progressBar(m.codeCoveragePercent, 100, covColor)),
+  ]);
+
+  // Integrations
+  const insecureColor    = m.insecureRemoteSitesCount > 0 ? '#dc2626' : '#22c55e';
+  const unusedCredColor  = statusColor(m.unusedNamedCredentialsCount, 0, 2);
+  const integrationsCard = inventoryCard('Integrations', [
+    metricRow('Connected Apps', m.connectedAppsCount),
+    metricRow('Remote Sites', m.remoteSitesCount),
+    metricRow('↳ Insecure', m.insecureRemoteSitesCount, insecureColor,
+      m.remoteSitesCount > 0 ? progressBar(m.insecureRemoteSitesCount, m.remoteSitesCount, insecureColor) : ''),
+    metricRow('Named Credentials', m.namedCredentialsCount),
+    metricRow('↳ Unused', m.unusedNamedCredentialsCount, m.unusedNamedCredentialsCount > 0 ? '#d97706' : '#22c55e',
+      m.namedCredentialsCount > 0 ? progressBar(m.unusedNamedCredentialsCount, m.namedCredentialsCount, unusedCredColor) : ''),
+  ]);
+
+  // Governance & Events
+  const failedColor    = statusColor(m.failedLogins30d, 10, 100);
+  const healthChkColor = m.healthCheckScore >= 75 ? '#22c55e' : m.healthCheckScore >= 50 ? '#d97706' : '#dc2626';
+  const governanceCard = inventoryCard('Governance & Events', [
+    metricRow('Failed Logins (30d)', m.failedLogins30d, failedColor),
+    metricRow('SF Health Check', `${m.healthCheckScore}%`, healthChkColor,
+      progressBar(m.healthCheckScore, 100, healthChkColor)),
+  ]);
+
+  return `
+  <div class="dashboard">
+    <div class="dash-top">
+      <div class="dash-score-panel">
+        <div class="gauge-wrap">
+          ${gauge}
+          <div class="gauge-center">
+            <div class="gauge-num" style="color:${gradeColor}">${result.healthScore}<span>/100</span></div>
+            <div class="dash-grade" style="background:${gradeColor}">${esc(result.grade)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="dash-risk-panel">
+        <div class="donut-wrap">
+          ${donut}
+          <div class="donut-legend">
+            ${(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map(l =>
+              `<div class="legend-row">
+                <span class="legend-dot" style="background:${RISK_COLORS[l]}"></span>
+                <span>${l}</span>
+                <span class="legend-count">${counts[l] ?? 0}</span>
+              </div>`,
+            ).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="kpi-strip">${kpiCards}</div>
+    <div class="inv-grid">
+      ${usersCard}
+      ${codeCard}
+      ${integrationsCard}
+      ${governanceCard}
+    </div>
+  </div>`;
+}
+
+// ── Main renderer ────────────────────────────────────────────────────────────
 
 export class HtmlRenderer implements AuditRenderer {
   readonly format = 'html';
@@ -38,14 +221,6 @@ export class HtmlRenderer implements AuditRenderer {
       levels.map((l) => [l, result.findings.filter((f) => f.riskLevel === l).length]),
     ) as Record<string, number>;
 
-    const gradeColor: Record<string, string> = {
-      A: '#22c55e', B: '#84cc16', C: '#eab308', D: '#f97316', F: '#ef4444',
-    };
-
-    const summaryBadges = levels
-      .map((l) => `<span class="badge" style="background:${RISK_COLORS[l]}">${counts[l]} ${l}</span>`)
-      .join('');
-
     const filterButtons = [
       `<button class="filter-btn active" data-filter="all">All (${result.findings.length})</button>`,
       ...levels.map(
@@ -54,16 +229,23 @@ export class HtmlRenderer implements AuditRenderer {
     ].join('\n        ');
 
     const findingsHtml = result.findings.length === 0
-      ? '<p style="color:#64748b;text-align:center;padding:2rem 0">No findings.</p>'
+      ? '<p class="no-findings">No findings.</p>'
       : result.findings.map((f) => {
-        const cardAccent = f.passed ? PASS_COLOR : (RISK_COLORS[f.riskLevel] ?? '#64748b');
-        const cardBg     = f.passed ? PASS_BG    : (RISK_BG[f.riskLevel]    ?? 'rgba(100,116,139,0.12)');
-        const badgeStyle = f.passed ? PASS_COLOR : (RISK_COLORS[f.riskLevel] ?? '#64748b');
-        const badgeLabel = f.passed ? '✓ PASS'   : esc(f.riskLevel);
+        const isInconclusive = !!f.inconclusive;
+        const cardAccent = isInconclusive ? '#8b949e' : (f.passed ? PASS_COLOR : (RISK_COLORS[f.riskLevel] ?? '#64748b'));
+        const cardBg     = isInconclusive ? 'rgba(139,148,158,0.06)' : (f.passed ? PASS_BG : (RISK_BG[f.riskLevel] ?? 'rgba(100,116,139,0.12)'));
+        const badgeHtml  = isInconclusive
+          ? `<span class="inconclusive-badge">? INCONCLUSIVE</span>`
+          : f.passed
+            ? `<span class="risk-badge" style="background:${PASS_COLOR}">✓ PASS</span>`
+            : `<span class="risk-badge" style="background:${RISK_COLORS[f.riskLevel] ?? '#64748b'}">${esc(f.riskLevel)}</span>`;
+        const tagsHtml = f.complianceTags?.length
+          ? `<div class="compliance-tags">${f.complianceTags.map((t) => `<span class="compliance-tag">${esc(t)}</span>`).join('')}</div>`
+          : '';
         return `
-      <details class="finding-card" data-risk="${esc(f.riskLevel)}" style="--card-accent:${cardAccent};--card-bg:${cardBg}">
+      <details class="finding-card${isInconclusive ? ' is-inconclusive' : ''}" data-risk="${esc(f.riskLevel)}" style="--card-accent:${cardAccent};--card-bg:${cardBg}">
         <summary class="finding-summary">
-          <span class="risk-badge" style="background:${badgeStyle}">${badgeLabel}</span>
+          ${badgeHtml}
           <span class="finding-title">${esc(f.title)}</span>
           <span class="finding-category">${esc(f.category)}</span>
           <span class="chevron">›</span>
@@ -75,20 +257,21 @@ export class HtmlRenderer implements AuditRenderer {
             <p>${esc(f.remediation)}</p>
           </div>
           ${f.affectedItems?.length ? (() => {
-            const hasUrls = f.affectedItems!.some((i) => i.url);
+            const hasUrls  = f.affectedItems!.some((i) => i.url);
             const hasNotes = f.affectedItems!.some((i) => i.note);
-            const headers = ['Item', ...(hasUrls ? ['Setup Link'] : []), ...(hasNotes ? ['Notes'] : [])];
-            const thead = `<tr>${headers.map((h) => `<th>${esc(h)}</th>`).join('')}</tr>`;
-            const tbody = f.affectedItems!.map((item) => {
+            const headers  = ['Item', ...(hasUrls ? ['Setup Link'] : []), ...(hasNotes ? ['Notes'] : [])];
+            const thead    = `<tr>${headers.map((h) => `<th>${esc(h)}</th>`).join('')}</tr>`;
+            const tbody    = f.affectedItems!.map((item) => {
               const cells = [
                 `<td>${esc(item.label)}</td>`,
-                ...(hasUrls ? [`<td>${item.url ? `<a href="${esc(item.url)}" target="_blank" rel="noopener">Open ↗</a>` : '—'}</td>`] : []),
+                ...(hasUrls  ? [`<td>${item.url ? `<a href="${esc(item.url)}" target="_blank" rel="noopener">Open ↗</a>` : '—'}</td>`] : []),
                 ...(hasNotes ? [`<td>${esc(item.note ?? '')}</td>`] : []),
               ];
               return `<tr>${cells.join('')}</tr>`;
             }).join('');
             return `<div class="affected-items"><strong>Affected items (${f.affectedItems!.length})</strong><table class="affected-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
           })() : ''}
+          ${tagsHtml}
         </div>
       </details>`;
       }).join('\n');
@@ -105,51 +288,106 @@ export class HtmlRenderer implements AuditRenderer {
     font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     background: #0d1117;
     color: #c9d1d9;
-    max-width: 1000px;
+    max-width: 1100px;
     margin: 2rem auto;
     padding: 0 1.25rem 4rem;
     line-height: 1.6;
   }
-  /* Header */
-  .header { margin-bottom: 2rem; }
+
+  /* ── Header ── */
+  .header { margin-bottom: 1.5rem; }
   .header h1 { color: #f0f6fc; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.4rem; }
-  .meta { font-size: 0.8rem; color: #8b949e; display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
-  /* Score card */
-  .scorecard {
+  .meta { font-size: 0.8rem; color: #8b949e; display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; }
+
+  /* ── Dashboard ── */
+  .dashboard { margin-bottom: 2rem; }
+
+  .dash-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .dash-score-panel, .dash-risk-panel {
     background: #161b22;
     border: 1px solid #30363d;
     border-radius: 12px;
-    padding: 1.5rem 2rem;
+    padding: 1.5rem;
     display: flex;
     align-items: center;
-    gap: 2rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
+    justify-content: center;
   }
-  .score-number {
-    font-size: 3.5rem;
-    font-weight: 800;
-    color: #f0f6fc;
-    line-height: 1;
+
+  /* Gauge */
+  .gauge-wrap { display: flex; flex-direction: column; align-items: center; }
+  .gauge-center { text-align: center; margin-top: -0.25rem; }
+  .gauge-num { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+  .gauge-num span { font-size: 1rem; color: #8b949e; font-weight: 400; }
+  .dash-grade {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 2.5rem; height: 2.5rem; border-radius: 50%;
+    font-size: 1.2rem; font-weight: 800; color: #fff;
+    margin-top: 0.5rem;
   }
-  .score-number span { font-size: 1.25rem; color: #8b949e; font-weight: 400; }
-  .grade-badge {
-    width: 3rem; height: 3rem;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.5rem; font-weight: 800;
-    color: #fff;
-    background: ${gradeColor[result.grade] ?? '#64748b'};
+
+  /* Donut */
+  .donut-wrap { display: flex; align-items: center; gap: 1.5rem; }
+  .donut-legend { display: flex; flex-direction: column; gap: 0.45rem; }
+  .legend-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #c9d1d9; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .legend-count { margin-left: auto; font-weight: 700; color: #f0f6fc; padding-left: 1rem; }
+
+  /* KPI strip */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
   }
-  .summary-badges { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-  .badge {
-    padding: 0.2rem 0.65rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
+  .kpi-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+  }
+  .kpi-value { font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 0.25rem; }
+  .kpi-label { font-size: 0.7rem; font-weight: 700; color: #8b949e; letter-spacing: 0.06em; }
+
+  /* Inventory grid */
+  .inv-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  .inv-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+  }
+  .inv-card-title {
+    font-size: 0.7rem;
     font-weight: 700;
-    color: #fff;
+    color: #8b949e;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #21262d;
   }
-  /* Filters */
+  .metric-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.28rem 0;
+  }
+  .metric-label { flex: 1; font-size: 0.82rem; color: #c9d1d9; }
+  .metric-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem; min-width: 72px; }
+  .metric-value { font-size: 0.9rem; font-weight: 700; color: #f0f6fc; }
+  .prog-bar { width: 72px; height: 4px; background: #21262d; border-radius: 2px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 2px; }
+
+  /* ── Filters ── */
   .filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; }
   .filter-btn {
     padding: 0.35rem 0.9rem;
@@ -168,7 +406,8 @@ export class HtmlRenderer implements AuditRenderer {
     border-color: var(--accent, #238636);
     color: #fff;
   }
-  /* Finding cards */
+
+  /* ── Finding cards ── */
   .finding-card {
     background: var(--card-bg);
     border: 1px solid #30363d;
@@ -202,7 +441,7 @@ export class HtmlRenderer implements AuditRenderer {
   .finding-category { font-size: 0.75rem; color: #8b949e; white-space: nowrap; }
   .chevron { color: #8b949e; font-size: 1.2rem; transition: transform 0.2s; }
   .finding-card[open] .chevron { transform: rotate(90deg); }
-  .finding-body { padding: 0 1rem 1rem 1rem; border-top: 1px solid #30363d; }
+  .finding-body { padding: 0 1rem 1rem; border-top: 1px solid #30363d; }
   .finding-detail { color: #c9d1d9; font-size: 0.875rem; padding: 0.75rem 0 0.5rem; }
   .remediation-box {
     background: rgba(35,134,54,0.1);
@@ -213,10 +452,7 @@ export class HtmlRenderer implements AuditRenderer {
     font-size: 0.85rem;
   }
   .remediation-box strong { color: #3fb950; display: block; margin-bottom: 0.25rem; }
-  .affected-items {
-    margin-top: 0.75rem;
-    font-size: 0.82rem;
-  }
+  .affected-items { margin-top: 0.75rem; font-size: 0.82rem; }
   .affected-items strong { color: #c9d1d9; display: block; margin-bottom: 0.5rem; }
   .affected-table {
     width: 100%;
@@ -243,8 +479,57 @@ export class HtmlRenderer implements AuditRenderer {
   .affected-table tr:last-child td { border-bottom: none; }
   .affected-table a { color: #58a6ff; text-decoration: none; white-space: nowrap; }
   .affected-table a:hover { text-decoration: underline; }
-  /* Empty state */
+
   .no-findings { color: #8b949e; text-align: center; padding: 3rem 0; }
+
+  /* ── Compliance tags ── */
+  .compliance-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+  .compliance-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.45rem;
+    border-radius: 3px;
+    background: rgba(88,166,255,0.12);
+    border: 1px solid rgba(88,166,255,0.25);
+    color: #58a6ff;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+  /* ── Inconclusive findings ── */
+  .finding-card.is-inconclusive {
+    border-left-color: #8b949e !important;
+    opacity: 0.8;
+  }
+  .finding-card.is-inconclusive .finding-summary { background: rgba(139,148,158,0.05); }
+  .inconclusive-badge {
+    flex-shrink: 0;
+    padding: 0.15rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: #8b949e;
+    border: 1px dashed #8b949e;
+    letter-spacing: 0.04em;
+  }
+  /* ── Offline footer ── */
+  .offline-footer {
+    margin-top: 3rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    background: rgba(34,197,94,0.05);
+    border: 1px solid rgba(34,197,94,0.15);
+    font-size: 0.78rem;
+    color: #8b949e;
+    text-align: center;
+  }
+  .offline-footer strong { color: #3fb950; }
+
+  /* ── Responsive ── */
+  @media (max-width: 680px) {
+    .dash-top { grid-template-columns: 1fr; }
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+    .inv-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -259,11 +544,7 @@ export class HtmlRenderer implements AuditRenderer {
     </div>
   </div>
 
-  <div class="scorecard">
-    <div class="score-number">${result.healthScore}<span>/100</span></div>
-    <div class="grade-badge" title="Grade">${esc(result.grade)}</div>
-    <div class="summary-badges">${summaryBadges}</div>
-  </div>
+  ${buildDashboard(result, counts)}
 
   <div class="filters">
     ${filterButtons}
@@ -275,7 +556,7 @@ export class HtmlRenderer implements AuditRenderer {
 
 <script>
   const buttons = document.querySelectorAll('.filter-btn');
-  const cards = document.querySelectorAll('.finding-card');
+  const cards   = document.querySelectorAll('.finding-card');
 
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -288,6 +569,9 @@ export class HtmlRenderer implements AuditRenderer {
     });
   });
 </script>
+  <div class="offline-footer">
+    <strong>Offline-first audit</strong> — all analysis performed locally; no data is transmitted outside your Salesforce org. Generated by CloudCounsel SF Audit.
+  </div>
 </body>
 </html>`;
   }
