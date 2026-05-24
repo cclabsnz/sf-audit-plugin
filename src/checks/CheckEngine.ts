@@ -6,6 +6,7 @@ import type { Finding } from '../findings/Finding.js';
 import type { AuditResult } from '../findings/AuditResult.js';
 import type { ScoringConfig } from '../findings/ScoringConfig.js';
 import { buildAuditResult } from '../findings/scoring.js';
+import { getComplianceTags } from '../findings/ComplianceMapping.js';
 
 function buildErrorFinding(check: SecurityCheck, err: unknown): Finding {
   const msg = err instanceof Error ? err.message : String(err);
@@ -42,7 +43,8 @@ export class CheckEngine {
       onProgress?.(i + 1, total, check.name);
       try {
         const result = await check.run(this.ctx);
-        findings.push(...result.findings.map((f) => ({ ...f, checkId: check.id })));
+        const tags = getComplianceTags(check.id);
+        findings.push(...result.findings.map((f) => ({ ...f, checkId: check.id, complianceTags: tags })));
         if (result.metrics) {
           metrics = { ...metrics, ...result.metrics };
         }
