@@ -12,6 +12,7 @@ import { PasswordSessionPolicyCheck } from './impl/PasswordSessionPolicyCheck.js
 import { IpRestrictionsCheck } from './impl/IpRestrictionsCheck.js';
 import { GuestUserAccessCheck } from './impl/GuestUserAccessCheck.js';
 import { RemoteSitesCheck } from './impl/RemoteSitesCheck.js';
+import { CspTrustedSitesCheck } from './impl/CspTrustedSitesCheck.js';
 import { NamedCredentialsCheck } from './impl/NamedCredentialsCheck.js';
 import { HardcodedCredentialsCheck } from './impl/HardcodedCredentialsCheck.js';
 import { ApexSharingCheck } from './impl/ApexSharingCheck.js';
@@ -38,6 +39,7 @@ export const CHECKS: SecurityCheck[] = [
   new IpRestrictionsCheck(),       // no cache deps
   new GuestUserAccessCheck(),      // reads: healthCloudInstalled
   new RemoteSitesCheck(),          // writes: remoteSiteUrls
+  new CspTrustedSitesCheck(),      // no deps
   new NamedCredentialsCheck(),     // writes: namedCredentialEndpoints
   new HardcodedCredentialsCheck(), // reads: namedCredentialEndpoints, remoteSiteUrls; writes: apexBodies
   new ApexSharingCheck(),          // reads: apexBodies
