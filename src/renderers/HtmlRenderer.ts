@@ -1,6 +1,7 @@
 import type { AuditResult } from '../findings/AuditResult.js';
 import type { OrgMetrics } from '../context/OrgMetrics.js';
 import type { AuditRenderer } from './AuditRenderer.js';
+import { esc } from './html-utils.js';
 
 const RISK_COLORS: Record<string, string> = {
   CRITICAL: '#dc2626',
@@ -24,14 +25,6 @@ const PASS_BG    = 'rgba(34,197,94,0.10)';
 const GRADE_COLOR: Record<string, string> = {
   A: '#22c55e', B: '#84cc16', C: '#eab308', D: '#f97316', F: '#ef4444',
 };
-
-function esc(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
 
 // ── Dashboard helpers ────────────────────────────────────────────────────────
 
