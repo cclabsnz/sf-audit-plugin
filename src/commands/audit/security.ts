@@ -9,6 +9,8 @@ import { JsonRenderer } from '../../renderers/JsonRenderer.js';
 import { HtmlRenderer } from '../../renderers/HtmlRenderer.js';
 import { MarkdownRenderer } from '../../renderers/MarkdownRenderer.js';
 import type { AuditRenderer } from '../../renderers/AuditRenderer.js';
+import { ClientReportRenderer } from '../../renderers/ClientReportRenderer.js';
+import { resolveBranding, type BrandingOverrides } from '../../report/branding.js';
 import { buildAuditContext, resolveOrgInfo } from '../../lib/wire.js';
 import { loadScoringConfig } from '../../findings/loadScoringConfig.js';
 import { HistoryStore } from '../../history/HistoryStore.js';
@@ -53,6 +55,17 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
       summary: 'Path to a custom scoring config JSON file. Merges with defaults.',
       helpValue: './hnz-scoring.json',
     }),
+    'prepared-for': Flags.string({
+      summary: 'Client name for the executive report cover line.',
+    }),
+    branding: Flags.string({
+      summary: 'Path to a report-branding.json to override CloudCounsel defaults (executive format).',
+      helpValue: './report-branding.json',
+    }),
+    top: Flags.integer({
+      summary: 'Number of executive priorities to highlight (executive format).',
+      default: 5,
+    }),
   };
 
   public async run(): Promise<AuditResult> {
@@ -91,13 +104,14 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     const formats = flags.format.split(',').map((f) => f.trim());
     fs.mkdirSync(flags.output, { recursive: true });
     for (const format of formats) {
-      const renderer = RENDERERS[format];
+      const renderer = this.rendererFor(format, flags);
       if (!renderer) {
-        this.warn(`Unknown format '${format}' — skipping. Valid formats: html, md, json`);
+        this.warn(`Unknown format '${format}' — skipping. Valid formats: html, md, json, executive`);
         continue;
       }
       const output = renderer.render(result);
-      const filename = `sf-audit-${orgInfo.id}-${Date.now()}${renderer.fileExtension}`;
+      const prefix = renderer.filenamePrefix ?? 'sf-audit';
+      const filename = `${prefix}-${orgInfo.id}-${Date.now()}${renderer.fileExtension}`;
       const outputPath = path.join(flags.output, filename);
       fs.writeFileSync(outputPath, output, 'utf-8');
       this.log(`\nReport written: ${outputPath}`);
@@ -115,6 +129,19 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     }
 
     return result;
+  }
+
+  private rendererFor(
+    format: string,
+    flags: { 'prepared-for'?: string; branding?: string; top: number },
+  ): AuditRenderer | undefined {
+    if (format === 'executive') {
+      let overrides: BrandingOverrides | undefined;
+      if (flags.branding) overrides = JSON.parse(fs.readFileSync(flags.branding, 'utf-8')) as BrandingOverrides;
+      const branding = resolveBranding(overrides, flags['prepared-for']);
+      return new ClientReportRenderer({ branding, topN: flags.top });
+    }
+    return RENDERERS[format];
   }
 
   private printSummary(result: AuditResult): void {
