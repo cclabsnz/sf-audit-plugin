@@ -1,10 +1,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import type { AuditResult } from '../../findings/AuditResult.js';
 import type { RiskLevel } from '../../findings/RiskLevel.js';
-import { QueryRegistry } from '../../queries/QueryRegistry.js';
 import { CheckEngine } from '../../checks/CheckEngine.js';
 import { CHECKS } from '../../checks/registry.js';
 import { JsonRenderer } from '../../renderers/JsonRenderer.js';
@@ -61,11 +59,8 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     const { flags } = await this.parse(SecurityAuditCommand);
 
     const conn = flags['target-org'].getConnection('62.0') as any;
-    // Resolve plugin root from compiled file location (lib/commands/audit/security.js → 3 levels up)
-    const pluginRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-    const queries = QueryRegistry.load(pluginRoot);
     const orgInfo = await resolveOrgInfo(conn);
-    const ctx = buildAuditContext(conn, queries, orgInfo);
+    const ctx = buildAuditContext(conn, orgInfo);
 
     const checksToRun = flags.checks
       ? (() => {
@@ -94,6 +89,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     });
 
     const formats = flags.format.split(',').map((f) => f.trim());
+    fs.mkdirSync(flags.output, { recursive: true });
     for (const format of formats) {
       const renderer = RENDERERS[format];
       if (!renderer) {

@@ -8,6 +8,11 @@ interface GroupRecord {
   Type: string;
 }
 
+interface SharingCountRecord {
+  UserOrGroupId: string;
+  cnt: number;
+}
+
 const SHARE_TABLES = ['AccountShare', 'CaseShare', 'ContactShare', 'OpportunityShare'] as const;
 
 export class PublicGroupSharingCheck implements SecurityCheck {
@@ -47,20 +52,31 @@ export class PublicGroupSharingCheck implements SecurityCheck {
       count: number;
     }
 
-    const exposures: Exposure[] = [];
+    // One query per share table with IN clause — reduces G×4 queries to 4 regardless of group count
+    const groupIdList = groups.map((g) => `'${g.Id}'`).join(', ');
+    const groupNameMap = new Map(groups.map((g) => [g.Id, g.Name]));
 
-    for (const group of groups) {
-      for (const shareTable of SHARE_TABLES) {
-        try {
-          const result = await ctx.soql.query<Record<string, never>>(
-            `SELECT COUNT() FROM ${shareTable} WHERE UserOrGroupId = '${group.Id}' AND RowCause = 'SharingRule'`
-          );
-          if (result.totalSize > 0) {
-            exposures.push({ shareTable, groupName: group.Name, count: result.totalSize });
+    const exposures: Exposure[] = [];
+    for (const shareTable of SHARE_TABLES) {
+      try {
+        const result = await ctx.soql.query<SharingCountRecord>(
+          `SELECT UserOrGroupId, COUNT(Id) cnt
+           FROM ${shareTable}
+           WHERE UserOrGroupId IN (${groupIdList})
+             AND RowCause = 'SharingRule'
+           GROUP BY UserOrGroupId`
+        );
+        for (const r of result.records) {
+          if (r.cnt > 0) {
+            exposures.push({
+              shareTable,
+              groupName: groupNameMap.get(r.UserOrGroupId) ?? r.UserOrGroupId,
+              count: r.cnt,
+            });
           }
-        } catch {
-          // Object may not exist or not be accessible — skip silently
         }
+      } catch {
+        // Object may not exist or not be accessible — skip silently
       }
     }
 

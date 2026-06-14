@@ -58,6 +58,7 @@ export default class AuditDiffCommand extends SfCommand<AuditDiff> {
     const baseTs  = baseline.generatedAt.getTime();
     const curTs   = current.generatedAt.getTime();
 
+    fs.mkdirSync(flags.output, { recursive: true });
     for (const format of formats) {
       const renderer = DIFF_RENDERERS[format];
       if (!renderer) {

@@ -10,7 +10,6 @@ function makeCtx(records: unknown[]): AuditContext {
     } as any,
     tooling: {} as any,
     rest: {} as any,
-    queries: {} as any,
     orgInfo: {
       id: 'org1', name: 'Test', type: 'DE', isSandbox: false,
       instance: 'NA1', instanceUrl: 'https://test.salesforce.com',

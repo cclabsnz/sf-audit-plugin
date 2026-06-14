@@ -29,12 +29,76 @@ export class UsersAndAdminsCheck implements SecurityCheck {
     );
     const totalActiveUsers = activeUsersResult.totalSize;
 
-    // Modify All Data
-    const modifyAllResult = await ctx.soql.query<PsaRecord>(
-      'SELECT Assignee.Id, Assignee.Username, Assignee.Name, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.IsOwnedByProfile FROM PermissionSetAssignment WHERE PermissionSet.PermissionsModifyAllData = true AND Assignee.IsActive = true AND AssigneeId NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)'
+    // Single query for all broad permissions — avoids multiple round-trips to the org.
+    // We filter per-permission in TypeScript after fetching.
+    interface BroadPermRecord {
+      Assignee: { Id: string; Username: string; Name?: string; Profile?: { Name: string } };
+      PermissionSet: {
+        Name: string;
+        IsOwnedByProfile?: boolean;
+        PermissionsModifyAllData: boolean;
+        PermissionsViewAllData: boolean;
+        PermissionsManageUsers: boolean;
+        PermissionsCustomizeApplication: boolean;
+        PermissionsAuthorApex: boolean;
+      };
+    }
+
+    const broadPermResult = await ctx.soql.query<BroadPermRecord>(
+      `SELECT Assignee.Id, Assignee.Username, Assignee.Name, Assignee.Profile.Name,
+              PermissionSet.Name, PermissionSet.IsOwnedByProfile,
+              PermissionSet.PermissionsModifyAllData, PermissionSet.PermissionsViewAllData,
+              PermissionSet.PermissionsManageUsers, PermissionSet.PermissionsCustomizeApplication,
+              PermissionSet.PermissionsAuthorApex
+       FROM PermissionSetAssignment
+       WHERE (PermissionSet.PermissionsModifyAllData = true
+           OR PermissionSet.PermissionsViewAllData = true
+           OR PermissionSet.PermissionsManageUsers = true
+           OR PermissionSet.PermissionsCustomizeApplication = true
+           OR PermissionSet.PermissionsAuthorApex = true)
+         AND Assignee.IsActive = true
+         AND AssigneeId NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)`
     );
-    const modifyAllUsers = modifyAllResult.records;
-    const modifyAllCount = modifyAllUsers.length;
+
+    const broadPerms = broadPermResult.records;
+
+    // Group by permission — a user may appear multiple times (once per permission set granting them)
+    const modifyAllUsers = broadPerms.filter((r) => r.PermissionSet.PermissionsModifyAllData);
+    const viewAllUsers   = broadPerms.filter((r) => r.PermissionSet.PermissionsViewAllData);
+    const manageUsersRows = broadPerms.filter((r) => r.PermissionSet.PermissionsManageUsers);
+    const customizeAppUsers = broadPerms.filter((r) => r.PermissionSet.PermissionsCustomizeApplication);
+    const authorApexUsers   = broadPerms.filter((r) => r.PermissionSet.PermissionsAuthorApex);
+
+    // Deduplicate by Assignee.Id for counting unique users
+    const uniqueIds = (rows: BroadPermRecord[]) => new Set(rows.map((r) => r.Assignee.Id));
+    const modifyAllIds   = uniqueIds(modifyAllUsers);
+    const viewAllIds     = uniqueIds(viewAllUsers);
+    const manageUsersIds = uniqueIds(manageUsersRows);
+
+    const modifyAllCount   = modifyAllIds.size;
+    const viewAllCount     = viewAllIds.size;
+    const customizeAppCount = uniqueIds(customizeAppUsers).size;
+    const authorApexCount   = uniqueIds(authorApexUsers).size;
+
+    // SBS-ACS-004: flag users with ALL THREE super-admin permissions simultaneously
+    const superAdminIds = [...modifyAllIds].filter((id) => viewAllIds.has(id) && manageUsersIds.has(id));
+    if (superAdminIds.length > 0) {
+      const superAdminItems = superAdminIds.map((id) => {
+        const row = modifyAllUsers.find((r) => r.Assignee.Id === id)!;
+        return userItem(row as PsaRecord);
+      });
+      findings.push({
+        id: 'users-super-admin-combo',
+        category: this.category,
+        riskLevel: 'CRITICAL',
+        title: `${superAdminIds.length} user(s) hold the super-admin permission combination (ViewAllData + ModifyAllData + ManageUsers)`,
+        detail:
+          'SBS-ACS-004 requires documented justification for any user holding all three of ViewAllData, ModifyAllData, and ManageUsers simultaneously. This combination is equivalent to unrestricted org control.',
+        remediation:
+          'Reduce to the minimum necessary permissions. Document justification for each user in the system of record. Consider breaking this into role-specific permission sets.',
+        affectedItems: superAdminItems,
+      });
+    }
 
     const modifyRisk = modifyAllCount > 5 ? 'CRITICAL' : modifyAllCount > 3 ? 'HIGH' : 'LOW';
     findings.push({
@@ -44,15 +108,8 @@ export class UsersAndAdminsCheck implements SecurityCheck {
       title: `${modifyAllCount} user(s) have Modify All Data permission`,
       detail: 'Modify All Data grants unrestricted write access across all objects. This is one of the most powerful permissions in Salesforce.',
       remediation: 'Limit Modify All Data to essential system administrators only. Review each user and remove the permission from any non-essential accounts.',
-      affectedItems: modifyAllUsers.map(userItem),
+      affectedItems: modifyAllUsers.map((r) => userItem(r as PsaRecord)),
     });
-
-    // View All Data
-    const viewAllResult = await ctx.soql.query<PsaRecord>(
-      'SELECT Assignee.Id, Assignee.Username, Assignee.Name, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.IsOwnedByProfile FROM PermissionSetAssignment WHERE PermissionSet.PermissionsViewAllData = true AND Assignee.IsActive = true AND AssigneeId NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)'
-    );
-    const viewAllUsers = viewAllResult.records;
-    const viewAllCount = viewAllUsers.length;
 
     const viewRisk = viewAllCount > 10 ? 'HIGH' : viewAllCount > 5 ? 'MEDIUM' : 'LOW';
     findings.push({
@@ -62,15 +119,8 @@ export class UsersAndAdminsCheck implements SecurityCheck {
       title: `${viewAllCount} user(s) have View All Data permission`,
       detail: 'View All Data grants unrestricted read access across all objects, bypassing sharing rules and record-level security.',
       remediation: 'Limit View All Data to essential users. Consider using permission sets scoped to specific objects instead.',
-      affectedItems: viewAllUsers.map(userItem),
+      affectedItems: viewAllUsers.map((r) => userItem(r as PsaRecord)),
     });
-
-    // Customize Application
-    const customizeAppResult = await ctx.soql.query<PsaRecord>(
-      'SELECT Assignee.Id, Assignee.Username, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.IsOwnedByProfile FROM PermissionSetAssignment WHERE PermissionSet.PermissionsCustomizeApplication = true AND Assignee.IsActive = true AND AssigneeId NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)'
-    );
-    const customizeAppUsers = customizeAppResult.records;
-    const customizeAppCount = customizeAppUsers.length;
 
     if (customizeAppCount > 5) {
       findings.push({
@@ -80,16 +130,9 @@ export class UsersAndAdminsCheck implements SecurityCheck {
         title: `${customizeAppCount} user(s) have Customize Application permission`,
         detail: 'Customize Application allows users to make metadata changes, including modifying page layouts, custom fields, and application settings.',
         remediation: 'Customize Application allows metadata changes. Review and reduce to essential configuration administrators.',
-        affectedItems: customizeAppUsers.map(userItem),
+        affectedItems: customizeAppUsers.map((r) => userItem(r as PsaRecord)),
       });
     }
-
-    // Author Apex
-    const authorApexResult = await ctx.soql.query<PsaRecord>(
-      'SELECT Assignee.Id, Assignee.Username, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.IsOwnedByProfile FROM PermissionSetAssignment WHERE PermissionSet.PermissionsAuthorApex = true AND Assignee.IsActive = true AND AssigneeId NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)'
-    );
-    const authorApexUsers = authorApexResult.records;
-    const authorApexCount = authorApexUsers.length;
 
     if (authorApexCount > 3) {
       findings.push({
@@ -99,7 +142,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
         title: `${authorApexCount} user(s) have Author Apex permission`,
         detail: 'Author Apex allows users to write and deploy Apex code, which can execute server-side logic with elevated privileges.',
         remediation: 'Author Apex allows code deployment. Limit to developers with a genuine need.',
-        affectedItems: authorApexUsers.map(userItem),
+        affectedItems: authorApexUsers.map((r) => userItem(r as PsaRecord)),
       });
     }
 

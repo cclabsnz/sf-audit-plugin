@@ -68,31 +68,44 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
       return { findings };
     }
 
-    // 2. Resolve object API names
-    const objectIds = [...new Set(sensitiveFields.map((f) => f.TableEnumOrId))];
-    let entityDefs: EntityDefinitionRecord[] = [];
-    try {
-      entityDefs = await ctx.tooling.query<EntityDefinitionRecord>(
-        `SELECT Id, QualifiedApiName FROM EntityDefinition WHERE Id IN (${objectIds.map((id) => `'${id}'`).join(', ')})`
-      );
-    } catch {
-      // If entity lookup fails, fall through — field names will be unresolvable
+    // 2. Resolve object API names.
+    // CustomField.TableEnumOrId is either:
+    //   - An 18-char Salesforce ID (custom objects) — needs EntityDefinition lookup
+    //   - An API name string like 'Account' (standard objects) — use directly
+    const sfIdPattern = /^[A-Za-z0-9]{15,18}$/;
+    const objectApiNameById = new Map<string, string>();
+
+    const customObjectIds: string[] = [];
+    for (const field of sensitiveFields) {
+      const teo = field.TableEnumOrId;
+      if (teo.length >= 15 && sfIdPattern.test(teo)) {
+        customObjectIds.push(teo);
+      } else {
+        // Standard object: TableEnumOrId IS the API name
+        objectApiNameById.set(teo, teo);
+      }
     }
 
-    const objectApiNameById = new Map<string, string>(
-      entityDefs.map((e) => [e.Id, e.QualifiedApiName])
-    );
+    if (customObjectIds.length > 0) {
+      try {
+        const entityDefs = await ctx.tooling.query<EntityDefinitionRecord>(
+          `SELECT Id, QualifiedApiName FROM EntityDefinition WHERE Id IN (${[...new Set(customObjectIds)].map((id) => `'${id}'`).join(', ')})`
+        );
+        for (const e of entityDefs) {
+          objectApiNameById.set(e.Id, e.QualifiedApiName);
+        }
+      } catch {
+        // If entity lookup fails, custom object field names will be unresolvable
+      }
+    }
 
     // Build field API names: {ObjectApiName}.{DeveloperName}__c
     const fieldApiNames: string[] = [];
-    const fieldApiNameMap = new Map<string, string>();
 
     for (const field of sensitiveFields) {
       const objectApiName = objectApiNameById.get(field.TableEnumOrId);
       if (objectApiName) {
-        const fieldApiName = `${objectApiName}.${field.DeveloperName}__c`;
-        fieldApiNames.push(fieldApiName);
-        fieldApiNameMap.set(fieldApiName, fieldApiName);
+        fieldApiNames.push(`${objectApiName}.${field.DeveloperName}__c`);
       }
     }
 
@@ -118,12 +131,7 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
          WHERE PermissionsRead = true AND Field IN (${fieldApiNames.map((f) => `'${f}'`).join(', ')})
          GROUP BY Field`
       );
-      permRecords = result.records.map((r) => ({
-        Field: r.Field,
-        cnt: (r as unknown as Record<string, unknown>).cnt != null
-          ? Number((r as unknown as Record<string, unknown>).cnt)
-          : 0,
-      }));
+      permRecords = result.records.map((r) => ({ Field: r.Field, cnt: r.cnt ?? 0 }));
     } catch {
       findings.push({
         id: 'field-level-security-ok',

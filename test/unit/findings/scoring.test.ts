@@ -1,13 +1,13 @@
 import { buildAuditResult } from '../../../src/findings/scoring.js';
 import type { Finding } from '../../../src/findings/Finding.js';
 import type { AuditContext } from '../../../src/context/AuditContext.js';
+import type { AttackChain } from '../../../src/chains/AttackChain.js';
 
 function makeCtx(): AuditContext {
   return {
     soql: {} as any,
     tooling: {} as any,
     rest: {} as any,
-    queries: {} as any,
     orgInfo: { id: 'orgId', name: 'Test Org', type: 'Developer Edition', isSandbox: false, instance: 'NA1', instanceUrl: 'https://test.salesforce.com' },
     cache: {},
   };
@@ -147,6 +147,32 @@ describe('buildAuditResult', () => {
       // Zero findings → healthScore=100, minScore=95 → should be A
       const result = buildAuditResult(makeCtx(), [], {}, config);
       expect(result.grade).toBe('A');
+    });
+  });
+
+  describe('buildAuditResult with attack chains', () => {
+    function mkCtx() {
+      return {
+        orgInfo: { id: 'o', name: 'n', type: 'DE', isSandbox: false, instance: 'NA1', instanceUrl: 'https://x' },
+      } as any;
+    }
+    const cleanFinding = (id: string): Finding => ({
+      id, checkId: id, category: 'x', riskLevel: 'LOW' as const, title: id, detail: '', remediation: '', passed: true,
+    });
+    const criticalChain: AttackChain = {
+      id: 'c1', title: 'Takeover', severity: 'CRITICAL', confidence: 'named',
+      narrative: '', remediation: '', steps: [],
+    };
+
+    it('a CRITICAL chain prevents grade A even when findings are clean', () => {
+      const result = buildAuditResult(mkCtx(), [cleanFinding('a'), cleanFinding('b')], {}, undefined, [criticalChain]);
+      expect(result.attackChains).toHaveLength(1);
+      expect(result.grade).not.toBe('A');
+    });
+
+    it('defaults attackChains to empty when none supplied', () => {
+      const result = buildAuditResult(mkCtx(), [cleanFinding('a')], {});
+      expect(result.attackChains).toEqual([]);
     });
   });
 });

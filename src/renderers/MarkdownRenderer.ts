@@ -17,6 +17,29 @@ export class MarkdownRenderer implements AuditRenderer {
     lines.push(`**Instance:** ${result.instance} | **Type:** ${result.orgType}${result.isSandbox ? ' (Sandbox)' : ''}`);
     lines.push(`**Health Score:** ${result.healthScore}/100 | **Grade:** ${result.grade}`);
     lines.push('');
+    if (result.attackChains && result.attackChains.length > 0) {
+      lines.push(`## Attack Paths (${result.attackChains.length})`);
+      lines.push('');
+      lines.push('_Combinations of findings that together enable an exploit more severe than any single finding._');
+      lines.push('');
+      for (const c of result.attackChains) {
+        const conf = c.confidence === 'named' ? '' : ' _(potential)_';
+        lines.push(`### [${c.severity}] ${c.title}${conf}`);
+        lines.push('');
+        lines.push(c.narrative);
+        lines.push('');
+        lines.push('**Steps:**');
+        lines.push('');
+        c.steps.forEach((s, i) => {
+          lines.push(`${i + 1}. **${s.title ?? s.findingId}** (${s.severity ?? '—'}) — grants \`${s.capability}\``);
+        });
+        lines.push('');
+        lines.push(`**Remediation:** ${c.remediation}`);
+        lines.push('');
+        lines.push('---');
+        lines.push('');
+      }
+    }
     lines.push(`## Findings (${result.findings.length})`);
     lines.push('');
 

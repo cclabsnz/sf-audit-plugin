@@ -15,12 +15,20 @@ export function loadScoringConfig(
   } catch (err) {
     throw new Error(`Cannot read scoring config file '${filePath}': ${err instanceof Error ? err.message : String(err)}`);
   }
-  const parsed: unknown = JSON.parse(raw);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(
+      `Invalid JSON in scoring config '${filePath}': ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
   const validated = scoringConfigSchema.parse(parsed); // throws ZodError on failure
 
   // Warn on unknown check IDs and drop them
   const safeCheckWeights: Record<string, number> = {};
-  for (const [id, weight] of Object.entries(validated.checkWeights ?? {})) {
+  const rawWeights: Record<string, number> = validated.checkWeights ?? {};
+  for (const [id, weight] of Object.entries(rawWeights)) {
     if (!knownCheckIds.has(id)) {
       warn(`Unknown check ID in --scoring-config checkWeights: '${id}'. Run 'sf audit list' to see valid IDs. Skipping.`);
     } else {

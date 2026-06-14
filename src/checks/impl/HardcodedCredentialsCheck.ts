@@ -14,8 +14,8 @@ const HIGH_RISK_PATTERNS = [
   /Bearer\s+[A-Za-z0-9\-_.~+/]{20,}=*/gi,        // Bearer tokens (min length to avoid test stubs)
   /Basic\s+[A-Za-z0-9+/]{20,}=*/gi,               // Basic auth (min length)
   /Authorization['":\s]+['"](Bearer|Basic)/gi,     // Auth header construction
-  // Credential variable assignments with a string literal RHS
-  /(?:password|passwd|secret|apiKey|api_key|clientSecret|client_secret|accessToken|access_token|authToken|auth_token)\s*[=+]\s*'[^']{8,}'/gi,
+  // Credential variable assignments with a string literal RHS (single or double quoted)
+  /(?:password|passwd|secret|apiKey|api_key|clientSecret|client_secret|accessToken|access_token|authToken|auth_token)\s*[=+]\s*['"][^'"]{8,}['"]/gi,
 ];
 
 const ENDPOINT_PATTERN = /\.setEndpoint\s*\(\s*'(https?:\/\/[^']+)'/gi;

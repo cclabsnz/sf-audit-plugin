@@ -4,7 +4,6 @@ import { ToolingClientImpl } from '../api/ToolingClientImpl.js';
 import { RestClientImpl } from '../api/RestClientImpl.js';
 import type { AuditContext } from '../context/AuditContext.js';
 import type { OrgInfo } from '../context/OrgInfo.js';
-import type { QueryRegistry } from '../queries/QueryRegistry.js';
 
 export function buildApiClients(conn: Connection) {
   return {
@@ -31,17 +30,12 @@ export async function resolveOrgInfo(conn: Connection): Promise<OrgInfo> {
   };
 }
 
-export function buildAuditContext(
-  conn: Connection,
-  queries: QueryRegistry,
-  orgInfo: OrgInfo,
-): AuditContext {
+export function buildAuditContext(conn: Connection, orgInfo: OrgInfo): AuditContext {
   const clients = buildApiClients(conn);
   return {
     soql: clients.soql,
     tooling: clients.tooling,
     rest: clients.rest,
-    queries,
     orgInfo,
     cache: {},
   };
