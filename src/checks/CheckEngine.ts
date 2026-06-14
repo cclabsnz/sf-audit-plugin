@@ -7,6 +7,7 @@ import type { AuditResult } from '../findings/AuditResult.js';
 import type { ScoringConfig } from '../findings/ScoringConfig.js';
 import { buildAuditResult } from '../findings/scoring.js';
 import { getComplianceTags } from '../findings/ComplianceMapping.js';
+import { ChainEngine } from '../chains/ChainEngine.js';
 
 const PERMISSION_ERROR_CODES = new Set([
   'INSUFFICIENT_ACCESS_RIGHTS',
@@ -79,7 +80,8 @@ export class CheckEngine {
       }
     }
 
-    return buildAuditResult(this.ctx, findings, metrics, this.scoringConfig);
+    const attackChains = new ChainEngine().correlate(findings);
+    return buildAuditResult(this.ctx, findings, metrics, this.scoringConfig, attackChains);
   }
 
   private validateCacheOrdering(): void {

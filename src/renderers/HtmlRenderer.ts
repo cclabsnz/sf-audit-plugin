@@ -58,27 +58,14 @@ function inventoryCard(title: string, rows: string[]): string {
   return `<div class="inv-card"><div class="inv-card-title">${esc(title)}</div>${rows.join('')}</div>`;
 }
 
-function buildGaugeSvg(score: number, color: string): string {
-  const cx = 80, cy = 78, r = 60;
-  const startX = cx - r, startY = cy;
-  const endX   = cx + r, endY   = cy;
-
-  // Arc travels counterclockwise from left to right through the TOP
-  // angle from 180° → 360° maps to score 0% → 100%
-  const theta = Math.PI + (score / 100) * Math.PI;
-  const fillX = (cx + r * Math.cos(theta)).toFixed(2);
-  const fillY = (cy + r * Math.sin(theta)).toFixed(2);
-
-  const fillArc = score === 0
-    ? ''
-    : score >= 100
-      ? `<path d="M ${startX} ${startY} A ${r} ${r} 0 0 0 ${endX} ${endY}" stroke="${color}" stroke-width="10" fill="none" stroke-linecap="round" />`
-      : `<path d="M ${startX} ${startY} A ${r} ${r} 0 0 0 ${fillX} ${fillY}" stroke="${color}" stroke-width="10" fill="none" stroke-linecap="round" />`;
-
-  return `<svg width="160" height="88" viewBox="0 0 160 88" aria-hidden="true">
-    <path d="M ${startX} ${startY} A ${r} ${r} 0 0 0 ${endX} ${endY}" stroke="#21262d" stroke-width="10" fill="none" stroke-linecap="round" />
-    ${fillArc}
-  </svg>`;
+function buildScoreRing(score: number, grade: string, color: string): string {
+  return `
+    <div class="score-ring" style="background:conic-gradient(from -90deg, ${color} ${score}%, #2d3748 ${score}%)" aria-label="Health score ${score} out of 100, grade ${grade}">
+      <div class="score-inner">
+        <div class="score-num" style="color:${color}">${score}<span>/100</span></div>
+        <div class="score-grade" style="background:${color}">${esc(grade)}</div>
+      </div>
+    </div>`;
 }
 
 function buildDonutSvg(counts: Record<string, number>): string {
@@ -116,7 +103,7 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
   const m: OrgMetrics = result.metrics;
   const gradeColor = GRADE_COLOR[result.grade] ?? '#64748b';
 
-  const gauge = buildGaugeSvg(result.healthScore, gradeColor);
+  const gauge = buildScoreRing(result.healthScore, result.grade, gradeColor);
   const donut = buildDonutSvg(counts);
 
   const kpiCards = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(l =>
@@ -178,10 +165,6 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
       <div class="dash-score-panel">
         <div class="gauge-wrap">
           ${gauge}
-          <div class="gauge-center">
-            <div class="gauge-num" style="color:${gradeColor}">${result.healthScore}<span>/100</span></div>
-            <div class="dash-grade" style="background:${gradeColor}">${esc(result.grade)}</div>
-          </div>
         </div>
       </div>
       <div class="dash-risk-panel">
@@ -215,6 +198,31 @@ export class HtmlRenderer implements AuditRenderer {
   readonly format = 'html';
   readonly fileExtension = '.html';
 
+  private renderAttackPaths(result: AuditResult): string {
+    if (!result.attackChains || result.attackChains.length === 0) return '';
+    const escStr = (s: string): string =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const cards = result.attackChains
+      .map((c) => {
+        const conf = c.confidence === 'named' ? '' : ' (potential)';
+        const steps = c.steps
+          .map((s, i) => `<li><strong>${escStr(s.title ?? s.findingId)}</strong> (${escStr(s.severity ?? '—')}) — grants <code>${escStr(s.capability)}</code></li>`)
+          .join('');
+        return `<div class="attack-chain severity-${c.severity.toLowerCase()}">
+  <h3>[${escStr(c.severity)}] ${escStr(c.title)}${conf}</h3>
+  <p>${escStr(c.narrative)}</p>
+  <ol>${steps}</ol>
+  <p class="remediation"><strong>Remediation:</strong> ${escStr(c.remediation)}</p>
+</div>`;
+      })
+      .join('\n');
+    return `<section class="attack-paths">
+  <h2>Attack Paths (${result.attackChains.length})</h2>
+  <p class="subtitle">Combinations of findings that together enable an exploit more severe than any single finding.</p>
+  ${cards}
+</section>`;
+  }
+
   render(result: AuditResult): string {
     const levels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
     const counts = Object.fromEntries(
@@ -227,6 +235,8 @@ export class HtmlRenderer implements AuditRenderer {
         (l) => `<button class="filter-btn" data-filter="${l}" style="--accent:${RISK_COLORS[l]}">${l} (${counts[l]})</button>`,
       ),
     ].join('\n        ');
+
+    const attackPathsHtml = this.renderAttackPaths(result);
 
     const findingsHtml = result.findings.length === 0
       ? '<p class="no-findings">No findings.</p>'
@@ -282,10 +292,12 @@ export class HtmlRenderer implements AuditRenderer {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SF Security Audit — ${esc(result.orgName)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-family: 'Fira Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
     background: #0d1117;
     color: #c9d1d9;
     max-width: 1100px;
@@ -318,16 +330,45 @@ export class HtmlRenderer implements AuditRenderer {
     justify-content: center;
   }
 
-  /* Gauge */
-  .gauge-wrap { display: flex; flex-direction: column; align-items: center; }
-  .gauge-center { text-align: center; margin-top: -0.25rem; }
-  .gauge-num { font-size: 2.5rem; font-weight: 800; line-height: 1; }
-  .gauge-num span { font-size: 1rem; color: #8b949e; font-weight: 400; }
-  .dash-grade {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 2.5rem; height: 2.5rem; border-radius: 50%;
-    font-size: 1.2rem; font-weight: 800; color: #fff;
-    margin-top: 0.5rem;
+  /* Score ring */
+  .gauge-wrap { display: flex; align-items: center; justify-content: center; }
+  .score-ring {
+    width: 152px;
+    height: 152px;
+    border-radius: 50%;
+    padding: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .score-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #161b22;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+  }
+  .score-num {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    font-family: 'Fira Code', monospace;
+  }
+  .score-num span { font-size: 0.75rem; color: #8b949e; font-weight: 400; }
+  .score-grade {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #fff;
   }
 
   /* Donut */
@@ -545,6 +586,8 @@ export class HtmlRenderer implements AuditRenderer {
   </div>
 
   ${buildDashboard(result, counts)}
+
+  ${attackPathsHtml}
 
   <div class="filters">
     ${filterButtons}

@@ -9,10 +9,17 @@ interface UserRecord {
 }
 
 interface ObjectPermissionRecord {
+  ParentId: string;
   SobjectType: string;
   PermissionsCreate: boolean;
   PermissionsEdit: boolean;
+  PermissionsDelete: boolean;
   PermissionsRead: boolean;
+}
+
+interface SharingCountRecord {
+  UserOrGroupId: string;
+  cnt: number;
 }
 
 const STANDARD_OBJECTS = ['Account', 'Contact', 'Case', 'Lead', 'Opportunity'] as const;
@@ -50,103 +57,99 @@ export class GuestUserAccessCheck implements SecurityCheck {
       return { findings };
     }
 
-    // Determine which objects to check
+    // Build profile → users map and unique profile ID list for batch queries
+    const profileUserMap = new Map<string, UserRecord[]>();
+    for (const user of guestUsers) {
+      const list = profileUserMap.get(user.ProfileId) ?? [];
+      list.push(user);
+      profileUserMap.set(user.ProfileId, list);
+    }
+    const profileIds = [...profileUserMap.keys()];
+
+    // Determine which objects to check (include HC objects only if installed)
     const objectsToCheck: string[] = [...STANDARD_OBJECTS];
     if (ctx.cache.healthCloudInstalled === true) {
       objectsToCheck.push(...HEALTH_CLOUD_OBJECTS);
     }
 
-    // Collect write access violations
+    // SBS-CPORTAL-002: guest users must have NO access to business objects — not even read.
     interface WriteViolation {
       userId: string;
       username: string;
       sobjectType: string;
       canCreate: boolean;
       canEdit: boolean;
+      canDelete: boolean;
+    }
+    interface ReadViolation {
+      userId: string;
+      username: string;
+      sobjectType: string;
     }
     const writeViolations: WriteViolation[] = [];
+    const readViolations: ReadViolation[] = [];
 
-    // Collect unique profile IDs to avoid re-querying
-    const profileIds = [...new Set(guestUsers.map((u) => u.ProfileId))];
-
-    for (const profileId of profileIds) {
-      // Find which user(s) belong to this profile
-      const profileUsers = guestUsers.filter((u) => u.ProfileId === profileId);
-
-      // Query standard objects for this profile
-      const standardObjectList = STANDARD_OBJECTS.map((o) => `'${o}'`).join(',');
-      try {
-        const perms = await ctx.soql.queryAll<ObjectPermissionRecord>(
-          `SELECT SobjectType, PermissionsCreate, PermissionsEdit, PermissionsRead FROM ObjectPermissions WHERE ParentId = '${profileId}' AND SobjectType IN (${standardObjectList})`
-        );
-        for (const perm of perms) {
-          if (perm.PermissionsCreate || perm.PermissionsEdit) {
-            for (const u of profileUsers) {
-              writeViolations.push({
-                userId: u.Id,
-                username: u.Username,
-                sobjectType: perm.SobjectType,
-                canCreate: perm.PermissionsCreate,
-                canEdit: perm.PermissionsEdit,
-              });
-            }
+    // Single batch query: all profiles × all objects (replaces per-profile loop)
+    const profileIdList = profileIds.map((id) => `'${id}'`).join(', ');
+    const objectList = objectsToCheck.map((o) => `'${o}'`).join(', ');
+    try {
+      const perms = await ctx.soql.queryAll<ObjectPermissionRecord>(
+        `SELECT ParentId, SobjectType, PermissionsCreate, PermissionsEdit, PermissionsDelete, PermissionsRead
+         FROM ObjectPermissions
+         WHERE ParentId IN (${profileIdList})
+           AND SobjectType IN (${objectList})`
+      );
+      for (const perm of perms) {
+        const profileUsers = profileUserMap.get(perm.ParentId) ?? [];
+        if (perm.PermissionsCreate || perm.PermissionsEdit || perm.PermissionsDelete) {
+          for (const u of profileUsers) {
+            writeViolations.push({
+              userId: u.Id,
+              username: u.Username,
+              sobjectType: perm.SobjectType,
+              canCreate: perm.PermissionsCreate,
+              canEdit: perm.PermissionsEdit,
+              canDelete: perm.PermissionsDelete,
+            });
           }
-        }
-      } catch {
-        // Skip on error
-      }
-
-      // Check Health Cloud objects if applicable
-      if (ctx.cache.healthCloudInstalled === true) {
-        for (const obj of HEALTH_CLOUD_OBJECTS) {
-          try {
-            const perms = await ctx.soql.queryAll<ObjectPermissionRecord>(
-              `SELECT SobjectType, PermissionsCreate, PermissionsEdit, PermissionsRead FROM ObjectPermissions WHERE ParentId = '${profileId}' AND SobjectType = '${obj}'`
-            );
-            for (const perm of perms) {
-              if (perm.PermissionsCreate || perm.PermissionsEdit) {
-                for (const u of profileUsers) {
-                  writeViolations.push({
-                    userId: u.Id,
-                    username: u.Username,
-                    sobjectType: perm.SobjectType,
-                    canCreate: perm.PermissionsCreate,
-                    canEdit: perm.PermissionsEdit,
-                  });
-                }
-              }
-            }
-          } catch {
-            // Object may not exist — skip silently
+        } else if (perm.PermissionsRead) {
+          for (const u of profileUsers) {
+            readViolations.push({
+              userId: u.Id,
+              username: u.Username,
+              sobjectType: perm.SobjectType,
+            });
           }
         }
       }
+    } catch {
+      // Skip on error
     }
 
-    // Check sharing rules targeting guest users
+    // Check sharing rules targeting guest users.
+    // One query per share table (not per user) using GROUP BY — reduces N×4 to 4 queries.
     interface SharingExposure {
       shareTable: string;
       count: number;
     }
     const sharingExposures: SharingExposure[] = [];
+    const userIdList = guestUsers.map((u) => `'${u.Id}'`).join(', ');
 
-    for (const user of guestUsers) {
-      for (const shareTable of SHARE_TABLES) {
-        try {
-          const result = await ctx.soql.query<Record<string, never>>(
-            `SELECT COUNT() FROM ${shareTable} WHERE UserOrGroupId = '${user.Id}' AND RowCause = 'SharingRule'`
-          );
-          if (result.totalSize > 0) {
-            const existing = sharingExposures.find((e) => e.shareTable === shareTable);
-            if (existing) {
-              existing.count += result.totalSize;
-            } else {
-              sharingExposures.push({ shareTable, count: result.totalSize });
-            }
-          }
-        } catch {
-          // Object may not be accessible — skip silently
+    for (const shareTable of SHARE_TABLES) {
+      try {
+        const result = await ctx.soql.query<SharingCountRecord>(
+          `SELECT UserOrGroupId, COUNT(Id) cnt
+           FROM ${shareTable}
+           WHERE UserOrGroupId IN (${userIdList})
+             AND RowCause = 'SharingRule'
+           GROUP BY UserOrGroupId`
+        );
+        const totalCount = result.records.reduce((sum, r) => sum + (r.cnt ?? 0), 0);
+        if (totalCount > 0) {
+          sharingExposures.push({ shareTable, count: totalCount });
         }
+      } catch {
+        // Object may not be accessible — skip silently
       }
     }
 
@@ -158,7 +161,7 @@ export class GuestUserAccessCheck implements SecurityCheck {
         riskLevel: 'CRITICAL',
         title: 'Guest user profile(s) have write access to Salesforce objects',
         affectedItems: writeViolations.map((v) => {
-          const actions = [v.canCreate && 'Create', v.canEdit && 'Edit']
+          const actions = [v.canCreate && 'Create', v.canEdit && 'Edit', v.canDelete && 'Delete']
             .filter(Boolean)
             .join('/');
           return {
@@ -168,9 +171,28 @@ export class GuestUserAccessCheck implements SecurityCheck {
           };
         }),
         detail:
-          'Unauthenticated users (guests) with write access to standard objects represents a critical misconfiguration.',
+          'Unauthenticated users (guests) with write access to standard objects represents a critical misconfiguration. SBS-CPORTAL-002 requires guest users have no access to business objects.',
         remediation:
-          'Remove all Create and Edit permissions from guest user profiles immediately. Guest users should have minimal or no object access.',
+          'Remove all Create, Edit, and Delete permissions from guest user profiles immediately. Guest users should have no object access.',
+      });
+    }
+
+    // SBS-CPORTAL-002: read access also violates the standard
+    if (readViolations.length > 0) {
+      findings.push({
+        id: 'guest-user-read-access',
+        category: this.category,
+        riskLevel: 'HIGH',
+        title: `${readViolations.length} object(s) grant read access to guest user(s)`,
+        affectedItems: readViolations.map((v) => ({
+          label: `${v.username} — ${v.sobjectType}`,
+          url: `${baseUrl}/${v.userId}`,
+          note: 'Read access — remove from guest profile; restrict to authenticated users only',
+        })),
+        detail:
+          'SBS-CPORTAL-002 requires guest users be limited to authentication flows only with no access to business objects. Read access exposes data to unauthenticated visitors.',
+        remediation:
+          'Remove Read permissions on all business objects from guest user profiles. Data access should only be granted after authentication.',
       });
     }
 
@@ -193,7 +215,7 @@ export class GuestUserAccessCheck implements SecurityCheck {
       });
     }
 
-    if (writeViolations.length === 0 && sharingExposures.length === 0) {
+    if (writeViolations.length === 0 && readViolations.length === 0 && sharingExposures.length === 0) {
       const count = guestUsers.length;
       findings.push({
         id: 'guest-user-baseline',

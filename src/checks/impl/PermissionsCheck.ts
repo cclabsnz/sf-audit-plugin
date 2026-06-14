@@ -3,6 +3,7 @@ import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
 interface PermissionSetRecord { Id: string; Name: string; }
+interface ApiEnabledPsRecord { Id: string; Name: string; IsOwnedByProfile: boolean; }
 
 // Standard Salesforce built-in profiles present in every org — excluded from custom profile counts.
 // Profile SOQL does not expose an IsCustom field; this list covers the known standard set.
@@ -60,25 +61,38 @@ export class PermissionsCheck implements SecurityCheck {
       remediation: 'Review and consolidate permission sets. Excessive numbers increase administrative complexity and expand the attack surface.',
     });
 
-    // Unassigned custom permission sets — exclude direct assignments AND membership in a permission set group
-    const unassignedResult = await ctx.soql.query<PermissionSetRecord>(
-      'SELECT Id, Name FROM PermissionSet WHERE IsCustom = true AND Id NOT IN (SELECT PermissionSetId FROM PermissionSetAssignment) AND Id NOT IN (SELECT PermissionSetId FROM PermissionSetGroupComponent)'
-    );
-    const unassignedSets = unassignedResult.records;
-    const unassignedCount = unassignedSets.length;
+    // Unassigned custom permission sets — exclude direct assignments AND membership in a permission set group.
+    // The double NOT IN semi-join is governor-limited to 2,000 records per subquery; wrap in try-catch.
+    try {
+      const unassignedResult = await ctx.soql.query<PermissionSetRecord>(
+        'SELECT Id, Name FROM PermissionSet WHERE IsCustom = true AND Id NOT IN (SELECT PermissionSetId FROM PermissionSetAssignment) AND Id NOT IN (SELECT PermissionSetId FROM PermissionSetGroupComponent)'
+      );
+      const unassignedSets = unassignedResult.records;
+      const unassignedCount = unassignedSets.length;
 
-    if (unassignedCount > 0) {
+      if (unassignedCount > 0) {
+        findings.push({
+          id: 'permissions-unassigned-sets',
+          category: this.category,
+          riskLevel: 'LOW',
+          title: `${unassignedCount} permission set(s) are defined but never assigned`,
+          detail: 'Permission sets that are defined but never assigned to any user (directly or via a permission set group) represent configuration bloat and may indicate outdated or orphaned access configurations.',
+          remediation: 'Unused permission sets should be reviewed and deleted to reduce configuration bloat.',
+          affectedItems: unassignedSets.map((r) => ({
+            label: r.Name,
+            url: `${baseUrl}/${r.Id}`,
+          })),
+        });
+      }
+    } catch {
       findings.push({
-        id: 'permissions-unassigned-sets',
+        id: 'permissions-unassigned-inconclusive',
         category: this.category,
-        riskLevel: 'LOW',
-        title: `${unassignedCount} permission set(s) are defined but never assigned`,
-        detail: 'Permission sets that are defined but never assigned to any user (directly or via a permission set group) represent configuration bloat and may indicate outdated or orphaned access configurations.',
-        remediation: 'Unused permission sets should be reviewed and deleted to reduce configuration bloat.',
-        affectedItems: unassignedSets.map((r) => ({
-          label: r.Name,
-          url: `${baseUrl}/${r.Id}`,
-        })),
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'Unassigned permission set check could not be completed',
+        detail: 'The semi-join query to identify unassigned permission sets failed — this can occur in orgs with very large numbers of permission set assignments (governor limit on semi-join subqueries). Review orphaned permission sets manually.',
+        remediation: 'In Setup → Permission Sets, sort by Last Modified and review sets that appear to have no user assignments.',
       });
     }
 
@@ -98,6 +112,51 @@ export class PermissionsCheck implements SecurityCheck {
         title: `${profileCount} custom profiles exist in this org`,
         detail: 'A high number of custom profiles increases the complexity of access management and makes it harder to maintain a clear security model.',
         remediation: 'Consider migrating access control from profiles to permission sets for more granular and auditable access management.',
+      });
+    }
+
+    // SBS-ACS-002: every entity granting API Enabled requires documented justification.
+    // One query for all PS/profiles granting it — we report the granting entities, not every assignment.
+    const apiEnabledPs = await ctx.soql.query<ApiEnabledPsRecord>(
+      'SELECT Id, Name, IsOwnedByProfile FROM PermissionSet WHERE PermissionsApiEnabled = true AND IsCustom = true'
+    );
+    const apiEnabledSets = apiEnabledPs.records;
+
+    if (apiEnabledSets.length > 0) {
+      const profileGrantors = apiEnabledSets.filter((r) => r.IsOwnedByProfile);
+      const psGrantors = apiEnabledSets.filter((r) => !r.IsOwnedByProfile);
+
+      findings.push({
+        id: 'permissions-api-enabled',
+        category: this.category,
+        riskLevel: profileGrantors.length > 0 ? 'HIGH' : 'MEDIUM',
+        title: `${apiEnabledSets.length} custom profile(s)/permission set(s) grant the API Enabled permission`,
+        detail:
+          'SBS-ACS-002 requires documented business or technical justification for every profile, permission set, or group granting API Enabled. Undocumented API access increases the attack surface for data exfiltration via the REST/SOAP APIs.',
+        remediation:
+          'Review each entry in the system of record. Remove API Enabled from profiles/sets where it is not required. Prefer permission sets over profiles for this permission.',
+        affectedItems: [
+          ...profileGrantors.map((r) => ({
+            label: r.Name,
+            url: `${baseUrl}/${r.Id}`,
+            note: 'Granted via Profile — prefer moving to a permission set for finer control',
+          })),
+          ...psGrantors.map((r) => ({
+            label: r.Name,
+            url: `${baseUrl}/${r.Id}`,
+            note: 'Permission Set — document justification in system of record',
+          })),
+        ],
+      });
+    } else {
+      findings.push({
+        id: 'permissions-api-enabled-ok',
+        category: this.category,
+        riskLevel: 'LOW',
+        passed: true,
+        title: 'No custom profiles or permission sets broadly grant API Enabled',
+        detail: 'API Enabled is not granted by any custom profile or permission set. Standard profiles may still grant it.',
+        remediation: 'Continue monitoring as new permission sets and profiles are created.',
       });
     }
 

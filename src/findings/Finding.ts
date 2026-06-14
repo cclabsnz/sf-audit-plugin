@@ -1,4 +1,5 @@
 import type { RiskLevel } from './RiskLevel.js';
+import type { Capability } from '../chains/Capability.js';
 
 export interface AffectedItem {
   label: string;
@@ -36,4 +37,10 @@ export interface Finding {
    * Scored as INFO (no impact on health score) but displayed distinctly.
    */
   inconclusive?: boolean;
+  /**
+   * Optional inline attacker-capability declaration for findings produced by
+   * chain-aware checks. When present, it overrides the central CapabilityRegistry
+   * entry for this finding id. Only honoured for active (non-passed, non-inconclusive) findings.
+   */
+  capabilities?: { grants?: Capability[]; requires?: Capability[] };
 }

@@ -20,6 +20,22 @@ export class CspTrustedSitesCheck implements SecurityCheck {
       `SELECT Id, EndpointUrl, Context, IsActive FROM CspTrustedSite WHERE IsActive = true`,
     );
 
+    if (sites.length === 0) {
+      return {
+        findings: [{
+          id: 'csp-trusted-sites-none',
+          category: this.category,
+          riskLevel: 'INFO',
+          passed: true,
+          title: 'No active CSP Trusted Sites configured',
+          detail:
+            'No active CSP Trusted Sites are configured. Salesforce applies default Content Security Policy headers. Add trusted sites only when loading external resources in Lightning components.',
+          remediation:
+            'No action required. When adding external resources, use HTTPS endpoints only.',
+        }],
+      };
+    }
+
     const insecure = sites.filter((s) => s.EndpointUrl.toLowerCase().startsWith('http://'));
 
     if (insecure.length === 0) {
@@ -28,7 +44,7 @@ export class CspTrustedSitesCheck implements SecurityCheck {
           id: 'csp-trusted-sites-pass',
           category: this.category,
           riskLevel: 'INFO',
-          title: 'CSP Trusted Sites: all entries use HTTPS',
+          title: `CSP Trusted Sites: all ${sites.length} active entries use HTTPS`,
           detail: `All ${sites.length} active CSP trusted site(s) use secure HTTPS endpoints.`,
           remediation: 'No action required.',
           passed: true,

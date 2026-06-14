@@ -14,6 +14,7 @@ function makeResult(overrides: Partial<AuditResult> = {}): AuditResult {
     orgType: 'Developer Edition',
     isSandbox: false,
     instance: 'NA1',
+    instanceUrl: 'https://test.salesforce.com',
     findings: [],
     metrics: { ...EMPTY_METRICS },
     healthScore: 64,

@@ -22,6 +22,8 @@ export class ScheduledApexCheck implements SecurityCheck {
   readonly category = 'Code Security';
   readonly description = 'Lists active scheduled and batch Apex jobs running in the org';
 
+  readonly populatesCache = ['scheduledApexClassNames'] as const;
+
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
@@ -37,6 +39,9 @@ export class ScheduledApexCheck implements SecurityCheck {
     `);
 
     const totalJobs = jobs.length;
+
+    // Cache class names for ApexLoggingCheck and SiemIntegrationCheck — free, no extra query
+    ctx.cache.scheduledApexClassNames = jobs.map((j: ApexJobRecord) => j.ApexClass.Name);
 
     // If there are jobs, get creator profiles
     let creatorMap: Record<string, CreatorUserRecord> = {};

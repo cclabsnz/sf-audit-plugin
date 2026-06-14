@@ -14,6 +14,8 @@ const WITHOUT_SHARING = /\bwithout\s+sharing\b/i;
 const WITH_SHARING = /\bwith\s+sharing\b/i;
 const CLASS_PATTERN = /\bclass\s+\w+/i;
 const IS_TEST_CLASS = /@IsTest\b/i;
+// SBS-CPORTAL-001: @AuraEnabled or @RemoteAction marks a class as portal/community-exposed
+const IS_PORTAL_EXPOSED = /@AuraEnabled|@RemoteAction/i;
 
 type SharingDeclaration = 'with' | 'without' | 'inherited' | 'none';
 
@@ -54,6 +56,9 @@ export class ApexSharingCheck implements SecurityCheck {
     const withoutSharingClasses: string[] = [];
     const inheritedSharingClasses: string[] = [];
     const noDeclarationClasses: string[] = [];
+    // SBS-CPORTAL-001: portal-exposed Apex without enforcement = IDOR risk
+    const portalExposedWithoutSharing: string[] = [];
+    const portalExposedNoDeclaration: string[] = [];
 
     for (const apexClass of apexBodies) {
       const body = apexClass.body ?? '';
@@ -65,18 +70,22 @@ export class ApexSharingCheck implements SecurityCheck {
 
       if (declaration === null) continue; // Not a class definition
 
+      const isPortalExposed = IS_PORTAL_EXPOSED.test(body);
+
       switch (declaration) {
         case 'with':
           withSharingClasses.push(apexClass.name);
           break;
         case 'without':
           withoutSharingClasses.push(apexClass.name);
+          if (isPortalExposed) portalExposedWithoutSharing.push(apexClass.name);
           break;
         case 'inherited':
           inheritedSharingClasses.push(apexClass.name);
           break;
         case 'none':
           noDeclarationClasses.push(apexClass.name);
+          if (isPortalExposed) portalExposedNoDeclaration.push(apexClass.name);
           break;
       }
     }
@@ -86,6 +95,28 @@ export class ApexSharingCheck implements SecurityCheck {
       withoutSharingClasses.length +
       inheritedSharingClasses.length +
       noDeclarationClasses.length;
+
+    // SBS-CPORTAL-001: portal-exposed classes with weak sharing declarations are the highest risk
+    const allPortalRisk = [...new Set([...portalExposedWithoutSharing, ...portalExposedNoDeclaration])];
+    if (allPortalRisk.length > 0) {
+      findings.push({
+        id: 'portal-exposed-apex-without-sharing',
+        category: this.category,
+        riskLevel: 'CRITICAL',
+        title: `${allPortalRisk.length} portal-exposed Apex class(es) (@AuraEnabled/@RemoteAction) lack "with sharing" — IDOR risk`,
+        detail:
+          'Classes with @AuraEnabled or @RemoteAction methods that use "without sharing" or have no sharing declaration execute without record-level access control. Attackers can supply arbitrary record IDs to read or manipulate data they should not access (IDOR). SBS-CPORTAL-001 requires server-side authorization for every record accessed via portal Apex.',
+        remediation:
+          'Add "with sharing" to all @AuraEnabled and @RemoteAction classes. Validate user ownership or sharing on every record accessed inside these methods.',
+        affectedItems: allPortalRisk.map((name) => ({
+          label: name,
+          url: apexClassesUrl,
+          note: portalExposedWithoutSharing.includes(name)
+            ? 'Uses explicit "without sharing" — replace with "with sharing"'
+            : 'No sharing declaration — add "with sharing"',
+        })),
+      });
+    }
 
     if (withoutSharingClasses.length > 0) {
       const count = withoutSharingClasses.length;

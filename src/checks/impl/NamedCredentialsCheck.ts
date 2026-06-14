@@ -7,6 +7,9 @@ interface NamedCredentialRecord {
   MasterLabel: string;
   DeveloperName: string;
   Endpoint: string;
+  // PrincipalType: 'Anonymous' | 'NamedUser' | 'PerUser'
+  // AuthTokenEndpointUrl is present only for OAuth-type credentials
+  PrincipalType: string | null;
 }
 
 interface ApexClassRecord {
@@ -27,9 +30,9 @@ export class NamedCredentialsCheck implements SecurityCheck {
     const baseUrl = ctx.orgInfo.instanceUrl;
     const setupUrl = `${baseUrl}/lightning/setup/NamedCredential/home`;
 
-    // Query named credentials using Tooling API
+    // Single Tooling query — PrincipalType lets us flag anonymous (no-auth) credentials
     const records = await ctx.tooling.query<NamedCredentialRecord>(
-      'SELECT Id, MasterLabel, DeveloperName, Endpoint FROM NamedCredential'
+      'SELECT Id, MasterLabel, DeveloperName, Endpoint, PrincipalType FROM NamedCredential'
     );
 
     const count = records.length;
@@ -121,6 +124,47 @@ export class NamedCredentialsCheck implements SecurityCheck {
           label: r.MasterLabel,
           url: setupUrl,
           note: `${r.Endpoint} — verify if still required, delete if orphaned`,
+        })),
+      });
+    }
+
+    // SBS-INT-003: flag plaintext HTTP endpoints — credentials transmitted unencrypted in transit.
+    const httpEndpoints = records.filter((r) => r.Endpoint.startsWith('http://'));
+    if (httpEndpoints.length > 0) {
+      findings.push({
+        id: 'named-credentials-http-endpoint',
+        category: this.category,
+        riskLevel: 'HIGH',
+        title: `${httpEndpoints.length} named credential(s) use plaintext HTTP endpoints`,
+        detail:
+          'Named credentials pointing to http:// endpoints transmit authentication tokens and data over an unencrypted channel, exposing them to interception. SBS-INT-003 requires inventory and justification of all named credential endpoints.',
+        remediation:
+          'Update each credential to use an https:// endpoint. If the target service does not support HTTPS, escalate to the vendor.',
+        affectedItems: httpEndpoints.map((r) => ({
+          label: r.MasterLabel,
+          url: setupUrl,
+          note: `${r.Endpoint} — migrate to HTTPS`,
+        })),
+      });
+    }
+
+    // Flag anonymous (no-auth) named credentials: PrincipalType = 'Anonymous' means no credentials
+    // are sent to the endpoint, which may indicate misconfiguration for authenticated services.
+    const anonymousCreds = records.filter((r) => r.PrincipalType === 'Anonymous');
+    if (anonymousCreds.length > 0) {
+      findings.push({
+        id: 'named-credentials-anonymous',
+        category: this.category,
+        riskLevel: 'LOW',
+        title: `${anonymousCreds.length} named credential(s) use anonymous (no-auth) principal type`,
+        detail:
+          'Named credentials with PrincipalType "Anonymous" send no authentication to the external endpoint. This is acceptable for public APIs but should be reviewed to confirm no sensitive data is exchanged without authentication.',
+        remediation:
+          'Confirm that anonymous named credentials only point to fully public APIs. If any exchange sensitive data, configure Named User or Per-User OAuth authentication.',
+        affectedItems: anonymousCreds.map((r) => ({
+          label: r.MasterLabel,
+          url: setupUrl,
+          note: `${r.Endpoint} — verify that no authentication is required`,
         })),
       });
     }

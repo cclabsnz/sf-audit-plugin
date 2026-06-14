@@ -37,9 +37,9 @@ export class HistoryStore {
     const searchDir = dir ? path.join(dir, orgId) : path.join(this.root, orgId);
     if (!fs.existsSync(searchDir)) return [];
 
-    const files = fs.readdirSync(searchDir)
-      .filter((f) => f.startsWith('sf-audit-') && f.endsWith('.json'))
-      .map((f) => path.join(searchDir, f));
+    const files = (fs.readdirSync(searchDir) as string[])
+      .filter((f: string) => f.startsWith('sf-audit-') && f.endsWith('.json'))
+      .map((f: string) => path.join(searchDir, f));
 
     const results: AuditResult[] = [];
     for (const file of files) {

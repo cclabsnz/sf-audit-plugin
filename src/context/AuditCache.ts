@@ -12,6 +12,28 @@ export interface ApexClassBody {
   body: string;
 }
 
+// VfPageBody: Visualforce page markup, populated by VisualforceXssCheck
+export interface VfPageBody {
+  name: string;
+  markup: string;
+}
+
+// EventLogSummary: populated by EventMonitoringCheck, consumed by SiemIntegrationCheck
+export interface EventLogSummary {
+  earliestDate: string | null;
+  totalFiles: number;
+  eventTypes: string[];
+}
+
+// MfaRegistration: one entry per user with at least one registered MFA method.
+// Populated by MfaRegistrationCheck, consumed by MfaMethodStrengthCheck.
+export interface MfaRegistration {
+  userId: string;
+  username: string;
+  profileName: string;
+  methods: string[];
+}
+
 // AuditCache is mutable shared state passed through AuditContext.
 // Keys are typed — rename any field and every check referencing it gets a compile error.
 export interface AuditCache {
@@ -20,4 +42,14 @@ export interface AuditCache {
   namedCredentialEndpoints?: string[];
   remoteSiteUrls?: string[];
   healthCloudInstalled?: boolean;
+  // Populated by ConnectedAppsCheck — consumed by DeploymentIdentityCheck + SiemIntegrationCheck
+  connectedAppNames?: string[];
+  // Populated by ScheduledApexCheck — consumed by ApexLoggingCheck + SiemIntegrationCheck
+  scheduledApexClassNames?: string[];
+  // Populated by EventMonitoringCheck — consumed by SiemIntegrationCheck
+  eventLogSummary?: EventLogSummary;
+  // Populated by MfaRegistrationCheck — consumed by MfaMethodStrengthCheck
+  mfaRegistrations?: MfaRegistration[];
+  // Populated by VisualforceXssCheck — available for future VF-scanning checks
+  vfPageBodies?: VfPageBody[];
 }

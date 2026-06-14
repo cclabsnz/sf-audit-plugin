@@ -10,6 +10,11 @@ interface AuditTrailRecord {
   CreatedBy: { Username: string };
 }
 
+interface EventLogDeleteRecord {
+  Assignee: { Id: string; Username: string; Profile?: { Name: string } };
+  PermissionSet: { Name: string; IsOwnedByProfile?: boolean };
+}
+
 export class AuditTrailCheck implements SecurityCheck {
   readonly id = 'audit-trail';
   readonly name = 'Audit Trail';
@@ -93,6 +98,40 @@ export class AuditTrailCheck implements SecurityCheck {
           note: new Date(r.CreatedDate).toISOString().split('T')[0],
         })),
       });
+    }
+
+    // SBS-MON-002: flag users who can delete Event Monitoring data (erasing the audit trail).
+    // PermissionsManageEventLogFiles grants the "Delete Event Monitoring Data" capability.
+    try {
+      const eventLogDeleteResult = await ctx.soql.query<EventLogDeleteRecord>(
+        `SELECT Assignee.Id, Assignee.Username, Assignee.Profile.Name,
+                PermissionSet.Name, PermissionSet.IsOwnedByProfile
+         FROM PermissionSetAssignment
+         WHERE PermissionSet.PermissionsManageEventLogFiles = true
+           AND Assignee.IsActive = true
+           AND AssigneeId NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)`
+      );
+
+      const eventLogDeleteUsers = eventLogDeleteResult.records;
+      if (eventLogDeleteUsers.length > 0) {
+        findings.push({
+          id: 'event-log-delete-permission',
+          category: this.category,
+          riskLevel: 'HIGH',
+          title: `${eventLogDeleteUsers.length} active user(s) can delete Event Monitoring data (Manage Event Log Files)`,
+          detail:
+            'SBS-MON-002 requires event logs to be protected from tampering and unauthorised deletion. Users with "Manage Event Log Files" can delete EventLogFile records, permanently destroying audit evidence.',
+          remediation:
+            'Remove the "Manage Event Log Files" permission from all users who do not have a specific, documented administrative need. Consider exporting logs to an immutable external SIEM before any deletion is possible.',
+          affectedItems: eventLogDeleteUsers.map((r) => ({
+            label: r.Assignee.Username,
+            url: `${baseUrl}/${r.Assignee.Id}`,
+            note: `via: ${r.PermissionSet.IsOwnedByProfile ? r.Assignee.Profile?.Name ?? 'Profile' : r.PermissionSet.Name}`,
+          })),
+        });
+      }
+    } catch {
+      // PermissionsManageEventLogFiles may not exist in orgs without Event Monitoring — skip silently
     }
 
     return { findings };
