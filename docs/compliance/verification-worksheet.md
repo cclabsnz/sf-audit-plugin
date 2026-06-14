@@ -1,9 +1,8 @@
 # Compliance Control Verification Worksheet
 
-Controls marked `verified: true` have been checked against an authoritative source.
-Unverified controls stay **excluded from rendered reports** (provenance gate).
+Controls marked verified have been checked against an authoritative source. Unverified controls stay excluded from rendered reports (provenance gate).
 
-Total controls: 89 · Verified: 12
+Total controls: 89 · Verified: 53
 
 ## OWASP — OWASP Top 10:2021 (9/9 verified)
 
@@ -50,51 +49,51 @@ Total controls: 89 · Verified: 12
 | [ ] | ISO-A.14.1 | Security requirements of information systems | ISO/IEC 27001:2013, A.14.1 |
 | [ ] | ISO-A.14.2 | Security in development and support | ISO/IEC 27001:2013, A.14.2 |
 
-## SBS — Salesforce Security Baseline (0/41 verified)
+## SBS — Security Benchmark for Salesforce (SBS) (41/41 verified)
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
-| [ ] | SBS-ACS-002 | Permission set sprawl | Salesforce Security Baseline, SBS-ACS-002 |
-| [ ] | SBS-ACS-004 | System-wide administrative permissions | Salesforce Security Baseline, SBS-ACS-004 |
-| [ ] | SBS-ACS-005 | Standard profile usage | Salesforce Security Baseline, SBS-ACS-005 |
-| [ ] | SBS-ACS-006 | API access control | Salesforce Security Baseline, SBS-ACS-006 |
-| [ ] | SBS-ACS-007 | Inactive and dormant accounts | Salesforce Security Baseline, SBS-ACS-007 |
-| [ ] | SBS-ACS-008 | Integration account privilege | Salesforce Security Baseline, SBS-ACS-008 |
-| [ ] | SBS-ACS-009 | Service account governance | Salesforce Security Baseline, SBS-ACS-009 |
-| [ ] | SBS-AUTH-001 | Single sign-on enforcement | Salesforce Security Baseline, SBS-AUTH-001 |
-| [ ] | SBS-AUTH-002 | My Domain login policy | Salesforce Security Baseline, SBS-AUTH-002 |
-| [ ] | SBS-AUTH-003 | Login IP restrictions | Salesforce Security Baseline, SBS-AUTH-003 |
-| [ ] | SBS-AUTH-004 | Multi-factor authentication enforcement | Salesforce Security Baseline, SBS-AUTH-004 |
-| [ ] | SBS-CODE-002 | Apex security and test coverage | Salesforce Security Baseline, SBS-CODE-002 |
-| [ ] | SBS-CODE-003 | Logging framework usage | Salesforce Security Baseline, SBS-CODE-003 |
-| [ ] | SBS-CODE-004 | Sensitive data in logs | Salesforce Security Baseline, SBS-CODE-004 |
-| [ ] | SBS-CPORTAL-001 | Apex sharing declarations | Salesforce Security Baseline, SBS-CPORTAL-001 |
-| [ ] | SBS-CPORTAL-002 | Guest user access | Salesforce Security Baseline, SBS-CPORTAL-002 |
-| [ ] | SBS-CPORTAL-003 | Experience Cloud site exposure | Salesforce Security Baseline, SBS-CPORTAL-003 |
-| [ ] | SBS-CPORTAL-004 | Flow sharing context | Salesforce Security Baseline, SBS-CPORTAL-004 |
-| [ ] | SBS-DATA-001 | Data classification | Salesforce Security Baseline, SBS-DATA-001 |
-| [ ] | SBS-DATA-002 | Encryption of sensitive data | Salesforce Security Baseline, SBS-DATA-002 |
-| [ ] | SBS-DATA-003 | Sensitive data handling | Salesforce Security Baseline, SBS-DATA-003 |
-| [ ] | SBS-DATA-004 | Field history tracking | Salesforce Security Baseline, SBS-DATA-004 |
-| [ ] | SBS-DEP-001 | Designated deployment identity | Salesforce Security Baseline, SBS-DEP-001 |
-| [ ] | SBS-DEP-003 | Controlled deployment activity | Salesforce Security Baseline, SBS-DEP-003 |
-| [ ] | SBS-DEP-005 | No hardcoded credentials | Salesforce Security Baseline, SBS-DEP-005 |
-| [ ] | SBS-DEP-006 | Connected app approval | Salesforce Security Baseline, SBS-DEP-006 |
-| [ ] | SBS-FILE-001 | Public content link expiry | Salesforce Security Baseline, SBS-FILE-001 |
-| [ ] | SBS-FILE-002 | Public content link passwords | Salesforce Security Baseline, SBS-FILE-002 |
-| [ ] | SBS-FILE-003 | Stale content links | Salesforce Security Baseline, SBS-FILE-003 |
-| [ ] | SBS-INT-002 | Remote site settings | Salesforce Security Baseline, SBS-INT-002 |
-| [ ] | SBS-INT-003 | Named credential usage | Salesforce Security Baseline, SBS-INT-003 |
-| [ ] | SBS-INT-004 | Monitoring integration | Salesforce Security Baseline, SBS-INT-004 |
-| [ ] | SBS-MON-001 | Event monitoring enabled | Salesforce Security Baseline, SBS-MON-001 |
-| [ ] | SBS-MON-002 | Setup audit trail review | Salesforce Security Baseline, SBS-MON-002 |
-| [ ] | SBS-MON-003 | SIEM forwarding | Salesforce Security Baseline, SBS-MON-003 |
-| [ ] | SBS-MON-004 | External monitoring coverage | Salesforce Security Baseline, SBS-MON-004 |
-| [ ] | SBS-MON-005 | API and resource limit monitoring | Salesforce Security Baseline, SBS-MON-005 |
-| [ ] | SBS-OAUTH-001 | Connected app restriction | Salesforce Security Baseline, SBS-OAUTH-001 |
-| [ ] | SBS-OAUTH-002 | OAuth scope and token policy | Salesforce Security Baseline, SBS-OAUTH-002 |
-| [ ] | SBS-SECCONF-001 | Security Health Check baseline | Salesforce Security Baseline, SBS-SECCONF-001 |
-| [ ] | SBS-SECCONF-002 | High-risk setting remediation | Salesforce Security Baseline, SBS-SECCONF-002 |
+| [x] | SBS-ACS-002 | Documented Justification for All API-Enabled Authorizations | Security Benchmark for Salesforce, SBS-ACS-002 |
+| [x] | SBS-ACS-004 | Documented Justification for All Super Admin–Equivalent Users | Security Benchmark for Salesforce, SBS-ACS-004 |
+| [x] | SBS-ACS-005 | Only Use Custom Profiles for Active Users | Security Benchmark for Salesforce, SBS-ACS-005 |
+| [x] | SBS-ACS-006 | Documented Justification for Use Any API Client Permission | Security Benchmark for Salesforce, SBS-ACS-006 |
+| [x] | SBS-ACS-007 | Maintain Inventory of Non-Human Identities | Security Benchmark for Salesforce, SBS-ACS-007 |
+| [x] | SBS-ACS-008 | Restrict Broad Privileges for Non-Human Identities | Security Benchmark for Salesforce, SBS-ACS-008 |
+| [x] | SBS-ACS-009 | Implement Compensating Controls for Privileged Non-Human Identities | Security Benchmark for Salesforce, SBS-ACS-009 |
+| [x] | SBS-AUTH-001 | Enable Organization-Wide SSO Enforcement Setting | Security Benchmark for Salesforce, SBS-AUTH-001 |
+| [x] | SBS-AUTH-002 | Govern and Document All Users Permitted to Bypass Single Sign-On | Security Benchmark for Salesforce, SBS-AUTH-002 |
+| [x] | SBS-AUTH-003 | Prohibit Broad or Unrestricted Profile Login IP Ranges | Security Benchmark for Salesforce, SBS-AUTH-003 |
+| [x] | SBS-AUTH-004 | Enforce Strong Multi-Factor Authentication for External Users | Security Benchmark for Salesforce, SBS-AUTH-004 |
+| [x] | SBS-CODE-002 | Pre-Merge Static Code Analysis for Apex and LWC | Security Benchmark for Salesforce, SBS-CODE-002 |
+| [x] | SBS-CODE-003 | Implement Persistent Apex Application Logging | Security Benchmark for Salesforce, SBS-CODE-003 |
+| [x] | SBS-CODE-004 | Prevent Sensitive Data in Application Logs | Security Benchmark for Salesforce, SBS-CODE-004 |
+| [x] | SBS-CPORTAL-001 | Prevent Parameter-Based Record Access in Portal Apex | Security Benchmark for Salesforce, SBS-CPORTAL-001 |
+| [x] | SBS-CPORTAL-002 | Restrict Guest User Record Access | Security Benchmark for Salesforce, SBS-CPORTAL-002 |
+| [x] | SBS-CPORTAL-003 | Inventory Portal-Exposed Apex Classes and Flows | Security Benchmark for Salesforce, SBS-CPORTAL-003 |
+| [x] | SBS-CPORTAL-004 | Prevent Parameter-Based Record Access in Portal-Exposed Flows | Security Benchmark for Salesforce, SBS-CPORTAL-004 |
+| [x] | SBS-DATA-001 | Implement Mechanisms to Detect Regulated Data in Long Text Fields | Security Benchmark for Salesforce, SBS-DATA-001 |
+| [x] | SBS-DATA-002 | Maintain an Inventory of Long Text Area Fields Containing Data | Security Benchmark for Salesforce, SBS-DATA-002 |
+| [x] | SBS-DATA-003 | Maintain Tested Backup and Recovery for Salesforce Data | Security Benchmark for Salesforce, SBS-DATA-003 |
+| [x] | SBS-DATA-004 | Require Field History Tracking for Sensitive Fields | Security Benchmark for Salesforce, SBS-DATA-004 |
+| [x] | SBS-DEP-001 | Require a Designated Deployment Identity for Metadata Changes | Security Benchmark for Salesforce, SBS-DEP-001 |
+| [x] | SBS-DEP-003 | Monitor and Alert on Unauthorized Modifications to High-Risk Metadata | Security Benchmark for Salesforce, SBS-DEP-003 |
+| [x] | SBS-DEP-005 | Implement Secret Scanning for Salesforce Source Repositories | Security Benchmark for Salesforce, SBS-DEP-005 |
+| [x] | SBS-DEP-006 | Configure Salesforce CLI Connected App with Token Expiration | Security Benchmark for Salesforce, SBS-DEP-006 |
+| [x] | SBS-FILE-001 | Require Expiry Dates on Public Content Links | Security Benchmark for Salesforce, SBS-FILE-001 |
+| [x] | SBS-FILE-002 | Require Passwords on Public Content Links for Sensitive Content | Security Benchmark for Salesforce, SBS-FILE-002 |
+| [x] | SBS-FILE-003 | Periodic Review and Cleanup of Public Content Links | Security Benchmark for Salesforce, SBS-FILE-003 |
+| [x] | SBS-INT-002 | Inventory and Justification of Remote Site Settings | Security Benchmark for Salesforce, SBS-INT-002 |
+| [x] | SBS-INT-003 | Inventory and Justification of Named Credentials | Security Benchmark for Salesforce, SBS-INT-003 |
+| [x] | SBS-INT-004 | Retain API Total Usage Event Logs for 30 Days | Security Benchmark for Salesforce, SBS-INT-004 |
+| [x] | SBS-MON-001 | Enable Event Monitoring Log Storage | Security Benchmark for Salesforce, SBS-MON-001 |
+| [x] | SBS-MON-002 | Retaining Event Logs | Security Benchmark for Salesforce, SBS-MON-002 |
+| [x] | SBS-MON-003 | Monitor for Suspicious Logins | Security Benchmark for Salesforce, SBS-MON-003 |
+| [x] | SBS-MON-004 | Monitor for Suspicious API Activity | Security Benchmark for Salesforce, SBS-MON-004 |
+| [x] | SBS-MON-005 | Monitor API Usage Against Limits | Security Benchmark for Salesforce, SBS-MON-005 |
+| [x] | SBS-OAUTH-001 | Require Formal Installation of Connected Apps | Security Benchmark for Salesforce, SBS-OAUTH-001 |
+| [x] | SBS-OAUTH-002 | Require Profile or Permission Set Access Control for Connected Apps | Security Benchmark for Salesforce, SBS-OAUTH-002 |
+| [x] | SBS-SECCONF-001 | Establish a Salesforce Health Check Baseline | Security Benchmark for Salesforce, SBS-SECCONF-001 |
+| [x] | SBS-SECCONF-002 | Review and Remediate Salesforce Health Check Deviations | Security Benchmark for Salesforce, SBS-SECCONF-002 |
 
 ## PRIVACY_ACT — NZ Privacy Act 2020 (IPPs) (3/3 verified)
 
