@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SF Audit (Read-Only) permission set — least-privilege access for `sf audit security`.
+  Grants only the read permissions needed for a complete audit. See ../../PERMISSIONS.md.
+
+  Deploy:
+    sf project deploy start -m PermissionSet:SF_Audit_ReadOnly -o <orgAlias>
+  then assign:
+    sf org assign permset -n SF_Audit_ReadOnly -o <orgAlias>
+
+  NOTE: user-permission API names occasionally vary by API version. If a deploy
+  fails on a specific <name>, confirm it against your org's API version
+  (Setup → Permission Sets → System Permissions) and adjust. The most likely to
+  differ are ViewHealthCheckScreen, ViewEventLogFiles, and ViewRoles.
+-->
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>SF Audit (Read-Only)</label>
+    <description>Least-privilege, read-only access for the @cclabsnz/sf-audit security audit plugin. No DML, no metadata writes, no View All Data.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+
+    <!-- Required -->
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>ApiEnabled</name>
+    </userPermissions>
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>ViewSetup</name>
+    </userPermissions>
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>ViewAllUsers</name>
+    </userPermissions>
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>ViewHealthCheckScreen</name>
+    </userPermissions>
+    <userPermissions>
+        <!-- Read-only: only gate that exposes ApexClass.Body via Tooling. Omit to skip the 9 code-security checks. -->
+        <enabled>true</enabled>
+        <name>AuthorApex</name>
+    </userPermissions>
+    <userPermissions>
+        <!-- Requires Event Monitoring / Shield licensed in the org. -->
+        <enabled>true</enabled>
+        <name>ViewEventLogFiles</name>
+    </userPermissions>
+
+    <!-- Recommended (completeness) -->
+    <userPermissions>
+        <enabled>true</enabled>
+        <name>ViewRoles</name>
+    </userPermissions>
+</PermissionSet>
