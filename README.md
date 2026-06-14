@@ -24,7 +24,7 @@ sf plugins link .
 sf audit security --target-org <orgAlias>
 ```
 
-This runs all 22 security checks against the target org and writes a report to the current directory.
+This runs all 61 security checks against the target org and writes a report to the current directory.
 
 ### Options
 
@@ -34,7 +34,7 @@ This runs all 22 security checks against the target org and writes a report to t
 | `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json` |
 | `--output` / `-o` | `.` | Directory to write the report file |
 | `--fail-on` | — | Exit with code 1 if any finding is at or above this severity: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
-| `--checks` | *(all)* | Comma-separated check IDs to run instead of all 22 (e.g. `hardcoded-credentials,apex-sharing`) |
+| `--checks` | *(all)* | Comma-separated check IDs to run instead of all 61 (e.g. `hardcoded-credentials,apex-sharing`) |
 | `--scoring-config` | — | Path to a custom scoring config JSON file to override weights and grade thresholds |
 
 ### Examples
@@ -63,53 +63,116 @@ The report file is written as `sf-audit-<orgId>-<timestamp>.<ext>` in the output
 
 ## What It Checks
 
-The audit runs 22 checks across 6 categories:
+The audit runs **61 read-only checks**. Every finding is risk-rated (CRITICAL → INFO) and tagged against compliance frameworks (OWASP, SOC 2, ISO 27001, HIPAA, GDPR). The checks are grouped into nine domains below.
 
-### Org Health
+### Org Health & Configuration
 | Check | What it looks for |
 |-------|------------------|
-| Health Check | Salesforce Health Check score and individual risk items |
-| Password & Session Policy | Weak password requirements, session timeout, MFA gaps |
+| Security Health Check | Salesforce Health Check score and individual high-risk settings |
+| Enhanced Domains | Enhanced Domains enabled — prevents cross-org cookie leakage and enforces URL isolation |
+| Pending Release Updates | Salesforce release updates pending activation, especially those past auto-activation |
+| Legacy API Versions | Apex compiled on old API versions and SOAP-based remote site integrations |
+| API & Resource Limits | API request consumption against daily and concurrent limits |
 
-### Identity & Access
+### Identity & Authentication
 | Check | What it looks for |
 |-------|------------------|
-| Users & Admins | Users with system-wide permissions (ModifyAllData, ViewAllData, AuthorApex) |
-| Permissions | Unassigned permission sets, excessive profile count |
-| IP Restrictions | Admins without IP range restrictions, connected apps with relaxed IP policies |
-| Login Sessions | Failed login trends, logins from diverse IPs, recent login activity |
+| SSO Enforcement | Username-password logins indicating SSO is not org-wide enforced |
+| My Domain Login Policy | My Domain configured and login from login.salesforce.com blocked (stops SSO bypass) |
+| Internal User MFA | MFA enforcement for active internal standard users |
+| MFA for External Users | MFA enforced for external/portal users with data access |
+| MFA Method Registration | Active standard users with no registered MFA method |
+| MFA Method Strength | Registered MFA methods classified by strength (phishing-resistant / TOTP / weak) |
+| High Assurance Sessions | Admin-capable connected apps requiring short timeouts or high-assurance MFA sessions |
+| Trusted IP Ranges | Trusted IP ranges that bypass MFA, including overly broad ranges |
+| Login IP Restrictions | Admin profiles missing IP ranges; connected apps with relaxed IP policy |
+| Password & Session Policy | Password complexity, session timeout, and MFA gaps (from Health Check) |
+| Certificate Expiry | Installed certificates nearing expiry (30 / 90 / 180-day thresholds) |
+
+### Users, Permissions & Privilege
+| Check | What it looks for |
+|-------|------------------|
+| Users & Admins | Users with system-wide permissions (ModifyAllData, ViewAllData, AuthorApex, CustomizeApplication) |
+| Permissions | Unassigned permission sets and high profile counts that widen the attack surface |
+| Standard Profile Usage | Active users assigned to out-of-the-box standard profiles |
+| Use Any API Client | Users with the permission that bypasses API Access Control |
+| Privilege Escalation Permissions | Users holding lateral-movement / persistence permission clusters |
+| Integration / Service Accounts | Non-human identity inventory and excess privilege |
 | Inactive Users | Active licensed users with no login in 90+ days |
 
-### Data Security
+### Data Access & Sharing
 | Check | What it looks for |
 |-------|------------------|
-| Sharing Model | Object-level OWD settings for Account, Contact, Opportunity, Case, Lead |
-| Field Level Security | Sensitive fields (SSN, credit card, tax ID) exposed to broad permission sets |
-| Guest User Access | Object permissions and sharing rules granted to unauthenticated guest users |
+| OWD Sharing Model | Org-wide defaults for Account, Contact, Opportunity, Case, Lead (internal + external) |
+| Field-Level Security | Sensitive fields (SSN, credit card, tax ID) exposed to broad permission sets |
 | Public Group Sharing | Sharing rules that grant access to All Internal Users |
+| Report Folder Public Access | Report folders any authenticated user can view |
+| Field History Tracking | History tracking enabled on sensitive standard objects |
+| Data Classification & Encryption | Field data classification usage and Shield Platform Encryption |
+| Flows Without Sharing | Active flows running in system context without sharing enforcement |
+| Content Distribution Links | Public file links missing expiry or passwords, and stale records |
 
-### Integration Security
+### Guest & External-Facing Access
+| Check | What it looks for |
+|-------|------------------|
+| Guest User Access | Object permissions and sharing rules granted to unauthenticated guests |
+| Guest-Executable Apex | Apex that guest profiles can run, flagging `without sharing` classes |
+| Experience Cloud Sites | Live sites with self-registration enabled and guest user presence |
+| CORS Allowlist | Wildcard or overly broad CORS allowlist origins |
+| CSP Trusted Sites | Content Security Policy trusted sites with insecure HTTP (mixed-content) endpoints |
+
+### Apex & Code Security
+| Check | What it looks for |
+|-------|------------------|
+| Apex Sharing Declarations | Classes classified by sharing declaration (with / without / inherited / omitted) |
+| Apex CRUD/FLS Enforcement | DML or SOQL performed without CRUD/FLS permission checks |
+| Apex REST Endpoints | `@RestResource` classes running `without sharing` |
+| Visualforce XSS | `escape="false"` and unencoded merge fields in Visualforce markup |
+| Hardcoded Credentials | Bearer tokens, Basic auth, API keys, and raw callout URLs in Apex |
+| Code Security & Coverage | Org-wide Apex test coverage, class/trigger counts, and SOQL injection patterns |
+| Scheduled & Batch Apex | Active scheduled and batch Apex jobs |
+| Anonymous Apex Audit | Anonymous Apex executed in the last 90 days (via SetupAuditTrail) |
+| Apex Logging Framework | Persistent logging usage and sensitive data exposed in Apex logs |
+
+### Integrations, Connected Apps & Deployments
 | Check | What it looks for |
 |-------|------------------|
 | Connected Apps | Apps not restricted to admin-approved users |
-| Remote Sites | Raw remote site registrations without Named Credential coverage |
-| Named Credentials | Named credential inventory |
-| Hardcoded Credentials | Bearer tokens, Basic auth, API keys, and raw callout URLs in Apex code |
+| Connected App OAuth Scopes | Full OAuth-scope grants and infinite refresh-token policies |
+| Inactive Connected Apps | Apps with no OAuth logins in the past 90 days |
+| Named Credentials | Named credential inventory; credentials not referenced in Apex |
+| Remote Site Settings | Remote sites with protocol security disabled |
+| Installed Packages | Managed/unmanaged package inventory; unmanaged or beta packages in production |
+| Deployment Identity | Designated deployment identity and uncontrolled deployment activity |
 
-### Code & Automation
+### Secrets & Credential Storage
 | Check | What it looks for |
 |-------|------------------|
-| Apex Sharing | Apex classes using `without sharing` or missing sharing declaration |
-| Flows Without Sharing | Active flows running in system context without sharing enforcement |
-| Scheduled Apex | Active scheduled and batch Apex jobs |
-| Code Security | Org-wide Apex test coverage percentage |
+| Custom Settings & Credentials | Custom settings with credential-like names that may store secrets |
+| Custom Labels Credential Exposure | API keys and tokens in globally-readable Custom Labels |
 
-### Platform
+### Monitoring & Threat Detection
 | Check | What it looks for |
 |-------|------------------|
-| API Limits | API request consumption vs. daily/concurrent limits |
 | Audit Trail | Permission changes and Login-As events in the setup audit trail |
-| Custom Settings | Custom settings with credential-like names that may store secrets |
+| Login Session | Failed login trends, Login-As events, and access from diverse IPs |
+| Failed Login Detection | Brute-force and credential-stuffing patterns (last 7 days) |
+| Transaction Security Policies | Automated threat detection and response policies configured |
+| Active Debug Log Traces | Active TraceFlag records capturing logs, including high-detail traces |
+| Event Monitoring | Event Monitoring enabled with logs covering 30+ days |
+| SIEM Integration Signals | Evidence of SIEM or external monitoring integration |
+
+## Scope & Liability
+
+**What this tool is.** A read-only, point-in-time configuration review. Every check uses standard Salesforce SOQL, Tooling, and REST **GET** queries only — the tool performs no DML, no metadata deployments, and never modifies the target org or its data. It runs under the permissions of the authenticated `sf` user; checks that the user cannot access are reported as *inconclusive* rather than passing silently.
+
+**What this tool is not.** It is **not** a penetration test, a dynamic/runtime security test, or a source-code audit of managed-package internals. It does not exploit vulnerabilities, attempt privilege escalation, or guarantee detection of every misconfiguration. The Health Score and A–F grade are **prioritisation aids**, not certifications, and do not represent compliance with, or accreditation under, any standard (OWASP, SOC 2, ISO 27001, HIPAA, GDPR, or otherwise). Compliance-framework tags indicate *relevance* to a control area only.
+
+**Point-in-time.** Results reflect org configuration **at the moment the audit ran**. Configuration drift, new customisations, and platform changes can invalidate findings at any time. Re-run regularly (see [History & Diff](#history--diff)).
+
+**Authorisation.** Run this tool only against orgs you own or are **explicitly authorised in writing** to assess. You are responsible for obtaining the necessary permissions and for handling generated reports — which may contain sensitive security configuration — in accordance with your organisation's data-handling and confidentiality obligations.
+
+**No warranty.** This software is provided "as is", without warranty of any kind, express or implied. To the maximum extent permitted by law, the authors and CloudCounsel Limited accept no liability for any loss, damage, or claim arising from use of this tool or reliance on its output. Findings are informational and should be validated by a qualified Salesforce security practitioner before any remediation action is taken.
 
 ## Scoring
 
@@ -261,7 +324,7 @@ Diff report written: ./sf-audit-diff-00D000000000001-...-vs-....json
 
 - Node.js 18+
 - Salesforce CLI (`sf`) v2+
-- The authenticated org user needs at least: Read access to setup objects (User, PermissionSet, ApexClass, Flow, etc.) and access to the Tooling API.
+- A least-privilege, **read-only** org user. The audit performs no writes and does **not** require `View All Data`. See **[PERMISSIONS.md](PERMISSIONS.md)** for the exact minimum permission set, what each is for, what the tool does *not* need, and a ready-to-deploy `SF Audit (Read-Only)` permission set ([`docs/permissionset/`](docs/permissionset/SF_Audit_ReadOnly.permissionset-meta.xml)).
 
 ## Development
 
