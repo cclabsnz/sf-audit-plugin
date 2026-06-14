@@ -1,26 +1,25 @@
 # Compliance Control Verification Worksheet
 
-Every control below is a **draft (`verified: false`)**. Confirm each against the source
-standard, then set `verified: true` in its catalog file. Controls stay **excluded from
-rendered reports** until verified (provenance gate).
+Controls marked `verified: true` have been checked against an authoritative source.
+Unverified controls stay **excluded from rendered reports** (provenance gate).
 
-Total controls: 89 · Verified: 0
+Total controls: 89 · Verified: 12
 
-## OWASP — OWASP Top 10:2021 (9)
+## OWASP — OWASP Top 10:2021 (9/9 verified)
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
-| [ ] | OWASP-A01 | Broken Access Control | OWASP Top 10:2021 A01 |
-| [ ] | OWASP-A02 | Cryptographic Failures | OWASP Top 10:2021 A02 |
-| [ ] | OWASP-A03 | Injection | OWASP Top 10:2021 A03 |
-| [ ] | OWASP-A05 | Security Misconfiguration | OWASP Top 10:2021 A05 |
-| [ ] | OWASP-A06 | Vulnerable and Outdated Components | OWASP Top 10:2021 A06 |
-| [ ] | OWASP-A07 | Identification and Authentication Failures | OWASP Top 10:2021 A07 |
-| [ ] | OWASP-A08 | Software and Data Integrity Failures | OWASP Top 10:2021 A08 |
-| [ ] | OWASP-A09 | Security Logging and Monitoring Failures | OWASP Top 10:2021 A09 |
-| [ ] | OWASP-A10 | Server-Side Request Forgery (SSRF) | OWASP Top 10:2021 A10 |
+| [x] | OWASP-A01 | Broken Access Control | OWASP Top 10:2021 A01 |
+| [x] | OWASP-A02 | Cryptographic Failures | OWASP Top 10:2021 A02 |
+| [x] | OWASP-A03 | Injection | OWASP Top 10:2021 A03 |
+| [x] | OWASP-A05 | Security Misconfiguration | OWASP Top 10:2021 A05 |
+| [x] | OWASP-A06 | Vulnerable and Outdated Components | OWASP Top 10:2021 A06 |
+| [x] | OWASP-A07 | Identification and Authentication Failures | OWASP Top 10:2021 A07 |
+| [x] | OWASP-A08 | Software and Data Integrity Failures | OWASP Top 10:2021 A08 |
+| [x] | OWASP-A09 | Security Logging and Monitoring Failures | OWASP Top 10:2021 A09 |
+| [x] | OWASP-A10 | Server-Side Request Forgery (SSRF) | OWASP Top 10:2021 A10 |
 
-## SOC2 — SOC 2 (2017 TSC) (11)
+## SOC2 — SOC 2 (2017 TSC) (0/11 verified)
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
@@ -36,7 +35,7 @@ Total controls: 89 · Verified: 0
 | [ ] | SOC2-CC9.1 | Risk mitigation for business disruptions | SOC 2 (2017 TSC), CC9.1 |
 | [ ] | SOC2-CC9.2 | Vendor and third-party risk management | SOC 2 (2017 TSC), CC9.2 |
 
-## ISO27001 — ISO/IEC 27001:2013 (Annex A) (10)
+## ISO27001 — ISO/IEC 27001:2013 (Annex A) (0/10 verified)
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
@@ -51,7 +50,7 @@ Total controls: 89 · Verified: 0
 | [ ] | ISO-A.14.1 | Security requirements of information systems | ISO/IEC 27001:2013, A.14.1 |
 | [ ] | ISO-A.14.2 | Security in development and support | ISO/IEC 27001:2013, A.14.2 |
 
-## SBS — Salesforce Security Baseline (41)
+## SBS — Salesforce Security Baseline (0/41 verified)
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
@@ -97,15 +96,15 @@ Total controls: 89 · Verified: 0
 | [ ] | SBS-SECCONF-001 | Security Health Check baseline | Salesforce Security Baseline, SBS-SECCONF-001 |
 | [ ] | SBS-SECCONF-002 | High-risk setting remediation | Salesforce Security Baseline, SBS-SECCONF-002 |
 
-## PRIVACY_ACT — NZ Privacy Act 2020 (IPPs) (3)
+## PRIVACY_ACT — NZ Privacy Act 2020 (IPPs) (3/3 verified)
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
-| [ ] | PRIVACY-IPP5 | IPP 5 — Storage and security of personal information | Privacy Act 2020, IPP 5 |
-| [ ] | PRIVACY-IPP9 | IPP 9 — Retention of personal information | Privacy Act 2020, IPP 9 |
-| [ ] | PRIVACY-IPP12 | IPP 12 — Disclosure of personal information outside New Zealand | Privacy Act 2020, IPP 12 |
+| [x] | PRIVACY-IPP5 | IPP 5 — Storage and security of personal information | Privacy Act 2020, IPP 5 |
+| [x] | PRIVACY-IPP9 | IPP 9 — Retention of personal information | Privacy Act 2020, IPP 9 |
+| [x] | PRIVACY-IPP12 | IPP 12 — Disclosure of personal information outside New Zealand | Privacy Act 2020, IPP 12 |
 
-## HISO10029 — HISO 10029:2022 (HISF) (8)
+## HISO10029 — HISO 10029:2022 (HISF) (0/8 verified)
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
@@ -118,7 +117,7 @@ Total controls: 89 · Verified: 0
 | [ ] | HISO-COMM | Communications and integration security | HISO 10029:2022 (HISF), Communications Security |
 | [ ] | HISO-GOV | Security configuration and governance | HISO 10029:2022 (HISF), Security Governance |
 
-## NZISM — NZISM v3.7 (7)
+## NZISM — NZISM v3.7 (0/7 verified)
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
