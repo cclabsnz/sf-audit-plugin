@@ -3,7 +3,8 @@
 // until their catalogs land (later plan). A08/A10 are mapped precisely:
 //   A10 (SSRF) → egress controls (remote-sites, csp-trusted-sites, named-credentials)
 //   A08 (Software & Data Integrity) → installed-packages, deployment-identity
-export const CHECK_CONTROL_MAP: Record<string, string[]> = {
+// NZ pack control ids (HISO/NZISM/Privacy Act) are layered on by domain via NZ_CROSSWALK below.
+const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'users-and-admins':        ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.9.2', 'SBS-ACS-004'],
   'permissions':             ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.9.2', 'SBS-ACS-002', 'SBS-ACS-005'],
   'inactive-users':          ['OWASP-A01', 'SOC2-CC6.2', 'ISO-A.9.2', 'SBS-ACS-007'],
@@ -66,3 +67,46 @@ export const CHECK_CONTROL_MAP: Record<string, string[]> = {
   'cors-allowlist':          ['OWASP-A05', 'SOC2-CC6.4', 'ISO-A.14.1'],
   'guest-executable-apex':   ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.9.4', 'SBS-CPORTAL-001', 'SBS-CPORTAL-002'],
 };
+
+// NZ pack crosswalk — each check belongs to one domain; the domain's NZ control ids are
+// layered onto its base entry. HISO/NZISM are domain/chapter-level drafts; Privacy Act IPPs
+// are statute-level. All verified:false until the verification pass.
+const NZ_CROSSWALK: Array<{ controls: string[]; checks: string[] }> = [
+  { controls: ['HISO-AC', 'NZISM-AC', 'PRIVACY-IPP5'],
+    checks: ['users-and-admins', 'permissions', 'sharing-model', 'public-group-sharing', 'guest-user-access',
+             'field-level-security', 'standard-profiles', 'api-client-permission', 'integration-users',
+             'escalation-perms', 'report-folder-access', 'apex-crud-fls', 'apex-rest-endpoint',
+             'guest-executable-apex', 'experience-cloud-site', 'content-links', 'apex-sharing', 'flows-without-sharing'] },
+  { controls: ['HISO-AUTH', 'NZISM-AUTH', 'PRIVACY-IPP5'],
+    checks: ['login-session', 'ip-restrictions', 'password-session-policy', 'sso-enforcement', 'mfa-enforcement',
+             'trusted-ip-ranges', 'my-domain-login-policy', 'high-assurance-session', 'internal-user-mfa',
+             'mfa-registration', 'mfa-method-strength', 'failed-login-detection', 'enhanced-domains'] },
+  { controls: ['HISO-CRYPTO', 'NZISM-CRYPTO', 'PRIVACY-IPP5'],
+    checks: ['named-credentials', 'hardcoded-credentials', 'custom-settings', 'certificate-expiry', 'custom-labels-credential'] },
+  { controls: ['HISO-LOG', 'NZISM-LOG'],
+    checks: ['audit-trail', 'apex-logging', 'event-monitoring', 'siem-integration', 'anonymous-apex-audit',
+             'debug-log-access', 'transaction-security-policy'] },
+  { controls: ['HISO-DEV', 'NZISM-SW'],
+    checks: ['code-security', 'visualforce-xss', 'scheduled-apex'] },
+  { controls: ['HISO-COMM', 'NZISM-NET', 'PRIVACY-IPP12'],
+    checks: ['remote-sites', 'csp-trusted-sites', 'connected-apps', 'connected-app-scope', 'connected-app-inactivity', 'cors-allowlist'] },
+  { controls: ['HISO-DATA', 'PRIVACY-IPP5'],
+    checks: ['data-classification', 'field-history-tracking'] },
+  { controls: ['HISO-GOV', 'NZISM-CONFIG'],
+    checks: ['health-check', 'api-limits', 'release-updates', 'legacy-api-version', 'installed-packages', 'deployment-identity'] },
+  { controls: ['PRIVACY-IPP9'],
+    checks: ['inactive-users'] },
+];
+
+function buildCheckControlMap(): Record<string, string[]> {
+  const map: Record<string, string[]> = {};
+  for (const [check, ids] of Object.entries(BASE_CHECK_CONTROL_MAP)) map[check] = [...ids];
+  for (const group of NZ_CROSSWALK) {
+    for (const check of group.checks) {
+      (map[check] ??= []).push(...group.controls);
+    }
+  }
+  return map;
+}
+
+export const CHECK_CONTROL_MAP: Record<string, string[]> = buildCheckControlMap();

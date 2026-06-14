@@ -4,7 +4,7 @@ import { getControl } from './catalogs/index.js';
 
 const PACKS: Record<FrameworkPack, Framework[]> = {
   universal: ['OWASP', 'SOC2', 'ISO27001'],
-  nz: ['ISO27001', 'HISO10029', 'PRIVACY_ACT'],
+  nz: ['ISO27001', 'HISO10029', 'PRIVACY_ACT', 'NZISM'],
   all: ['OWASP', 'SOC2', 'ISO27001', 'SBS', 'HISO10029', 'PRIVACY_ACT', 'NZISM', 'HIPAA', 'GDPR'],
 };
 
