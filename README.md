@@ -31,11 +31,14 @@ This runs all 61 security checks against the target org and writes a report to t
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--target-org` | *(required)* | Org alias or username to audit |
-| `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json` |
+| `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json`, `executive` |
 | `--output` / `-o` | `.` | Directory to write the report file |
 | `--fail-on` | — | Exit with code 1 if any finding is at or above this severity: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
 | `--checks` | *(all)* | Comma-separated check IDs to run instead of all 61 (e.g. `hardcoded-credentials,apex-sharing`) |
 | `--scoring-config` | — | Path to a custom scoring config JSON file to override weights and grade thresholds |
+| `--prepared-for` | — | Client name for the executive report cover line |
+| `--branding` | — | Path to a `report-branding.json` to override CloudCounsel defaults (executive format) |
+| `--top` | `5` | Number of executive priorities to highlight (executive format) |
 
 ### Examples
 
@@ -57,6 +60,20 @@ sf audit security --target-org myOrg --checks hardcoded-credentials,apex-sharing
 
 # Use a custom scoring config (e.g. stricter weights for your org)
 sf audit security --target-org myOrg --scoring-config ./my-scoring.json
+```
+
+### Executive report
+
+`--format executive` produces a CloudCounsel-branded, print-to-PDF HTML report for clients —
+grade and executive summary, top priorities with abuse/impact narratives, attack scenarios, and a
+risk×effort remediation roadmap. It is fully self-contained (fonts embedded); open it and **Save as PDF**.
+
+```bash
+# Branded executive report for a client
+sf audit security --target-org myOrg --format executive --prepared-for "Acme Health" --top 5
+
+# White-label / co-brand via overrides
+sf audit security --target-org myOrg --format executive --branding ./report-branding.json
 ```
 
 The report file is written as `sf-audit-<orgId>-<timestamp>.<ext>` in the output directory (e.g. `sf-audit-00D000000000001-1711234567890.html`).
