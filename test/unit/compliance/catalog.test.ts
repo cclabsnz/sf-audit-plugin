@@ -18,9 +18,9 @@ describe('catalog lookup', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('contains the universal frameworks plus SBS', () => {
+  it('contains the universal frameworks, SBS, and the NZ pack', () => {
     const frameworks = new Set(ALL_CONTROLS.map((c) => c.framework));
-    for (const fw of ['OWASP', 'SOC2', 'ISO27001', 'SBS']) {
+    for (const fw of ['OWASP', 'SOC2', 'ISO27001', 'SBS', 'HISO10029', 'PRIVACY_ACT', 'NZISM']) {
       expect(frameworks.has(fw as never)).toBe(true);
     }
   });
