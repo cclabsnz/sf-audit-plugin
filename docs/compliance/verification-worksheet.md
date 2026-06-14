@@ -2,7 +2,7 @@
 
 Controls marked verified have been checked against an authoritative source. Unverified controls stay excluded from rendered reports (provenance gate).
 
-Total controls: 89 · Verified: 60
+Total controls: 89 · Verified: 79
 
 ## OWASP — OWASP Top 10:2021 (9/9 verified)
 
@@ -18,21 +18,21 @@ Total controls: 89 · Verified: 60
 | [x] | OWASP-A09 | Security Logging and Monitoring Failures | OWASP Top 10:2021 A09 |
 | [x] | OWASP-A10 | Server-Side Request Forgery (SSRF) | OWASP Top 10:2021 A10 |
 
-## SOC2 — SOC 2 (2017 TSC) (0/11 verified)
+## SOC2 — AICPA TSC 2017 (Common Criteria) (11/11 verified)
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
-| [ ] | SOC2-CC6.1 | Logical access controls | SOC 2 (2017 TSC), CC6.1 |
-| [ ] | SOC2-CC6.2 | User registration and authorization | SOC 2 (2017 TSC), CC6.2 |
-| [ ] | SOC2-CC6.3 | Role-based access and least privilege | SOC 2 (2017 TSC), CC6.3 |
-| [ ] | SOC2-CC6.4 | Access restrictions for sensitive resources | SOC 2 (2017 TSC), CC6.4 |
-| [ ] | SOC2-CC6.6 | Boundary protection against external threats | SOC 2 (2017 TSC), CC6.6 |
-| [ ] | SOC2-CC6.7 | Restricting the transmission of information | SOC 2 (2017 TSC), CC6.7 |
-| [ ] | SOC2-CC7.1 | Detection of configuration changes and vulnerabilities | SOC 2 (2017 TSC), CC7.1 |
-| [ ] | SOC2-CC7.2 | Monitoring for anomalies and security events | SOC 2 (2017 TSC), CC7.2 |
-| [ ] | SOC2-CC8.1 | Change management | SOC 2 (2017 TSC), CC8.1 |
-| [ ] | SOC2-CC9.1 | Risk mitigation for business disruptions | SOC 2 (2017 TSC), CC9.1 |
-| [ ] | SOC2-CC9.2 | Vendor and third-party risk management | SOC 2 (2017 TSC), CC9.2 |
+| [x] | SOC2-CC6.1 | Logical access controls | AICPA Trust Services Criteria 2017, CC6.1 |
+| [x] | SOC2-CC6.2 | Registration and de-provisioning of users | AICPA Trust Services Criteria 2017, CC6.2 |
+| [x] | SOC2-CC6.3 | Role-based access and least privilege | AICPA Trust Services Criteria 2017, CC6.3 |
+| [x] | SOC2-CC6.4 | Physical access controls | AICPA Trust Services Criteria 2017, CC6.4 |
+| [x] | SOC2-CC6.6 | Boundary protection against external threats | AICPA Trust Services Criteria 2017, CC6.6 |
+| [x] | SOC2-CC6.7 | Restriction of information transmission and movement | AICPA Trust Services Criteria 2017, CC6.7 |
+| [x] | SOC2-CC7.1 | Detection of configuration changes and vulnerabilities | AICPA Trust Services Criteria 2017, CC7.1 |
+| [x] | SOC2-CC7.2 | Monitoring for anomalies and security events | AICPA Trust Services Criteria 2017, CC7.2 |
+| [x] | SOC2-CC8.1 | Change management | AICPA Trust Services Criteria 2017, CC8.1 |
+| [x] | SOC2-CC9.1 | Risk mitigation for business disruptions | AICPA Trust Services Criteria 2017, CC9.1 |
+| [x] | SOC2-CC9.2 | Vendor and third-party risk management | AICPA Trust Services Criteria 2017, CC9.2 |
 
 ## ISO27001 — ISO/IEC 27001:2013 (Annex A) (0/10 verified)
 
@@ -103,18 +103,18 @@ Total controls: 89 · Verified: 60
 | [x] | PRIVACY-IPP9 | IPP 9 — Retention of personal information | Privacy Act 2020, IPP 9 |
 | [x] | PRIVACY-IPP12 | IPP 12 — Disclosure of personal information outside New Zealand | Privacy Act 2020, IPP 12 |
 
-## HISO10029 — HISO 10029:2022 (HISF) (0/8 verified)
+## HISO10029 — HISO 10029:2022 (HISF) (8/8 verified)
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
-| [ ] | HISO-AC | Access control | HISO 10029:2022 (HISF), Access Control |
-| [ ] | HISO-AUTH | Identity and authentication | HISO 10029:2022 (HISF), Authentication |
-| [ ] | HISO-CRYPTO | Cryptography and key management | HISO 10029:2022 (HISF), Cryptography |
-| [ ] | HISO-LOG | Logging, monitoring and audit | HISO 10029:2022 (HISF), Logging and Monitoring |
-| [ ] | HISO-DATA | Information classification and handling | HISO 10029:2022 (HISF), Information Classification |
-| [ ] | HISO-DEV | Secure development and change | HISO 10029:2022 (HISF), Secure Development |
-| [ ] | HISO-COMM | Communications and integration security | HISO 10029:2022 (HISF), Communications Security |
-| [ ] | HISO-GOV | Security configuration and governance | HISO 10029:2022 (HISF), Security Governance |
+| [x] | HISO-AC | Access control | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Access Control |
+| [x] | HISO-AUTH | Identity and authentication | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Authentication |
+| [x] | HISO-CRYPTO | Cryptography and key management | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Cryptography |
+| [x] | HISO-LOG | Logging, monitoring and audit | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Logging and Monitoring |
+| [x] | HISO-DATA | Information classification and handling | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Information Classification |
+| [x] | HISO-DEV | Secure development and change | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Secure Development |
+| [x] | HISO-COMM | Communications and integration security | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Communications Security |
+| [x] | HISO-GOV | Security configuration and governance | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Security Governance |
 
 ## NZISM — NZISM v3.8 (7/7 verified)
 

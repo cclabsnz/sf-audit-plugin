@@ -18,8 +18,8 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'apex-sharing':            ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.9.4', 'SBS-CPORTAL-001'],
   'flows-without-sharing':   ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.9.4', 'SBS-CPORTAL-004'],
   'connected-apps':          ['OWASP-A05', 'SOC2-CC6.6', 'ISO-A.9.4', 'SBS-OAUTH-001', 'SBS-OAUTH-002', 'SBS-DEP-006'],
-  'remote-sites':            ['OWASP-A05', 'OWASP-A10', 'SOC2-CC6.4', 'ISO-A.14.1', 'SBS-INT-002'],
-  'csp-trusted-sites':       ['OWASP-A05', 'OWASP-A10', 'SOC2-CC6.4', 'ISO-A.14.1'],
+  'remote-sites':            ['OWASP-A05', 'OWASP-A10', 'SOC2-CC6.6', 'ISO-A.14.1', 'SBS-INT-002'],
+  'csp-trusted-sites':       ['OWASP-A05', 'OWASP-A10', 'SOC2-CC6.6', 'ISO-A.14.1'],
   'named-credentials':       ['OWASP-A02', 'OWASP-A10', 'SOC2-CC6.7', 'ISO-A.9.4', 'SBS-INT-003'],
   'hardcoded-credentials':   ['OWASP-A02', 'SOC2-CC6.7', 'ISO-A.9.4', 'SBS-DEP-005'],
   'custom-settings':         ['OWASP-A02', 'SOC2-CC6.7', 'ISO-A.9.4'],
@@ -56,7 +56,7 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'mfa-registration':        ['OWASP-A07', 'SOC2-CC6.1', 'ISO-A.9.4'],
   'mfa-method-strength':     ['OWASP-A07', 'SOC2-CC6.1', 'ISO-A.9.4'],
   'release-updates':         ['OWASP-A06', 'SOC2-CC7.1', 'ISO-A.12.6'],
-  'legacy-api-version':      ['OWASP-A06', 'SOC2-CC6.4', 'ISO-A.12.6'],
+  'legacy-api-version':      ['OWASP-A06', 'SOC2-CC6.6', 'ISO-A.12.6'],
   'connected-app-scope':     ['OWASP-A01', 'OWASP-A05', 'SOC2-CC6.6', 'ISO-A.9.4', 'SBS-OAUTH-002'],
   'transaction-security-policy': ['OWASP-A09', 'SOC2-CC7.2', 'ISO-A.12.4', 'SBS-MON-003'],
   'failed-login-detection':  ['OWASP-A07', 'SOC2-CC7.2', 'ISO-A.12.4', 'SBS-MON-003'],
@@ -64,7 +64,7 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'custom-labels-credential':['OWASP-A02', 'SOC2-CC6.7', 'ISO-A.9.4'],
   'report-folder-access':    ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.9.4'],
   'escalation-perms':        ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.9.2', 'SBS-ACS-004'],
-  'cors-allowlist':          ['OWASP-A05', 'SOC2-CC6.4', 'ISO-A.14.1'],
+  'cors-allowlist':          ['OWASP-A05', 'SOC2-CC6.6', 'ISO-A.14.1'],
   'guest-executable-apex':   ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.9.4', 'SBS-CPORTAL-001', 'SBS-CPORTAL-002'],
 };
 
