@@ -6,7 +6,7 @@ import type { Finding } from '../findings/Finding.js';
 import type { AuditResult } from '../findings/AuditResult.js';
 import type { ScoringConfig } from '../findings/ScoringConfig.js';
 import { buildAuditResult } from '../findings/scoring.js';
-import { getComplianceTags } from '../findings/ComplianceMapping.js';
+import { getComplianceTags } from '../compliance/resolve.js';
 import { ChainEngine } from '../chains/ChainEngine.js';
 
 const PERMISSION_ERROR_CODES = new Set([

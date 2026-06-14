@@ -2,7 +2,8 @@ import { jest } from '@jest/globals';
 import { CheckEngine } from '../../../src/checks/CheckEngine.js';
 import type { SecurityCheck, CheckResult } from '../../../src/checks/SecurityCheck.js';
 import type { AuditContext } from '../../../src/context/AuditContext.js';
-import { COMPLIANCE_MAP, getComplianceTags } from '../../../src/findings/ComplianceMapping.js';
+import { CHECK_CONTROL_MAP } from '../../../src/compliance/mapping.js';
+import { getComplianceTags } from '../../../src/compliance/resolve.js';
 
 function makeCtx(): AuditContext {
   return {
@@ -172,10 +173,10 @@ describe('CheckEngine', () => {
   });
 
   describe('ComplianceMapping', () => {
-    it('COMPLIANCE_MAP covers every registered check ID', async () => {
+    it('CHECK_CONTROL_MAP covers every registered check ID', async () => {
       const { CHECKS } = await import('../../../src/checks/registry.js');
       for (const check of CHECKS) {
-        expect(COMPLIANCE_MAP).toHaveProperty(check.id);
+        expect(CHECK_CONTROL_MAP).toHaveProperty(check.id);
       }
     });
 
