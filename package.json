@@ -58,6 +58,7 @@
     "/lib",
     "/messages",
     "/config",
+    "/src/assets",
     "!/lib/**/*.map"
   ]
 }
