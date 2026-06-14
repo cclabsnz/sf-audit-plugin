@@ -21,7 +21,18 @@ export const OWASP_CONTROLS: ControlDef[] = [
   { id: 'OWASP-A07', framework: 'OWASP', version: V, title: 'Identification and Authentication Failures',
     requirement: 'Authentication is strong (MFA, session controls, IP/login policy) and resistant to credential stuffing and session abuse.',
     sourceRef: 'OWASP Top 10:2021 A07', verified: false },
+  { id: 'OWASP-A08', framework: 'OWASP', version: V, title: 'Software and Data Integrity Failures',
+    requirement: 'Software, packages, and deployments originate from trusted sources with integrity controls; unmanaged/unverified components and uncontrolled deployment activity are flagged.',
+    sourceRef: 'OWASP Top 10:2021 A08', verified: false },
   { id: 'OWASP-A09', framework: 'OWASP', version: V, title: 'Security Logging and Monitoring Failures',
     requirement: 'Security-relevant events are logged, retained, and monitored so incidents can be detected and investigated.',
     sourceRef: 'OWASP Top 10:2021 A09', verified: false },
+  { id: 'OWASP-A10', framework: 'OWASP', version: V, title: 'Server-Side Request Forgery (SSRF)',
+    requirement: 'Server-side requests (Apex callouts, remote sites, integrations) are restricted to trusted, explicitly allowlisted endpoints to prevent forged requests to internal or unintended targets.',
+    sourceRef: 'OWASP Top 10:2021 A10', verified: false },
 ];
+
+// Note: OWASP-A04 (Insecure Design) is intentionally NOT catalogued. It concerns
+// design-level flaws, not org configuration, so no read-only config check maps to it.
+// The executive report's scope section declares A04 as out of assessment scope rather
+// than forcing a weak mapping.
