@@ -8,13 +8,15 @@ describe('resolveControls', () => {
   });
 
   it('excludes unverified controls when requireVerified is true', () => {
-    // catalogs ship verified:false, so a verified-only resolve is empty for now
+    // ISO 27001 controls are unverified drafts, so a verified-only resolve excludes them.
     const out = resolveControls('users-and-admins', { frameworks: ['ISO27001'], requireVerified: true });
     expect(out).toEqual([]);
   });
 
-  it('defaults requireVerified to true', () => {
-    expect(resolveControls('users-and-admins')).toEqual([]);
+  it('defaults requireVerified to true and returns only verified controls', () => {
+    const out = resolveControls('users-and-admins');
+    expect(out.length).toBeGreaterThan(0);          // OWASP/Privacy Act controls are verified
+    expect(out.every((c) => c.verified)).toBe(true); // never returns a draft
   });
 
   it('packFrameworks maps universal to OWASP/SOC2/ISO', () => {
