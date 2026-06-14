@@ -7,7 +7,7 @@
 const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'users-and-admins':        ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.9.2', 'SBS-ACS-004'],
   'permissions':             ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.9.2', 'SBS-ACS-002', 'SBS-ACS-005'],
-  'inactive-users':          ['OWASP-A01', 'SOC2-CC6.2', 'ISO-A.9.2', 'SBS-ACS-007'],
+  'inactive-users':          ['OWASP-A01', 'SOC2-CC6.2', 'ISO-A.9.2'],
   'login-session':           ['OWASP-A07', 'SOC2-CC6.1', 'ISO-A.9.4'],
   'ip-restrictions':         ['OWASP-A07', 'SOC2-CC6.1', 'ISO-A.9.4', 'SBS-AUTH-003'],
   'password-session-policy': ['OWASP-A07', 'SOC2-CC6.1', 'ISO-A.9.4'],
@@ -35,7 +35,7 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'integration-users':       ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.9.2', 'SBS-ACS-007', 'SBS-ACS-008', 'SBS-ACS-009'],
   'content-links':           ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.13.2', 'SBS-FILE-001', 'SBS-FILE-002', 'SBS-FILE-003'],
   'field-history-tracking':  ['OWASP-A09', 'SOC2-CC7.2', 'ISO-A.12.4', 'SBS-DATA-004'],
-  'data-classification':     ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.8.2', 'SBS-DATA-001', 'SBS-DATA-002', 'SBS-DATA-003'],
+  'data-classification':     ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.8.2', 'SBS-DATA-001', 'SBS-DATA-002'],
   'deployment-identity':     ['OWASP-A05', 'OWASP-A08', 'SOC2-CC8.1', 'ISO-A.12.1', 'SBS-DEP-001', 'SBS-DEP-003'],
   'apex-logging':            ['OWASP-A09', 'SOC2-CC7.2', 'ISO-A.12.4', 'SBS-CODE-003', 'SBS-CODE-004'],
   'event-monitoring':        ['OWASP-A09', 'SOC2-CC7.2', 'ISO-A.12.4', 'SBS-MON-001', 'SBS-INT-004'],
