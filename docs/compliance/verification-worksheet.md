@@ -2,7 +2,7 @@
 
 Controls marked verified have been checked against an authoritative source. Unverified controls stay excluded from rendered reports (provenance gate).
 
-Total controls: 89 · Verified: 53
+Total controls: 89 · Verified: 60
 
 ## OWASP — OWASP Top 10:2021 (9/9 verified)
 
@@ -116,15 +116,15 @@ Total controls: 89 · Verified: 53
 | [ ] | HISO-COMM | Communications and integration security | HISO 10029:2022 (HISF), Communications Security |
 | [ ] | HISO-GOV | Security configuration and governance | HISO 10029:2022 (HISF), Security Governance |
 
-## NZISM — NZISM v3.7 (0/7 verified)
+## NZISM — NZISM v3.8 (7/7 verified)
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
-| [ ] | NZISM-AC | Access control and privilege management | NZISM v3.7, Access Control and Passwords |
-| [ ] | NZISM-AUTH | Identification and authentication | NZISM v3.7, Authentication |
-| [ ] | NZISM-LOG | Event logging and auditing | NZISM v3.7, Event Logging and Auditing |
-| [ ] | NZISM-CRYPTO | Cryptography and key management | NZISM v3.7, Cryptography |
-| [ ] | NZISM-SW | Software and application security | NZISM v3.7, Software Security |
-| [ ] | NZISM-NET | Network security and gateways | NZISM v3.7, Gateway and Network Security |
-| [ ] | NZISM-CONFIG | System hardening and configuration | NZISM v3.7, System Hardening |
+| [x] | NZISM-AC | Access control and privilege management | NZISM v3.8, Ch.16 Authentication and Access Controls (16.2 System Access, 16.3 Privileged User Access) |
+| [x] | NZISM-AUTH | Identification, authentication and MFA | NZISM v3.8, Ch.16 Authentication and Access Controls (16.1 Identification, Authentication and Authorisation, 16.7 Multi-Factor Authentication) |
+| [x] | NZISM-LOG | Event monitoring, logging and auditing | NZISM v3.8, §16.6 Event Monitoring, Logging and Auditing |
+| [x] | NZISM-CRYPTO | Cryptography and key management | NZISM v3.8, Ch.17 Cryptography |
+| [x] | NZISM-SW | Software and application security | NZISM v3.8, Ch.14 Software Security |
+| [x] | NZISM-NET | Network security and gateways | NZISM v3.8, Ch.18 Network Security / Ch.19 Gateway Security |
+| [x] | NZISM-CONFIG | System hardening and configuration | NZISM v3.8, Ch.12 Product Security (configuration and patching) |
 
