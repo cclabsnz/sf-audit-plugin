@@ -11,6 +11,7 @@ import { MarkdownRenderer } from '../../renderers/MarkdownRenderer.js';
 import type { AuditRenderer } from '../../renderers/AuditRenderer.js';
 import { ClientReportRenderer } from '../../renderers/ClientReportRenderer.js';
 import { resolveBranding, type BrandingOverrides } from '../../report/branding.js';
+import { resolveFrameworks } from '../../compliance/resolve.js';
 import { buildAuditContext, resolveOrgInfo } from '../../lib/wire.js';
 import { loadScoringConfig } from '../../findings/loadScoringConfig.js';
 import { HistoryStore } from '../../history/HistoryStore.js';
@@ -65,6 +66,10 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     top: Flags.integer({
       summary: 'Number of executive priorities to highlight (executive format).',
       default: 5,
+    }),
+    frameworks: Flags.string({
+      summary: 'Compliance frameworks for the executive matrix: universal | nz | all | a comma list (executive format).',
+      default: 'universal',
     }),
   };
 
@@ -133,13 +138,13 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
 
   private rendererFor(
     format: string,
-    flags: { 'prepared-for'?: string; branding?: string; top: number },
+    flags: { 'prepared-for'?: string; branding?: string; top: number; frameworks: string },
   ): AuditRenderer | undefined {
     if (format === 'executive') {
       let overrides: BrandingOverrides | undefined;
       if (flags.branding) overrides = JSON.parse(fs.readFileSync(flags.branding, 'utf-8')) as BrandingOverrides;
       const branding = resolveBranding(overrides, flags['prepared-for']);
-      return new ClientReportRenderer({ branding, topN: flags.top });
+      return new ClientReportRenderer({ branding, topN: flags.top, frameworks: resolveFrameworks(flags.frameworks) });
     }
     return RENDERERS[format];
   }
