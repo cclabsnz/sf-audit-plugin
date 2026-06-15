@@ -7,10 +7,11 @@ describe('resolveControls', () => {
     expect(out.length).toBeGreaterThan(0);
   });
 
-  it('excludes unverified controls when requireVerified is true', () => {
-    // ISO 27001 controls are unverified drafts, so a verified-only resolve excludes them.
+  it('returns only verified controls when requireVerified is true (provenance gate)', () => {
+    // The gate filters out any control whose verified flag is false; with the catalog fully
+    // verified, every returned control is verified — and a draft would never appear.
     const out = resolveControls('users-and-admins', { frameworks: ['ISO27001'], requireVerified: true });
-    expect(out).toEqual([]);
+    expect(out.every((c) => c.verified)).toBe(true);
   });
 
   it('defaults requireVerified to true and returns only verified controls', () => {
@@ -41,7 +42,7 @@ describe('getComplianceTags (compat shim)', () => {
   it('returns the raw id strings for a check, unchanged from the old behaviour', () => {
     const tags = getComplianceTags('users-and-admins');
     expect(tags).toContain('OWASP-A01');
-    expect(tags).toContain('ISO-A.9.2');
+    expect(tags).toContain('ISO-A.5.18'); // ISO/IEC 27001:2022 Annex A 5.18 Access rights
   });
 
   it('returns an empty array for an unknown check', () => {

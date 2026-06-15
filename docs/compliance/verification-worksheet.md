@@ -2,7 +2,7 @@
 
 Controls marked verified have been checked against an authoritative source. Unverified controls stay excluded from rendered reports (provenance gate).
 
-Total controls: 89 · Verified: 79
+Total controls: 89 · Verified: 89
 
 ## OWASP — OWASP Top 10:2021 (9/9 verified)
 
@@ -34,20 +34,20 @@ Total controls: 89 · Verified: 79
 | [x] | SOC2-CC9.1 | Risk mitigation for business disruptions | AICPA Trust Services Criteria 2017, CC9.1 |
 | [x] | SOC2-CC9.2 | Vendor and third-party risk management | AICPA Trust Services Criteria 2017, CC9.2 |
 
-## ISO27001 — ISO/IEC 27001:2013 (Annex A) (0/10 verified)
+## ISO27001 — ISO/IEC 27001:2022 (10/10 verified)
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
-| [ ] | ISO-A.8.2 | Information classification | ISO/IEC 27001:2013, A.8.2 |
-| [ ] | ISO-A.9.2 | User access management | ISO/IEC 27001:2013, A.9.2 |
-| [ ] | ISO-A.9.4 | System and application access control | ISO/IEC 27001:2013, A.9.4 |
-| [ ] | ISO-A.10.1 | Cryptographic controls | ISO/IEC 27001:2013, A.10.1 |
-| [ ] | ISO-A.12.1 | Operational procedures and responsibilities | ISO/IEC 27001:2013, A.12.1 |
-| [ ] | ISO-A.12.4 | Logging and monitoring | ISO/IEC 27001:2013, A.12.4 |
-| [ ] | ISO-A.12.6 | Technical vulnerability management | ISO/IEC 27001:2013, A.12.6 |
-| [ ] | ISO-A.13.2 | Information transfer | ISO/IEC 27001:2013, A.13.2 |
-| [ ] | ISO-A.14.1 | Security requirements of information systems | ISO/IEC 27001:2013, A.14.1 |
-| [ ] | ISO-A.14.2 | Security in development and support | ISO/IEC 27001:2013, A.14.2 |
+| [x] | ISO-A.5.12 | Classification of information | ISO/IEC 27001:2022, Annex A A.5.12 |
+| [x] | ISO-A.5.14 | Information transfer | ISO/IEC 27001:2022, Annex A A.5.14 |
+| [x] | ISO-A.5.18 | Access rights | ISO/IEC 27001:2022, Annex A A.5.18 |
+| [x] | ISO-A.8.3 | Information access restriction | ISO/IEC 27001:2022, Annex A A.8.3 |
+| [x] | ISO-A.8.8 | Management of technical vulnerabilities | ISO/IEC 27001:2022, Annex A A.8.8 |
+| [x] | ISO-A.8.15 | Logging | ISO/IEC 27001:2022, Annex A A.8.15 |
+| [x] | ISO-A.8.24 | Use of cryptography | ISO/IEC 27001:2022, Annex A A.8.24 |
+| [x] | ISO-A.8.25 | Secure development life cycle | ISO/IEC 27001:2022, Annex A A.8.25 |
+| [x] | ISO-A.8.26 | Application security requirements | ISO/IEC 27001:2022, Annex A A.8.26 |
+| [x] | ISO-A.8.32 | Change management | ISO/IEC 27001:2022, Annex A A.8.32 |
 
 ## SBS — Security Benchmark for Salesforce (SBS) (41/41 verified)
 
