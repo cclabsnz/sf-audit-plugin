@@ -24,7 +24,14 @@ function makeResult(): AuditResult {
 }
 
 describe('ClientReportRenderer', () => {
-  const r = new ClientReportRenderer({ branding: DEFAULT_BRANDING, topN: 5 });
+  const r = new ClientReportRenderer({ branding: DEFAULT_BRANDING, topN: 5, frameworks: ['OWASP'] });
+
+  it('renders the compliance matrix for selected frameworks', () => {
+    const html = r.render(makeResult());
+    expect(html).toContain('Compliance Coverage');
+    expect(html).toContain('OWASP-A07');
+    expect(html).toContain('OWASP Top 10:2021');
+  });
 
   it('declares the executive format and html extension', () => {
     expect(r.format).toBe('executive');

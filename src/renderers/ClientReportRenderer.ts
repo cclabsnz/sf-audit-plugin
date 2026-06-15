@@ -8,18 +8,28 @@ import { fontFaceCss } from '../report/fonts.js';
 import { getCheckMeta } from '../findings/CheckMeta.js';
 import { selectPriorities } from '../report/ExecutivePriorities.js';
 import { buildRoadmap, type Roadmap } from '../report/RemediationRoadmap.js';
+import type { Framework } from '../compliance/types.js';
+import { buildComplianceMatrix, type FrameworkMatrix } from '../report/ComplianceMatrix.js';
 
 const SEV_COLOR: Record<string, string> = {
   CRITICAL: '#7d3a3a', HIGH: '#a35a2a', MEDIUM: '#8a6d1f', LOW: '#3a5a82', INFO: '#636770',
 };
+const SEV_RANK: Record<RiskLevel, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4 };
 const GRADE_COLOR: Record<string, string> = {
   A: '#4a7d5e', B: '#4a7d5e', C: '#8a6d1f', D: '#a35a2a', F: '#7d3a3a',
 };
 const SEV_ORDER: RiskLevel[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
+const FRAMEWORK_LABEL: Record<Framework, string> = {
+  OWASP: 'OWASP Top 10', SOC2: 'SOC 2', ISO27001: 'ISO/IEC 27001',
+  SBS: 'Security Benchmark for Salesforce', PRIVACY_ACT: 'NZ Privacy Act',
+  HISO10029: 'HISO 10029', NZISM: 'NZISM', HIPAA: 'HIPAA', GDPR: 'GDPR',
+};
+
 export interface ClientReportOptions {
   branding: Branding;
   topN: number;
+  frameworks: Framework[];
 }
 
 export class ClientReportRenderer implements AuditRenderer {
@@ -36,6 +46,7 @@ export class ClientReportRenderer implements AuditRenderer {
     for (const c of chains) for (const s of c.steps) chainIds.add(s.findingId);
     const priorities = selectPriorities(result.findings, chainIds, this.opts.topN);
     const roadmap = buildRoadmap(result.findings);
+    const matrix = buildComplianceMatrix(result, this.opts.frameworks);
 
     let n = 0;
     const num = (): string => String(++n).padStart(2, '0');
@@ -44,6 +55,7 @@ export class ClientReportRenderer implements AuditRenderer {
       this.prioritiesSection(priorities, chainIds, num()),
       chains.length ? this.scenarios(chains, num()) : '',
       this.roadmapSection(roadmap, num()),
+      matrix.length ? this.matrixSection(matrix, num()) : '',
       this.findingsAppendix(result, num()),
     ].join('\n');
 
@@ -92,6 +104,11 @@ p{margin:0 0 10px;max-width:68ch}
 .find{padding:12px 0;border-bottom:1px solid var(--border)}
 .find h3{font-family:var(--body);font-size:15px;font-weight:600;margin:0 0 3px}
 .find p{font-size:13px;color:var(--muted);margin:0}
+.matrix{width:100%;border-collapse:collapse;margin:8px 0 22px;font-size:13px}
+.matrix th{text-align:left;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.08em;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border);padding:6px 8px}
+.matrix td{border-bottom:1px solid var(--border);padding:7px 8px;vertical-align:top}
+.matrix .cid{font-family:var(--mono);font-size:12px;color:var(--primary);white-space:nowrap}
+.matrix .st{text-align:right;white-space:nowrap}
 footer{margin-top:56px;border-top:1px solid var(--border);padding-top:18px;color:var(--muted);font-size:12px;line-height:1.55}
 footer .label{display:block;margin-bottom:6px;color:var(--ink)}
 @page{margin:18mm}
@@ -174,6 +191,25 @@ ${impact}${chained}<p><strong>Fix:</strong> ${esc(f.remediation)}</p></div>`;
 ${tier('Quick wins', '≤1 day', roadmap.quick)}
 ${tier('Moderate', 'days', roadmap.moderate)}
 ${tier('Projects', 'weeks', roadmap.project)}`;
+  }
+
+  private worst(findings: Finding[]): RiskLevel | undefined {
+    return findings.slice().sort((a, b) => SEV_RANK[a.riskLevel] - SEV_RANK[b.riskLevel])[0]?.riskLevel;
+  }
+
+  private matrixSection(matrix: FrameworkMatrix[], numStr: string): string {
+    const blocks = matrix.map((fm) => {
+      const rows = fm.rows.map((row) => {
+        const w = this.worst(row.findings);
+        const status = w
+          ? this.chip(w, `${row.findings.length} finding${row.findings.length === 1 ? '' : 's'}`)
+          : '<span class="muted">No findings detected</span>';
+        return `<tr><td class="cid">${esc(row.control.id)}</td><td>${esc(row.control.title)}</td><td class="st">${status}</td></tr>`;
+      }).join('');
+      return `<h3>${esc(FRAMEWORK_LABEL[fm.framework])} <span class="muted">· ${esc(fm.version)}</span></h3>
+<table class="matrix"><thead><tr><th>Control</th><th>Requirement area</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }).join('');
+    return `${this.sectionHead(numStr, 'Compliance Coverage')}<p class="muted">Findings mapped to framework controls. “No findings detected” is not an attestation of compliance — see Scope &amp; Liability.</p>${blocks}`;
   }
 
   private findingsAppendix(r: AuditResult, numStr: string): string {
