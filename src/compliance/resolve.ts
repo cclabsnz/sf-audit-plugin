@@ -35,3 +35,21 @@ export function resolveControls(checkId: string, opts: ResolveOptions = {}): Con
 export function getComplianceTags(checkId: string): string[] {
   return CHECK_CONTROL_MAP[checkId] ?? [];
 }
+
+const ALIAS: Record<string, Framework> = {
+  owasp: 'OWASP', soc2: 'SOC2', iso: 'ISO27001', iso27001: 'ISO27001', sbs: 'SBS',
+  privacy: 'PRIVACY_ACT', 'privacy-act': 'PRIVACY_ACT', hiso: 'HISO10029', nzism: 'NZISM',
+  hipaa: 'HIPAA', gdpr: 'GDPR',
+};
+
+/** Resolve a --frameworks value: a pack name (universal|nz|all) or a comma list of aliases. */
+export function resolveFrameworks(input: string): Framework[] {
+  const v = input.trim().toLowerCase();
+  if (v === 'universal' || v === 'nz' || v === 'all') return packFrameworks(v);
+  const out: Framework[] = [];
+  for (const part of v.split(',').map((s) => s.trim())) {
+    const fw = ALIAS[part];
+    if (fw && !out.includes(fw)) out.push(fw);
+  }
+  return out;
+}
