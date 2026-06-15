@@ -39,6 +39,7 @@ This runs all 61 security checks against the target org and writes a report to t
 | `--prepared-for` | — | Client name for the executive report cover line |
 | `--branding` | — | Path to a `report-branding.json` to override CloudCounsel defaults (executive format) |
 | `--top` | `5` | Number of executive priorities to highlight (executive format) |
+| `--frameworks` | `universal` | Compliance matrix scope (executive format): `universal` (OWASP/SOC 2/ISO 27001), `nz` (ISO/HISO/Privacy Act/NZISM), `all`, or a comma list (e.g. `owasp,iso,nzism`) |
 
 ### Examples
 
@@ -65,16 +66,25 @@ sf audit security --target-org myOrg --scoring-config ./my-scoring.json
 ### Executive report
 
 `--format executive` produces a CloudCounsel-branded, print-to-PDF HTML report for clients —
-grade and executive summary, top priorities with abuse/impact narratives, attack scenarios, and a
-risk×effort remediation roadmap. It is fully self-contained (fonts embedded); open it and **Save as PDF**.
+grade and executive summary, top priorities with abuse/impact narratives, attack scenarios, a
+risk×effort remediation roadmap, and a **compliance coverage matrix** mapping findings to framework
+controls. It is fully self-contained (fonts embedded); open it and **Save as PDF**.
 
 ```bash
-# Branded executive report for a client
+# Branded executive report for a client (universal compliance matrix)
 sf audit security --target-org myOrg --format executive --prepared-for "Acme Health" --top 5
+
+# NZ health/government engagement — NZ framework matrix
+sf audit security --target-org myOrg --format executive --frameworks nz
 
 # White-label / co-brand via overrides
 sf audit security --target-org myOrg --format executive --branding ./report-branding.json
 ```
+
+Compliance controls are mapped from authoritative, version-pinned sources (OWASP Top 10:2021,
+AICPA TSC, ISO/IEC 27001:2022, the Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029,
+NZISM). Only source-verified controls render; "No findings detected" is **not** an attestation of
+compliance (see the report's Scope & Liability section).
 
 The report file is written as `sf-audit-<orgId>-<timestamp>.<ext>` in the output directory (e.g. `sf-audit-00D000000000001-1711234567890.html`).
 
