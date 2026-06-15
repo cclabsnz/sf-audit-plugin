@@ -19,7 +19,7 @@ published to npm, actively gaining checks.
 - `src/compliance/` — sourced control catalogs (`catalogs/*`), `checkId → controlId[]` mapping (`mapping.ts`, base + NZ crosswalk), and `resolve.ts` (framework packs + provenance gate). Replaces the old flat ComplianceMapping; `CheckEngine` gets tag strings via `getComplianceTags`. Catalogs ship `verified:false` until source-checked (see `docs/compliance/verification-worksheet.md`)
 - `src/api/` — `SoqlClient`/`ToolingClient`/`RestClient` interfaces + Impls wrapping `@salesforce/core` Connection; checks only see these via `AuditContext`
 - `src/renderers/`, `src/history/` — report output; auto-archive to `~/.sf/audit-history/{orgId}`, `sf audit diff|history|list` commands in `src/commands/audit/`
-- `src/renderers/ClientReportRenderer.ts` + `src/report/` (branding, fonts, ExecutivePriorities, RemediationRoadmap) — the `--format executive` branded client report. Compliance matrix section deferred (gated on control verification)
+- `src/renderers/ClientReportRenderer.ts` + `src/report/` (branding, fonts, ExecutivePriorities, RemediationRoadmap, ComplianceMatrix) — the `--format executive` branded client report, incl. the compliance coverage matrix (`--frameworks universal|nz|all|<list>`; only `verified` controls render via the provenance gate)
 - `src/chains/` — attack-chain/capability correlation across findings
 - Sibling repo `../cloudcounsel-sf-audit` = the original Python prototype (`sf_security_audit.py`) this plugin is a rewrite of. Reference only — do not edit; but its `docs/superpowers/specs/2026-03-24-sf-audit-native-plugin-design.md` is THIS repo's design doc
 - GitHub remote is `cclabsnz/sf-audit-plugin` (name differs from folder)
