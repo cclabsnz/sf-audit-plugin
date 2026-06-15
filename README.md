@@ -1,6 +1,13 @@
 # @cclabsnz/sf-audit
 
-A Salesforce CLI (`sf`) plugin that runs a comprehensive security audit against any Salesforce org and produces an HTML, Markdown, or JSON report.
+A Salesforce CLI (`sf`) plugin that runs a comprehensive, **read-only** security audit against any Salesforce org, risk-scores it with an A–F grade, and turns the result into a report your security team — or your client's — can act on.
+
+- **61 read-only checks** across identity, access, data, code, integrations, and monitoring
+- **Attack-chain correlation** — links individual findings into named, multi-step attack scenarios
+- **Compliance mapping** — every finding mapped to **source-verified** controls across 7 frameworks (OWASP, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029, NZISM)
+- **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
+- **History & diff** — archives each run and shows security-posture drift over time
+- Strictly read-only (SOQL/Tooling/REST GETs); see [PERMISSIONS.md](PERMISSIONS.md) for the least-privilege access it needs
 
 ## Installation
 
@@ -90,7 +97,7 @@ The report file is written as `sf-audit-<orgId>-<timestamp>.<ext>` in the output
 
 ## What It Checks
 
-The audit runs **61 read-only checks**. Every finding is risk-rated (CRITICAL → INFO) and tagged against compliance frameworks (OWASP, SOC 2, ISO 27001, HIPAA, GDPR). The checks are grouped into nine domains below.
+The audit runs **61 read-only checks**. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into nine domains below.
 
 ### Org Health & Configuration
 | Check | What it looks for |
@@ -188,6 +195,31 @@ The audit runs **61 read-only checks**. Every finding is risk-rated (CRITICAL �
 | Active Debug Log Traces | Active TraceFlag records capturing logs, including high-detail traces |
 | Event Monitoring | Event Monitoring enabled with logs covering 30+ days |
 | SIEM Integration Signals | Evidence of SIEM or external monitoring integration |
+
+## Compliance frameworks
+
+Findings are mapped to controls across seven security and privacy frameworks. The mapping is built on a **sourced control catalog** — each control carries its framework, **pinned version**, official title, and a citation — so a finding's compliance reference ties to an exact, defensible requirement rather than a bare tag.
+
+| Framework | Version | Notes |
+|-----------|---------|-------|
+| OWASP Top 10 | 2021 | Web application risk categories |
+| SOC 2 | AICPA TSC 2017 | Common Criteria (CC6–CC9) |
+| ISO/IEC 27001 | 2022 | Annex A controls |
+| Security Benchmark for Salesforce (SBS) | current | Salesforce-native benchmark — [docs.securitybenchmark.org](https://docs.securitybenchmark.org) |
+| NZ Privacy Act | 2020 | Information Privacy Principles (IPP 5/9/12) |
+| HISO 10029 | 2022 | NZ Health Information Security Framework |
+| NZISM | v3.8 | NZ Information Security Manual |
+
+**Provenance gate.** Each catalogued control is marked `verified` only after its title/reference is confirmed against the authoritative source. **Controls that are not verified do not render** in the compliance matrix — nothing ships as "compliant-to-clause" on unconfirmed data. The current verification status is tracked in [`docs/compliance/verification-worksheet.md`](docs/compliance/verification-worksheet.md).
+
+**Framework packs.** The executive report's compliance matrix is scoped with `--frameworks`:
+
+- `universal` *(default)* — OWASP, SOC 2, ISO 27001
+- `nz` — ISO 27001, HISO 10029, NZ Privacy Act, NZISM (for NZ health/government engagements)
+- `all` — every framework
+- a comma list of aliases, e.g. `owasp,iso,nzism`
+
+> **Not an attestation.** A control rendering "No findings detected" means this audit's checks surfaced no issues mapped to it — it is **not** a statement of compliance or certification. See [Scope & Liability](#scope--liability).
 
 ## Scope & Liability
 
