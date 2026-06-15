@@ -1,9 +1,11 @@
 # @cclabsnz/sf-audit — Salesforce Security Audit sf plugin
 
 Native `sf` CLI plugin (oclif + @salesforce/sf-plugins-core, TypeScript ESM) that runs 61
-read-only security checks against a Salesforce org and renders HTML/MD/JSON reports with
-scoring, compliance tags, history archiving, and diffs. CloudCounsel consulting tool; v1.0.x,
-published to npm, actively gaining checks.
+read-only security checks against a Salesforce org, with attack-chain correlation and a
+source-verified compliance catalog (OWASP/SOC2/ISO 27001:2022/SBS/NZ Privacy Act/HISO/NZISM).
+Renders HTML/MD/JSON technical reports plus a branded, print-to-PDF `--format executive` client
+report (priorities, remediation roadmap, compliance matrix); history archiving + diffs.
+CloudCounsel consulting tool; v1.1.x, published to npm, actively gaining checks.
 
 ## Commands
 - `npm run build` — tsc to `lib/`
@@ -41,7 +43,7 @@ published to npm, actively gaining checks.
 - `oclif.pluginType` is `jit` and `lib/commands` is the command dir — a command "missing" after edits usually means you forgot `npm run build`.
 
 ## Done means
-- `npm run build` clean and `npm test` green (currently 25 suites / 159 tests, all passing)
+- `npm run build` clean and `npm test` green (currently 38 suites / 200 tests, all passing)
 - New/changed checks have unit tests with mocked SOQL/Tooling/REST clients
 - Registry ordering still validates; ComplianceMapping has an entry for any new check id
 - README counts/flags updated if user-facing behavior changed; no report artifacts staged
