@@ -221,6 +221,8 @@ Findings are mapped to controls across seven security and privacy frameworks. Th
 
 > **Not an attestation.** A control rendering "No findings detected" means this audit's checks surfaced no issues mapped to it — it is **not** a statement of compliance or certification. See [Scope & Liability](#scope--liability).
 
+**Further reading:** [Mapping Salesforce security to NZISM, the NZ Privacy Act and ISO 27001](https://www.softwareinsights.dev/posts/salesforce-security-nzism-nz-privacy-act) and [Why Salesforce Health Cloud needs its own security review](https://www.softwareinsights.dev/posts/salesforce-health-cloud-security-review).
+
 ## Scope & Liability
 
 **What this tool is.** A read-only, point-in-time configuration review. Every check uses standard Salesforce SOQL, Tooling, and REST **GET** queries only — the tool performs no DML, no metadata deployments, and never modifies the target org or its data. It runs under the permissions of the authenticated `sf` user; checks that the user cannot access are reported as *inconclusive* rather than passing silently.
