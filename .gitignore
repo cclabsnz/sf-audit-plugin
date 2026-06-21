@@ -25,3 +25,7 @@ sf-audit-*.json
 sf-audit-diff-*.html
 sf-audit-diff-*.json
 sf-audit-history-*.html
+
+# Internal docs — kept locally, never published to the public repo
+/CLAUDE.md
+/docs/superpowers/
