@@ -67,6 +67,9 @@ export const CHECK_META: Record<string, CheckMeta> = {
   'escalation-perms':        { effort: 'moderate', impact: 'Lateral-movement permissions let a compromised account grant itself more access and persist.' },
   'cors-allowlist':          { effort: 'quick',    impact: 'Wildcard CORS origins let malicious sites make authenticated browser requests against the org.' },
   'guest-executable-apex':   { effort: 'project',  impact: 'Unauthenticated web users can execute Apex that bypasses sharing — bulk record exfiltration without login.' },
+  'email-security':          { effort: 'quick',    impact: 'Unauthenticated inbound email services and all-profile send-as addresses let attackers trigger Apex or spoof internal senders.' },
+  'outbound-messages':       { effort: 'quick',    impact: 'Outbound messages can ship a live session ID to external endpoints over cleartext — a direct session-hijack and exfiltration path.' },
+  'public-content-exposure': { effort: 'quick',    impact: 'Documents marked externally available and public static resources are retrievable without authentication by anyone with the URL.' },
 };
 
 export function getCheckMeta(id: string): CheckMeta | undefined {

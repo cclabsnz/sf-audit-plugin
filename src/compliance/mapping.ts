@@ -66,6 +66,9 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'escalation-perms':        ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.5.18', 'SBS-ACS-004'],
   'cors-allowlist':          ['OWASP-A05', 'SOC2-CC6.6', 'ISO-A.8.26'],
   'guest-executable-apex':   ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.8.3', 'SBS-CPORTAL-001', 'SBS-CPORTAL-002'],
+  'email-security':          ['OWASP-A05', 'SOC2-CC6.6', 'ISO-A.5.14'],
+  'outbound-messages':       ['OWASP-A05', 'OWASP-A10', 'SOC2-CC6.6', 'ISO-A.8.26'],
+  'public-content-exposure': ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.5.14'],
 };
 
 // NZ pack crosswalk — each check belongs to one domain; the domain's NZ control ids are
@@ -76,7 +79,8 @@ const NZ_CROSSWALK: Array<{ controls: string[]; checks: string[] }> = [
     checks: ['users-and-admins', 'permissions', 'sharing-model', 'public-group-sharing', 'guest-user-access',
              'field-level-security', 'standard-profiles', 'api-client-permission', 'integration-users',
              'escalation-perms', 'report-folder-access', 'apex-crud-fls', 'apex-rest-endpoint',
-             'guest-executable-apex', 'experience-cloud-site', 'content-links', 'apex-sharing', 'flows-without-sharing'] },
+             'guest-executable-apex', 'experience-cloud-site', 'content-links', 'apex-sharing', 'flows-without-sharing',
+             'public-content-exposure'] },
   { controls: ['HISO-AUTH', 'NZISM-AUTH', 'PRIVACY-IPP5'],
     checks: ['login-session', 'ip-restrictions', 'password-session-policy', 'sso-enforcement', 'mfa-enforcement',
              'trusted-ip-ranges', 'my-domain-login-policy', 'high-assurance-session', 'internal-user-mfa',
@@ -89,7 +93,8 @@ const NZ_CROSSWALK: Array<{ controls: string[]; checks: string[] }> = [
   { controls: ['HISO-DEV', 'NZISM-SW'],
     checks: ['code-security', 'visualforce-xss', 'scheduled-apex'] },
   { controls: ['HISO-COMM', 'NZISM-NET', 'PRIVACY-IPP12'],
-    checks: ['remote-sites', 'csp-trusted-sites', 'connected-apps', 'connected-app-scope', 'connected-app-inactivity', 'cors-allowlist'] },
+    checks: ['remote-sites', 'csp-trusted-sites', 'connected-apps', 'connected-app-scope', 'connected-app-inactivity', 'cors-allowlist',
+             'email-security', 'outbound-messages'] },
   { controls: ['HISO-DATA', 'PRIVACY-IPP5'],
     checks: ['data-classification', 'field-history-tracking'] },
   { controls: ['HISO-GOV', 'NZISM-CONFIG'],

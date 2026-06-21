@@ -1,6 +1,6 @@
 # Minimum Salesforce Permissions for `sf-audit`
 
-`sf audit security` is **strictly read-only**. Every one of the 61 checks issues
+`sf audit security` is **strictly read-only**. Every one of the 64 checks issues
 SOQL / Tooling / REST **GET** queries only — no DML, no Metadata API writes, no
 record modification. The account running the audit needs only enough permission
 to *read* security configuration, setup metadata, and audit/login data.
@@ -26,7 +26,7 @@ permissions below, and nothing else. A starter permission-set definition is in
 | Permission | API name | Why it's needed | If omitted |
 |---|---|---|---|
 | **API Enabled** | `ApiEnabled` | All access is via SOQL/Tooling/REST over the API | Audit cannot run at all |
-| **View Setup and Configuration** | `ViewSetup` | Reads the bulk of the surface: `SetupAuditTrail`, `TraceFlag`, `ConnectedApplication`, `RemoteProxy`, `CorsWhitelistEntry`, `CspTrustedSite`, `NamedCredential`, `AuthConfig`, `CriticalUpdate`/release updates, `Network` (Experience sites), `ProfileLoginIpRange`, `NetworkAccess`, `Certificate`, `ExternalString` (Custom Labels), and Tooling metadata (`ApexClass`, `Flow`, `CustomObject`/`CustomField`, `EntityDefinition`, `FieldDefinition`, `FieldPermissions`, `ObjectPermissions`, `SetupEntityAccess`) | Most setup/config checks return **inconclusive** |
+| **View Setup and Configuration** | `ViewSetup` | Reads the bulk of the surface: `SetupAuditTrail`, `TraceFlag`, `ConnectedApplication`, `RemoteProxy`, `CorsWhitelistEntry`, `CspTrustedSite`, `NamedCredential`, `AuthConfig`, `CriticalUpdate`/release updates, `Network` (Experience sites), `ProfileLoginIpRange`, `NetworkAccess`, `Certificate`, `ExternalString` (Custom Labels), `OrgWideEmailAddress`, `EmailServicesFunction`/`EmailServicesAddress`, and Tooling metadata (`ApexClass`, `Flow`, `CustomObject`/`CustomField`, `EntityDefinition`, `FieldDefinition`, `FieldPermissions`, `ObjectPermissions`, `SetupEntityAccess`, `WorkflowOutboundMessage`, `StaticResource`) | Most setup/config checks return **inconclusive** |
 | **View All Users** | `ViewAllUsers` | Enumerate every `User`, `UserLogin`, `PermissionSetAssignment`, and `TwoFactorInfo` record org-wide (not just role-hierarchy-visible users) | User/admin/MFA checks under-count and miss accounts |
 | **View Health Check** | `ViewHealthCheckScreen` | Read `SecurityHealthCheck` and `SecurityHealthCheckRisks` (Tooling) | Health Check + Password/Session checks inconclusive |
 | **Author Apex** | `AuthorApex` | **Read-only use:** the only standard gate that exposes `ApexClass`/`ApexTrigger`/`ApexPage` **`Body`** via the Tooling API. Used by the ~9 Apex/Visualforce code-security checks. Grants *no* ability to modify org data | The 9 code-security checks return **inconclusive**; rest of the audit is unaffected |
@@ -57,11 +57,18 @@ security team is right to refuse them:
   but for this tool it is used purely to *read* Apex source via Tooling. It does
   not let the audit account modify data or deploy code. If your security policy
   forbids it, omit it: the ~9 code-security checks will report **inconclusive**
-  and the other 52 checks run normally.
+  and the other 55 checks run normally.
 - **Feature/licence-gated checks.** The Event Monitoring and SIEM checks require
   **Event Monitoring / Shield** to be licensed in the org; the Shield
   Platform Encryption portion of Data Classification likewise. Where a feature
   isn't licensed, the relevant check reports **inconclusive** rather than failing.
+- **Public `Document` visibility is folder-gated.** The Public Static Resources &
+  Documents check queries `Document WHERE IsPublic = true`. `Document` records are
+  visible per **folder** access rather than via `ViewSetup`, so an audit user with
+  no access to a folder will not see its public documents. Grant the audit user
+  read access to document folders (or assign a profile that can view all folders)
+  for complete coverage; otherwise that check reports **inconclusive** for what it
+  cannot read.
 - **Inconclusive ≠ pass.** Any check the audit user cannot access is surfaced as
   an explicit *inconclusive* finding — never silently treated as a pass — so an
   under-permissioned run is visible in the report, not hidden.

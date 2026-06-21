@@ -63,6 +63,10 @@ import { ReportFolderAccessCheck } from './impl/ReportFolderAccessCheck.js';
 import { EscalationPermsCheck } from './impl/EscalationPermsCheck.js';
 import { CorsAllowlistCheck } from './impl/CorsAllowlistCheck.js';
 import { GuestExecutableApexCheck } from './impl/GuestExecutableApexCheck.js';
+// External-surface checks (no cache deps)
+import { EmailSecurityCheck } from './impl/EmailSecurityCheck.js';
+import { OutboundMessagesCheck } from './impl/OutboundMessagesCheck.js';
+import { PublicContentExposureCheck } from './impl/PublicContentExposureCheck.js';
 
 // Order matters: a check's dependsOnCache must be satisfied by a preceding check's populatesCache.
 // CheckEngine.validateCacheOrdering() enforces this at startup.
@@ -119,6 +123,9 @@ export const CHECKS: SecurityCheck[] = [
   new ReportFolderAccessCheck(),          // public report folders — mass data exfiltration risk
   new EscalationPermsCheck(),             // priv-esc permission cluster (chain ingredient)
   new CorsAllowlistCheck(),               // wildcard/broad CORS origins (chain ingredient)
+  new EmailSecurityCheck(),               // inbound email services + send-as spoofing
+  new OutboundMessagesCheck(),            // outbound message session-id leak + cleartext endpoints
+  new PublicContentExposureCheck(),       // externally available Documents + public static resources
   // Cache-dependent checks — must come after their producers
   new DeploymentIdentityCheck(),   // reads connectedAppNames
   new ApexLoggingCheck(),          // reads apexBodies + scheduledApexClassNames
