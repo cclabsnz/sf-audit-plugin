@@ -1,0 +1,26 @@
+name: Guard internal files
+
+# Enforced safety net: fails CI if internal/AI-agent or secret-like files are ever
+# tracked in the repo. This is the one layer that cannot be bypassed locally
+# (git add -f, skipped pre-commit hooks). Pair with a required status check on main.
+on:
+  push:
+  pull_request:
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail if internal or secret files are tracked
+        run: |
+          set -euo pipefail
+          # Paths that must never be committed to this public repo.
+          PATTERNS='^(CLAUDE\.md|AGENTS\.md|GEMINI\.md|\.cursorrules|\.clinerules|\.windsurfrules|docs/superpowers/|.*/superpowers/(plans|specs)/|\.env$|\.env\.(?!example|sample|template)|.*\.pem$|.*\.key$|.*\.p12$|.*\.pfx$|.*-credentials\.json$|service-account.*\.json$)'
+          if matches=$(git ls-files | grep -nP "$PATTERNS"); then
+            echo "::error::Internal or secret files are tracked in this public repo:"
+            echo "$matches"
+            echo "Remove them with: git rm --cached <file> ; then add to .gitignore."
+            exit 1
+          fi
+          echo "OK — no internal or secret files are tracked."
