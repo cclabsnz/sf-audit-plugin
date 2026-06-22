@@ -67,6 +67,9 @@ import { GuestExecutableApexCheck } from './impl/GuestExecutableApexCheck.js';
 import { EmailSecurityCheck } from './impl/EmailSecurityCheck.js';
 import { OutboundMessagesCheck } from './impl/OutboundMessagesCheck.js';
 import { PublicContentExposureCheck } from './impl/PublicContentExposureCheck.js';
+// Access-control depth: effective-permission resolution + combination analysis
+import { PrivilegedAccessCheck } from './impl/PrivilegedAccessCheck.js';
+import { SeparationOfDutiesCheck } from './impl/SeparationOfDutiesCheck.js';
 
 // Order matters: a check's dependsOnCache must be satisfied by a preceding check's populatesCache.
 // CheckEngine.validateCacheOrdering() enforces this at startup.
@@ -126,6 +129,7 @@ export const CHECKS: SecurityCheck[] = [
   new EmailSecurityCheck(),               // inbound email services + send-as spoofing
   new OutboundMessagesCheck(),            // outbound message session-id leak + cleartext endpoints
   new PublicContentExposureCheck(),       // externally available Documents + public static resources
+  new PrivilegedAccessCheck(),            // writes: effectivePermissions; shadow-admin detection
   // Cache-dependent checks — must come after their producers
   new DeploymentIdentityCheck(),   // reads connectedAppNames
   new ApexLoggingCheck(),          // reads apexBodies + scheduledApexClassNames
@@ -139,4 +143,5 @@ export const CHECKS: SecurityCheck[] = [
   new SiemIntegrationCheck(),      // reads namedCredentialEndpoints, remoteSiteUrls,
                                    //   connectedAppNames, scheduledApexClassNames, eventLogSummary
   new MfaMethodStrengthCheck(),    // reads mfaRegistrations
+  new SeparationOfDutiesCheck(),   // reads effectivePermissions — toxic permission combinations
 ];

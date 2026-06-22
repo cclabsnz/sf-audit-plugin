@@ -2,7 +2,7 @@
 
 A Salesforce CLI (`sf`) plugin that runs a comprehensive, **read-only** security audit against any Salesforce org, risk-scores it with an A–F grade, and turns the result into a report your security team — or your client's — can act on.
 
-- **64 read-only checks** across identity, access, data, code, integrations, and monitoring
+- **66 read-only checks** across identity, access, data, code, integrations, and monitoring
 - **Attack-chain correlation** — links individual findings into named, multi-step attack scenarios
 - **Compliance mapping** — every finding mapped to **source-verified** controls across 7 frameworks (OWASP, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029, NZISM)
 - **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
@@ -31,7 +31,7 @@ sf plugins link .
 sf audit security --target-org <orgAlias>
 ```
 
-This runs all 64 security checks against the target org and writes a report to the current directory.
+This runs all 66 security checks against the target org and writes a report to the current directory.
 
 ### Options
 
@@ -41,7 +41,7 @@ This runs all 64 security checks against the target org and writes a report to t
 | `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json`, `executive` |
 | `--output` / `-o` | `.` | Directory to write the report file |
 | `--fail-on` | — | Exit with code 1 if any finding is at or above this severity: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
-| `--checks` | *(all)* | Comma-separated check IDs to run instead of all 64 (e.g. `hardcoded-credentials,apex-sharing`) |
+| `--checks` | *(all)* | Comma-separated check IDs to run instead of all 66 (e.g. `hardcoded-credentials,apex-sharing`) |
 | `--scoring-config` | — | Path to a custom scoring config JSON file to override weights and grade thresholds |
 | `--prepared-for` | — | Client name for the executive report cover line |
 | `--branding` | — | Path to a `report-branding.json` to override CloudCounsel defaults (executive format) |
@@ -97,7 +97,7 @@ The report file is written as `sf-audit-<orgId>-<timestamp>.<ext>` in the output
 
 ## What It Checks
 
-The audit runs **64 read-only checks**. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into nine domains below.
+The audit runs **66 read-only checks**. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into nine domains below.
 
 ### Org Health & Configuration
 | Check | What it looks for |
@@ -131,6 +131,8 @@ The audit runs **64 read-only checks**. Every finding is risk-rated (CRITICAL �
 | Standard Profile Usage | Active users assigned to out-of-the-box standard profiles |
 | Use Any API Client | Users with the permission that bypasses API Access Control |
 | Privilege Escalation Permissions | Users holding lateral-movement / persistence permission clusters |
+| Privileged Access & Shadow Admins | Effective high-risk permissions per user (profile + permission sets + groups); admin-equivalent users not on the System Administrator profile |
+| Separation of Duties | Toxic permission combinations a single user holds (e.g. Manage Users + Assign Permission Sets, Author Apex + Modify All Data) |
 | Integration / Service Accounts | Non-human identity inventory and excess privilege |
 | Inactive Users | Active licensed users with no login in 90+ days |
 

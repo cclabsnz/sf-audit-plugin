@@ -69,6 +69,8 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'email-security':          ['OWASP-A05', 'SOC2-CC6.6', 'ISO-A.5.14'],
   'outbound-messages':       ['OWASP-A05', 'OWASP-A10', 'SOC2-CC6.6', 'ISO-A.8.26'],
   'public-content-exposure': ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.5.14'],
+  'privileged-access':       ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.5.18', 'SBS-ACS-004'],
+  'separation-of-duties':    ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.5.18', 'SBS-ACS-004'],
 };
 
 // NZ pack crosswalk — each check belongs to one domain; the domain's NZ control ids are
@@ -80,7 +82,7 @@ const NZ_CROSSWALK: Array<{ controls: string[]; checks: string[] }> = [
              'field-level-security', 'standard-profiles', 'api-client-permission', 'integration-users',
              'escalation-perms', 'report-folder-access', 'apex-crud-fls', 'apex-rest-endpoint',
              'guest-executable-apex', 'experience-cloud-site', 'content-links', 'apex-sharing', 'flows-without-sharing',
-             'public-content-exposure'] },
+             'public-content-exposure', 'privileged-access', 'separation-of-duties'] },
   { controls: ['HISO-AUTH', 'NZISM-AUTH', 'PRIVACY-IPP5'],
     checks: ['login-session', 'ip-restrictions', 'password-session-policy', 'sso-enforcement', 'mfa-enforcement',
              'trusted-ip-ranges', 'my-domain-login-policy', 'high-assurance-session', 'internal-user-mfa',

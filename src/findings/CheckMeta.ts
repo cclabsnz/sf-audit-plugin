@@ -70,6 +70,8 @@ export const CHECK_META: Record<string, CheckMeta> = {
   'email-security':          { effort: 'quick',    impact: 'Unauthenticated inbound email services and all-profile send-as addresses let attackers trigger Apex or spoof internal senders.' },
   'outbound-messages':       { effort: 'quick',    impact: 'Outbound messages can ship a live session ID to external endpoints over cleartext — a direct session-hijack and exfiltration path.' },
   'public-content-exposure': { effort: 'quick',    impact: 'Documents marked externally available and public static resources are retrievable without authentication by anyone with the URL.' },
+  'privileged-access':       { effort: 'moderate', impact: 'Shadow admins hold full org control outside the admin profile, so a single takeover bypasses admin-focused monitoring and owns everything.' },
+  'separation-of-duties':    { effort: 'moderate', impact: 'A single user holding a toxic permission combination can self-escalate, commit fraud, or tamper undetected with no second party to stop them.' },
 };
 
 export function getCheckMeta(id: string): CheckMeta | undefined {

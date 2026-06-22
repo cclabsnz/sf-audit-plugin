@@ -34,6 +34,21 @@ export interface MfaRegistration {
   methods: string[];
 }
 
+// EffectivePermissionGrant: per active user, the subset of catalogued high-risk
+// permissions (see src/checks/permCatalog.ts) they hold *effectively* — i.e. via
+// profile, assigned permission sets, OR permission set groups. Salesforce aggregates
+// all of these into the user's PermissionSetAssignment rows (the PSG rows already
+// reflect union-minus-muting), so a single PSA query yields the effective grant.
+// Populated by PrivilegedAccessCheck, consumed by SeparationOfDutiesCheck.
+export interface EffectivePermissionGrant {
+  userId: string;
+  username: string;
+  name: string;
+  profileName: string;
+  /** Stable permission keys from DANGEROUS_PERMS held by this user. */
+  perms: string[];
+}
+
 // AuditCache is mutable shared state passed through AuditContext.
 // Keys are typed — rename any field and every check referencing it gets a compile error.
 export interface AuditCache {
@@ -52,4 +67,6 @@ export interface AuditCache {
   mfaRegistrations?: MfaRegistration[];
   // Populated by VisualforceXssCheck — available for future VF-scanning checks
   vfPageBodies?: VfPageBody[];
+  // Populated by PrivilegedAccessCheck — consumed by SeparationOfDutiesCheck
+  effectivePermissions?: EffectivePermissionGrant[];
 }
