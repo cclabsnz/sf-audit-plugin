@@ -1,6 +1,6 @@
 # Summary
 
-Run a comprehensive, read-only security audit against a Salesforce org.
+Run a complete, read-only security audit against a Salesforce org.
 
 # Flags
 

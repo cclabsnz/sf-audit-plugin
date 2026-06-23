@@ -2,7 +2,7 @@
 
 `@cclabsnz/sf-audit` is a **read-only** Salesforce security audit plugin. It issues
 only SOQL / Tooling / REST GET queries and never modifies an org. Even so, we take
-the security of the plugin — and of the orgs it runs against — seriously.
+the security of the plugin (and of the orgs it runs against) seriously.
 
 ## Supported versions
 
@@ -20,9 +20,9 @@ newest release before reporting an issue.
 
 Instead, use one of the following private channels:
 
-- **GitHub private vulnerability reporting** — open the repository's **Security**
+- **GitHub private vulnerability reporting:** open the repository's **Security**
   tab and choose **Report a vulnerability** (preferred).
-- **Email** — [hello@cloudcounsel.co.nz](mailto:hello@cloudcounsel.co.nz) with the
+- **Email:** [hello@cloudcounsel.co.nz](mailto:hello@cloudcounsel.co.nz) with the
   subject line `SECURITY: sf-audit`.
 
 Please include:

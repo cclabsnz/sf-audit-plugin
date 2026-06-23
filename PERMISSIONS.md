@@ -1,13 +1,13 @@
 # Minimum Salesforce Permissions for `sf-audit`
 
 `sf audit security` is **strictly read-only**. Every one of the 66 checks issues
-SOQL / Tooling / REST **GET** queries only — no DML, no Metadata API writes, no
+SOQL / Tooling / REST **GET** queries only: no DML, no Metadata API writes, no
 record modification. The account running the audit needs only enough permission
 to *read* security configuration, setup metadata, and audit/login data.
 
 This document lists the **minimum** permission set required for a **complete**
-audit, what each permission is for, and — importantly for a client security
-team — what the tool explicitly does **not** need.
+audit, what each permission is for, and (importantly for a client security
+team) what the tool explicitly does **not** need.
 
 > **Key reassurance for the org owner:** the tool reads *configuration and
 > metadata*, not your business records. It checks Org-Wide Defaults via
@@ -21,7 +21,7 @@ Create a dedicated **permission set** (or integration profile) named e.g.
 permissions below, and nothing else. A starter permission-set definition is in
 [`docs/permissionset/SF_Audit_ReadOnly.permissionset-meta.xml`](docs/permissionset/SF_Audit_ReadOnly.permissionset-meta.xml).
 
-## System (user) permissions — required
+## System (user) permissions: required
 
 | Permission | API name | Why it's needed | If omitted |
 |---|---|---|---|
@@ -40,10 +40,10 @@ permissions below, and nothing else. A starter permission-set definition is in
 
 ## What the tool does **NOT** need
 
-Grant **none** of these — they are unnecessary for a read-only audit and a client
+Grant **none** of these. They are unnecessary for a read-only audit and a client
 security team is right to refuse them:
 
-- **`View All Data`** — not required; the tool reads metadata/config, not records
+- **`View All Data`:** not required; the tool reads metadata/config, not records
 - **`Modify All Data`** (`ModifyAllData`)
 - **`Customize Application`** (`CustomizeApplication`)
 - **`Manage Users`** / **`Manage Internal Users`**
@@ -70,7 +70,7 @@ security team is right to refuse them:
   for complete coverage; otherwise that check reports **inconclusive** for what it
   cannot read.
 - **Inconclusive ≠ pass.** Any check the audit user cannot access is surfaced as
-  an explicit *inconclusive* finding — never silently treated as a pass — so an
+  an explicit *inconclusive* finding (never silently treated as a pass) so an
   under-permissioned run is visible in the report, not hidden.
 - **`View Setup and Configuration` vs `View All Data`.** `ViewSetup` is the
   narrowest standard permission that allows SOQL against setup objects. Some
@@ -82,7 +82,7 @@ security team is right to refuse them:
 To run the audit from CI (e.g. scheduled posture checks), authenticate with a
 **Connected App** using least-privilege OAuth:
 
-- OAuth scopes: `api`, `refresh_token` — **no** `full`, **no** `web`
+- OAuth scopes: `api`, `refresh_token`: **no** `full`, **no** `web`
 - Apply IP restrictions to your CI runner's IP ranges if the org enforces them
 - Store the credential (`sf org login sfdx-url` output) as a secret; rotate every
   90 days or on any suspected exposure
