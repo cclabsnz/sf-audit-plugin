@@ -2,6 +2,7 @@
   "name": "@cclabsnz/sf-audit",
   "version": "1.2.0",
   "description": "Salesforce Security Audit — native sf plugin",
+  "license": "Apache-2.0",
   "type": "module",
   "main": "lib/index.js",
   "scripts": {
