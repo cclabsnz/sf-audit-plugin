@@ -99,13 +99,13 @@ export class InternalUserMfaCheck implements SecurityCheck {
       riskLevel,
       title: `${usersWithoutMfa.length} of ${users.length} active internal user(s) lack explicit MFA enforcement permission`,
       detail:
-        `${usersWithoutMfa.length} active standard users do not have the PermissionsMultiFactorForUiLogins permission assigned. Salesforce auto-enforced MFA at the system level in Spring 2023, but the explicit permission provides belt-and-suspenders assurance — users without it rely solely on system-level enforcement, which can have edge cases in API-heavy or SSO-integrated environments. Users without the explicit permission should be reviewed to confirm they are subject to effective MFA controls.`,
+        `${usersWithoutMfa.length} active standard users do not have the PermissionsMultiFactorForUiLogins permission assigned. Salesforce auto-enforced MFA at the system level in Spring 2023, but the explicit permission provides belt-and-suspenders assurance. Users without it rely solely on system-level enforcement, which can have edge cases in API-heavy or SSO-integrated environments. Users without the explicit permission should be reviewed to confirm they are subject to effective MFA controls.`,
       remediation:
         'Assign the "Multi-Factor Authentication for User Interface Logins" permission to all internal standard users via their profile or a permission set. This ensures MFA is explicitly enforced regardless of system-level settings. Prioritise users with privileged access or access to sensitive data.',
       affectedItems: usersWithoutMfa.slice(0, 50).map((u) => ({
         label: u.Username,
         url: `${baseUrl}/${u.Id}`,
-        note: `profile: ${u.Profile?.Name ?? 'unknown'} — last login: ${u.LastLoginDate ? new Date(u.LastLoginDate).toISOString().split('T')[0] : 'never'}`,
+        note: `profile: ${u.Profile?.Name ?? 'unknown'} | last login: ${u.LastLoginDate ? new Date(u.LastLoginDate).toISOString().split('T')[0] : 'never'}`,
       })),
     });
 

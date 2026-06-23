@@ -113,7 +113,7 @@ export class LegacyApiVersionCheck implements SecurityCheck {
       riskLevel: 'INFO',
       title: 'Inbound SOAP API usage: manual review required via Event Monitoring',
       detail:
-        'Salesforce does not expose inbound SOAP API call details in SOQL-queryable objects — they are captured only in EventLogFile with EventType = "API". The API_TYPE column in those log files distinguishes SOAP callers: "E" = Enterprise WSDL, "P" = Partner WSDL. LoginHistory cannot make this distinction; SOAP login() calls and UI logins both appear as LoginType = "Application". If external systems are calling this org via the Enterprise or Partner WSDL, those callers should be migrated to REST API or connected-app-governed OAuth flows.',
+        'Salesforce does not expose inbound SOAP API call details in SOQL-queryable objects. They are captured only in EventLogFile with EventType = "API". The API_TYPE column in those log files distinguishes SOAP callers: "E" = Enterprise WSDL, "P" = Partner WSDL. LoginHistory cannot make this distinction; SOAP login() calls and UI logins both appear as LoginType = "Application". If external systems are calling this org via the Enterprise or Partner WSDL, those callers should be migrated to REST API or connected-app-governed OAuth flows.',
       remediation:
         'In Setup → Event Monitoring, download an API event log and filter on API_TYPE = "E" or "P" to identify active SOAP callers. For each SOAP caller, work with the integration owner to migrate to REST API using a connected app with appropriate OAuth scopes and IP restrictions.',
     });

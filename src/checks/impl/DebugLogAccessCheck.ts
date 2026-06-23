@@ -43,7 +43,7 @@ export class DebugLogAccessCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'TraceFlag records could not be retrieved — active debug traces cannot be verified',
+        title: 'TraceFlag records could not be retrieved: active debug traces cannot be verified',
         detail:
           'The TraceFlag object was not accessible. This may indicate the audit user lacks API access or the required permission to manage debug logs.',
         remediation:
@@ -80,13 +80,13 @@ export class DebugLogAccessCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${userDebugTraces.length} active USER_DEBUG trace flag(s) are capturing all user activity`,
         detail:
-          `In production, active debug traces on users should be reviewed — they capture sensitive field values and are accessible to administrators. USER_DEBUG traces record all DML operations, SOQL queries, and field values for the traced user, including data from sensitive objects such as financial records, PII, and health information. Debug logs are visible to any org admin and are not access-controlled at the record level.`,
+          `In production, active debug traces on users should be reviewed: they capture sensitive field values and are accessible to administrators. USER_DEBUG traces record all DML operations, SOQL queries, and field values for the traced user, including data from sensitive objects such as financial records, PII, and health information. Debug logs are visible to any org admin and are not access-controlled at the record level.`,
         remediation:
           'Remove all USER_DEBUG trace flags that are not actively being used for an approved troubleshooting session. Establish a policy requiring trace flags to be removed within 24 hours of creation. Consider using a dedicated sandbox for debugging rather than production.',
         affectedItems: userDebugTraces.map((t) => ({
           label: t.TracedEntityId,
           url: setupUrl,
-          note: `LogType: ${t.LogType} — expires: ${new Date(t.ExpirationDate).toISOString().split('T')[0]} — level: ${t.DebugLevel?.DeveloperName ?? 'unknown'}`,
+          note: `LogType: ${t.LogType} (expires: ${new Date(t.ExpirationDate).toISOString().split('T')[0]}, level: ${t.DebugLevel?.DeveloperName ?? 'unknown'})`,
         })),
       });
     }
@@ -96,15 +96,15 @@ export class DebugLogAccessCheck implements SecurityCheck {
         id: 'debug-log-high-level',
         category: this.category,
         riskLevel: 'MEDIUM',
-        title: `${highDetailTraces.length} active trace flag(s) use FINE/FINER/FINEST log level — all variable values are captured`,
+        title: `${highDetailTraces.length} active trace flag(s) use FINE/FINER/FINEST log level: all variable values are captured`,
         detail:
-          `Active traces with ApexCode set to FINE, FINER, or FINEST capture the maximum level of detail, including all variable values at every line of code execution. This includes any field values read or written during the traced session, potentially exposing passwords, tokens, PII, and financial data in the debug log output. In production, active debug traces on users should be reviewed — they capture sensitive field values and are accessible to administrators.`,
+          `Active traces with ApexCode set to FINE, FINER, or FINEST capture the maximum level of detail, including all variable values at every line of code execution. This includes any field values read or written during the traced session, potentially exposing passwords, tokens, PII, and financial data in the debug log output. In production, active debug traces on users should be reviewed: they capture sensitive field values and are accessible to administrators.`,
         remediation:
           'Reduce log levels to ERROR or WARN for any traces that must remain active. Remove high-detail traces immediately after the debugging session is complete. Never leave FINEST-level traces active in production for extended periods.',
         affectedItems: highDetailTraces.map((t) => ({
           label: t.TracedEntityId,
           url: setupUrl,
-          note: `ApexCode level: ${t.DebugLevel?.ApexCode ?? 'unknown'} — expires: ${new Date(t.ExpirationDate).toISOString().split('T')[0]}`,
+          note: `ApexCode level: ${t.DebugLevel?.ApexCode ?? 'unknown'} (expires: ${new Date(t.ExpirationDate).toISOString().split('T')[0]})`,
         })),
       });
     }

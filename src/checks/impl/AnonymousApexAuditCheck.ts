@@ -57,7 +57,7 @@ export class AnonymousApexAuditCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'SetupAuditTrail could not be queried — anonymous Apex execution cannot be verified',
+        title: 'SetupAuditTrail could not be queried: anonymous Apex execution cannot be verified',
         detail:
           'The SetupAuditTrail object was not accessible. This may indicate insufficient permissions to view the org audit trail.',
         remediation:
@@ -110,13 +110,13 @@ export class AnonymousApexAuditCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${nonAdminUsers.length} non-admin user(s) executed anonymous Apex in the last 90 days`,
         detail:
-          'Anonymous Apex execution in production is a privileged, hard-to-audit operation. Anon Apex runs as the executing user but leaves no code artifact — it cannot be reviewed, versioned, or rolled back. Non-admin users executing anonymous Apex indicates a significant control gap: these users have Developer Console access in production and can manipulate data or bypass sharing rules without leaving a traceable code change.',
+          'Anonymous Apex execution in production is a privileged, hard-to-audit operation. Anon Apex runs as the executing user but leaves no code artifact. It cannot be reviewed, versioned, or rolled back. Non-admin users executing anonymous Apex indicates a significant control gap: these users have Developer Console access in production and can manipulate data or bypass sharing rules without leaving a traceable code change.',
         remediation:
           'Remove Developer Console access from non-admin users. Revoke the "Author Apex" permission from all profiles and permission sets that do not require it. All code changes in production must go through a formal deployment process (change sets, Salesforce DX). Review each execution instance to determine what code was run and what data was affected.',
         affectedItems: nonAdminUsers.map((u) => ({
           label: u.username,
           url: auditTrailUrl,
-          note: `${u.count} execution(s) — latest: ${new Date(u.latest).toISOString().split('T')[0]} — profile: ${u.profile}`,
+          note: `${u.count} execution(s). Latest: ${new Date(u.latest).toISOString().split('T')[0]}. Profile: ${u.profile}`,
         })),
       });
     }
@@ -126,7 +126,7 @@ export class AnonymousApexAuditCheck implements SecurityCheck {
         id: 'anonymous-apex-admin-only',
         category: this.category,
         riskLevel: 'MEDIUM',
-        title: `Anonymous Apex executed by ${adminOnlyUsers.length} admin-profile user(s) in the last 90 days — monitoring recommended`,
+        title: `Anonymous Apex executed by ${adminOnlyUsers.length} admin-profile user(s) in the last 90 days: monitoring recommended`,
         detail:
           'Anonymous Apex execution by administrator-profile users still represents a risk in production: it bypasses change management, leaves no deployable artifact, and cannot be peer-reviewed. Even legitimate use by admins should be tracked, approved, and documented as part of a change management process.',
         remediation:
@@ -134,7 +134,7 @@ export class AnonymousApexAuditCheck implements SecurityCheck {
         affectedItems: adminOnlyUsers.map((u) => ({
           label: u.username,
           url: auditTrailUrl,
-          note: `${u.count} execution(s) — latest: ${new Date(u.latest).toISOString().split('T')[0]} — profile: ${u.profile}`,
+          note: `${u.count} execution(s). Latest: ${new Date(u.latest).toISOString().split('T')[0]}. Profile: ${u.profile}`,
         })),
       });
     }

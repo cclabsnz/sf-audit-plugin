@@ -50,7 +50,7 @@ export class RemoteSitesCheck implements SecurityCheck {
         affectedItems: insecureSites.map((r) => ({
           label: r.SiteName,
           url: setupUrl,
-          note: `${r.EndpointUrl} — enable HTTPS and re-enable protocol security`,
+          note: `${r.EndpointUrl}: enable HTTPS and re-enable protocol security`,
         })),
       });
     }

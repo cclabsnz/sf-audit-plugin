@@ -48,8 +48,8 @@ export class ApexLoggingCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'Apex class bodies not available — SBS-CODE-003/004 check skipped',
-        detail: 'SBS-CODE-003/004 require scanning Apex class bodies for logging patterns. Apex bodies were not available in the audit cache — ensure HardcodedCredentialsCheck runs before this check.',
+        title: 'Apex class bodies not available: SBS-CODE-003/004 check skipped',
+        detail: 'SBS-CODE-003/004 require scanning Apex class bodies for logging patterns. Apex bodies were not available in the audit cache. Ensure HardcodedCredentialsCheck runs before this check.',
         remediation: 'Verify HardcodedCredentialsCheck is registered before ApexLoggingCheck in the check registry.',
       });
       return { findings };
@@ -87,7 +87,7 @@ export class ApexLoggingCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: `${persistentLoggerClasses.length} Apex class(es) use a persistent logging framework — SBS-CODE-003`,
+        title: `${persistentLoggerClasses.length} Apex class(es) use a persistent logging framework: SBS-CODE-003`,
         detail: `SBS-CODE-003 requires Apex to use a persistent logging framework rather than transient System.debug calls. ${persistentLoggerClasses.length} class(es) reference a persistent logger. Examples: ${persistentLoggerClasses.slice(0, 5).join(', ')}${persistentLoggerClasses.length > 5 ? ` (+${persistentLoggerClasses.length - 5} more)` : ''}.`,
         remediation: 'Extend persistent logging coverage to all production classes that handle significant business logic or integration operations.',
       });
@@ -98,17 +98,17 @@ export class ApexLoggingCheck implements SecurityCheck {
         id: 'apex-logging-debug-only',
         category: this.category,
         riskLevel: scheduledDebugClasses.length > 0 ? 'MEDIUM' : 'LOW',
-        title: `${debugOnlyClasses.length} Apex class(es) use only System.debug — SBS-CODE-003`,
+        title: `${debugOnlyClasses.length} Apex class(es) use only System.debug: SBS-CODE-003`,
         detail:
-          `SBS-CODE-003 requires a persistent logging framework so that audit and error events are durable and searchable after the fact. ${debugOnlyClasses.length} production class(es) rely solely on System.debug, whose output is transient and unavailable once the debug log expires. ${scheduledDebugClasses.length > 0 ? `${scheduledDebugClasses.length} of these are scheduled or batch jobs — persistent logging is especially important for operational visibility in background processes.` : ''}`,
+          `SBS-CODE-003 requires a persistent logging framework so that audit and error events are durable and searchable after the fact. ${debugOnlyClasses.length} production class(es) rely solely on System.debug, whose output is transient and unavailable once the debug log expires. ${scheduledDebugClasses.length > 0 ? `${scheduledDebugClasses.length} of these are scheduled or batch jobs. Persistent logging is especially important for operational visibility in background processes.` : ''}`,
         remediation:
           'Adopt a persistent logging framework (a custom Log__c object, Platform Events, or an open-source framework) and migrate System.debug calls to it for all classes handling critical business logic.',
         affectedItems: debugOnlyClasses.slice(0, 30).map((name) => ({
           label: name,
           url: apexClassesUrl,
           note: scheduledClassNames.has(name)
-            ? 'scheduled/batch job — high priority to add persistent logging'
-            : 'System.debug only — no persistent log trail',
+            ? 'scheduled/batch job: high priority to add persistent logging'
+            : 'System.debug only: no persistent log trail',
         })),
       });
     }
@@ -118,7 +118,7 @@ export class ApexLoggingCheck implements SecurityCheck {
         id: 'apex-logging-sensitive-data',
         category: this.category,
         riskLevel: 'HIGH',
-        title: `${sensitiveLogClasses.length} Apex class(es) may log sensitive data — SBS-CODE-004`,
+        title: `${sensitiveLogClasses.length} Apex class(es) may log sensitive data: SBS-CODE-004`,
         detail:
           'SBS-CODE-004 prohibits logging sensitive data (passwords, tokens, session IDs, PII) in Apex. The flagged classes appear to pass sensitive variable names or credential values directly to System.debug(), which writes them to debug logs accessible to any administrator who can view debug logs.',
         remediation:
@@ -126,7 +126,7 @@ export class ApexLoggingCheck implements SecurityCheck {
         affectedItems: sensitiveLogClasses.map((name) => ({
           label: name,
           url: apexClassesUrl,
-          note: 'Review System.debug() calls — sensitive variable names detected near logging statements',
+          note: 'Review System.debug() calls: sensitive variable names detected near logging statements',
         })),
       });
     }
@@ -137,7 +137,7 @@ export class ApexLoggingCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: 'No System.debug-only logging or sensitive-data logging patterns found — SBS-CODE-003/004',
+        title: 'No System.debug-only logging or sensitive-data logging patterns found: SBS-CODE-003/004',
         detail: 'SBS-CODE-003 requires a persistent logging framework and SBS-CODE-004 prohibits sensitive data in logs. No violations were detected in the scanned Apex classes.',
         remediation: 'Continue monitoring as new Apex classes are added to the org.',
       });

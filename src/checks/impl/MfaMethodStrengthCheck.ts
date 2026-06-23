@@ -43,7 +43,7 @@ export class MfaMethodStrengthCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'No MFA registration data available — MfaRegistrationCheck must run first',
+        title: 'No MFA registration data available: MfaRegistrationCheck must run first',
         detail:
           'The mfaRegistrations cache is empty. Either MfaRegistrationCheck did not run, or TwoFactorInfo was not accessible. MFA method strength analysis cannot be performed without this data.',
         remediation:
@@ -98,7 +98,7 @@ export class MfaMethodStrengthCheck implements SecurityCheck {
         affectedItems: adminWeakUsers.map((u) => ({
           label: u.username,
           url: setupUrl,
-          note: `profile: ${u.profileName} — methods: ${u.methods.join(', ') || 'none'}`,
+          note: `profile: ${u.profileName} | methods: ${u.methods.join(', ') || 'none'}`,
         })),
       });
     }
@@ -116,7 +116,7 @@ export class MfaMethodStrengthCheck implements SecurityCheck {
         affectedItems: nonAdminWeakUsers.slice(0, 30).map((u) => ({
           label: u.username,
           url: setupUrl,
-          note: `profile: ${u.profileName} — methods: ${u.methods.join(', ') || 'none'}`,
+          note: `profile: ${u.profileName} | methods: ${u.methods.join(', ') || 'none'}`,
         })),
       });
     }

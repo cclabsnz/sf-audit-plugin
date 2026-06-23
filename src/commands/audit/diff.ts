@@ -62,7 +62,7 @@ export default class AuditDiffCommand extends SfCommand<AuditDiff> {
     for (const format of formats) {
       const renderer = DIFF_RENDERERS[format];
       if (!renderer) {
-        this.warn(`Unknown format '${format}' — skipping. Valid formats: html, json`);
+        this.warn(`Unknown format '${format}'. Skipping. Valid formats: html, json`);
         continue;
       }
       const filename   = `sf-audit-diff-${baseline.orgId}-${baseTs}-vs-${curTs}${renderer.fileExtension}`;

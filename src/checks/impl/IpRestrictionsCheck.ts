@@ -119,7 +119,7 @@ export class IpRestrictionsCheck implements SecurityCheck {
         affectedItems: unrestrictedAdmins.map((u) => ({
           label: u.Username,
           url: `${baseUrl}/${u.Id}`,
-          note: `Profile: ${u.Profile.Name} — add IP ranges in Setup → Profiles → Login IP Ranges`,
+          note: `Profile: ${u.Profile.Name}: add IP ranges in Setup → Profiles → Login IP Ranges`,
         })),
         detail:
           'Administrator accounts without IP login restrictions can be accessed from any network, increasing exposure to credential-stuffing attacks.',
@@ -137,7 +137,7 @@ export class IpRestrictionsCheck implements SecurityCheck {
         affectedItems: ipBypassingApps.map((app) => ({
           label: app.name,
           url: `${baseUrl}/lightning/setup/ConnectedApplication/page`,
-          note: 'IP Relaxation = All — change to "Enforce IP Restrictions" or "Relax IP Restrictions" to reinstate controls',
+          note: 'IP Relaxation = All: change to "Enforce IP Restrictions" or "Relax IP Restrictions" to reinstate controls',
         })),
         detail:
           `Connected apps configured with IP Relaxation set to "All" allow API access from any IP address for any user, completely overriding profile-level IP restrictions. An attacker with a stolen OAuth token or credential can authenticate from anywhere regardless of org-level IP policies.`,
@@ -155,7 +155,7 @@ export class IpRestrictionsCheck implements SecurityCheck {
         affectedItems: ipRelaxingApps.map((app) => ({
           label: app.name,
           url: `${baseUrl}/lightning/setup/ConnectedApplication/page`,
-          note: 'IP Relaxation = Relax — confirm documented justification exists',
+          note: 'IP Relaxation = Relax: confirm documented justification exists',
         })),
         detail:
           `Connected apps configured with IP Relaxation set to "Relax" allow the app's users to access the org from outside the IP ranges defined on their profile when using this app. This weakens the IP restriction control for API access.`,

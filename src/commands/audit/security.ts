@@ -111,7 +111,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     for (const format of formats) {
       const renderer = this.rendererFor(format, flags);
       if (!renderer) {
-        this.warn(`Unknown format '${format}' — skipping. Valid formats: html, md, json, executive`);
+        this.warn(`Unknown format '${format}'. Skipping. Valid formats: html, md, json, executive`);
         continue;
       }
       const output = renderer.render(result);
@@ -171,7 +171,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     const threshold = ORDER.indexOf(failOn);
     const violations = result.findings.filter((f) => ORDER.indexOf(f.riskLevel) <= threshold);
     if (violations.length > 0) {
-      this.log(`\nFail-on threshold: ${failOn} — ${violations.length} finding${violations.length !== 1 ? 's' : ''} at or above threshold:`);
+      this.log(`\nFail-on threshold: ${failOn}, ${violations.length} finding${violations.length !== 1 ? 's' : ''} at or above threshold:`);
       for (const f of violations) {
         this.log(`  [${f.riskLevel}] ${f.title}`);
       }

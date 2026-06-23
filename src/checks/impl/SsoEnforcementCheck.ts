@@ -68,7 +68,7 @@ export class SsoEnforcementCheck implements SecurityCheck {
         id: 'sso-password-logins-detected',
         category: this.category,
         riskLevel: 'HIGH',
-        title: `${uniqueUsers.length} user(s) logged in with username-password credentials in the last 30 days — SBS-AUTH-001/002`,
+        title: `${uniqueUsers.length} user(s) logged in with username-password credentials in the last 30 days: SBS-AUTH-001/002`,
         detail:
           `SBS-AUTH-001 requires production orgs to enable the org-level setting that disables Salesforce credential logins for all users. SBS-AUTH-002 requires that any users permitted to bypass SSO be explicitly authorised and documented. Found ${records.length} password-based login(s) across ${uniqueUsers.length} unique user(s) in the past 30 days, indicating SSO is either not enforced org-wide or users have undocumented SSO bypass.`,
         remediation:
@@ -76,7 +76,7 @@ export class SsoEnforcementCheck implements SecurityCheck {
         affectedItems: uniqueUsers.map(([userId, info]) => ({
           label: info.username,
           url: `${baseUrl}/${userId}`,
-          note: `${info.count} credential login(s) — last: ${new Date(info.latest).toISOString().split('T')[0]}`,
+          note: `${info.count} credential login(s), last: ${new Date(info.latest).toISOString().split('T')[0]}`,
         })),
       });
 
@@ -87,7 +87,7 @@ export class SsoEnforcementCheck implements SecurityCheck {
           id: 'sso-frequent-bypass-users',
           category: this.category,
           riskLevel: 'MEDIUM',
-          title: `${highFrequency.length} user(s) logged in with credentials >10 times — likely undocumented SSO exemptions (SBS-AUTH-002)`,
+          title: `${highFrequency.length} user(s) logged in with credentials >10 times, likely undocumented SSO exemptions (SBS-AUTH-002)`,
           detail:
             'SBS-AUTH-002 requires all users permitted to bypass SSO to be explicitly documented. High-frequency credential logins suggest these are regular exemptions rather than emergency break-glass access.',
           remediation:
@@ -95,7 +95,7 @@ export class SsoEnforcementCheck implements SecurityCheck {
           affectedItems: highFrequency.map(([userId, info]) => ({
             label: info.username,
             url: `${baseUrl}/${userId}`,
-            note: `${info.count} credential logins in 30 days — document or remove exemption`,
+            note: `${info.count} credential logins in 30 days, document or remove exemption`,
           })),
         });
       }
@@ -105,7 +105,7 @@ export class SsoEnforcementCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'SSO enforcement status could not be determined — LoginHistory not accessible',
+        title: 'SSO enforcement status could not be determined: LoginHistory not accessible',
         detail:
           'SBS-AUTH-001/002 require SSO enforcement configuration to be verified. LoginHistory was not accessible with current permissions.',
         remediation:

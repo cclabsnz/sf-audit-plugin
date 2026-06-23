@@ -80,7 +80,7 @@ export class InstalledPackagesCheck implements SecurityCheck {
         id: 'installed-packages-unmanaged',
         category: this.category,
         riskLevel: 'HIGH',
-        title: `${unmanagedPackages.length} unmanaged package(s) installed — code is editable and bypasses AppExchange security review`,
+        title: `${unmanagedPackages.length} unmanaged package(s) installed: code is editable and bypasses AppExchange security review`,
         detail:
           'Unmanaged packages contain Apex code, Visualforce pages, and other metadata that can be edited directly in the target org. Unlike managed packages, unmanaged packages are not subject to the Salesforce AppExchange security review process. Installed unmanaged code should be treated as untrusted third-party code and reviewed manually for data access, SOQL injection vulnerabilities, and hardcoded credentials.',
         remediation:
@@ -88,7 +88,7 @@ export class InstalledPackagesCheck implements SecurityCheck {
         affectedItems: unmanagedPackages.map((p) => ({
           label: p.SubscriberPackage.Name,
           url: setupUrl,
-          note: `no namespace — unmanaged — publisher: ${p.SubscriberPackageVersion.PublisherName ?? 'unknown'} — version: ${versionString(p)}`,
+          note: `no namespace | unmanaged | publisher: ${p.SubscriberPackageVersion.PublisherName ?? 'unknown'} | version: ${versionString(p)}`,
         })),
       });
     }
@@ -106,7 +106,7 @@ export class InstalledPackagesCheck implements SecurityCheck {
         affectedItems: betaPackages.map((p) => ({
           label: p.SubscriberPackage.Name,
           url: setupUrl,
-          note: `namespace: ${p.SubscriberPackage.NamespacePrefix ?? 'none'} — state: Beta — version: ${versionString(p)} — publisher: ${p.SubscriberPackageVersion.PublisherName ?? 'unknown'}`,
+          note: `namespace: ${p.SubscriberPackage.NamespacePrefix ?? 'none'} | state: Beta | version: ${versionString(p)} | publisher: ${p.SubscriberPackageVersion.PublisherName ?? 'unknown'}`,
         })),
       });
     }
@@ -115,7 +115,7 @@ export class InstalledPackagesCheck implements SecurityCheck {
       id: 'installed-packages-inventory',
       category: this.category,
       riskLevel: 'INFO',
-      title: `${packages.length} package(s) installed — full inventory`,
+      title: `${packages.length} package(s) installed: full inventory`,
       detail:
         `${packages.length} installed package(s) found. All installed packages should be reviewed periodically to confirm they are still required, up to date, and from trusted publishers. Packages with elevated data access permissions should be audited for field-level security and sharing configurations.`,
       remediation:
@@ -123,7 +123,7 @@ export class InstalledPackagesCheck implements SecurityCheck {
       affectedItems: packages.map((p) => ({
         label: p.SubscriberPackage.Name,
         url: setupUrl,
-        note: `namespace: ${p.SubscriberPackage.NamespacePrefix ?? 'no namespace — unmanaged'} — version: ${versionString(p)} — publisher: ${p.SubscriberPackageVersion.PublisherName ?? 'unknown'} — state: ${p.SubscriberPackageVersion.ReleaseState}`,
+        note: `namespace: ${p.SubscriberPackage.NamespacePrefix ?? 'no namespace (unmanaged)'} | version: ${versionString(p)} | publisher: ${p.SubscriberPackageVersion.PublisherName ?? 'unknown'} | state: ${p.SubscriberPackageVersion.ReleaseState}`,
       })),
     });
 

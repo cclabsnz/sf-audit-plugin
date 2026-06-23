@@ -41,13 +41,13 @@ export class PublicContentExposureCheck implements SecurityCheck {
           riskLevel: 'HIGH',
           title: `${docs.length} Document(s) are marked externally available (public)`,
           detail:
-            'A Document with "Externally Available Image" enabled is served from a stable, guessable URL with no authentication. Anyone who obtains or guesses the URL — including search-engine crawlers — can download the file. Documents are frequently used to store images, but also exported reports, spreadsheets, and other data that should not be world-readable.',
+            'A Document with "Externally Available Image" enabled is served from a stable, guessable URL with no authentication. Anyone who obtains or guesses the URL (including search-engine crawlers) can download the file. Documents are frequently used to store images, but also exported reports, spreadsheets, and other data that should not be world-readable.',
           remediation:
             'Review each public Document and clear "Externally Available Image" unless the file is genuinely intended for anonymous access. Move sensitive files to authenticated storage (Files/ContentVersion).',
           affectedItems: docs.map((d) => ({
             label: d.Name,
             url: docUrl,
-            note: `Folder: ${d.Folder?.Name ?? 'unknown'} — clear "Externally Available Image" if not intended`,
+            note: `Folder: ${d.Folder?.Name ?? 'unknown'}: clear "Externally Available Image" if not intended`,
           })),
         });
       } else {
@@ -92,7 +92,7 @@ export class PublicContentExposureCheck implements SecurityCheck {
           affectedItems: resources.map((r) => ({
             label: r.Name,
             url: resUrl,
-            note: `${r.ContentType ?? 'unknown type'} — set cache control to Private if not intentionally public`,
+            note: `${r.ContentType ?? 'unknown type'}: set cache control to Private if not intentionally public`,
           })),
         });
       } else {

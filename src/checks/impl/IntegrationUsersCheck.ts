@@ -75,7 +75,7 @@ export class IntegrationUsersCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: 'No candidate non-human identities found — SBS-ACS-007',
+        title: 'No candidate non-human identities found: SBS-ACS-007',
         detail:
           'SBS-ACS-007 requires all non-human identities to be inventoried and documented. No standard users matching common service account patterns (by username) or never-logged-in users were found.',
         remediation: 'As integration accounts are created, ensure they are documented with a named owner, stated purpose, and review date.',
@@ -88,7 +88,7 @@ export class IntegrationUsersCheck implements SecurityCheck {
       id: 'integration-users-inventory',
       category: this.category,
       riskLevel: 'INFO',
-      title: `${candidates.length} candidate non-human identity/identities found — SBS-ACS-007`,
+      title: `${candidates.length} candidate non-human identity/identities found: SBS-ACS-007`,
       detail:
         'SBS-ACS-007 requires all non-human identities (integration accounts, service users, automation users) to be inventoried and documented with a named owner, stated purpose, and review date. These users were identified by never having a UI login (and being more than 30 days old) or matching common service-account username patterns.',
       remediation:
@@ -130,15 +130,15 @@ export class IntegrationUsersCheck implements SecurityCheck {
         id: 'integration-users-broad-permissions',
         category: this.category,
         riskLevel: modifyAll.length > 0 ? 'HIGH' : 'MEDIUM',
-        title: `${broadPermUsers.length} service account(s) hold Modify All / View All Data — SBS-ACS-008`,
+        title: `${broadPermUsers.length} service account(s) hold Modify All / View All Data: SBS-ACS-008`,
         detail:
-          `SBS-ACS-008 requires non-human identities to hold only the minimum permissions necessary for their function. ${modifyAll.length} account(s) have "Modify All Data" and ${viewAll.length} have "View All Data" — these are org-wide permissions exposing all records and should never be granted to integration accounts without explicit documented justification.`,
+          `SBS-ACS-008 requires non-human identities to hold only the minimum permissions necessary for their function. ${modifyAll.length} account(s) have "Modify All Data" and ${viewAll.length} have "View All Data". These are org-wide permissions exposing all records and should never be granted to integration accounts without explicit documented justification.`,
         remediation:
           `Replace broad data permissions with object- and field-specific permissions scoped to the integration's actual data needs. Use a dedicated permission set that grants only the objects and operations the integration requires.`,
         affectedItems: broadPermUsers.map((r) => ({
           label: r.Assignee.Username,
           url: `${baseUrl}/${r.Assignee.Id}`,
-          note: `via: ${r.PermissionSet.Name} — ${r.PermissionSet.PermissionsModifyAllData ? 'Modify All Data' : 'View All Data'}`,
+          note: `via: ${r.PermissionSet.Name}: ${r.PermissionSet.PermissionsModifyAllData ? 'Modify All Data' : 'View All Data'}`,
         })),
       });
     }

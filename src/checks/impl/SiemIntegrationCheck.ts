@@ -85,7 +85,7 @@ export class SiemIntegrationCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: `${totalSignals} SIEM/monitoring integration signal(s) detected — SBS-MON-003/004`,
+        title: `${totalSignals} SIEM/monitoring integration signal(s) detected: SBS-MON-003/004`,
         detail:
           `SBS-MON-003 requires suspicious login activity to be monitored and alerted on. SBS-MON-004 requires API activity anomalies to be detected. Both controls require integration with an external monitoring system. ${totalSignals} signal(s) suggest external monitoring is in place. Sources: ${signalSummary}.`,
         remediation:
@@ -101,7 +101,7 @@ export class SiemIntegrationCheck implements SecurityCheck {
         id: 'siem-integration-not-detected',
         category: this.category,
         riskLevel: 'HIGH',
-        title: 'No SIEM or external monitoring integration detected — SBS-MON-003/004',
+        title: 'No SIEM or external monitoring integration detected: SBS-MON-003/004',
         detail:
           'SBS-MON-003 requires suspicious login activity to be monitored and alerted on. SBS-MON-004 requires API activity anomalies to be detected. No signals of an external monitoring or SIEM integration were found across Named Credentials, Remote Sites, Connected Apps, or Scheduled Apex jobs. Without external log forwarding, Event Monitoring data remains unanalysed and no automated alerts can be generated.',
         remediation:
@@ -120,9 +120,9 @@ export class SiemIntegrationCheck implements SecurityCheck {
           id: 'siem-retention-gap',
           category: this.category,
           riskLevel: 'MEDIUM',
-          title: `Event logs cover only ${daysCovered} day(s) in Salesforce — SIEM ingestion needed for SBS-INT-004 compliance`,
+          title: `Event logs cover only ${daysCovered} day(s) in Salesforce: SIEM ingestion needed for SBS-INT-004 compliance`,
           detail:
-            'SBS-INT-004 requires 30 days of API event log retention. Without a SIEM or log archival process ingesting logs daily, native Salesforce retention may be insufficient — logs older than the native retention window will be permanently lost.',
+            'SBS-INT-004 requires 30 days of API event log retention. Without a SIEM or log archival process ingesting logs daily, native Salesforce retention may be insufficient. Logs older than the native retention window will be permanently lost.',
           remediation:
             `Configure a SIEM or log archival process to ingest EventLogFile records at least daily. This ensures the 30-day retention requirement is met independent of Salesforce's native retention window.`,
         });

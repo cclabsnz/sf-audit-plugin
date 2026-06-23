@@ -19,7 +19,7 @@ export class ApexCrudFLSCheck implements SecurityCheck {
   readonly id = 'apex-crud-fls';
   readonly name = 'Apex CRUD/FLS Enforcement';
   readonly category = 'Code Security';
-  readonly description = 'Flags Apex classes that perform DML or SOQL without checking CRUD/FLS permissions — OWASP Top 10 for Salesforce';
+  readonly description = 'Flags Apex classes that perform DML or SOQL without checking CRUD/FLS permissions: OWASP Top 10 for Salesforce';
 
   readonly dependsOnCache = ['apexBodies'] as const;
 
@@ -34,7 +34,7 @@ export class ApexCrudFLSCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'Apex class bodies not available — CRUD/FLS check skipped',
+        title: 'Apex class bodies not available: CRUD/FLS check skipped',
         detail: 'Apex class bodies were not cached. Ensure HardcodedCredentialsCheck runs before this check.',
         remediation: 'Verify registry ordering so HardcodedCredentialsCheck (which populates apexBodies) precedes ApexCrudFLSCheck.',
       });
@@ -76,7 +76,7 @@ export class ApexCrudFLSCheck implements SecurityCheck {
         affectedItems: withoutSharingNoFls.slice(0, 30).map((n) => ({
           label: n,
           url: apexClassesUrl,
-          note: '"without sharing" + DML/SOQL + no FLS check — highest risk',
+          note: '"without sharing" + DML/SOQL + no FLS check: highest risk',
         })),
       });
     }
@@ -94,7 +94,7 @@ export class ApexCrudFLSCheck implements SecurityCheck {
         affectedItems: withDmlNoFls.slice(0, 30).map((n) => ({
           label: n,
           url: apexClassesUrl,
-          note: 'DML/SOQL without FLS check — add Security.stripInaccessible() or isAccessible() guards',
+          note: 'DML/SOQL without FLS check: add Security.stripInaccessible() or isAccessible() guards',
         })),
       });
     }

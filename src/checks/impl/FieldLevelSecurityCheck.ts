@@ -160,7 +160,7 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
           return {
             label: r.Field,
             url: `${baseUrl}/lightning/setup/ObjectManager/${objectApiName}/FieldsAndRelationships/view`,
-            note: `Readable by ${r.cnt} permission sets — restrict to minimum required`,
+            note: `Readable by ${r.cnt} permission sets: restrict to minimum required`,
           };
         }),
         detail:
@@ -181,7 +181,7 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
           return {
             label: r.Field,
             url: `${baseUrl}/lightning/setup/ObjectManager/${objectApiName}/FieldsAndRelationships/view`,
-            note: `Readable by ${r.cnt} permission sets — review and reduce access`,
+            note: `Readable by ${r.cnt} permission sets: review and reduce access`,
           };
         }),
         detail:

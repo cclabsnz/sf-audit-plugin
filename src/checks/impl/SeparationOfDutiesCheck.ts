@@ -21,7 +21,7 @@ const COMBOS: ToxicCombo[] = [
     label: 'Manage Users + Assign Permission Sets',
     perms: ['ManageUsers', 'AssignPermissionSets'],
     risk: 'CRITICAL',
-    why: 'The user can create/modify accounts and grant permission sets, so they can grant themselves (or a confederate) any access in the org — a self-service path to full admin.',
+    why: 'The user can create/modify accounts and grant permission sets, so they can grant themselves (or a confederate) any access in the org: a self-service path to full admin.',
     fix: 'Split these duties across different roles. A user who assigns permission sets should not also administer users.',
   },
   {
@@ -29,7 +29,7 @@ const COMBOS: ToxicCombo[] = [
     label: 'Author Apex + Modify All Data',
     perms: ['AuthorApex', 'ModifyAllData'],
     risk: 'CRITICAL',
-    why: 'The user can deploy Apex that runs without sharing AND already has unrestricted data access — enabling code-driven mass exfiltration or tampering that bypasses every control.',
+    why: 'The user can deploy Apex that runs without sharing AND already has unrestricted data access: enabling code-driven mass exfiltration or tampering that bypasses every control.',
     fix: 'Remove Modify All Data from developers, or Author Apex from data-privileged users. Use separate sandbox/deploy identities for code.',
   },
   {
@@ -37,7 +37,7 @@ const COMBOS: ToxicCombo[] = [
     label: 'Assign Permission Sets + View All Data',
     perms: ['AssignPermissionSets', 'ViewAllData'],
     risk: 'HIGH',
-    why: 'The user can read all data and grant access — they can escalate their own or others\' visibility silently.',
+    why: 'The user can read all data and grant access. They can escalate their own or others\' visibility silently.',
     fix: 'Separate permission-set administration from broad data-visibility roles.',
   },
   {
@@ -45,7 +45,7 @@ const COMBOS: ToxicCombo[] = [
     label: 'Manage Auth. Providers + Manage Users',
     perms: ['ManageAuthProviders', 'ManageUsers'],
     risk: 'HIGH',
-    why: 'The user can reconfigure SSO/identity providers and administer accounts — enabling them to reroute authentication and impersonate or lock out other users.',
+    why: 'The user can reconfigure SSO/identity providers and administer accounts: enabling them to reroute authentication and impersonate or lock out other users.',
     fix: 'Restrict auth-provider management to a dedicated identity team, separate from user administration.',
   },
   {
@@ -53,7 +53,7 @@ const COMBOS: ToxicCombo[] = [
     label: 'Manage Connected Apps + Use Any API Client',
     perms: ['ManageConnectedApps', 'UseAnyApiClient'],
     risk: 'HIGH',
-    why: 'The user can stand up OAuth connected apps and reach the org from any API client, bypassing API Access Control — a self-provisioned, persistent exfiltration channel.',
+    why: 'The user can stand up OAuth connected apps and reach the org from any API client, bypassing API Access Control: a self-provisioned, persistent exfiltration channel.',
     fix: 'Keep connected-app administration away from users who can bypass API access control.',
   },
   {
@@ -111,7 +111,7 @@ export class SeparationOfDutiesCheck implements SecurityCheck {
         affectedItems: holders.map((g) => ({
           label: g.username,
           url: setupUrl,
-          note: `Profile: ${g.profileName} — holds ${combo.label}`,
+          note: `Profile: ${g.profileName}, holds ${combo.label}`,
         })),
       });
     }

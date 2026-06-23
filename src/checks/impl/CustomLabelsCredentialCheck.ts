@@ -20,7 +20,7 @@ export class CustomLabelsCredentialCheck implements SecurityCheck {
   readonly name = 'Custom Labels Credential Exposure';
   readonly category = 'Secrets Management';
   readonly description =
-    'Scans Custom Labels for API keys, tokens, and credentials — labels are globally readable by all authenticated users via {!$Label.X} merge fields';
+    'Scans Custom Labels for API keys, tokens, and credentials. Labels are globally readable by all authenticated users via {!$Label.X} merge fields';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
@@ -38,7 +38,7 @@ export class CustomLabelsCredentialCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'Custom Labels could not be queried — credential scan skipped',
+        title: 'Custom Labels could not be queried: credential scan skipped',
         detail:
           'The Tooling API ExternalString query was not accessible. This may indicate the audit user lacks Tooling API access.',
         remediation: 'Grant Tooling API access to the audit user and re-run.',
@@ -78,13 +78,13 @@ export class CustomLabelsCredentialCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${nameMatches.length} Custom Label(s) have names suggesting credential storage`,
         detail:
-          `Custom Labels with names like "ApiKey", "ClientSecret", or "AuthToken" strongly suggest they store sensitive credentials. This is a critical misconfiguration: Custom Labels are globally readable by every authenticated Salesforce user via the \`{!\$Label.X}\` merge field in Visualforce pages, Flows, and Apex. Any user who can query the Tooling API or view source markup containing the merge field can read the label value — including attacker accounts, compromised users, and over-permissioned portal users. Unlike Named Credentials or Protected Custom Metadata, Custom Labels have no access control.`,
+          `Custom Labels with names like "ApiKey", "ClientSecret", or "AuthToken" strongly suggest they store sensitive credentials. This is a critical misconfiguration: Custom Labels are globally readable by every authenticated Salesforce user via the \`{!\$Label.X}\` merge field in Visualforce pages, Flows, and Apex. Any user who can query the Tooling API or view source markup containing the merge field can read the label value, including attacker accounts, compromised users, and over-permissioned portal users. Unlike Named Credentials or Protected Custom Metadata, Custom Labels have no access control.`,
         remediation:
-          'Migrate these credentials to Named Credentials or Protected Custom Metadata (visibility: "Protected"). Named Credentials encrypt stored values and provide managed authentication. Protected Custom Metadata is only accessible from the managed package — not from arbitrary user queries.',
+          'Migrate these credentials to Named Credentials or Protected Custom Metadata (visibility: "Protected"). Named Credentials encrypt stored values and provide managed authentication. Protected Custom Metadata is only accessible from the managed package, not from arbitrary user queries.',
         affectedItems: nameMatches.map((l) => ({
           label: l.Name,
           url: setupUrl,
-          note: `Name indicates credential — migrate to Named Credential or Protected Custom Metadata`,
+          note: `Name indicates credential: migrate to Named Credential or Protected Custom Metadata`,
         })),
       });
     }
@@ -102,7 +102,7 @@ export class CustomLabelsCredentialCheck implements SecurityCheck {
         affectedItems: valueMatches.map((l) => ({
           label: l.Name,
           url: setupUrl,
-          note: `Value matches secret pattern — rotate credential and migrate storage`,
+          note: `Value matches secret pattern: rotate credential and migrate storage`,
         })),
       });
     }
@@ -113,7 +113,7 @@ export class CustomLabelsCredentialCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: `${labels.length} Custom Label(s) scanned — no obvious credential patterns found`,
+        title: `${labels.length} Custom Label(s) scanned: no obvious credential patterns found`,
         detail: `All ${labels.length} custom labels were scanned for name and value patterns indicating credential storage. No obvious secrets were found. Note: custom labels with obfuscated names or non-standard encoding may not be detected.`,
         remediation:
           'Maintain the practice of using Named Credentials or Protected Custom Metadata for all secrets. Periodically review Custom Labels for new entries that may inadvertently store sensitive values.',

@@ -47,7 +47,7 @@ export class DeploymentIdentityCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: `${ciCdApps.length} CI/CD-related Connected App(s) detected — pipeline deployment likely in use`,
+        title: `${ciCdApps.length} CI/CD-related Connected App(s) detected: pipeline deployment likely in use`,
         detail:
           'SBS-DEP-001 requires all deployments to be performed by a designated deployment identity, not individual admin accounts. Connected Apps with CI/CD tool names indicate pipeline-based deployments are in use, which is consistent with a controlled deployment process.',
         remediation:
@@ -55,7 +55,7 @@ export class DeploymentIdentityCheck implements SecurityCheck {
         affectedItems: ciCdApps.map((name) => ({
           label: name,
           url: connectedAppsUrl,
-          note: 'CI/CD Connected App — verify it uses a named, dedicated deployment user',
+          note: 'CI/CD Connected App: verify it uses a named, dedicated deployment user',
         })),
       });
     }
@@ -80,7 +80,7 @@ export class DeploymentIdentityCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'MEDIUM',
         inconclusive: true,
-        title: 'Deployment audit trail could not be read — SBS-DEP-003 unverified',
+        title: 'Deployment audit trail could not be read: SBS-DEP-003 unverified',
         detail:
           'SetupAuditTrail was not accessible. Deployment activity from the past 90 days cannot be analyzed for unauthorized modifications. Without this data it is impossible to determine whether deployments are performed by a single designated identity.',
         remediation:
@@ -94,7 +94,7 @@ export class DeploymentIdentityCheck implements SecurityCheck {
         id: 'deployment-no-activity',
         category: this.category,
         riskLevel: 'INFO',
-        title: 'No deployment activity detected in the last 90 days — SBS-DEP-001/003',
+        title: 'No deployment activity detected in the last 90 days: SBS-DEP-001/003',
         detail:
           'SBS-DEP-001 requires a designated deployment identity. No deployment-related SetupAuditTrail entries (Change Sets, Developer Tools, Packages, Metadata sections) and no CI/CD-named Connected Apps were found. Deployments via SF CLI JWT flow or Metadata API may not appear in the audit trail.',
         remediation:
@@ -130,7 +130,7 @@ export class DeploymentIdentityCheck implements SecurityCheck {
           id: 'deployment-multiple-identities',
           category: this.category,
           riskLevel: uniqueDeployers.length > 3 ? 'HIGH' : 'MEDIUM',
-          title: `${uniqueDeployers.length} distinct user(s) performed deployment actions in the last 90 days — SBS-DEP-001`,
+          title: `${uniqueDeployers.length} distinct user(s) performed deployment actions in the last 90 days: SBS-DEP-001`,
           detail:
             `SBS-DEP-001 requires all deployments to be performed by a single designated deployment identity, not individual user accounts. ${uniqueDeployers.length} distinct users were found in deployment-related audit trail entries (Change Sets, Developer Tools, Packages, Metadata) over the past 90 days. Multiple deployers make it harder to audit changes and bypass change-management controls.`,
           remediation:
@@ -148,7 +148,7 @@ export class DeploymentIdentityCheck implements SecurityCheck {
           category: this.category,
           riskLevel: 'LOW',
           passed: true,
-          title: 'All deployment activity in the last 90 days came from a single identity — SBS-DEP-001',
+          title: 'All deployment activity in the last 90 days came from a single identity: SBS-DEP-001',
           detail:
             `SBS-DEP-001 requires a designated deployment identity. All ${deployRecords.length} deployment-related audit trail entries over 90 days originate from the same user: ${d.username} (${d.profile}).`,
           remediation: 'Document this identity as the designated deployment user in your system of record. Verify it is a service account and not a personal admin account.',
@@ -161,7 +161,7 @@ export class DeploymentIdentityCheck implements SecurityCheck {
           id: 'deployment-admin-accounts',
           category: this.category,
           riskLevel: 'MEDIUM',
-          title: `${adminDeployers.length} deployer(s) are admin-profile users — SBS-DEP-003`,
+          title: `${adminDeployers.length} deployer(s) are admin-profile users: SBS-DEP-003`,
           detail:
             'SBS-DEP-003 requires monitoring for unauthorized deployment modifications. Deployments performed by administrator-profile users are harder to distinguish from emergency break-glass changes and are more likely to occur outside of a change-management window.',
           remediation:
@@ -169,7 +169,7 @@ export class DeploymentIdentityCheck implements SecurityCheck {
           affectedItems: adminDeployers.map(({ username, profile, count }) => ({
             label: username,
             url: auditUrl,
-            note: `${count} deployment action(s) | profile: ${profile} — replace with dedicated deployment service account`,
+            note: `${count} deployment action(s) | profile: ${profile} | replace with dedicated deployment service account`,
           })),
         });
       }

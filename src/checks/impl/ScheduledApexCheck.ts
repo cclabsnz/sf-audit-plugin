@@ -80,7 +80,7 @@ export class ScheduledApexCheck implements SecurityCheck {
         affectedItems: privilegedJobs.map((job: ApexJobRecord) => ({
           label: `${job.ApexClass.Name} (${job.JobType})`,
           url: apexJobsUrl,
-          note: `Owner: ${creatorMap[job.CreatedById].Username} [${creatorMap[job.CreatedById].Profile.Name}] — reassign to a dedicated integration user`,
+          note: `Owner: ${creatorMap[job.CreatedById].Username} [${creatorMap[job.CreatedById].Profile.Name}]: reassign to a dedicated integration user`,
         })),
       });
     }

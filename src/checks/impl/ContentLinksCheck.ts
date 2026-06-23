@@ -78,7 +78,7 @@ export class ContentLinksCheck implements SecurityCheck {
         id: 'content-links-no-expiry',
         category: this.category,
         riskLevel: noExpiry.length > 20 ? 'HIGH' : 'MEDIUM',
-        title: `${noExpiry.length} public content link(s) have no expiry date — SBS-FILE-001`,
+        title: `${noExpiry.length} public content link(s) have no expiry date: SBS-FILE-001`,
         detail:
           'SBS-FILE-001 requires all public content distribution links to have an expiry date. Links without expiry remain active indefinitely, allowing anyone with the URL to continue accessing potentially sensitive documents even after the sharing purpose has ended.',
         remediation:
@@ -86,7 +86,7 @@ export class ContentLinksCheck implements SecurityCheck {
         affectedItems: noExpiry.slice(0, 50).map((r) => ({
           label: r.Name,
           url: `${baseUrl}/${r.ContentDocumentId}`,
-          note: `created: ${new Date(r.CreatedDate).toISOString().split('T')[0]} — set an expiry date`,
+          note: `created: ${new Date(r.CreatedDate).toISOString().split('T')[0]}, set an expiry date`,
         })),
       });
     }
@@ -98,7 +98,7 @@ export class ContentLinksCheck implements SecurityCheck {
         id: 'content-links-no-password',
         category: this.category,
         riskLevel: 'LOW',
-        title: `${noPassword.length} public content link(s) are not password-protected — SBS-FILE-002`,
+        title: `${noPassword.length} public content link(s) are not password-protected: SBS-FILE-002`,
         detail:
           'SBS-FILE-002 recommends password-protecting public content sharing links, particularly for documents containing sensitive or confidential information. Links without a password can be accessed by anyone with the URL.',
         remediation:
@@ -106,7 +106,7 @@ export class ContentLinksCheck implements SecurityCheck {
         affectedItems: noPassword.slice(0, 50).map((r) => ({
           label: r.Name,
           url: `${baseUrl}/${r.ContentDocumentId}`,
-          note: `created: ${new Date(r.CreatedDate).toISOString().split('T')[0]} — assess whether password protection is needed`,
+          note: `created: ${new Date(r.CreatedDate).toISOString().split('T')[0]}, assess whether password protection is needed`,
         })),
       });
     }
@@ -118,7 +118,7 @@ export class ContentLinksCheck implements SecurityCheck {
         id: 'content-links-stale',
         category: this.category,
         riskLevel: 'MEDIUM',
-        title: `${stale.length} public content link(s) are over ${STALE_DAYS} days old with no expiry — SBS-FILE-003`,
+        title: `${stale.length} public content link(s) are over ${STALE_DAYS} days old with no expiry: SBS-FILE-003`,
         detail:
           `SBS-FILE-003 requires periodic cleanup of public content sharing links. ${stale.length} link(s) were created more than ${STALE_DAYS} days ago and have no expiry date, meaning they have been publicly accessible indefinitely. These likely represent sharing relationships that are no longer active.`,
         remediation:
@@ -126,7 +126,7 @@ export class ContentLinksCheck implements SecurityCheck {
         affectedItems: stale.slice(0, 50).map((r) => ({
           label: r.Name,
           url: `${baseUrl}/${r.ContentDocumentId}`,
-          note: `created: ${new Date(r.CreatedDate).toISOString().split('T')[0]} — review and expire or delete`,
+          note: `created: ${new Date(r.CreatedDate).toISOString().split('T')[0]}, review and expire or delete`,
         })),
       });
     }

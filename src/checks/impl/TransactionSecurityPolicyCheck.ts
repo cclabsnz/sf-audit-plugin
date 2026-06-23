@@ -50,12 +50,12 @@ export class TransactionSecurityPolicyCheck implements SecurityCheck {
         detail:
           'Transaction Security Policies provide automated, real-time threat detection and response within Salesforce. With no policies enabled, the org has no automated defence against: credential stuffing and brute-force attacks, impossible-travel logins (e.g. login from two countries within minutes), bulk data downloads and mass API queries, concurrent session anomalies, and privilege escalation attempts. An attacker who compromises any credential can operate without triggering any automated response.',
         remediation:
-          'Enable Transaction Security (Setup → Transaction Security Policies) and create policies for at minimum: (1) Login anomalies — impossible travel, concurrent sessions from different IPs; (2) Data export — block or notify on bulk Report/List View exports; (3) API anomalies — high-volume REST/SOAP queries. Recommended actions: Block + Notify for critical events; Notify for informational events.',
+          'Enable Transaction Security (Setup → Transaction Security Policies) and create policies for at minimum: (1) Login anomalies: impossible travel, concurrent sessions from different IPs; (2) Data export: block or notify on bulk Report/List View exports; (3) API anomalies: high-volume REST/SOAP queries. Recommended actions: Block + Notify for critical events; Notify for informational events.',
         affectedItems: [
           {
             label: 'Transaction Security Policies',
             url: setupUrl,
-            note: 'No policies enabled — real-time threat response is completely absent',
+            note: 'No policies enabled: real-time threat response is completely absent',
           },
         ],
       });

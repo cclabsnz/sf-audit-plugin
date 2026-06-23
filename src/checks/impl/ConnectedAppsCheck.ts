@@ -89,8 +89,8 @@ export class ConnectedAppsCheck implements SecurityCheck {
           url: `${baseUrl}/${app.Id}`,
           note:
             app.SessionTimeout === null || app.SessionTimeout === 0
-              ? 'No explicit timeout — inherits org default (likely > 15 min)'
-              : `Session timeout: ${app.SessionTimeout} min — reduce to ≤ 15`,
+              ? 'No explicit timeout: inherits org default (likely > 15 min)'
+              : `Session timeout: ${app.SessionTimeout} min, reduce to ≤ 15`,
         })),
       });
     } else if (count > 0) {

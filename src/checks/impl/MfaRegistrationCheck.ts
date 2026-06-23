@@ -52,7 +52,7 @@ export class MfaRegistrationCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'TwoFactorInfo could not be queried — MFA registration status cannot be verified',
+        title: 'TwoFactorInfo could not be queried: MFA registration status cannot be verified',
         detail:
           'The TwoFactorInfo object was not accessible. This may indicate the audit user lacks the "Manage Multi-Factor Authentication in API" permission or the org edition does not support this query.',
         remediation:
@@ -116,7 +116,7 @@ export class MfaRegistrationCheck implements SecurityCheck {
         {
           label: `${unregisteredCount} unregistered user(s)`,
           url: setupUrl,
-          note: `${totalActiveUsers} total active users — ${registeredCount} registered — ${unregisteredCount} unregistered`,
+          note: `${totalActiveUsers} total active users (${registeredCount} registered, ${unregisteredCount} unregistered)`,
         },
       ],
     });

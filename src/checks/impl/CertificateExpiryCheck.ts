@@ -78,7 +78,7 @@ export class CertificateExpiryCheck implements SecurityCheck {
       if (!cert.ExpirationDate) return 'no expiry date';
       const daysLeft = Math.ceil((new Date(cert.ExpirationDate).getTime() - now) / 86_400_000);
       const expiryStr = new Date(cert.ExpirationDate).toISOString().split('T')[0];
-      return `${daysLeft} day(s) until expiry — expires ${expiryStr}`;
+      return `${daysLeft} day(s) until expiry: expires ${expiryStr}`;
     }
 
     if (critical.length > 0) {

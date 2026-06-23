@@ -63,9 +63,9 @@ export class CorsAllowlistCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${wildcard.length} CORS allowlist entry(ies) use a full wildcard origin`,
         detail:
-          'A wildcard CORS origin lets ANY website make authenticated cross-origin requests to your org from a logged-in user\'s browser and read the responses — enabling session-scoped data and token theft.',
+          'A wildcard CORS origin lets ANY website make authenticated cross-origin requests to your org from a logged-in user\'s browser and read the responses, enabling session-scoped data and token theft.',
         remediation: 'Replace wildcard origins with exact, fully-qualified HTTPS origins for each trusted application.',
-        affectedItems: wildcard.map((r) => ({ label: r.UrlPattern, url: setupUrl, note: 'Full wildcard — remove immediately' })),
+        affectedItems: wildcard.map((r) => ({ label: r.UrlPattern, url: setupUrl, note: 'Full wildcard: remove immediately' })),
       });
     }
 
@@ -78,7 +78,7 @@ export class CorsAllowlistCheck implements SecurityCheck {
         detail:
           'Subdomain-wildcard CORS origins trust every current and future subdomain, widening the set of sites that can make authenticated cross-origin requests. A single compromised or attacker-controlled subdomain can steal session-scoped data.',
         remediation: 'Pin CORS origins to the exact subdomains that need access rather than a wildcard.',
-        affectedItems: broad.map((r) => ({ label: r.UrlPattern, url: setupUrl, note: 'Broad wildcard — narrow to exact origins' })),
+        affectedItems: broad.map((r) => ({ label: r.UrlPattern, url: setupUrl, note: 'Broad wildcard: narrow to exact origins' })),
       });
     }
 

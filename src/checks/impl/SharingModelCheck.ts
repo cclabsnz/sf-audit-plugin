@@ -17,7 +17,7 @@ export class SharingModelCheck implements SecurityCheck {
   readonly name = 'Org-Wide Defaults (OWD) Sharing Model';
   readonly category = 'Data Access Control';
   readonly description =
-    'Checks OWD sharing settings for Account, Contact, Opportunity, Case, and Lead — both internal and external (portal) sharing models';
+    'Checks OWD sharing settings for Account, Contact, Opportunity, Case, and Lead, covering both internal and external (portal) sharing models';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
@@ -79,13 +79,13 @@ export class SharingModelCheck implements SecurityCheck {
         riskLevel: 'CRITICAL',
         title: `${externalWriteObjects.length} object(s) have Public Read/Write OWD for external/portal users`,
         detail:
-          'An external OWD of Public Read/Write exposes all records to Experience Cloud portal users and guest users. Any low-trust or unauthenticated portal user can read and modify every record. This is a critical data exposure vector frequently overlooked when configuring portal sites — attackers who create or compromise a portal account gain unrestricted write access to the entire dataset.',
+          'An external OWD of Public Read/Write exposes all records to Experience Cloud portal users and guest users. Any low-trust or unauthenticated portal user can read and modify every record. This is a critical data exposure vector frequently overlooked when configuring portal sites. Attackers who create or compromise a portal account gain unrestricted write access to the entire dataset.',
         remediation:
-          'Set external OWD to Private for all sensitive objects immediately. Grant portal access via sharing sets, sharing rules, or Apex managed sharing — never via open OWD.',
+          'Set external OWD to Private for all sensitive objects immediately. Grant portal access via sharing sets, sharing rules, or Apex managed sharing, never via open OWD.',
         affectedItems: externalWriteObjects.map((o) => ({
           label: o.name,
           url: owdUrl,
-          note: `External OWD: ${o.model} — immediate action required`,
+          note: `External OWD: ${o.model}, immediate action required`,
         })),
       });
     }
@@ -98,13 +98,13 @@ export class SharingModelCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${externalReadObjects.length} object(s) have Public Read OWD for external/portal users`,
         detail:
-          'An external OWD of Public Read exposes all records to any Experience Cloud portal user. Attackers who create or compromise a portal account can enumerate the entire dataset for reconnaissance and data theft — even without write access, bulk record exposure violates data minimisation principles and enables targeted attacks.',
+          'An external OWD of Public Read exposes all records to any Experience Cloud portal user. Attackers who create or compromise a portal account can enumerate the entire dataset for reconnaissance and data theft. Even without write access, bulk record exposure violates data minimisation principles and enables targeted attacks.',
         remediation:
           'Set external OWD to Private and use sharing sets or sharing rules to grant portal users access only to their own records.',
         affectedItems: externalReadObjects.map((o) => ({
           label: o.name,
           url: owdUrl,
-          note: `External OWD: ${o.model} — portal users can read all records`,
+          note: `External OWD: ${o.model}, portal users can read all records`,
         })),
       });
     }
@@ -124,7 +124,7 @@ export class SharingModelCheck implements SecurityCheck {
         affectedItems: internalWriteObjects.map((o) => ({
           label: o.name,
           url: owdUrl,
-          note: `Internal OWD: ${o.model} — change to Private or Public Read Only`,
+          note: `Internal OWD: ${o.model}, change to Private or Public Read Only`,
         })),
       });
     }
@@ -143,7 +143,7 @@ export class SharingModelCheck implements SecurityCheck {
         affectedItems: internalReadObjects.map((o) => ({
           label: o.name,
           url: owdUrl,
-          note: `Internal OWD: ${o.model} — all internal users can read all records`,
+          note: `Internal OWD: ${o.model}, all internal users can read all records`,
         })),
       });
     }

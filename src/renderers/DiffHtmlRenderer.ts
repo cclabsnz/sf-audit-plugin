@@ -99,7 +99,7 @@ export class DiffHtmlRenderer implements DiffRenderer {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SF Audit Diff — ${esc(baseline.orgName)}</title>
+<title>SF Audit Diff: ${esc(baseline.orgName)}</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; max-width: 1000px; margin: 2rem auto; padding: 0 1.25rem 4rem; line-height: 1.6; }

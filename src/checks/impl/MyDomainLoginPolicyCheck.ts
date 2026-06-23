@@ -18,7 +18,7 @@ export class MyDomainLoginPolicyCheck implements SecurityCheck {
   readonly id = 'my-domain-login-policy';
   readonly name = 'My Domain Login Policy';
   readonly category = 'Authentication';
-  readonly description = 'Checks that My Domain is configured and login from login.salesforce.com is prevented — stops SSO bypass';
+  readonly description = 'Checks that My Domain is configured and login from login.salesforce.com is prevented: stops SSO bypass';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
@@ -44,7 +44,7 @@ export class MyDomainLoginPolicyCheck implements SecurityCheck {
           `My Domain is required to enforce SSO and to control the login experience. Without My Domain, users can authenticate directly via \`login.salesforce.com\` bypassing any identity provider restrictions. My Domain is also a prerequisite for Lightning Experience, SSO, and Enhanced Domains.`,
         remediation:
           'Configure My Domain in Setup → My Domain. After deployment, set the login policy to "Prevent login from login.salesforce.com" to ensure all logins go through your identity provider.',
-        affectedItems: [{ label: 'My Domain Setup', url: domainSetupUrl, note: 'My Domain not configured — required for SSO enforcement' }],
+        affectedItems: [{ label: 'My Domain Setup', url: domainSetupUrl, note: 'My Domain not configured: required for SSO enforcement' }],
       });
       return { findings };
     }
@@ -73,7 +73,7 @@ export class MyDomainLoginPolicyCheck implements SecurityCheck {
           id: 'my-domain-auth-config-empty',
           category: this.category,
           riskLevel: 'MEDIUM',
-          title: 'No active AuthConfig found — My Domain login policy unverified',
+          title: 'No active AuthConfig found: My Domain login policy unverified',
           detail:
             'The My Domain login policy (which controls whether users can log in with Salesforce credentials or must use SSO) could not be read from AuthConfig. The login policy may allow credential-based login even when SSO is configured.',
           remediation:
@@ -92,7 +92,7 @@ export class MyDomainLoginPolicyCheck implements SecurityCheck {
             id: 'my-domain-password-login-allowed',
             category: this.category,
             riskLevel: 'HIGH',
-            title: 'My Domain allows username-password login — SSO not enforced',
+            title: 'My Domain allows username-password login: SSO not enforced',
             detail:
               `The AuthConfig for this org allows users to log in with Salesforce username and password, meaning SSO via your identity provider is not the only authentication path. Users can bypass SSO (and its MFA, conditional access, and session controls) by using direct credentials. Affected authentication configuration(s): ${passwordAllowed.map((c) => c.DeveloperName).join(', ')}.`,
             remediation:
@@ -100,7 +100,7 @@ export class MyDomainLoginPolicyCheck implements SecurityCheck {
             affectedItems: passwordAllowed.map((c) => ({
               label: c.DeveloperName,
               url: domainSetupUrl,
-              note: 'AuthOptionsUsernamePassword = true — disable password login to enforce SSO',
+              note: 'AuthOptionsUsernamePassword = true: disable password login to enforce SSO',
             })),
           });
         }
@@ -111,14 +111,14 @@ export class MyDomainLoginPolicyCheck implements SecurityCheck {
             category: this.category,
             riskLevel: 'LOW',
             passed: true,
-            title: 'My Domain is configured to require SSO — password login disabled',
+            title: 'My Domain is configured to require SSO: password login disabled',
             detail:
-              `The AuthConfig for this org has SAML enabled and password login disabled, indicating SSO is enforced via My Domain. Users cannot log in with Salesforce credentials — they must authenticate through the configured identity provider.`,
+              `The AuthConfig for this org has SAML enabled and password login disabled, indicating SSO is enforced via My Domain. Users cannot log in with Salesforce credentials. They must authenticate through the configured identity provider.`,
             remediation: 'Verify that the SAML configuration points to the correct identity provider and that the IdP enforces MFA.',
             affectedItems: ssoEnforced.map((c) => ({
               label: c.DeveloperName,
               url: ssoSetupUrl,
-              note: 'SAML only — password login disabled',
+              note: 'SAML only: password login disabled',
             })),
           });
         }
@@ -129,7 +129,7 @@ export class MyDomainLoginPolicyCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'MEDIUM',
         inconclusive: true,
-        title: 'My Domain login policy could not be verified — AuthConfig not accessible',
+        title: 'My Domain login policy could not be verified: AuthConfig not accessible',
         detail:
           'The Tooling API AuthConfig query was not accessible. The My Domain login policy (credential login vs SSO-only) cannot be automatically verified.',
         remediation:

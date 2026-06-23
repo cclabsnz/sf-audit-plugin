@@ -165,9 +165,9 @@ export class GuestUserAccessCheck implements SecurityCheck {
             .filter(Boolean)
             .join('/');
           return {
-            label: `${v.username} — ${v.sobjectType}`,
+            label: `${v.username}: ${v.sobjectType}`,
             url: `${baseUrl}/${v.userId}`,
-            note: `Can ${actions} — remove immediately`,
+            note: `Can ${actions}: remove immediately`,
           };
         }),
         detail:
@@ -185,9 +185,9 @@ export class GuestUserAccessCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${readViolations.length} object(s) grant read access to guest user(s)`,
         affectedItems: readViolations.map((v) => ({
-          label: `${v.username} — ${v.sobjectType}`,
+          label: `${v.username}: ${v.sobjectType}`,
           url: `${baseUrl}/${v.userId}`,
-          note: 'Read access — remove from guest profile; restrict to authenticated users only',
+          note: 'Read access: remove from guest profile; restrict to authenticated users only',
         })),
         detail:
           'SBS-CPORTAL-002 requires guest users be limited to authentication flows only with no access to business objects. Read access exposes data to unauthenticated visitors.',
@@ -206,7 +206,7 @@ export class GuestUserAccessCheck implements SecurityCheck {
         affectedItems: sharingExposures.map((e) => ({
           label: e.shareTable,
           url: `${baseUrl}/lightning/setup/SecuritySharing/page`,
-          note: `${e.count} sharing rule(s) — review and remove guest-targeting rules`,
+          note: `${e.count} sharing rule(s): review and remove guest-targeting rules`,
         })),
         detail:
           'Sharing rules targeting guest users can expose internal records to unauthenticated visitors.',

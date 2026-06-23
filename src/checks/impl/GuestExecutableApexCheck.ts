@@ -14,7 +14,7 @@ export class GuestExecutableApexCheck implements SecurityCheck {
   readonly name = 'Guest-Executable Apex';
   readonly category = 'Access Control';
   readonly description =
-    'Finds Apex classes that unauthenticated guest profiles can execute, flagging those that run without sharing — the classic unauthenticated data-exfiltration vector';
+    'Finds Apex classes that unauthenticated guest profiles can execute, flagging those that run without sharing: the classic unauthenticated data-exfiltration vector';
 
   // Use cached Apex bodies (from HardcodedCredentialsCheck) when available to classify sharing.
   readonly dependsOnCache = ['apexBodies'] as const;
@@ -32,7 +32,7 @@ export class GuestExecutableApexCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: 'No active guest users — guest-executable Apex not a concern',
+        title: 'No active guest users: guest-executable Apex not a concern',
         detail: 'There are no active guest users, so no Apex class is reachable by unauthenticated visitors.',
         remediation: 'If an Experience Cloud/Sites guest user is added later, re-run this audit.',
       });
@@ -97,10 +97,10 @@ export class GuestExecutableApexCheck implements SecurityCheck {
         detail:
           'These Apex classes can be invoked by unauthenticated guest users AND do not enforce record-level sharing. ' +
           'This is the classic Salesforce guest-user exploit chain: an attacker calls the class and reads or writes ' +
-          'business data in bulk with no login. Object-level guest permissions do not mitigate this — the class runs in system context.',
+          'business data in bulk with no login. Object-level guest permissions do not mitigate this: the class runs in system context.',
         remediation:
           'Add "with sharing" to every guest-reachable Apex class, enforce CRUD/FLS, and remove guest execution access from any class that does not strictly need it.',
-        affectedItems: unprotected.map((n) => ({ label: n, url: apexUrl, note: 'Guest-executable + without/with-no sharing — fix immediately' })),
+        affectedItems: unprotected.map((n) => ({ label: n, url: apexUrl, note: 'Guest-executable + without/with-no sharing: fix immediately' })),
       });
     }
 
@@ -115,7 +115,7 @@ export class GuestExecutableApexCheck implements SecurityCheck {
           'unauthenticated attack surface and must enforce CRUD/FLS and validate all input.',
         remediation:
           'Review each class for least-privilege: confirm "with sharing", CRUD/FLS checks, and input validation. Remove guest access where unnecessary.',
-        affectedItems: exposed.map((n) => ({ label: n, url: apexUrl, note: 'Guest-executable — review for least privilege' })),
+        affectedItems: exposed.map((n) => ({ label: n, url: apexUrl, note: 'Guest-executable: review for least privilege' })),
       });
     }
 

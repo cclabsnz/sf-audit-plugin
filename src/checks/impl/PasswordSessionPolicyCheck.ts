@@ -64,7 +64,7 @@ export class PasswordSessionPolicyCheck implements SecurityCheck {
         affectedItems: passwordRisks.map((r) => ({
           label: r.setting,
           url: `${baseUrl}/lightning/setup/SecurityPasswordPolicies/page`,
-          note: `Current: ${r.value} — update in Setup → Password Policies`,
+          note: `Current: ${r.value}. Update in Setup → Password Policies`,
         })),
         detail:
           'Password policy settings deviate from CIS Salesforce Benchmark recommendations. Weak password policies increase the risk of credential-based attacks.',
@@ -82,7 +82,7 @@ export class PasswordSessionPolicyCheck implements SecurityCheck {
         affectedItems: sessionRisks.map((r) => ({
           label: r.setting,
           url: `${baseUrl}/lightning/setup/SessionSettings/page`,
-          note: `Current: ${r.value} — update in Setup → Session Settings`,
+          note: `Current: ${r.value}. Update in Setup → Session Settings`,
         })),
         detail:
           'Session security settings deviate from recommended values. This can expose users to session hijacking or cross-site request forgery attacks.',
@@ -100,7 +100,7 @@ export class PasswordSessionPolicyCheck implements SecurityCheck {
         affectedItems: mfaRisks.map((r) => ({
           label: r.setting,
           url: `${baseUrl}/lightning/setup/MultiFactorAuthentication/page`,
-          note: `Current: ${r.value} — enable MFA in Setup → Identity → Multi-Factor Authentication`,
+          note: `Current: ${r.value}. Enable MFA in Setup → Identity → Multi-Factor Authentication`,
         })),
         detail:
           'MFA enforcement protects against credential-based attacks. Gaps in MFA policy leave accounts vulnerable even if passwords are compromised.',

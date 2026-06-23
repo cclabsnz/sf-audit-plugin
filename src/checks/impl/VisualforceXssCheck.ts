@@ -55,7 +55,7 @@ export class VisualforceXssCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'Visualforce page markup could not be accessed — XSS check skipped',
+        title: 'Visualforce page markup could not be accessed: XSS check skipped',
         detail: 'The Tooling API ApexPage query was not accessible. This may indicate the audit user lacks Tooling API access.',
         remediation: 'Grant Tooling API access to the audit user and re-run.',
       });
@@ -69,7 +69,7 @@ export class VisualforceXssCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: `Visualforce XSS scan incomplete — only ${pages.length} of ${effectiveTotal} pages scanned (API LIMIT 500)`,
+        title: `Visualforce XSS scan incomplete: only ${pages.length} of ${effectiveTotal} pages scanned (API LIMIT 500)`,
         detail: `This org has ${effectiveTotal} Visualforce pages, but the Tooling API imposes a hard LIMIT of 500 rows per query. The remaining ${effectiveTotal - pages.length} pages were not analysed for XSS patterns. Findings below reflect only the scanned subset and may understate the true exposure.`,
         remediation:
           'Use the Salesforce CLI (sf apex list page) or a dedicated SAST tool (PMD, CodeScan) to perform a complete scan of all Visualforce pages outside the 500-row API limit.',
@@ -116,7 +116,7 @@ export class VisualforceXssCheck implements SecurityCheck {
         id: 'visualforce-xss-escape-false',
         category: this.category,
         riskLevel: 'HIGH',
-        title: `${escapeFalsePages.length} Visualforce page(s) use escape="false" — XSS risk`,
+        title: `${escapeFalsePages.length} Visualforce page(s) use escape="false": XSS risk`,
         detail:
           `\`escape="false"\` on \`<apex:outputText>\` or similar components disables Salesforce's automatic HTML encoding. If the rendered value contains user-controlled content, an attacker can inject arbitrary JavaScript into the page, leading to stored or reflected XSS. Salesforce defaults to \`escape="true"\` specifically to prevent this.`,
         remediation:
@@ -124,7 +124,7 @@ export class VisualforceXssCheck implements SecurityCheck {
         affectedItems: escapeFalsePages.map((name) => ({
           label: name,
           url: setupUrl,
-          note: 'escape="false" found — review all output components for user-controlled content',
+          note: 'escape="false" found: review all output components for user-controlled content',
         })),
       });
     }
@@ -143,7 +143,7 @@ export class VisualforceXssCheck implements SecurityCheck {
         affectedItems: jsUncodedPages.map((name) => ({
           label: name,
           url: setupUrl,
-          note: '{!var} in <script> block without JSENCODE — wrap with {!JSENCODE(var)}',
+          note: '{!var} in <script> block without JSENCODE: wrap with {!JSENCODE(var)}',
         })),
       });
     }
@@ -162,7 +162,7 @@ export class VisualforceXssCheck implements SecurityCheck {
         affectedItems: attrUncodedPages.map((name) => ({
           label: name,
           url: setupUrl,
-          note: '{!var} in href/src/action without URLENCODE — encode or validate',
+          note: '{!var} in href/src/action without URLENCODE: encode or validate',
         })),
       });
     }

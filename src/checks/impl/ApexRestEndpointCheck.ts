@@ -30,7 +30,7 @@ export class ApexRestEndpointCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'Apex class bodies not available — REST endpoint check skipped',
+        title: 'Apex class bodies not available: REST endpoint check skipped',
         detail: 'Apex bodies were not cached. Ensure HardcodedCredentialsCheck runs before this check.',
         remediation: 'Verify registry ordering.',
       });
@@ -65,7 +65,7 @@ export class ApexRestEndpointCheck implements SecurityCheck {
       affectedItems: restClasses.map(({ name }) => ({
         label: name,
         url: apexClassesUrl,
-        note: 'Custom REST endpoint — review access controls',
+        note: 'Custom REST endpoint: review access controls',
       })),
     });
 
@@ -78,13 +78,13 @@ export class ApexRestEndpointCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${withoutSharing.length} REST endpoint class(es) declared "without sharing"`,
         detail:
-          `Apex REST endpoints declared "without sharing" execute with elevated system privileges — any authenticated (or, if the endpoint is exposed via a Community, unauthenticated) caller can retrieve or modify records regardless of the running user's sharing rules. This is a common vector for horizontal privilege escalation in Salesforce integrations.`,
+          `Apex REST endpoints declared "without sharing" execute with elevated system privileges. Any authenticated (or, if the endpoint is exposed via a Community, unauthenticated) caller can retrieve or modify records regardless of the running user's sharing rules. This is a common vector for horizontal privilege escalation in Salesforce integrations.`,
         remediation:
           'Change declarations to "with sharing" so that record-level access is enforced for REST callers. Where system-level access is genuinely required (e.g. an integration service account), document the justification and ensure the endpoint is not accessible to end-user profiles.',
         affectedItems: withoutSharing.map(({ name }) => ({
           label: name,
           url: apexClassesUrl,
-          note: '"without sharing" REST endpoint — callers bypass record sharing rules',
+          note: '"without sharing" REST endpoint: callers bypass record sharing rules',
         })),
       });
     }
@@ -106,7 +106,7 @@ export class ApexRestEndpointCheck implements SecurityCheck {
         affectedItems: noSharingDeclaration.map(({ name }) => ({
           label: name,
           url: apexClassesUrl,
-          note: 'No sharing declaration — add "with sharing" explicitly',
+          note: 'No sharing declaration: add "with sharing" explicitly',
         })),
       });
     }

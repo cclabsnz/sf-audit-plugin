@@ -33,7 +33,7 @@ export class ConnectedAppScopeCheck implements SecurityCheck {
   readonly id = 'connected-app-scope';
   readonly name = 'Connected App OAuth Scopes & Token Policy';
   readonly category = 'App Security';
-  readonly description = 'Flags connected apps granting Full OAuth scope or using infinite refresh token policies — both expand the blast radius of a compromised token';
+  readonly description = 'Flags connected apps granting Full OAuth scope or using infinite refresh token policies: both expand the blast radius of a compromised token';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
@@ -92,7 +92,7 @@ export class ConnectedAppScopeCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${fullScopeApps.length} connected app(s) grant the "Full" OAuth scope`,
         detail:
-          'The Full OAuth scope gives a connected app the same access rights as the authorising user — including Modify All Data if the user is an admin. A stolen access or refresh token from a Full-scope app can be used to read, write, and delete any record the user could access. Full scope is almost never necessary; specific scopes (Api, Web, CustomPermissions) should be used instead.',
+          'The Full OAuth scope gives a connected app the same access rights as the authorising user, including Modify All Data if the user is an admin. A stolen access or refresh token from a Full-scope app can be used to read, write, and delete any record the user could access. Full scope is almost never necessary; specific scopes (Api, Web, CustomPermissions) should be used instead.',
         remediation:
           'Edit each connected app in Setup → Connected Apps → OAuth Policies and replace "Full" scope with the minimum scopes the integration actually requires. Common replacements: "Api" for REST API access, "Web" for web-based flows, "OpenID" + "Profile" for identity only. Rotating client secrets after scope changes is also recommended.',
         affectedItems: fullScopeApps.map((app) => ({
@@ -136,7 +136,7 @@ export class ConnectedAppScopeCheck implements SecurityCheck {
           id: 'connected-app-full-scope-infinite-token',
           category: this.category,
           riskLevel: 'CRITICAL',
-          title: `${fullAndInfinite.length} connected app(s) combine Full scope with an infinite refresh token — stolen token = permanent full access`,
+          title: `${fullAndInfinite.length} connected app(s) combine Full scope with an infinite refresh token: stolen token = permanent full access`,
           detail:
             'These apps issue never-expiring tokens that grant complete access to the org as the authorising user. A single leaked token is equivalent to a permanent credential with admin-level reach if the user is an admin. This is the highest-risk connected app configuration.',
           remediation:
@@ -144,7 +144,7 @@ export class ConnectedAppScopeCheck implements SecurityCheck {
           affectedItems: fullAndInfinite.map((app) => ({
             label: app.Name,
             url: setupUrl,
-            note: `Full scope + infinite refresh token — highest risk combination`,
+            note: `Full scope + infinite refresh token: highest risk combination`,
           })),
         });
       }

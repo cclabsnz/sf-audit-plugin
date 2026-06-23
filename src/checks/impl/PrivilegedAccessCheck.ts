@@ -87,13 +87,13 @@ export class PrivilegedAccessCheck implements SecurityCheck {
         riskLevel: 'CRITICAL',
         title: `${shadowAdmins.length} user(s) hold admin-equivalent access without the System Administrator profile`,
         detail:
-          'These active users have accumulated effective permissions equivalent to a System Administrator — either "Modify All Data" directly, or "Manage Users" combined with "Assign Permission Sets" (which lets them grant themselves anything) — but sit on a different profile. Such "shadow admins" are easy to miss in profile-based reviews, yet a takeover of any one grants full org control. The access is reached via the user\'s profile, assigned permission sets, or permission set groups combined.',
+          'These active users have accumulated effective permissions equivalent to a System Administrator (either "Modify All Data" directly, or "Manage Users" combined with "Assign Permission Sets", which lets them grant themselves anything) but sit on a different profile. Such "shadow admins" are easy to miss in profile-based reviews, yet a takeover of any one grants full org control. The access is reached via the user\'s profile, assigned permission sets, or permission set groups combined.',
         remediation:
           'Review each user\'s permission sets and profile. Remove "Modify All Data" / the Manage Users + Assign Permission Sets pairing unless the role genuinely requires org administration, and consolidate true admins onto a controlled admin profile.',
         affectedItems: shadowAdmins.map((g) => ({
           label: g.username,
           url: setupUrl,
-          note: `Profile: ${g.profileName} — effective: ${g.perms.join(', ')}`,
+          note: `Profile: ${g.profileName}, effective: ${g.perms.join(', ')}`,
         })),
       });
     } else {
@@ -126,7 +126,7 @@ export class PrivilegedAccessCheck implements SecurityCheck {
           .map((g) => ({
             label: g.username,
             url: setupUrl,
-            note: `Profile: ${g.profileName} — ${g.perms.length} high-risk perm(s): ${g.perms.join(', ')}`,
+            note: `Profile: ${g.profileName}, ${g.perms.length} high-risk perm(s): ${g.perms.join(', ')}`,
           })),
       });
     }

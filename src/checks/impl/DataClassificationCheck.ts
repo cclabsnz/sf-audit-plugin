@@ -70,7 +70,7 @@ export class DataClassificationCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'Data classification status could not be determined — Tooling API access needed',
+        title: 'Data classification status could not be determined: Tooling API access needed',
         detail:
           'SBS-DATA-001 requires all data fields to be classified by sensitivity. SBS-DATA-002 requires PII fields to be explicitly identified. The Tooling API FieldDefinition query was not accessible with the current user permissions.',
         remediation:
@@ -87,7 +87,7 @@ export class DataClassificationCheck implements SecurityCheck {
           category: this.category,
           riskLevel: 'LOW',
           passed: true,
-          title: `Data classification configured on all ${CLASSIFICATION_OBJECTS.length} key objects — SBS-DATA-001/002`,
+          title: `Data classification configured on all ${CLASSIFICATION_OBJECTS.length} key objects: SBS-DATA-001/002`,
           detail: `SBS-DATA-001 requires data to be classified by sensitivity and SBS-DATA-002 requires PII to be identified. All checked objects have at least one classified field (total: ${totalClassifiedFields} classified fields across ${classifiedObjects.length} objects).`,
           remediation: 'Extend classification to any custom objects that store sensitive or personally identifiable data.',
         });
@@ -96,7 +96,7 @@ export class DataClassificationCheck implements SecurityCheck {
           id: 'data-classification-missing',
           category: this.category,
           riskLevel: unclassifiedObjects.length >= 4 ? 'HIGH' : 'MEDIUM',
-          title: `${unclassifiedObjects.length} of ${CLASSIFICATION_OBJECTS.length} key object(s) have no data classification — SBS-DATA-001/002`,
+          title: `${unclassifiedObjects.length} of ${CLASSIFICATION_OBJECTS.length} key object(s) have no data classification: SBS-DATA-001/002`,
           detail:
             `SBS-DATA-001 requires all data to be classified by sensitivity and SBS-DATA-002 requires PII to be identified. ${unclassifiedObjects.length} key object(s) have no fields with a Compliance Group set: ${unclassifiedObjects.join(', ')}. ${classifiedObjects.length > 0 ? `Objects with classification already configured: ${classifiedObjects.map((o) => `${o} (${classifiedMap.get(o)} field(s))`).join(', ')}.` : ''}`,
           remediation:
@@ -104,7 +104,7 @@ export class DataClassificationCheck implements SecurityCheck {
           affectedItems: unclassifiedObjects.map((name) => ({
             label: name,
             url: `${baseUrl}/lightning/setup/ObjectManager/${name}/FieldsAndRelationships/view`,
-            note: 'No fields classified — configure Compliance Group via Data Classification in Setup',
+            note: 'No fields classified: configure Compliance Group via Data Classification in Setup',
           })),
         });
       }
@@ -117,7 +117,7 @@ export class DataClassificationCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: `Shield Platform Encryption active — ${encryptionKeyCount} encryption key(s) found — SBS-DATA-003`,
+        title: `Shield Platform Encryption active: ${encryptionKeyCount} encryption key(s) found (SBS-DATA-003)`,
         detail:
           `SBS-DATA-003 requires sensitive data to be encrypted at rest commensurate with its classification. ${encryptionKeyCount} Shield Platform Encryption key(s) are configured, indicating encryption-at-rest is in use.`,
         remediation:
@@ -128,7 +128,7 @@ export class DataClassificationCheck implements SecurityCheck {
         id: 'data-encryption-not-detected',
         category: this.category,
         riskLevel: 'MEDIUM',
-        title: 'Shield Platform Encryption not detected — SBS-DATA-003',
+        title: 'Shield Platform Encryption not detected: SBS-DATA-003',
         detail:
           'SBS-DATA-003 requires data at rest to be encrypted in line with its assigned classification. No Shield Platform Encryption keys were found, indicating either Shield is not licensed or encryption has not been configured for this org.',
         remediation:

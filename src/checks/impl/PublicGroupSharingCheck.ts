@@ -92,7 +92,7 @@ export class PublicGroupSharingCheck implements SecurityCheck {
         affectedItems: exposures.map((e) => ({
           label: `${e.shareTable} → ${e.groupName}`,
           url: sharingRulesUrl,
-          note: `${e.count} sharing rule(s) — replace with targeted group or role-based sharing`,
+          note: `${e.count} sharing rule(s): replace with targeted group or role-based sharing`,
         })),
         detail:
           'Sharing rules targeting "All Internal Users" expose records to every active internal user in the org.',

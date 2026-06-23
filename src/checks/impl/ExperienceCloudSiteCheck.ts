@@ -75,7 +75,7 @@ export class ExperienceCloudSiteCheck implements SecurityCheck {
         affectedItems: selfRegSites.map((n) => ({
           label: n.Name,
           url: `${baseUrl}/lightning/setup/SetupNetworks/home`,
-          note: `Self-registration enabled — SelfRegProfileId: ${n.SelfRegProfileId}`,
+          note: `Self-registration enabled, SelfRegProfileId: ${n.SelfRegProfileId}`,
         })),
       });
     }
@@ -93,7 +93,7 @@ export class ExperienceCloudSiteCheck implements SecurityCheck {
         affectedItems: guestSites.map((n) => ({
           label: n.Name,
           url: setupUrl,
-          note: `Guest access enabled — verify Guest Profile permissions`,
+          note: `Guest access enabled: verify Guest Profile permissions`,
         })),
       });
     }
@@ -104,7 +104,7 @@ export class ExperienceCloudSiteCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: `${networks.length} live Experience Cloud site(s) — no self-registration or open guest access`,
+        title: `${networks.length} live Experience Cloud site(s): no self-registration or open guest access`,
         detail: `All ${networks.length} live site(s) have self-registration disabled and no active guest users. Portal access requires an explicit user account.`,
         remediation:
           'Continue to monitor site configuration as sites are updated. Review portal user object permissions periodically.',

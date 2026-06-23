@@ -11,7 +11,7 @@ export class ConnectedAppInactivityCheck implements SecurityCheck {
   readonly id = 'connected-app-inactivity';
   readonly name = 'Inactive Connected Apps';
   readonly category = 'App Security';
-  readonly description = 'Flags connected apps with no OAuth logins in the past 90 days — stale apps are unused attack surface';
+  readonly description = 'Flags connected apps with no OAuth logins in the past 90 days: stale apps are unused attack surface';
 
   readonly dependsOnCache = ['connectedAppNames'] as const;
 
@@ -55,7 +55,7 @@ export class ConnectedAppInactivityCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'Connected app activity could not be determined — LoginHistory not accessible',
+        title: 'Connected app activity could not be determined: LoginHistory not accessible',
         detail: 'LoginHistory was not accessible. Connected app inactivity cannot be computed without login history.',
         remediation: 'Grant LoginHistory read access to the audit user.',
       });
@@ -77,13 +77,13 @@ export class ConnectedAppInactivityCheck implements SecurityCheck {
         riskLevel: inactiveApps.length > 5 ? 'MEDIUM' : 'LOW',
         title: `${inactiveApps.length} connected app(s) have had no OAuth logins in 90 days`,
         detail:
-          `${inactiveApps.length} of ${connectedAppNames.length} connected apps show no OAuth login activity in the past 90 days. Inactive apps still hold valid OAuth credentials and expand the attack surface — a compromised or leaked client secret for an inactive app can be used to obtain access tokens without triggering activity alerts.`,
+          `${inactiveApps.length} of ${connectedAppNames.length} connected apps show no OAuth login activity in the past 90 days. Inactive apps still hold valid OAuth credentials and expand the attack surface. A compromised or leaked client secret for an inactive app can be used to obtain access tokens without triggering activity alerts.`,
         remediation:
           'Review each inactive connected app. If the integration is no longer in use, delete or disable the app to revoke its OAuth credentials. Ensure active integrations are documented with an owner.',
         affectedItems: inactiveApps.map((name) => ({
           label: name,
           url: setupUrl,
-          note: 'No OAuth logins in 90 days — verify if still needed and delete if not',
+          note: 'No OAuth logins in 90 days: verify if still needed and delete if not',
         })),
       });
     }
@@ -99,7 +99,7 @@ export class ConnectedAppInactivityCheck implements SecurityCheck {
         affectedItems: activeApps.map((name) => ({
           label: name,
           url: setupUrl,
-          note: 'Active — verify documented owner and justification',
+          note: 'Active: verify documented owner and justification',
         })),
       });
     }

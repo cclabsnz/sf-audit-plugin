@@ -123,7 +123,7 @@ export class NamedCredentialsCheck implements SecurityCheck {
         affectedItems: unusedCredentials.map((r) => ({
           label: r.MasterLabel,
           url: setupUrl,
-          note: `${r.Endpoint} — verify if still required, delete if orphaned`,
+          note: `${r.Endpoint}: verify if still required, delete if orphaned`,
         })),
       });
     }
@@ -143,7 +143,7 @@ export class NamedCredentialsCheck implements SecurityCheck {
         affectedItems: httpEndpoints.map((r) => ({
           label: r.MasterLabel,
           url: setupUrl,
-          note: `${r.Endpoint} — migrate to HTTPS`,
+          note: `${r.Endpoint}: migrate to HTTPS`,
         })),
       });
     }
@@ -164,7 +164,7 @@ export class NamedCredentialsCheck implements SecurityCheck {
         affectedItems: anonymousCreds.map((r) => ({
           label: r.MasterLabel,
           url: setupUrl,
-          note: `${r.Endpoint} — verify that no authentication is required`,
+          note: `${r.Endpoint}: verify that no authentication is required`,
         })),
       });
     }

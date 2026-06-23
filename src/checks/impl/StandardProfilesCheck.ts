@@ -81,13 +81,13 @@ export class StandardProfilesCheck implements SecurityCheck {
       riskLevel: 'HIGH',
       title: `${totalAffected} active user(s) assigned to standard out-of-the-box Salesforce profiles`,
       detail:
-        `SBS-ACS-005 requires all active users be assigned custom profiles — standard profiles must not be used in production. Standard profiles grant broad, poorly-audited permissions and cannot be tailored to least-privilege requirements. Affected profile(s): ${profileSummary}.`,
+        `SBS-ACS-005 requires all active users be assigned custom profiles: standard profiles must not be used in production. Standard profiles grant broad, poorly-audited permissions and cannot be tailored to least-privilege requirements. Affected profile(s): ${profileSummary}.`,
       remediation:
         'Create custom profiles based on minimum required permissions and migrate all active users. Remove access to standard profiles in production. Standard profiles cannot be edited so they often grant more than needed.',
       affectedItems: users.slice(0, 50).map((u) => ({
         label: u.Username,
         url: `${baseUrl}/${u.Id}`,
-        note: `Profile: ${u.Profile.Name} — migrate to a custom profile`,
+        note: `Profile: ${u.Profile.Name}, migrate to a custom profile`,
       })),
     });
 

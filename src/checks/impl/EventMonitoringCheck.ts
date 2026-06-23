@@ -50,11 +50,11 @@ export class EventMonitoringCheck implements SecurityCheck {
           id: 'event-monitoring-disabled',
           category: this.category,
           riskLevel: 'HIGH',
-          title: 'No Event Monitoring log files found in the last 35 days — SBS-MON-001',
+          title: 'No Event Monitoring log files found in the last 35 days: SBS-MON-001',
           detail:
             'SBS-MON-001 requires Event Monitoring storage to be enabled so that login, API access, and data export events are captured. No EventLogFile records exist for the past 35 days, indicating Event Monitoring is either not licensed or not configured.',
           remediation:
-            'Enable Event Monitoring in Setup → Event Monitoring Settings. If the feature is not licensed, raise with your Salesforce account team — SBS-MON-001 compliance requires it.',
+            'Enable Event Monitoring in Setup → Event Monitoring Settings. If the feature is not licensed, raise with your Salesforce account team. SBS-MON-001 compliance requires it.',
           affectedItems: [{ label: 'Event Monitoring Setup', url: setupUrl, note: 'Enable event log storage' }],
         });
         return { findings };
@@ -66,7 +66,7 @@ export class EventMonitoringCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: `Event Monitoring active — ${totalFiles} log file(s) across ${eventTypes.length} event type(s) — SBS-MON-001`,
+        title: `Event Monitoring active: ${totalFiles} log file(s) across ${eventTypes.length} event type(s) (SBS-MON-001)`,
         detail: `SBS-MON-001 requires Event Monitoring to be enabled and actively capturing events. Found ${totalFiles} EventLogFile records covering ${eventTypes.length} distinct event types over the past 35 days. Event types captured: ${eventTypes.slice(0, 12).join(', ')}${eventTypes.length > 12 ? ` (+${eventTypes.length - 12} more)` : ''}.`,
         remediation: 'Review the list of monitored event types and ensure Login, API, DataExport, and LightningInteraction events are included.',
       });
@@ -82,7 +82,7 @@ export class EventMonitoringCheck implements SecurityCheck {
             id: 'event-monitoring-retention-short',
             category: this.category,
             riskLevel: 'MEDIUM',
-            title: `Event logs cover only ${daysCovered} day(s) — SBS-INT-004 requires 30-day minimum`,
+            title: `Event logs cover only ${daysCovered} day(s): SBS-INT-004 requires 30-day minimum`,
             detail:
               `SBS-INT-004 requires API event logs to be retained for at least 30 days to support incident investigation. The earliest EventLogFile available is from ${new Date(earliestDate).toISOString().split('T')[0]}, giving only ${daysCovered} day(s) of coverage within the past 35-day window.`,
             remediation:
@@ -98,9 +98,9 @@ export class EventMonitoringCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'MEDIUM',
         inconclusive: true,
-        title: 'Event Monitoring log files could not be accessed — SBS-MON-001 cannot be verified',
+        title: 'Event Monitoring log files could not be accessed: SBS-MON-001 cannot be verified',
         detail:
-          'SBS-MON-001 requires Event Monitoring storage to be enabled. EventLogFile was not accessible — this may indicate the feature is not licensed or the audit user lacks the "View Event Log Files" permission.',
+          'SBS-MON-001 requires Event Monitoring storage to be enabled. EventLogFile was not accessible. This may indicate the feature is not licensed or the audit user lacks the "View Event Log Files" permission.',
         remediation:
           'Grant "View Event Log Files" permission to the audit user, or verify Event Monitoring is licensed and enabled in Setup → Event Monitoring Settings.',
       });

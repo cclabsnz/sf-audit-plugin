@@ -49,7 +49,7 @@ export class ApiClientPermissionCheck implements SecurityCheck {
         id: 'api-client-permission-assigned',
         category: this.category,
         riskLevel: profileGrantors.length > 0 ? 'HIGH' : 'MEDIUM',
-        title: `${users.length} user(s) have the "Use Any API Client" permission — SBS-ACS-006`,
+        title: `${users.length} user(s) have the "Use Any API Client" permission: SBS-ACS-006`,
         detail:
           'SBS-ACS-006 requires documented justification for this permission and states it must not be granted to end-users. "Use Any API Client" bypasses API Access Control, allowing the user to connect via any third-party API client regardless of allowed-list restrictions. This significantly expands the attack surface for unauthorised data access.',
         remediation:
@@ -66,7 +66,7 @@ export class ApiClientPermissionCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: '"Use Any API Client" permission check could not run — field may not exist in this org edition',
+        title: '"Use Any API Client" permission check could not run: field may not exist in this org edition',
         detail:
           'SBS-ACS-006 requires documented justification for the "Use Any API Client" permission. This field is part of the API Access Control feature and may not be available in all Salesforce editions.',
         remediation:

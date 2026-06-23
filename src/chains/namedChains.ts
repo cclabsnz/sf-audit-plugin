@@ -43,7 +43,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
   },
   {
     id: 'standard-to-takeover',
-    title: 'Standard user → org takeover',
+    title: 'Standard user to org takeover',
     severity: 'CRITICAL',
     narrative:
       'A low-trust authenticated user combines with a privilege-escalation permission ' +
@@ -62,7 +62,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
   },
   {
     id: 'cred-theft-pivot',
-    title: 'Credential theft → external pivot',
+    title: 'Credential theft to external pivot',
     severity: 'CRITICAL',
     narrative:
       'Exposed secrets (hardcoded credentials, credentials in custom labels, debug logs, or broad CORS) ' +
@@ -81,7 +81,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
   },
   {
     id: 'soql-injection-read',
-    title: 'SOQL injection → mass read',
+    title: 'SOQL injection to mass read',
     severity: 'HIGH',
     narrative:
       'Injectable dynamic SOQL combines with bulk data readability to let an attacker extract large datasets.',
@@ -100,7 +100,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
   },
   {
     id: 'mfa-bypass-admin',
-    title: 'MFA bypass → privileged compromise',
+    title: 'MFA bypass to privileged compromise',
     severity: 'HIGH',
     narrative:
       'Weak MFA enforcement or trusted-IP MFA bypass combines with the presence of highly-privileged ' +

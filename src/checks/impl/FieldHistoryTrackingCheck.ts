@@ -50,7 +50,7 @@ export class FieldHistoryTrackingCheck implements SecurityCheck {
           category: this.category,
           riskLevel: 'LOW',
           passed: true,
-          title: 'Field history tracking enabled on all checked sensitive objects — SBS-DATA-004',
+          title: 'Field history tracking enabled on all checked sensitive objects: SBS-DATA-004',
           detail: `SBS-DATA-004 requires field history tracking on sensitive objects to support incident investigation and compliance evidence. All ${SENSITIVE_OBJECTS.length} checked objects have at least one tracked field. Objects: ${withTracking.map((o) => `${o} (${trackedMap.get(o)} field(s))`).join(', ')}.`,
           remediation: 'Periodically review which specific fields are tracked to ensure key sensitive fields (email address, phone, revenue, status) are included.',
         });
@@ -61,7 +61,7 @@ export class FieldHistoryTrackingCheck implements SecurityCheck {
         id: 'field-history-tracking-missing',
         category: this.category,
         riskLevel: withoutTracking.length >= 3 ? 'HIGH' : 'MEDIUM',
-        title: `${withoutTracking.length} sensitive object(s) have no field history tracking — SBS-DATA-004`,
+        title: `${withoutTracking.length} sensitive object(s) have no field history tracking: SBS-DATA-004`,
         detail:
           `SBS-DATA-004 requires field history tracking on sensitive objects to capture who changed what data and when, enabling post-incident investigation and audit evidence. The following objects have no tracked fields: ${withoutTracking.join(', ')}. ${withTracking.length > 0 ? `Objects already configured: ${withTracking.map((o) => `${o} (${trackedMap.get(o)} field(s))`).join(', ')}.` : ''}`,
         remediation:
@@ -69,7 +69,7 @@ export class FieldHistoryTrackingCheck implements SecurityCheck {
         affectedItems: withoutTracking.map((name) => ({
           label: name,
           url: `${setupUrl}/list?objectType=${name}`,
-          note: 'No fields have history tracking enabled — configure via Object Manager → Set History Tracking',
+          note: 'No fields have history tracking enabled: configure via Object Manager → Set History Tracking',
         })),
       });
     } catch {

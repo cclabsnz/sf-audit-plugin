@@ -62,7 +62,7 @@ export class HealthCheckCheck implements SecurityCheck {
         affectedItems: highRisks.map((r) => ({
           label: r.Setting,
           url: healthCheckUrl,
-          note: `Current: ${r.OrgValue} — Recommended: ${r.StandardValue}`,
+          note: `Current: ${r.OrgValue}. Recommended: ${r.StandardValue}`,
         })),
       });
     }
@@ -87,7 +87,7 @@ export class HealthCheckCheck implements SecurityCheck {
         affectedItems: mediumRisks.map((r) => ({
           label: r.Setting,
           url: healthCheckUrl,
-          note: `Current: ${r.OrgValue} — Recommended: ${r.StandardValue}`,
+          note: `Current: ${r.OrgValue}. Recommended: ${r.StandardValue}`,
         })),
       });
     }

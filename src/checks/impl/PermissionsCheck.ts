@@ -91,7 +91,7 @@ export class PermissionsCheck implements SecurityCheck {
         riskLevel: 'INFO',
         inconclusive: true,
         title: 'Unassigned permission set check could not be completed',
-        detail: 'The semi-join query to identify unassigned permission sets failed — this can occur in orgs with very large numbers of permission set assignments (governor limit on semi-join subqueries). Review orphaned permission sets manually.',
+        detail: 'The semi-join query to identify unassigned permission sets failed. This can occur in orgs with very large numbers of permission set assignments (governor limit on semi-join subqueries). Review orphaned permission sets manually.',
         remediation: 'In Setup → Permission Sets, sort by Last Modified and review sets that appear to have no user assignments.',
       });
     }
@@ -139,12 +139,12 @@ export class PermissionsCheck implements SecurityCheck {
           ...profileGrantors.map((r) => ({
             label: r.Name,
             url: `${baseUrl}/${r.Id}`,
-            note: 'Granted via Profile — prefer moving to a permission set for finer control',
+            note: 'Granted via Profile: prefer moving to a permission set for finer control',
           })),
           ...psGrantors.map((r) => ({
             label: r.Name,
             url: `${baseUrl}/${r.Id}`,
-            note: 'Permission Set — document justification in system of record',
+            note: 'Permission Set: document justification in system of record',
           })),
         ],
       });

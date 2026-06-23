@@ -14,7 +14,7 @@ export class OutboundMessagesCheck implements SecurityCheck {
   readonly name = 'Workflow Outbound Messages';
   readonly category = 'External Connectivity';
   readonly description =
-    'Flags workflow outbound messages that include a Salesforce session ID or post to cleartext (http://) endpoints — session-hijack and exfiltration vectors';
+    'Flags workflow outbound messages that include a Salesforce session ID or post to cleartext (http://) endpoints: session-hijack and exfiltration vectors';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
@@ -64,13 +64,13 @@ export class OutboundMessagesCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${sessionId.length} outbound message(s) send a Salesforce session ID to an external endpoint`,
         detail:
-          'Outbound messages with "Include Session ID" enabled deliver a live, API-capable Salesforce session ID to the configured endpoint with every fire. If that endpoint is attacker-controlled, compromised, or simply logs payloads, the session ID can be replayed to access the org as the integration user — a direct session-hijack and data-exfiltration path.',
+          'Outbound messages with "Include Session ID" enabled deliver a live, API-capable Salesforce session ID to the configured endpoint with every fire. If that endpoint is attacker-controlled, compromised, or simply logs payloads, the session ID can be replayed to access the org as the integration user: a direct session-hijack and data-exfiltration path.',
         remediation:
           'Disable "Include Session ID" on every outbound message unless absolutely required. Prefer Named Credentials or OAuth for callbacks that need to authenticate to Salesforce.',
         affectedItems: sessionId.map((r) => ({
           label: r.Name,
           url: setupUrl,
-          note: `${r.EndpointUrl} — disable Include Session ID`,
+          note: `${r.EndpointUrl}: disable Include Session ID`,
         })),
       });
     }
@@ -82,12 +82,12 @@ export class OutboundMessagesCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${cleartext.length} outbound message(s) post to a cleartext http:// endpoint`,
         detail:
-          'Outbound messages to plain http:// endpoints transmit record data — and the session ID, if included — unencrypted over the network, where it can be intercepted in transit.',
+          'Outbound messages to plain http:// endpoints transmit record data (and the session ID, if included) unencrypted over the network, where it can be intercepted in transit.',
         remediation: 'Change each endpoint to HTTPS and confirm the receiving service presents a valid certificate.',
         affectedItems: cleartext.map((r) => ({
           label: r.Name,
           url: setupUrl,
-          note: `${r.EndpointUrl} — switch to HTTPS`,
+          note: `${r.EndpointUrl}: switch to HTTPS`,
         })),
       });
     }

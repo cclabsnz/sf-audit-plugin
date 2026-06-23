@@ -59,7 +59,7 @@ export class TrustedIPRangesCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: 'No trusted IP ranges configured — MFA applies to all login locations',
+        title: 'No trusted IP ranges configured: MFA applies to all login locations',
         detail:
           'No NetworkAccess (trusted IP range) records are configured. All users are subject to MFA and login challenge enforcement regardless of their network location.',
         remediation:
@@ -83,7 +83,7 @@ export class TrustedIPRangesCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${broadRanges.length} trusted IP range(s) cover more than 65,536 hosts (broader than /16)`,
         detail:
-          'Trusted IP ranges completely bypass Salesforce MFA — any user logging in from a trusted IP is not challenged for a second factor. Ranges broader than /16 cover entire enterprise network blocks or ISP ranges, creating an extremely large MFA bypass surface. If an attacker or insider gains access to any host within that range, they can log in without MFA.',
+          'Trusted IP ranges completely bypass Salesforce MFA. Any user logging in from a trusted IP is not challenged for a second factor. Ranges broader than /16 cover entire enterprise network blocks or ISP ranges, creating an extremely large MFA bypass surface. If an attacker or insider gains access to any host within that range, they can log in without MFA.',
         remediation:
           'Narrow each trusted IP range to the minimum required set of specific host addresses or subnets. Remove overly broad ranges immediately. If broad ranges are required, document the business justification and ensure compensating controls (network-level MFA, VPN enforcement, EDR) are in place.',
         affectedItems: broadRanges.map((r) => {
@@ -96,7 +96,7 @@ export class TrustedIPRangesCheck implements SecurityCheck {
           return {
             label: `${r.StartAddress}–${r.EndAddress}`,
             url: setupUrl,
-            note: `${r.Description ?? 'no description'} — ${size} hosts`,
+            note: `${r.Description ?? 'no description'}, ${size} hosts`,
           };
         }),
       });
@@ -106,7 +106,7 @@ export class TrustedIPRangesCheck implements SecurityCheck {
       id: 'trusted-ip-exists',
       category: this.category,
       riskLevel: 'MEDIUM',
-      title: `${ranges.length} trusted IP range(s) configured — MFA is bypassed for logins from these addresses`,
+      title: `${ranges.length} trusted IP range(s) configured: MFA is bypassed for logins from these addresses`,
       detail:
         'Trusted IP ranges in Salesforce completely bypass MFA enforcement. Any user authenticating from a listed IP address is not required to provide a second factor. Each range must have documented justification and be reviewed regularly. Without this review, ranges can accumulate and silently expand the MFA bypass surface over time.',
       remediation:
@@ -121,7 +121,7 @@ export class TrustedIPRangesCheck implements SecurityCheck {
         return {
           label: `${r.StartAddress}–${r.EndAddress}`,
           url: setupUrl,
-          note: `${r.Description ?? 'no description'} — ${size} hosts`,
+          note: `${r.Description ?? 'no description'}, ${size} hosts`,
         };
       }),
     });

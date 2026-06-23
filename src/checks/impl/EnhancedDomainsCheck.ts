@@ -26,7 +26,7 @@ export class EnhancedDomainsCheck implements SecurityCheck {
   readonly id = 'enhanced-domains';
   readonly name = 'Enhanced Domains';
   readonly category = 'Authentication';
-  readonly description = 'Verifies Enhanced Domains is enabled — prevents cross-org cookie leakage and enables org-specific URL isolation (required since Spring 2023)';
+  readonly description = 'Verifies Enhanced Domains is enabled: prevents cross-org cookie leakage and enables org-specific URL isolation (required since Spring 2023)';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
@@ -64,9 +64,9 @@ export class EnhancedDomainsCheck implements SecurityCheck {
         id: 'enhanced-domains-no-my-domain',
         category: this.category,
         riskLevel: isSandbox ? 'MEDIUM' : 'HIGH',
-        title: 'My Domain is not configured — Enhanced Domains cannot be enabled',
+        title: 'My Domain is not configured: Enhanced Domains cannot be enabled',
         detail:
-          `Enhanced Domains (required for production orgs since Spring 2023) depends on My Domain being configured first. Without My Domain, the org uses shared Salesforce infrastructure URLs, which means cookies and sessions are not isolated to this specific org — increasing the risk of cross-org credential leakage. My Domain also enables SSO, Lightning Experience, and granular login policies.`,
+          `Enhanced Domains (required for production orgs since Spring 2023) depends on My Domain being configured first. Without My Domain, the org uses shared Salesforce infrastructure URLs, which means cookies and sessions are not isolated to this specific org, increasing the risk of cross-org credential leakage. My Domain also enables SSO, Lightning Experience, and granular login policies.`,
         remediation:
           'Configure My Domain in Setup → My Domain. After testing, deploy to all users. Then enable Enhanced Domains in Setup → My Domain → Enable Enhanced Domains.',
         affectedItems: [{ label: 'My Domain Setup', url: domainSetupUrl, note: 'Configure My Domain as a prerequisite for Enhanced Domains' }],
@@ -80,7 +80,7 @@ export class EnhancedDomainsCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: `Enhanced Domains is active — org uses isolated subdomain (${myDomain})`,
+        title: `Enhanced Domains is active: org uses isolated subdomain (${myDomain})`,
         detail:
           `The org instance URL (${instanceUrl}) uses the Enhanced Domain format, confirming that Enhanced Domains is enabled. This means Visualforce pages, Experience Cloud sites, and Lightning apps are served from org-specific subdomains, preventing cross-org cookie leakage and improving URL isolation between Salesforce customers on shared infrastructure.`,
         remediation: 'Verify that any hardcoded legacy URLs (force.com, visualforce.com, site.com) in integrations, bookmarks, or email templates have been updated to the new Enhanced Domain URLs.',
@@ -90,7 +90,7 @@ export class EnhancedDomainsCheck implements SecurityCheck {
         id: 'enhanced-domains-not-detected',
         category: this.category,
         riskLevel: isSandbox ? 'LOW' : 'MEDIUM',
-        title: `Enhanced Domains may not be enabled — org URL appears to use a legacy format`,
+        title: `Enhanced Domains may not be enabled: org URL appears to use a legacy format`,
         detail:
           `The org instance URL (${instanceUrl}) does not match the Enhanced Domain URL pattern (*.my.salesforce.com). The org has My Domain (${myDomain}) but may not have completed the Enhanced Domains migration. Enhanced Domains was required for all production orgs as of Spring 2023 and provides critical URL isolation that prevents cross-org cookie leakage.`,
         remediation:
@@ -98,7 +98,7 @@ export class EnhancedDomainsCheck implements SecurityCheck {
         affectedItems: [{
           label: myDomain,
           url: domainSetupUrl,
-          note: `Instance URL: ${instanceUrl} — expected *.my.salesforce.com format`,
+          note: `Instance URL: ${instanceUrl} (expected *.my.salesforce.com format)`,
         }],
       });
     }

@@ -40,7 +40,7 @@ export class MfaEnforcementCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: 'No active external/portal users found — SBS-AUTH-004 not applicable',
+        title: 'No active external/portal users found: SBS-AUTH-004 not applicable',
         detail: 'SBS-AUTH-004 applies to external users with substantial access to sensitive data. No active portal user types were found in this org.',
         remediation: 'If Experience Cloud sites are added in future, ensure SBS-AUTH-004 MFA requirements are met for external users.',
       });
@@ -84,7 +84,7 @@ export class MfaEnforcementCheck implements SecurityCheck {
       id: 'mfa-portal-users-without-enforcement',
       category: this.category,
       riskLevel,
-      title: `${withoutMfa.length} of ${allPortalUsers.length} external/portal user(s) do not have MFA enforced — SBS-AUTH-004`,
+      title: `${withoutMfa.length} of ${allPortalUsers.length} external/portal user(s) do not have MFA enforced: SBS-AUTH-004`,
       detail:
         `SBS-AUTH-004 requires all external human users with substantial access to sensitive data to enforce MFA including at least one strong authentication factor. ${withoutMfa.length} active portal user(s) lack the "Multi-Factor Authentication for User Interface Logins" permission. ${withMfa.length > 0 ? `${withMfa.length} user(s) already have MFA enforced.` : ''}`,
       remediation:
@@ -92,7 +92,7 @@ export class MfaEnforcementCheck implements SecurityCheck {
       affectedItems: withoutMfa.slice(0, 50).map((u) => ({
         label: u.Username,
         url: `${baseUrl}/${u.Id}`,
-        note: `UserType: ${u.UserType} | Profile: ${u.Profile.Name} — assign MFA permission set`,
+        note: `UserType: ${u.UserType} | Profile: ${u.Profile.Name} | assign MFA permission set`,
       })),
     });
 

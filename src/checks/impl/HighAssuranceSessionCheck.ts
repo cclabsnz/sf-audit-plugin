@@ -55,7 +55,7 @@ export class HighAssuranceSessionCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: 'No connected apps found — session policy check not applicable',
+        title: 'No connected apps found: session policy check not applicable',
         detail: 'No connected apps are configured in this org.',
         remediation: 'Continue monitoring as connected apps are added.',
       });
@@ -89,8 +89,8 @@ export class HighAssuranceSessionCheck implements SecurityCheck {
           label: a.Name,
           url: setupUrl,
           note: a.SessionTimeout === null || a.SessionTimeout === 0
-            ? 'No session timeout — sessions never expire'
-            : `Session timeout: ${Math.round(a.SessionTimeout / 3600)}h — reduce to ≤2h`,
+            ? 'No session timeout: sessions never expire'
+            : `Session timeout: ${Math.round(a.SessionTimeout / 3600)}h, reduce to ≤2h`,
         })),
       });
     }
@@ -108,7 +108,7 @@ export class HighAssuranceSessionCheck implements SecurityCheck {
         affectedItems: noTimeout.slice(0, 20).map((a) => ({
           label: a.Name,
           url: setupUrl,
-          note: 'No session timeout — configure a timeout in Connected App policies',
+          note: 'No session timeout: configure a timeout in Connected App policies',
         })),
       });
     }

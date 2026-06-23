@@ -92,11 +92,11 @@ export class EscalationPermsCheck implements SecurityCheck {
       title: `${affected.length} escalation-permission grant(s) across active users`,
       detail:
         'These permissions let a user create accounts, reset passwords, assign permission sets, modify metadata, ' +
-        'or register auth providers — the primitives an attacker uses for lateral movement and persistence after an initial foothold.',
+        'or register auth providers: the primitives an attacker uses for lateral movement and persistence after an initial foothold.',
       remediation:
         'Remove these permissions from non-administrator profiles/permission sets and document who legitimately needs each one.',
       affectedItems: affected.map((a) => ({
-        label: `${a.username} — ${a.perm}`,
+        label: `${a.username}: ${a.perm}`,
         url: `${baseUrl}/${a.userId}`,
         note: 'Review and remove if not essential',
       })),

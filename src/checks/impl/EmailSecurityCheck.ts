@@ -90,7 +90,7 @@ export class EmailSecurityCheck implements SecurityCheck {
           affectedItems: allProfiles.map((r) => ({
             label: r.Address,
             url: owaUrl,
-            note: `${r.DisplayName || 'no display name'} — restrict to specific profiles`,
+            note: `${r.DisplayName || 'no display name'}: restrict to specific profiles`,
           })),
         });
       } else if (owa.length > 0) {

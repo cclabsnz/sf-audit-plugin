@@ -38,7 +38,7 @@ export class FailedLoginCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'LoginHistory could not be queried — failed login analysis skipped',
+        title: 'LoginHistory could not be queried: failed login analysis skipped',
         detail:
           'The LoginHistory SOQL query was not accessible. This may indicate the audit user lacks "View All Users" or event monitoring access.',
         remediation:
@@ -93,7 +93,7 @@ export class FailedLoginCheck implements SecurityCheck {
         affectedItems: heavyTargets.map((r) => ({
           label: r.Username,
           url: setupUrl,
-          note: `${r.expr0} failed attempts in 7 days — likely automated attack`,
+          note: `${r.expr0} failed attempts in 7 days: likely automated attack`,
         })),
       });
     }
@@ -124,14 +124,14 @@ export class FailedLoginCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${totalFailures} failed logins across the org in the last 7 days`,
         detail:
-          `The org has recorded ${totalFailures} failed login attempts in 7 days distributed across many accounts. This pattern is consistent with broad credential stuffing — attackers using large lists of username/password combinations from data breaches, targeting the entire org rather than specific accounts. Even a low success rate across many attempts can yield multiple compromised accounts.`,
+          `The org has recorded ${totalFailures} failed login attempts in 7 days distributed across many accounts. This pattern is consistent with broad credential stuffing: attackers using large lists of username/password combinations from data breaches, targeting the entire org rather than specific accounts. Even a low success rate across many attempts can yield multiple compromised accounts.`,
         remediation:
           'Review Login History for patterns (source IPs, time clustering, usernames). Enable Transaction Security Policies to rate-limit or block logins from suspicious IPs. Consider enabling Salesforce Shield or Event Monitoring for deeper login analytics.',
         affectedItems: [
           {
             label: 'Org-wide login activity',
             url: setupUrl,
-            note: `${totalFailures} failures in 7 days — review for patterns`,
+            note: `${totalFailures} failures in 7 days: review for patterns`,
           },
         ],
       });
@@ -141,7 +141,7 @@ export class FailedLoginCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: `${totalFailures} failed login(s) in 7 days — no brute-force patterns detected`,
+        title: `${totalFailures} failed login(s) in 7 days: no brute-force patterns detected`,
         detail: `${totalFailures} failed login attempts recorded in the last 7 days, but no single account exceeded the brute-force threshold (${BRUTE_FORCE_PER_USER} failures). This volume appears consistent with normal user error.`,
         remediation:
           'Continue monitoring. Configure Transaction Security Policies to alert on anomalous login activity as volumes change.',

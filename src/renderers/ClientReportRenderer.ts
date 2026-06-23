@@ -60,7 +60,7 @@ export class ClientReportRenderer implements AuditRenderer {
     ].join('\n');
 
     return `<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><title>Security Audit — ${esc(result.orgName)}</title>
+<html lang="en"><head><meta charset="utf-8"><title>Security Audit: ${esc(result.orgName)}</title>
 <style>${fontFaceCss()}
 :root{--ink:${b.ink};--bg:${b.bg};--bgalt:${b.bgAlt};--muted:${b.muted};--border:${b.border};--primary:${b.primary};
 --display:'${b.fontDisplay}',Georgia,serif;--body:'${b.fontBody}',system-ui,sans-serif;--mono:ui-monospace,'SF Mono',Menlo,monospace;}
@@ -164,7 +164,7 @@ ${this.footer(b)}
     if (priorities.length === 0) return `${head}<p class="muted">No active findings to prioritise.</p>`;
     const items = priorities.map((f, i) => {
       const meta = f.checkId ? getCheckMeta(f.checkId) : undefined;
-      const chained = chainIds.has(f.id) ? '<p class="muted">Part of an attack chain — see Attack Scenarios.</p>' : '';
+      const chained = chainIds.has(f.id) ? '<p class="muted">Part of an attack chain. See Attack Scenarios.</p>' : '';
       const impact = meta ? `<p><strong>Impact:</strong> ${esc(meta.impact)}</p>` : '';
       return `<div class="card" style="--c:${SEV_COLOR[f.riskLevel]}">
 <div class="row"><h3><span class="pnum">${String(i + 1).padStart(2, '0')}</span>${esc(f.title)}</h3>${this.chip(f.riskLevel, f.riskLevel)}</div>
@@ -209,7 +209,7 @@ ${tier('Projects', 'weeks', roadmap.project)}`;
       return `<h3>${esc(FRAMEWORK_LABEL[fm.framework])} <span class="muted">· ${esc(fm.version)}</span></h3>
 <table class="matrix"><thead><tr><th>Control</th><th>Requirement area</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
     }).join('');
-    return `${this.sectionHead(numStr, 'Compliance Coverage')}<p class="muted">Findings mapped to framework controls. “No findings detected” is not an attestation of compliance — see Scope &amp; Liability.</p>${blocks}`;
+    return `${this.sectionHead(numStr, 'Compliance Coverage')}<p class="muted">Findings mapped to framework controls. “No findings detected” is not an attestation of compliance. See Scope &amp; Liability.</p>${blocks}`;
   }
 
   private findingsAppendix(r: AuditResult, numStr: string): string {
@@ -223,6 +223,6 @@ ${tier('Projects', 'weeks', roadmap.project)}`;
 
   private footer(b: Branding): string {
     return `<footer><span class="label">Scope &amp; Liability</span>
-Read-only, point-in-time configuration review — not a penetration test, not a code audit. The grade is a prioritisation aid, not a certification. Validate findings before remediation. © ${new Date().getFullYear()} ${esc(b.firmName)} · ${esc(b.contact)}</footer>`;
+Read-only, point-in-time configuration review: not a penetration test, not a code audit. The grade is a prioritisation aid, not a certification. Validate findings before remediation. © ${new Date().getFullYear()} ${esc(b.firmName)} · ${esc(b.contact)}</footer>`;
   }
 }

@@ -33,7 +33,7 @@ export class ReleaseUpdatesCheck implements SecurityCheck {
         riskLevel: 'INFO',
         inconclusive: true,
         title: 'Pending release updates check could not be completed',
-        detail: 'The CriticalUpdate Tooling API object was not accessible — this can occur if the audit user lacks the "Customize Application" permission or if the org is on a restricted edition.',
+        detail: 'The CriticalUpdate Tooling API object was not accessible. This can occur if the audit user lacks the "Customize Application" permission or if the org is on a restricted edition.',
         remediation: 'Review pending Release Updates manually in Setup → Release Updates.',
       });
       return { findings };
@@ -79,7 +79,7 @@ export class ReleaseUpdatesCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${overdueUpdates.length} release update(s) are past their auto-activation date and still not enabled`,
         detail:
-          'These updates were scheduled for automatic activation by Salesforce but remain disabled. Running without them may leave the org exposed to security issues or deprecated behaviors that Salesforce has already addressed. In some cases Salesforce may have already force-activated them — verify current status in Setup.',
+          'These updates were scheduled for automatic activation by Salesforce but remain disabled. Running without them may leave the org exposed to security issues or deprecated behaviors that Salesforce has already addressed. In some cases Salesforce may have already force-activated them. Verify current status in Setup.',
         remediation:
           'Enable these updates immediately in Setup → Release Updates. Test each one in a sandbox first. Check whether Salesforce has already force-activated any of these entries, in which case they may already be enforced despite showing as disabled.',
         affectedItems: overdueUpdates.map((u) => ({
