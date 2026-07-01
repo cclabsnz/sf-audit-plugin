@@ -67,6 +67,9 @@ import { GuestExecutableApexCheck } from './impl/GuestExecutableApexCheck.js';
 import { EmailSecurityCheck } from './impl/EmailSecurityCheck.js';
 import { OutboundMessagesCheck } from './impl/OutboundMessagesCheck.js';
 import { PublicContentExposureCheck } from './impl/PublicContentExposureCheck.js';
+import { GuestObjectExposureCheck } from './impl/GuestObjectExposureCheck.js';
+import { GuestSiteOptionsCheck } from './impl/GuestSiteOptionsCheck.js';
+import { ThreatDetectionCheck } from './impl/ThreatDetectionCheck.js';
 // Access-control depth: effective-permission resolution + combination analysis
 import { PrivilegedAccessCheck } from './impl/PrivilegedAccessCheck.js';
 import { SeparationOfDutiesCheck } from './impl/SeparationOfDutiesCheck.js';
@@ -129,6 +132,9 @@ export const CHECKS: SecurityCheck[] = [
   new EmailSecurityCheck(),               // inbound email services + send-as spoofing
   new OutboundMessagesCheck(),            // outbound message session-id leak + cleartext endpoints
   new PublicContentExposureCheck(),       // externally available Documents + public static resources
+  new GuestObjectExposureCheck(),         // auto-discovered guest bulk-read surface (UI API) + ownership-defeats-OWD
+  new GuestSiteOptionsCheck(),            // guest file access + guest member visibility on Experience sites
+  new ThreatDetectionCheck(),             // Guest User Anomaly / Threat Detection event storage enabled
   new PrivilegedAccessCheck(),            // writes: effectivePermissions; shadow-admin detection
   // Cache-dependent checks — must come after their producers
   new DeploymentIdentityCheck(),   // reads connectedAppNames

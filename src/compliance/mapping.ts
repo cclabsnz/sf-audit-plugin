@@ -71,6 +71,9 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'public-content-exposure': ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.5.14'],
   'privileged-access':       ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.5.18', 'SBS-ACS-004'],
   'separation-of-duties':    ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.5.18', 'SBS-ACS-004'],
+  'guest-object-exposure':   ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.5.18', 'SBS-CPORTAL-002'],
+  'guest-site-options':      ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.5.14', 'SBS-CPORTAL-003'],
+  'threat-detection':        ['OWASP-A09', 'SOC2-CC7.2', 'ISO-A.8.15', 'SBS-MON-001'],
 };
 
 // NZ pack crosswalk — each check belongs to one domain; the domain's NZ control ids are
@@ -82,7 +85,8 @@ const NZ_CROSSWALK: Array<{ controls: string[]; checks: string[] }> = [
              'field-level-security', 'standard-profiles', 'api-client-permission', 'integration-users',
              'escalation-perms', 'report-folder-access', 'apex-crud-fls', 'apex-rest-endpoint',
              'guest-executable-apex', 'experience-cloud-site', 'content-links', 'apex-sharing', 'flows-without-sharing',
-             'public-content-exposure', 'privileged-access', 'separation-of-duties'] },
+             'public-content-exposure', 'privileged-access', 'separation-of-duties',
+             'guest-object-exposure', 'guest-site-options'] },
   { controls: ['HISO-AUTH', 'NZISM-AUTH', 'PRIVACY-IPP5'],
     checks: ['login-session', 'ip-restrictions', 'password-session-policy', 'sso-enforcement', 'mfa-enforcement',
              'trusted-ip-ranges', 'my-domain-login-policy', 'high-assurance-session', 'internal-user-mfa',
@@ -91,7 +95,7 @@ const NZ_CROSSWALK: Array<{ controls: string[]; checks: string[] }> = [
     checks: ['named-credentials', 'hardcoded-credentials', 'custom-settings', 'certificate-expiry', 'custom-labels-credential'] },
   { controls: ['HISO-LOG', 'NZISM-LOG'],
     checks: ['audit-trail', 'apex-logging', 'event-monitoring', 'siem-integration', 'anonymous-apex-audit',
-             'debug-log-access', 'transaction-security-policy'] },
+             'debug-log-access', 'transaction-security-policy', 'threat-detection'] },
   { controls: ['HISO-DEV', 'NZISM-SW'],
     checks: ['code-security', 'visualforce-xss', 'scheduled-apex'] },
   { controls: ['HISO-COMM', 'NZISM-NET', 'PRIVACY-IPP12'],

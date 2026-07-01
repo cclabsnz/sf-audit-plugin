@@ -2,7 +2,7 @@
 
 A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audit against any Salesforce org, risk-scores it with an A–F grade, and turns the result into a report your security team (or your client's) can act on.
 
-- **66 read-only checks** across identity, access, data, code, integrations, and monitoring
+- **69 read-only checks** across identity, access, data, code, integrations, and monitoring
 - **Attack-chain correlation:** links individual findings into named, multi-step attack scenarios
 - **Compliance mapping:** every finding mapped to **source-verified** controls across 7 frameworks (OWASP, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029, NZISM)
 - **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
@@ -31,7 +31,7 @@ sf plugins link .
 sf audit security --target-org <orgAlias>
 ```
 
-This runs all 66 security checks against the target org and writes a report to the current directory.
+This runs all 69 security checks against the target org and writes a report to the current directory.
 
 ### Options
 
@@ -41,7 +41,7 @@ This runs all 66 security checks against the target org and writes a report to t
 | `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json`, `executive` |
 | `--output` / `-o` | `.` | Directory to write the report file |
 | `--fail-on` | (none) | Exit with code 1 if any finding is at or above this severity: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
-| `--checks` | *(all)* | Comma-separated check IDs to run instead of all 66 (e.g. `hardcoded-credentials,apex-sharing`) |
+| `--checks` | *(all)* | Comma-separated check IDs to run instead of all 69 (e.g. `hardcoded-credentials,apex-sharing`) |
 | `--scoring-config` | (none) | Path to a custom scoring config JSON file to override weights and grade thresholds |
 | `--prepared-for` | (none) | Client name for the executive report cover line |
 | `--branding` | (none) | Path to a `report-branding.json` to override CloudCounsel defaults (executive format) |
@@ -65,6 +65,10 @@ sf audit security --target-org myOrg --fail-on HIGH
 
 # Run only specific checks
 sf audit security --target-org myOrg --checks hardcoded-credentials,apex-sharing,guest-user-access
+
+# Guest / Experience Cloud exposure sweep — the unauthenticated data-leak surface
+# (bulk-read via UI API, guest-owned records defeating Private OWD, file access, self-reg, threat detection)
+sf audit security --target-org myOrg --checks guest-user-access,guest-object-exposure,guest-site-options,guest-executable-apex,experience-cloud-site,threat-detection
 
 # Use a custom scoring config (e.g. stricter weights for your org)
 sf audit security --target-org myOrg --scoring-config ./my-scoring.json
@@ -97,7 +101,7 @@ The report file is written as `sf-audit-<orgId>-<timestamp>.<ext>` in the output
 
 ## What It Checks
 
-The audit runs **66 read-only checks**. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into nine domains below.
+The audit runs **69 read-only checks**. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into nine domains below.
 
 ### Org Health & Configuration
 | Check | What it looks for |
@@ -153,8 +157,10 @@ The audit runs **66 read-only checks**. Every finding is risk-rated (CRITICAL �
 | Check | What it looks for |
 |-------|------------------|
 | Guest User Access | Object permissions and sharing rules granted to unauthenticated guests |
+| Guest Object Exposure (Bulk Read via UI API) | Auto-discovers every object a guest can bulk-read via the UI API (GraphQL), including records exposed by guest ownership despite a Private OWD |
 | Guest-Executable Apex | Apex that guest profiles can run, flagging `without sharing` classes |
 | Experience Cloud Sites | Live sites with self-registration enabled and guest user presence |
+| Experience Cloud Guest Site Options | Guest file access and guest member visibility on Experience Cloud sites |
 | CORS Allowlist | Wildcard or overly broad CORS allowlist origins |
 | CSP Trusted Sites | Content Security Policy trusted sites with insecure HTTP (mixed-content) endpoints |
 
@@ -199,6 +205,7 @@ The audit runs **66 read-only checks**. Every finding is risk-rated (CRITICAL �
 | Transaction Security Policies | Automated threat detection and response policies configured |
 | Active Debug Log Traces | Active TraceFlag records capturing logs, including high-detail traces |
 | Event Monitoring | Event Monitoring enabled with logs covering 30+ days |
+| Threat Detection Event Storage | Guest User Anomaly / Threat Detection event storage enabled and retaining events |
 | SIEM Integration Signals | Evidence of SIEM or external monitoring integration |
 
 ## Compliance frameworks

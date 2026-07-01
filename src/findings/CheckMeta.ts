@@ -72,6 +72,9 @@ export const CHECK_META: Record<string, CheckMeta> = {
   'public-content-exposure': { effort: 'quick',    impact: 'Documents marked externally available and public static resources are retrievable without authentication by anyone with the URL.' },
   'privileged-access':       { effort: 'moderate', impact: 'Shadow admins hold full org control outside the admin profile, so a single takeover bypasses admin-focused monitoring and owns everything.' },
   'separation-of-duties':    { effort: 'moderate', impact: 'A single user holding a toxic permission combination can self-escalate, commit fraud, or tamper undetected with no second party to stop them.' },
+  'guest-object-exposure':   { effort: 'moderate', impact: 'Any guest-readable object is bulk-readable unauthenticated via the UI API (GraphQL); guest-owned records stay exposed even under a Private OWD, enabling mass PII exfiltration without login.' },
+  'guest-site-options':      { effort: 'quick',    impact: 'Guest file access and member visibility let unauthenticated visitors download public files and enumerate site members.' },
+  'threat-detection':        { effort: 'moderate', impact: 'Without Guest User Anomaly storage, malicious guest bulk-reads are never flagged and cannot be reconstructed after the fact.' },
 };
 
 export function getCheckMeta(id: string): CheckMeta | undefined {
