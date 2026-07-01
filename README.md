@@ -157,7 +157,7 @@ The audit runs **69 read-only checks**. Every finding is risk-rated (CRITICAL â†
 | Check | What it looks for |
 |-------|------------------|
 | Guest User Access | Object permissions and sharing rules granted to unauthenticated guests |
-| Guest Object Exposure (Bulk Read via UI API) | Auto-discovers every object a guest can bulk-read via the UI API (GraphQL), including records exposed by guest ownership despite a Private OWD |
+| Guest Object Exposure (Bulk Read via UI API) | Auto-discovers guest-readable objects (incl. records exposed by guest ownership despite a Private OWD), then grades them by actual UI-API reachability: objects the UI API models are CRITICAL (GraphQL-pullable), objects readable only in the sharing model but not UI-API-modelled (Calendar, AuthSession, etc.) are separated as MEDIUM, with UserRecordAccess as ground-truth read confirmation |
 | Guest-Executable Apex | Apex that guest profiles can run, flagging `without sharing` classes |
 | Experience Cloud Sites | Live sites with self-registration enabled and guest user presence |
 | Experience Cloud Guest Site Options | Guest file access and guest member visibility on Experience Cloud sites |
