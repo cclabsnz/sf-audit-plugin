@@ -2,12 +2,12 @@
 
 A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audit against any Salesforce org, risk-scores it with an Aâ€“F grade, and turns the result into a report your security team (or your client's) can act on.
 
-- **69 read-only checks** across identity, access, data, code, integrations, and monitoring
+- **82 read-only checks** across identity, access, data, code, integrations, and monitoring
 - **Attack-chain correlation:** links individual findings into named, multi-step attack scenarios
 - **Compliance mapping:** every finding mapped to **source-verified** controls across 7 frameworks (OWASP, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029, NZISM)
 - **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
 - **History & diff:** archives each run and shows security-posture drift over time
-- Strictly read-only (SOQL/Tooling/REST GETs); see [PERMISSIONS.md](PERMISSIONS.md) for the least-privilege access it needs
+- Strictly read-only (SOQL/Tooling/REST GETs + Metadata API reads); see [PERMISSIONS.md](PERMISSIONS.md) for the least-privilege access it needs
 
 ## Installation
 
@@ -31,7 +31,7 @@ sf plugins link .
 sf audit security --target-org <orgAlias>
 ```
 
-This runs all 69 security checks against the target org and writes a report to the current directory.
+This runs all 82 security checks against the target org and writes a report to the current directory.
 
 ### Options
 
@@ -41,7 +41,7 @@ This runs all 69 security checks against the target org and writes a report to t
 | `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json`, `executive` |
 | `--output` / `-o` | `.` | Directory to write the report file |
 | `--fail-on` | (none) | Exit with code 1 if any finding is at or above this severity: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
-| `--checks` | *(all)* | Comma-separated check IDs to run instead of all 69 (e.g. `hardcoded-credentials,apex-sharing`) |
+| `--checks` | *(all)* | Comma-separated check IDs to run instead of all 82 (e.g. `hardcoded-credentials,apex-sharing`) |
 | `--scoring-config` | (none) | Path to a custom scoring config JSON file to override weights and grade thresholds |
 | `--prepared-for` | (none) | Client name for the executive report cover line |
 | `--branding` | (none) | Path to a `report-branding.json` to override CloudCounsel defaults (executive format) |
@@ -101,7 +101,7 @@ The report file is written as `sf-audit-<orgId>-<timestamp>.<ext>` in the output
 
 ## What It Checks
 
-The audit runs **69 read-only checks**. Every finding is risk-rated (CRITICAL â†’ INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into nine domains below.
+The audit runs **82 read-only checks**. Every finding is risk-rated (CRITICAL â†’ INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into nine domains below.
 
 ### Org Health & Configuration
 | Check | What it looks for |
@@ -126,6 +126,8 @@ The audit runs **69 read-only checks**. Every finding is risk-rated (CRITICAL â†
 | Login IP Restrictions | Admin profiles missing IP ranges; connected apps with relaxed IP policy |
 | Password & Session Policy | Password complexity, session timeout, and MFA gaps (from Health Check) |
 | Certificate Expiry | Installed certificates nearing expiry (30 / 90 / 180-day thresholds) |
+| Auth Providers & External IdPs | External Auth Providers and SAML SSO configs; flags social/JIT providers that can federate in or auto-provision users |
+| Session & Clickjack Hardening | Clickjack, CSRF, XSS, and content-sniffing settings read authoritatively from SecuritySettings (Health Check cache fallback) with per-setting remediation |
 
 ### Users, Permissions & Privilege
 | Check | What it looks for |
@@ -139,6 +141,8 @@ The audit runs **69 read-only checks**. Every finding is risk-rated (CRITICAL â†
 | Separation of Duties | Toxic permission combinations a single user holds (e.g. Manage Users + Assign Permission Sets, Author Apex + Modify All Data) |
 | Integration / Service Accounts | Non-human identity inventory and excess privilege |
 | Inactive Users | Active licensed users with no login in 90+ days |
+| Login-As & Delegated Administration | Delegated-admin groups (SOQL) and the "log in as any user" policy read from SecuritySettings â€” user-impersonation and scoped-escalation paths |
+| Mass Data Export Access | Profiles/permission sets with Weekly Data Export, or API access combined with View/Modify All Data (bulk-exfil capability) |
 
 ### Data Access & Sharing
 | Check | What it looks for |
@@ -149,6 +153,8 @@ The audit runs **69 read-only checks**. Every finding is risk-rated (CRITICAL â†
 | Report Folder Public Access | Report folders any authenticated user can view |
 | Field History Tracking | History tracking enabled on sensitive standard objects |
 | Data Classification & Encryption | Field data classification usage and Shield Platform Encryption |
+| Encryption Coverage for Sensitive Fields | Fields classified PII/PHI (ComplianceGroup) that are NOT encrypted at rest with Shield |
+| Sandbox Data Masking | In sandboxes, populated PII fields (likely unmasked production data); advises running Data Mask |
 | Flows Without Sharing | Active flows running in system context without sharing enforcement |
 | Content Distribution Links | Public file links missing expiry or passwords, and stale records |
 | Public Static Resources & Documents | Documents marked externally available (anonymous URL access) and static resources cached publicly |
@@ -161,6 +167,10 @@ The audit runs **69 read-only checks**. Every finding is risk-rated (CRITICAL â†
 | Guest-Executable Apex | Apex that guest profiles can run, flagging `without sharing` classes |
 | Experience Cloud Sites | Live sites with self-registration enabled and guest user presence |
 | Experience Cloud Guest Site Options | Guest file access and guest member visibility on Experience Cloud sites |
+| Secure Guest User Record Access | Verifies the "Secure guest user record access" enforcement is activated â€” the guardrail that stops guest-owned records defeating a Private OWD (complements Guest Object Exposure) |
+| Guest API & Bulk Access | Guest users granted API Enabled or Bulk API Hard Delete â€” programmatic bulk read/delete for unauthenticated visitors |
+| Classic Force.com Sites | Active classic (Visualforce) Sites and their guest users â€” an unauthenticated surface separate from Experience Cloud |
+| Experience Cloud CSP & Lightning Web Security | Advises verifying Strict CSP and Lightning Web Security on live sites (not reliably API-readable) |
 | CORS Allowlist | Wildcard or overly broad CORS allowlist origins |
 | CSP Trusted Sites | Content Security Policy trusted sites with insecure HTTP (mixed-content) endpoints |
 
@@ -184,6 +194,7 @@ The audit runs **69 read-only checks**. Every finding is risk-rated (CRITICAL â†
 | Connected App OAuth Scopes | Full OAuth-scope grants and infinite refresh-token policies |
 | Inactive Connected Apps | Apps with no OAuth logins in the past 90 days |
 | Named Credentials | Named credential inventory; credentials not referenced in Apex |
+| External Credential Authentication | External Credentials using no authentication or a custom (non-standard) scheme |
 | Remote Site Settings | Remote sites with protocol security disabled |
 | Outbound Messages | Workflow outbound messages that include a session ID or post to cleartext (http://) endpoints |
 | Email Security & Spoofing | Inbound email services accepting mail from any sender / running Apex unauthenticated, and org-wide send-as addresses open to all profiles |
@@ -206,7 +217,18 @@ The audit runs **69 read-only checks**. Every finding is risk-rated (CRITICAL â†
 | Active Debug Log Traces | Active TraceFlag records capturing logs, including high-detail traces |
 | Event Monitoring | Event Monitoring enabled with logs covering 30+ days |
 | Threat Detection Event Storage | Guest User Anomaly / Threat Detection event storage enabled and retaining events |
+| Guest Traffic Anomaly | Scans recent EventLogFile guest requests for anonymizer/hosting source IPs, single-IP bursts, and GraphQL `totalCount` reconnaissance sweeps |
+| Anomalous Successful Logins | Accounts with successful logins from an unusually high number of distinct source IPs (credential-sharing / compromise signature) |
 | SIEM Integration Signals | Evidence of SIEM or external monitoring integration |
+
+### Known limitations (advisory-only checks)
+
+A small number of checks emit an **advisory** rather than a pass/fail verdict because the underlying setting is not exposed to the read APIs this plugin uses (SOQL/Tooling/REST/Metadata read):
+
+- **Experience Cloud CSP & Lightning Web Security** â€” the per-site LWR Content Security Policy level and the Lightning Web Security toggle live inside the site's `ExperienceBundle`, not in a `metadata.read`-able type. The check lists live Experience sites and asks for manual verification. A true detection would require retrieving and parsing the `ExperienceBundle` (retrieve â†’ unzip â†’ read `config/*.json`), which is a larger capability than the current read clients; it is tracked as a future enhancement.
+- **"Administrators Can Log In as Any User"** is a true detection when SecuritySettings is readable; if the Metadata client is unavailable it degrades to a manual-verification advisory.
+
+Advisory findings are surfaced as `INFO` and never inflate the health score.
 
 ## Compliance frameworks
 

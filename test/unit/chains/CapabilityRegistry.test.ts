@@ -29,4 +29,18 @@ describe('CapabilityRegistry', () => {
     const finding = f('some-new-finding', { capabilities: { grants: ['code-exec'] } });
     expect(capabilitiesFor(finding).grants).toEqual(['code-exec']);
   });
+
+  it('grants unauth-foothold + bulk read to API-enabled guests', () => {
+    expect(CAPABILITY_REGISTRY['guest-api-access-enabled'].grants).toEqual(
+      expect.arrayContaining(['unauth-foothold', 'data-read-bulk']),
+    );
+  });
+
+  it('grants bulk-read to the mass data-export capability', () => {
+    expect(capabilitiesFor(f('data-export-weekly-export')).grants).toContain('data-read-bulk');
+  });
+
+  it('grants priv-esc to login-as-any-user', () => {
+    expect(capabilitiesFor(f('login-access-policy-login-as-enabled')).grants).toContain('priv-esc');
+  });
 });

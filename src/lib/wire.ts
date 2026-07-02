@@ -2,6 +2,7 @@ import type { Connection } from '@salesforce/core';
 import { SoqlClientImpl } from '../api/SoqlClientImpl.js';
 import { ToolingClientImpl } from '../api/ToolingClientImpl.js';
 import { RestClientImpl } from '../api/RestClientImpl.js';
+import { MetadataClientImpl } from '../api/MetadataClientImpl.js';
 import type { AuditContext } from '../context/AuditContext.js';
 import type { OrgInfo } from '../context/OrgInfo.js';
 
@@ -10,6 +11,7 @@ export function buildApiClients(conn: Connection) {
     soql: new SoqlClientImpl(conn),
     tooling: new ToolingClientImpl(conn),
     rest: new RestClientImpl(conn),
+    metadata: new MetadataClientImpl(conn),
   };
 }
 
@@ -36,6 +38,7 @@ export function buildAuditContext(conn: Connection, orgInfo: OrgInfo): AuditCont
     soql: clients.soql,
     tooling: clients.tooling,
     rest: clients.rest,
+    metadata: clients.metadata,
     orgInfo,
     cache: {},
   };

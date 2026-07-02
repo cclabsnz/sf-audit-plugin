@@ -1,6 +1,7 @@
 import type { AuditContext } from '../../context/AuditContext.js';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { classifyEventLogAccessError } from '../eventLogAccess.js';
 
 interface EventLogGroupRecord {
   EventType: string;
@@ -42,8 +43,8 @@ export class EventMonitoringCheck implements SecurityCheck {
         return r.earliestDate < earliest ? r.earliestDate : earliest;
       }, null);
 
-      // Populate cache for SiemIntegrationCheck at zero extra API cost
-      ctx.cache.eventLogSummary = { earliestDate, totalFiles, eventTypes };
+      // Populate cache for SiemIntegrationCheck + GuestTrafficAnomalyCheck at zero extra API cost
+      ctx.cache.eventLogSummary = { earliestDate, totalFiles, eventTypes, accessible: true };
 
       if (totalFiles === 0) {
         findings.push({
@@ -90,9 +91,11 @@ export class EventMonitoringCheck implements SecurityCheck {
           });
         }
       }
-    } catch {
-      // EventLogFile may not be accessible without Event Monitoring license
-      ctx.cache.eventLogSummary = { earliestDate: null, totalFiles: 0, eventTypes: [] };
+    } catch (e) {
+      // EventLogFile may not be accessible without Event Monitoring license, or the
+      // audit user may lack "View Event Log Files". Record which, so downstream
+      // checks can phrase their blind spot precisely instead of re-querying.
+      ctx.cache.eventLogSummary = { earliestDate: null, totalFiles: 0, eventTypes: [], accessible: false, accessError: classifyEventLogAccessError(e) };
       findings.push({
         id: 'event-monitoring-inaccessible',
         category: this.category,

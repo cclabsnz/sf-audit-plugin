@@ -47,6 +47,25 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'cors-wildcard-origin':              { grants: ['credential-theft'] },
   'cors-broad-origin':                 { grants: ['credential-theft'] },
   'escalation-perms-found':            { grants: ['priv-esc'] },
+  // Guest bulk-read surface (UI-API reachable) — the confirmed exfiltration sink
+  'guest-object-exposure-public-owd':  { grants: ['unauth-foothold', 'data-read-bulk'] },
+  'guest-object-exposure-guest-owned': { grants: ['unauth-foothold', 'data-read-bulk'] },
+  // Observed guest recon in EventLogFile — an active unauthenticated foothold
+  'guest-traffic-anomaly-recon':       { grants: ['unauth-foothold'] },
+  'guest-traffic-anomaly-anonymizer':  { grants: ['unauth-foothold'] },
+  // Guest API/Bulk access — programmatic unauthenticated bulk read / destruction
+  'guest-api-access-enabled':          { grants: ['unauth-foothold', 'data-read-bulk'] },
+  'guest-api-hard-delete':             { grants: ['unauth-foothold', 'data-write'] },
+  // Classic Visualforce sites — a second unauthenticated foothold surface
+  'classic-sites-active':              { grants: ['unauth-foothold'] },
+  // Mass data-export capability — a bulk-read sink for an authenticated actor
+  'data-export-weekly-export':         { grants: ['data-read-bulk'] },
+  'data-export-bulk-api-viewall':      { grants: ['data-read-bulk', 'data-write'] },
+  // Impersonation / delegated-admin escalation
+  'login-access-policy-delegated-admins': { grants: ['priv-esc'] },
+  'login-access-policy-login-as-enabled': { grants: ['priv-esc', 'data-read-bulk'] },
+  // External federation an attacker could ride in on
+  'auth-providers-social':             { grants: ['low-trust-authenticated'] },
 };
 
 /** Resolve the effective capabilities for a finding (inline overrides registry; passed/inconclusive yield nothing). */

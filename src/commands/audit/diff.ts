@@ -54,17 +54,20 @@ export default class AuditDiffCommand extends SfCommand<AuditDiff> {
     }
 
     const diff    = computeDiff(baseline, current);
-    const formats = flags.format.split(',').map((f) => f.trim());
+    const formats = flags.format.split(',').map((f) => f.trim()).filter(Boolean);
+    const bad     = formats.filter((f) => !DIFF_RENDERERS[f]);
+    if (bad.length > 0 || formats.length === 0) {
+      this.error(bad.length > 0 ? `Unknown output format(s): ${bad.join(', ')}` : 'No output format specified.', {
+        suggestions: ['Valid formats: html, json'],
+      });
+    }
     const baseTs  = baseline.generatedAt.getTime();
     const curTs   = current.generatedAt.getTime();
 
     fs.mkdirSync(flags.output, { recursive: true });
     for (const format of formats) {
       const renderer = DIFF_RENDERERS[format];
-      if (!renderer) {
-        this.warn(`Unknown format '${format}'. Skipping. Valid formats: html, json`);
-        continue;
-      }
+      if (!renderer) continue; // unreachable: validated above
       const filename   = `sf-audit-diff-${baseline.orgId}-${baseTs}-vs-${curTs}${renderer.fileExtension}`;
       const outputPath = path.join(flags.output, filename);
       fs.writeFileSync(outputPath, renderer.render(diff), 'utf-8');

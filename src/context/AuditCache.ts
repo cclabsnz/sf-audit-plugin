@@ -18,11 +18,21 @@ export interface VfPageBody {
   markup: string;
 }
 
+// Why an EventLogFile query failed: the feature is not licensed/enabled, or the
+// running (audit) user lacks the "View Event Log Files" permission.
+export type EventLogAccess = 'no-permission' | 'not-enabled' | 'unknown';
+
 // EventLogSummary: populated by EventMonitoringCheck, consumed by SiemIntegrationCheck
+// and GuestTrafficAnomalyCheck.
 export interface EventLogSummary {
   earliestDate: string | null;
   totalFiles: number;
   eventTypes: string[];
+  // false when the EventLogFile query threw. Lets consumers tell "Event Monitoring
+  // off / no permission" (blind) apart from "accessible but genuinely no files".
+  accessible?: boolean;
+  // Populated only when accessible === false.
+  accessError?: EventLogAccess;
 }
 
 // MfaRegistration: one entry per user with at least one registered MFA method.

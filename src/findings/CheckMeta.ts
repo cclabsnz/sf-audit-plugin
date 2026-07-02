@@ -75,6 +75,19 @@ export const CHECK_META: Record<string, CheckMeta> = {
   'guest-object-exposure':   { effort: 'moderate', impact: 'Grades guest-readable objects by ACTUAL UI-API reachability: objects the UI API models are bulk-readable unauthenticated via GraphQL (CRITICAL, incl. guest-owned records under a Private OWD, enabling mass PII exfiltration without login); objects readable only in the sharing model but not UI-API-modelled (Calendar, AuthSession, etc.) are separated as MEDIUM defense-in-depth, with UserRecordAccess as ground-truth read confirmation.' },
   'guest-site-options':      { effort: 'quick',    impact: 'Guest file access and member visibility let unauthenticated visitors download public files and enumerate site members.' },
   'threat-detection':        { effort: 'moderate', impact: 'Without Guest User Anomaly storage, malicious guest bulk-reads are never flagged and cannot be reconstructed after the fact.' },
+  'guest-record-access-policy': { effort: 'quick', impact: 'Without "Secure guest user record access" enforced, guests own the records they submit and can read them under a Private OWD, turning a public form into an unauthenticated bulk-read surface.' },
+  'guest-traffic-anomaly':   { effort: 'moderate', impact: 'Guest requests from anonymizer/hosting IPs, single-IP bursts, and GraphQL totalCount sweeps are the live signatures of scraping and pre-exfiltration recon — unmonitored, they only surface after data is gone.' },
+  'login-access-policy':     { effort: 'moderate', impact: 'Delegated admins and "log in as any user" let accounts impersonate others and self-escalate, bypassing normal credentials and admin-focused monitoring.' },
+  'data-export-access':      { effort: 'quick',    impact: 'Weekly Data Export or API access with View/Modify All is a one-step, org-wide exfiltration capability in the wrong hands.' },
+  'classic-sites':           { effort: 'moderate', impact: 'Active classic Visualforce sites expose a second unauthenticated guest surface that the Experience Cloud checks never inspect.' },
+  'auth-providers':          { effort: 'moderate', impact: 'Unvetted social/SAML identity providers with just-in-time provisioning can let attackers federate in or auto-create over-privileged users.' },
+  'guest-api-access':        { effort: 'quick',    impact: 'A guest user with API access can drive the raw REST/Bulk API, turning readable objects into scriptable mass extraction (and Hard Delete into irreversible destruction) without login.' },
+  'external-credentials':    { effort: 'moderate', impact: 'Callouts with no or custom authentication can be spoofed or leak a static secret, exposing the integrated system and the data crossing it.' },
+  'login-anomaly':           { effort: 'quick',    impact: 'An account logging in from many distinct IPs signals credential sharing or compromise; caught late, it means an attacker already has a working session.' },
+  'session-hardening':       { effort: 'quick',    impact: 'Weak clickjack/CSRF/session-lock/XSS settings let attackers hijack authenticated sessions via framing, forged requests, or injected script.' },
+  'encryption-coverage':     { effort: 'moderate', impact: 'Fields labelled PII/PHI but stored in plaintext are unprotected at rest and on export — the sensitivity is known, the protection is missing.' },
+  'experience-csp':          { effort: 'moderate', impact: 'Relaxed CSP or disabled Lightning Web Security on a public site lets injected/third-party scripts run against unauthenticated visitors.' },
+  'sandbox-data-masking':    { effort: 'moderate', impact: 'Unmasked production PII/PHI copied into a sandbox spreads sensitive data into a lower-trust environment with broader access and weaker monitoring.' },
 };
 
 export function getCheckMeta(id: string): CheckMeta | undefined {

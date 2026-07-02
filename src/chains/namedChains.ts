@@ -35,10 +35,32 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       const steps = byIds(active, [
         'guest-user-read-access', 'guest-user-write-access', 'guest-user-sharing-exposure', 'guest-user-baseline',
         'guest-executable-apex-unprotected', 'guest-executable-apex-exposed',
+        'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
+        'guest-api-access-enabled', 'guest-api-hard-delete', 'classic-sites-active',
         'portal-exposed-apex-without-sharing', 'sharing-model-external-read', 'sharing-model-external-write',
         'field-level-security-high', 'field-level-security-medium',
       ]);
       return steps.length >= 2 ? steps : null;
+    },
+  },
+  {
+    id: 'active-guest-exfil',
+    title: 'Active guest reconnaissance against an exposed data surface',
+    severity: 'CRITICAL',
+    narrative:
+      'Live EventLogFile evidence shows unauthenticated guests probing from anonymizer/hosting IPs or ' +
+      'running GraphQL object-enumeration (totalCount) sweeps, AND the org exposes objects that are ' +
+      'bulk-readable by those same guests. This is not a theoretical exposure — it is reconnaissance ' +
+      'against a confirmed exfiltration surface, i.e. an incident likely already in progress.',
+    remediation:
+      'Treat as an active incident: block the source IPs at the WAF/CDN, close the guest bulk-read surface ' +
+      '(set external OWD to Private, strip guest object read, enforce "Secure guest user record access"), ' +
+      'and preserve/forward the event logs before the short EventLogFile retention window closes.',
+    match(_present, active) {
+      const traffic = byIds(active, ['guest-traffic-anomaly-recon', 'guest-traffic-anomaly-anonymizer']);
+      const exposure = byIds(active, ['guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned']);
+      if (traffic.length === 0 || exposure.length === 0) return null;
+      return [...traffic, ...exposure];
     },
   },
   {
@@ -56,6 +78,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       const steps = byIds(active, [
         'sharing-model-external-read', 'sharing-model-external-write', 'guest-user-baseline',
         'escalation-perms-found', 'users-author-apex', 'users-super-admin-combo',
+        'login-access-policy-delegated-admins', 'login-access-policy-login-as-enabled',
       ]);
       return steps.length >= 2 ? steps : null;
     },

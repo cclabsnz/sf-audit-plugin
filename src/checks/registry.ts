@@ -69,7 +69,21 @@ import { OutboundMessagesCheck } from './impl/OutboundMessagesCheck.js';
 import { PublicContentExposureCheck } from './impl/PublicContentExposureCheck.js';
 import { GuestObjectExposureCheck } from './impl/GuestObjectExposureCheck.js';
 import { GuestSiteOptionsCheck } from './impl/GuestSiteOptionsCheck.js';
+import { GuestRecordAccessPolicyCheck } from './impl/GuestRecordAccessPolicyCheck.js';
+import { GuestTrafficAnomalyCheck } from './impl/GuestTrafficAnomalyCheck.js';
 import { ThreatDetectionCheck } from './impl/ThreatDetectionCheck.js';
+// Org-surface hardening checks (no cache deps)
+import { LoginAccessPolicyCheck } from './impl/LoginAccessPolicyCheck.js';
+import { DataExportAccessCheck } from './impl/DataExportAccessCheck.js';
+import { ClassicSitesCheck } from './impl/ClassicSitesCheck.js';
+import { AuthProvidersCheck } from './impl/AuthProvidersCheck.js';
+import { GuestApiAccessCheck } from './impl/GuestApiAccessCheck.js';
+import { ExternalCredentialsCheck } from './impl/ExternalCredentialsCheck.js';
+import { LoginAnomalyCheck } from './impl/LoginAnomalyCheck.js';
+import { SessionHardeningCheck } from './impl/SessionHardeningCheck.js';
+import { EncryptionCoverageCheck } from './impl/EncryptionCoverageCheck.js';
+import { ExperienceCspCheck } from './impl/ExperienceCspCheck.js';
+import { SandboxDataMaskingCheck } from './impl/SandboxDataMaskingCheck.js';
 // Access-control depth: effective-permission resolution + combination analysis
 import { PrivilegedAccessCheck } from './impl/PrivilegedAccessCheck.js';
 import { SeparationOfDutiesCheck } from './impl/SeparationOfDutiesCheck.js';
@@ -134,7 +148,19 @@ export const CHECKS: SecurityCheck[] = [
   new PublicContentExposureCheck(),       // externally available Documents + public static resources
   new GuestObjectExposureCheck(),         // auto-discovered guest bulk-read surface (UI API) + ownership-defeats-OWD
   new GuestSiteOptionsCheck(),            // guest file access + guest member visibility on Experience sites
+  new GuestRecordAccessPolicyCheck(),     // "Secure guest user record access" enforcement (ownership-defeats-OWD guardrail)
   new ThreatDetectionCheck(),             // Guest User Anomaly / Threat Detection event storage enabled
+  new LoginAccessPolicyCheck(),           // delegated admin + login-as impersonation paths
+  new DataExportAccessCheck(),            // Weekly Export / API+ViewAll bulk-exfil capability
+  new ClassicSitesCheck(),                // classic Visualforce Force.com Sites (unauth surface)
+  new AuthProvidersCheck(),               // external Auth Providers / SAML IdP federation review
+  new GuestApiAccessCheck(),              // guest users with API Enabled / Bulk API Hard Delete
+  new ExternalCredentialsCheck(),         // External Credential weak/no authentication
+  new LoginAnomalyCheck(),                // successful logins from many distinct IPs
+  new SessionHardeningCheck(),            // reads healthCheckRisks — clickjack/CSRF/session-lock/XSS
+  new EncryptionCoverageCheck(),          // classified sensitive fields not encrypted at rest
+  new ExperienceCspCheck(),               // Experience Cloud CSP / Lightning Web Security advisory
+  new SandboxDataMaskingCheck(),          // sandbox with populated (likely unmasked) PII
   new PrivilegedAccessCheck(),            // writes: effectivePermissions; shadow-admin detection
   // Cache-dependent checks — must come after their producers
   new DeploymentIdentityCheck(),   // reads connectedAppNames
@@ -145,6 +171,7 @@ export const CHECKS: SecurityCheck[] = [
   new ApexRestEndpointCheck(),     // reads apexBodies
   new VisualforceXssCheck(),       // writes vfPageBodies
   new EventMonitoringCheck(),      // writes eventLogSummary
+  new GuestTrafficAnomalyCheck(),  // reads eventLogSummary — anonymizer IPs, bursts, GraphQL recon in guest logs
   new MfaRegistrationCheck(),      // writes mfaRegistrations
   new SiemIntegrationCheck(),      // reads namedCredentialEndpoints, remoteSiteUrls,
                                    //   connectedAppNames, scheduledApexClassNames, eventLogSummary

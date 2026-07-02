@@ -36,7 +36,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     'target-org': Flags.requiredOrg(),
     format: Flags.string({
       char: 'f',
-      summary: 'Output format(s), comma-separated: html, md, json',
+      summary: 'Output format(s), comma-separated: html, md, json, executive',
       default: 'html',
     }),
     output: Flags.string({
@@ -76,20 +76,15 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
   public async run(): Promise<AuditResult> {
     const { flags } = await this.parse(SecurityAuditCommand);
 
+    // Validate the selection and output formats up front, so a typo fails fast with
+    // a clear message instead of silently running a partial/empty audit or writing
+    // no report after the (potentially long) run completes.
+    const checksToRun = this.resolveChecks(flags.checks);
+    const formats = this.resolveFormats(flags.format);
+
     const conn = flags['target-org'].getConnection('62.0') as any;
     const orgInfo = await resolveOrgInfo(conn);
     const ctx = buildAuditContext(conn, orgInfo);
-
-    const checksToRun = flags.checks
-      ? (() => {
-          const ids = new Set(flags.checks.split(',').map((s) => s.trim()));
-          const unknown = [...ids].filter((id) => !CHECKS.some((c) => c.id === id));
-          if (unknown.length > 0) {
-            this.warn(`Unknown check ID(s): ${unknown.join(', ')}. Run 'sf audit list' to see available checks.`);
-          }
-          return CHECKS.filter((c) => ids.has(c.id));
-        })()
-      : CHECKS;
 
     const knownCheckIds = new Set(CHECKS.map((c) => c.id));
     const scoringConfig = loadScoringConfig(
@@ -106,14 +101,10 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
       this.log(`[${String(current).padStart(2)}/${total}] ${checkName}`);
     });
 
-    const formats = flags.format.split(',').map((f) => f.trim());
     fs.mkdirSync(flags.output, { recursive: true });
     for (const format of formats) {
       const renderer = this.rendererFor(format, flags);
-      if (!renderer) {
-        this.warn(`Unknown format '${format}'. Skipping. Valid formats: html, md, json, executive`);
-        continue;
-      }
+      if (!renderer) continue; // unreachable: formats validated up front
       const output = renderer.render(result);
       const prefix = renderer.filenamePrefix ?? 'sf-audit';
       const filename = `${prefix}-${orgInfo.id}-${Date.now()}${renderer.fileExtension}`;
@@ -134,6 +125,39 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     }
 
     return result;
+  }
+
+  /** Resolve --checks to the checks to run, erroring on any unknown ID. */
+  private resolveChecks(raw?: string): typeof CHECKS {
+    if (!raw) return CHECKS;
+    const ids = raw.split(',').map((s) => s.trim()).filter(Boolean);
+    const unknown = ids.filter((id) => !CHECKS.some((c) => c.id === id));
+    if (unknown.length > 0) {
+      this.error(`Unknown check ID(s): ${unknown.join(', ')}`, {
+        suggestions: ["Run 'sf audit list' to see all valid check IDs."],
+      });
+    }
+    const set = new Set(ids);
+    const selected = CHECKS.filter((c) => set.has(c.id));
+    if (selected.length === 0) {
+      this.error('No checks were selected by --checks.', {
+        suggestions: ["Run 'sf audit list' to see valid check IDs, or omit --checks to run all."],
+      });
+    }
+    return selected;
+  }
+
+  /** Resolve --format to a validated list, erroring on any unknown format. */
+  private resolveFormats(raw: string): string[] {
+    const valid = ['html', 'md', 'json', 'executive'];
+    const formats = raw.split(',').map((f) => f.trim()).filter(Boolean);
+    const bad = formats.filter((f) => !valid.includes(f));
+    if (bad.length > 0 || formats.length === 0) {
+      this.error(bad.length > 0 ? `Unknown output format(s): ${bad.join(', ')}` : 'No output format specified.', {
+        suggestions: [`Valid formats: ${valid.join(', ')}`],
+      });
+    }
+    return formats;
   }
 
   private rendererFor(
