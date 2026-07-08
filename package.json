@@ -1,6 +1,6 @@
 {
   "name": "@cclabsnz/sf-audit",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Salesforce Security Audit — native sf plugin",
   "license": "Apache-2.0",
   "type": "module",
@@ -42,7 +42,12 @@
     "devPlugins": [],
     "topics": {
       "audit": {
-        "description": "Salesforce security audit commands"
+        "description": "Salesforce security audit commands",
+        "subtopics": {
+          "events": {
+            "description": "Capture free EventLogFile logs to local disk"
+          }
+        }
       }
     }
   },

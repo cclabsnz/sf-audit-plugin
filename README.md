@@ -7,6 +7,7 @@ A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audi
 - **Compliance mapping:** every finding mapped to **source-verified** controls across 7 frameworks (OWASP, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029, NZISM)
 - **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
 - **History & diff:** archives each run and shows security-posture drift over time
+- **Free event baseline:** `sf audit events pull` captures the org's free daily `EventLogFile` logs to local disk before the 1-day retention window drops them — no Event Monitoring / Shield add-on needed
 - Strictly read-only (SOQL/Tooling/REST GETs + Metadata API reads); see [PERMISSIONS.md](PERMISSIONS.md) for the least-privilege access it needs
 
 ## Installation
@@ -414,6 +415,72 @@ Diff report written: ./sf-audit-diff-00D000000000001-...-vs-....json
   New               0
   Resolved          1
 ─────────────────────────────
+```
+
+## Free event baseline
+
+Salesforce's free tier exposes **Daily-interval `EventLogFile` logs** (login, API, and error
+activity) on Enterprise/Unlimited/Performance editions and Developer Edition — *without* the paid
+Event Monitoring / Shield add-on. The catch: on the free tier those logs are retained for only
+**~1 day**. Miss a day and that day's activity is gone.
+
+`sf audit events pull` captures them to local disk before they expire, so a daily run builds a
+rolling local baseline you own:
+
+```bash
+sf audit events pull --target-org myOrg
+```
+
+It queries whatever daily event types the org actually exposes, downloads each log's CSV body, and
+saves it to `~/.sf/event-baseline/{orgId}/{EventType}/{LogDate}-{Id}.csv`, plus a per-run manifest.
+It is **read-only** (GET only) and **idempotent**: any log already on disk is skipped, so it is safe
+to run repeatedly. Run it once a day from cron or a scheduled GitHub Action and you beat the 1-day
+retention window with a growing archive — no add-on required.
+
+```bash
+# Daily cron entry (07:15) — capture yesterday's logs
+15 7 * * *  sf audit events pull --target-org myOrg >> ~/.sf/event-baseline/pull.log 2>&1
+```
+
+**Flags:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--target-org` | Org alias or username | required |
+| `--since` | Days of `LogDate` to request (`LAST_N_DAYS` window) | `1` |
+| `--types` | Restrict to specific EventTypes, comma-separated (e.g. `Login,ApiTotalUsage`) | *(all available)* |
+| `--output` / `-o` | Base directory to store logs under | `~/.sf/event-baseline` |
+
+```bash
+# Backfill the last 3 days (each still subject to the org's retention)
+sf audit events pull --target-org myOrg --since 3
+
+# Only pull login and API-usage logs
+sf audit events pull --target-org myOrg --types Login,ApiTotalUsage
+
+# Store under a project-local directory instead of ~/.sf
+sf audit events pull --target-org myOrg --output ./event-baseline
+```
+
+> Reading `EventLogFile` requires the **View Event Log Files** permission on the running user (this
+> is in addition to the minimum read-only audit permission set). If it is missing, or the edition
+> does not expose free daily logs, the command exits cleanly with an explanation rather than failing.
+
+**Example output:**
+
+```
+Pulling free EventLogFile logs for org: My Org (00D000000000001)
+
+─────────────────────────────
+  Event Baseline Pull
+─────────────────────────────
+  Found           7
+  Downloaded      7
+  Skipped         0  (already saved)
+  Total bytes  48213
+─────────────────────────────
+  Saved to: ~/.sf/event-baseline/00D000000000001
+  Manifest: ~/.sf/event-baseline/00D000000000001/_manifests/manifest-...-....json
 ```
 
 ## Requirements
