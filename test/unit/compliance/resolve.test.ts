@@ -20,8 +20,8 @@ describe('resolveControls', () => {
     expect(out.every((c) => c.verified)).toBe(true); // never returns a draft
   });
 
-  it('packFrameworks maps universal to OWASP/SOC2/ISO', () => {
-    expect(packFrameworks('universal').sort()).toEqual(['ISO27001', 'OWASP', 'SOC2']);
+  it('packFrameworks maps universal to OWASP/OWASP_LLM/SOC2/ISO', () => {
+    expect(packFrameworks('universal').sort()).toEqual(['ISO27001', 'OWASP', 'OWASP_LLM', 'SOC2']);
   });
 
   it('the nz pack includes HISO, Privacy Act, and NZISM', () => {

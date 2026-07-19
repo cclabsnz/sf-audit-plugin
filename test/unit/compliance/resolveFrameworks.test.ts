@@ -2,7 +2,7 @@ import { resolveFrameworks } from '../../../src/compliance/resolve.js';
 
 describe('resolveFrameworks', () => {
   it('resolves pack names', () => {
-    expect(resolveFrameworks('universal').sort()).toEqual(['ISO27001', 'OWASP', 'SOC2']);
+    expect(resolveFrameworks('universal').sort()).toEqual(['ISO27001', 'OWASP', 'OWASP_LLM', 'SOC2']);
     expect(resolveFrameworks('nz')).toContain('NZISM');
     expect(resolveFrameworks('all')).toContain('HIPAA');
   });

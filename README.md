@@ -47,7 +47,7 @@ This runs all 88 security checks against the target org and writes a report to t
 | `--prepared-for` | (none) | Client name for the executive report cover line |
 | `--branding` | (none) | Path to a `report-branding.json` to override CloudCounsel defaults (executive format) |
 | `--top` | `5` | Number of executive priorities to highlight (executive format) |
-| `--frameworks` | `universal` | Compliance matrix scope (executive format): `universal` (OWASP/SOC 2/ISO 27001), `nz` (ISO/HISO/Privacy Act/NZISM), `all`, or a comma list (e.g. `owasp,owasp-llm,iso,nzism`) |
+| `--frameworks` | `universal` | Compliance matrix scope (executive format): `universal` (OWASP/OWASP LLM/SOC 2/ISO 27001), `nz` (ISO/HISO/Privacy Act/NZISM), `all`, or a comma list (e.g. `owasp,owasp-llm,iso,nzism`) |
 | `--resolve-domains` | `false` | Makes **outbound DNS queries from this machine** to verify CSP trusted domains still resolve (flags unresolvable / parked domains as exfiltration channels). Off by default; a default run contacts **only the target org** and never reaches out to any other host. |
 
 ### Examples
@@ -265,9 +265,9 @@ Findings are mapped to controls across eight security and privacy frameworks. Th
 
 **Framework packs.** The executive report's compliance matrix is scoped with `--frameworks`:
 
-- `universal` *(default)*: OWASP, SOC 2, ISO 27001
+- `universal` *(default)*: OWASP, OWASP LLM Top 10, SOC 2, ISO 27001
 - `nz`: ISO 27001, HISO 10029, NZ Privacy Act, NZISM (for NZ health/government engagements)
-- `all`: every framework (includes OWASP LLM Top 10)
+- `all`: every framework
 - a comma list of aliases, e.g. `owasp,owasp-llm,iso,nzism` (`owasp-llm` / `llm` selects the OWASP LLM Top 10)
 
 > **Not an attestation.** A control rendering "No findings detected" means this audit's checks surfaced no issues mapped to it. It is **not** a statement of compliance or certification. See [Scope & Liability](#scope--liability).

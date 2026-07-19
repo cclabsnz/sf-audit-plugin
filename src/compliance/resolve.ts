@@ -3,7 +3,7 @@ import { CHECK_CONTROL_MAP } from './mapping.js';
 import { getControl } from './catalogs/index.js';
 
 const PACKS: Record<FrameworkPack, Framework[]> = {
-  universal: ['OWASP', 'SOC2', 'ISO27001'],
+  universal: ['OWASP', 'OWASP_LLM', 'SOC2', 'ISO27001'],
   nz: ['ISO27001', 'HISO10029', 'PRIVACY_ACT', 'NZISM'],
   all: ['OWASP', 'OWASP_LLM', 'SOC2', 'ISO27001', 'SBS', 'HISO10029', 'PRIVACY_ACT', 'NZISM', 'HIPAA', 'GDPR'],
 };
