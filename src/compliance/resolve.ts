@@ -5,7 +5,7 @@ import { getControl } from './catalogs/index.js';
 const PACKS: Record<FrameworkPack, Framework[]> = {
   universal: ['OWASP', 'SOC2', 'ISO27001'],
   nz: ['ISO27001', 'HISO10029', 'PRIVACY_ACT', 'NZISM'],
-  all: ['OWASP', 'SOC2', 'ISO27001', 'SBS', 'HISO10029', 'PRIVACY_ACT', 'NZISM', 'HIPAA', 'GDPR'],
+  all: ['OWASP', 'OWASP_LLM', 'SOC2', 'ISO27001', 'SBS', 'HISO10029', 'PRIVACY_ACT', 'NZISM', 'HIPAA', 'GDPR'],
 };
 
 export function packFrameworks(pack: FrameworkPack): Framework[] {
@@ -37,7 +37,8 @@ export function getComplianceTags(checkId: string): string[] {
 }
 
 const ALIAS: Record<string, Framework> = {
-  owasp: 'OWASP', soc2: 'SOC2', iso: 'ISO27001', iso27001: 'ISO27001', sbs: 'SBS',
+  owasp: 'OWASP', 'owasp-llm': 'OWASP_LLM', llm: 'OWASP_LLM',
+  soc2: 'SOC2', iso: 'ISO27001', iso27001: 'ISO27001', sbs: 'SBS',
   privacy: 'PRIVACY_ACT', 'privacy-act': 'PRIVACY_ACT', hiso: 'HISO10029', nzism: 'NZISM',
   hipaa: 'HIPAA', gdpr: 'GDPR',
 };

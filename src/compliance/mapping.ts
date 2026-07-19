@@ -87,10 +87,25 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'encryption-coverage':     ['OWASP-A02', 'SOC2-CC6.1', 'ISO-A.8.24'],
   'experience-csp':          ['OWASP-A05', 'SOC2-CC6.6', 'ISO-A.8.26'],
   'sandbox-data-masking':    ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.5.12'],
-  // AI & Agents (v1.5). The dedicated OWASP LLM Top 10 framework and its precise mappings
-  // land in Phase 3; for now the inventory maps to the access-governance / least-privilege
-  // and monitoring controls its findings speak to (agent identities + run-as access).
-  'agent-inventory':         ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.5.18'],
+  // AI & Agents (v1.5). Each agent check carries its web-OWASP / SOC2 / ISO governance
+  // control(s) plus the OWASP LLM Top 10 (2025) risk it maps to. LLM ids/titles are the real
+  // 2025 edition (see catalogs/owaspLlm.ts). Rationale is inline per check:
+  //   LLM01 Prompt Injection       — untrusted input path (public channel) or the egress a
+  //                                   payload leaves through (allowlisted domain).
+  //   LLM02 Sensitive Info Disclose — undetected agent-driven exfiltration (monitoring gap).
+  //   LLM05 Improper Output Handling — agent output routed to an unowned/parked destination
+  //                                   (the ForcedLeak exfil channel; this was "Insecure Output
+  //                                   Handling / LLM02" in the 2023 list, renumbered to LLM05
+  //                                   in 2025 — we map to the 2025 id honestly).
+  //   LLM06 Excessive Agency        — over-broad run-as identity or write-capable action surface.
+  // agent-inventory keeps its access-governance base and adds LLM06 (inventorying agent
+  // identities + run-as access is the foundation of least-agency).
+  'agent-inventory':         ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.5.18', 'LLM06'],
+  'agent-user-privilege':    ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.5.18', 'LLM06'],
+  'agent-action-surface':    ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.8.3', 'LLM06'],
+  'agent-channel-exposure':  ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.8.3', 'LLM01'],
+  'agent-monitoring-coverage':['OWASP-A09', 'SOC2-CC7.2', 'ISO-A.8.15', 'LLM02'],
+  'trusted-url-hygiene':     ['OWASP-A05', 'OWASP-A10', 'SOC2-CC6.6', 'ISO-A.8.26', 'LLM01', 'LLM05'],
 };
 
 // NZ pack crosswalk — each check belongs to one domain; the domain's NZ control ids are

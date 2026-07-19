@@ -21,7 +21,7 @@ const GRADE_COLOR: Record<string, string> = {
 const SEV_ORDER: RiskLevel[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 
 const FRAMEWORK_LABEL: Record<Framework, string> = {
-  OWASP: 'OWASP Top 10', SOC2: 'SOC 2', ISO27001: 'ISO/IEC 27001',
+  OWASP: 'OWASP Top 10', OWASP_LLM: 'OWASP LLM Top 10', SOC2: 'SOC 2', ISO27001: 'ISO/IEC 27001',
   SBS: 'Security Benchmark for Salesforce', PRIVACY_ACT: 'NZ Privacy Act',
   HISO10029: 'HISO 10029', NZISM: 'NZISM', HIPAA: 'HIPAA', GDPR: 'GDPR',
 };

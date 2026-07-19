@@ -1,5 +1,6 @@
 import type { ControlDef } from '../types.js';
 import { OWASP_CONTROLS } from './owasp.js';
+import { OWASP_LLM_CONTROLS } from './owaspLlm.js';
 import { SOC2_CONTROLS } from './soc2.js';
 import { ISO27001_CONTROLS } from './iso27001.js';
 import { SBS_CONTROLS } from './sbs.js';
@@ -9,6 +10,7 @@ import { NZISM_CONTROLS } from './nzism.js';
 
 export const ALL_CONTROLS: ControlDef[] = [
   ...OWASP_CONTROLS,
+  ...OWASP_LLM_CONTROLS,
   ...SOC2_CONTROLS,
   ...ISO27001_CONTROLS,
   ...SBS_CONTROLS,

@@ -1,5 +1,5 @@
 export type Framework =
-  | 'OWASP' | 'SOC2' | 'ISO27001' | 'SBS'
+  | 'OWASP' | 'OWASP_LLM' | 'SOC2' | 'ISO27001' | 'SBS'
   | 'HISO10029' | 'PRIVACY_ACT' | 'NZISM' | 'HIPAA' | 'GDPR';
 
 export interface ControlDef {
