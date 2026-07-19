@@ -17,6 +17,10 @@ const has = (s: Set<Capability>, ...caps: Capability[]): boolean => caps.every((
 const hasAny = (s: Set<Capability>, ...caps: Capability[]): boolean => caps.some((c) => s.has(c));
 const byIds = (active: Finding[], ids: string[]): Finding[] =>
   active.filter((f) => ids.includes(f.id));
+// The AI & Agents findings carry dynamic id suffixes (userId, agent dev name, channel slug,
+// domain), so their chain ingredients are matched by id prefix rather than exact id.
+const byPrefixes = (active: Finding[], prefixes: string[]): Finding[] =>
+  active.filter((f) => prefixes.some((p) => f.id === p || f.id.startsWith(p)));
 
 export const NAMED_CHAINS: NamedChainDef[] = [
   {
@@ -119,6 +123,50 @@ export const NAMED_CHAINS: NamedChainDef[] = [
         'field-level-security-high', 'field-level-security-medium', 'users-view-all-data',
       ]);
       return sink.length > 0 ? [...inj, ...sink] : null;
+    },
+  },
+  {
+    id: 'prompt-injection-blast-radius',
+    title: 'Prompt injection blast radius',
+    severity: 'CRITICAL',
+    narrative:
+      'A guest-reachable Agentforce channel lets an unauthenticated attacker send prompt-injection input to an ' +
+      'agent that runs as an over-privileged user (Modify/View All Data or broad object write) and can drive ' +
+      'write-capable actions. Public input, privileged identity, and state-changing actions are all present at ' +
+      'once, so a single injected prompt can read, alter, or destroy data across the agent\'s reach.',
+    remediation:
+      'Break any one link: remove the guest/public binding, scope the agent run-as user to least privilege, ' +
+      'or remove write-capable actions from the exposed agent (and add confirmation/guardrails where they must stay).',
+    match(_present, active) {
+      const channel = byPrefixes(active, ['agent-channel-exposure-guest-']);
+      const privilege = byPrefixes(active, [
+        'agent-user-privilege-admin-', 'agent-user-privilege-broad-write-',
+      ]);
+      const actions = byIds(active, ['agent-action-surface-write']);
+      if (channel.length === 0 || privilege.length === 0 || actions.length === 0) return null;
+      return [...channel, ...privilege, ...actions];
+    },
+  },
+  {
+    id: 'forcedleak-pattern',
+    title: 'ForcedLeak pattern',
+    severity: 'CRITICAL',
+    narrative:
+      'Active Agentforce agents run in an org that has a stale CSP-trusted domain (unresolvable or parked) on ' +
+      'its allowlist and no Event Monitoring capture of agent activity. This is the exact ForcedLeak chain ' +
+      '(Noma Security, Sept 2025): an attacker registers the lapsed allowlisted domain, prompt-injects an agent ' +
+      'into sending data to it, and nothing records or responds to the exfiltration.',
+    remediation:
+      'Remove or reclaim the stale trusted domain immediately, then enable Event Monitoring (and pull agent logs ' +
+      'with `sf audit events pull`) plus a Transaction Security policy so agent-driven exfiltration is detected.',
+    match(_present, active) {
+      const agents = byIds(active, ['agent-inventory-summary']);
+      const staleUrl = byPrefixes(active, [
+        'trusted-url-hygiene-unresolvable-', 'trusted-url-hygiene-parked-',
+      ]);
+      const noCapture = byIds(active, ['agent-monitoring-coverage-none']);
+      if (agents.length === 0 || staleUrl.length === 0 || noCapture.length === 0) return null;
+      return [...agents, ...staleUrl, ...noCapture];
     },
   },
   {
