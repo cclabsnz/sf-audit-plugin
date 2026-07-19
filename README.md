@@ -2,9 +2,9 @@
 
 A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audit against any Salesforce org, risk-scores it with an A–F grade, and turns the result into a report your security team (or your client's) can act on.
 
-- **82 read-only checks** across identity, access, data, code, integrations, and monitoring
+- **88 read-only checks** across identity, access, data, code, integrations, monitoring, and Agentforce / GenAI
 - **Attack-chain correlation:** links individual findings into named, multi-step attack scenarios
-- **Compliance mapping:** every finding mapped to **source-verified** controls across 7 frameworks (OWASP, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029, NZISM)
+- **Compliance mapping:** every finding mapped to **source-verified** controls across 8 frameworks (OWASP, OWASP LLM Top 10, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029, NZISM)
 - **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
 - **History & diff:** archives each run and shows security-posture drift over time
 - **Free event baseline:** `sf audit events pull` captures the org's free daily `EventLogFile` logs to local disk before the 1-day retention window drops them — no Event Monitoring / Shield add-on needed
@@ -32,7 +32,7 @@ sf plugins link .
 sf audit security --target-org <orgAlias>
 ```
 
-This runs all 82 security checks against the target org and writes a report to the current directory.
+This runs all 88 security checks against the target org and writes a report to the current directory.
 
 ### Options
 
@@ -42,12 +42,13 @@ This runs all 82 security checks against the target org and writes a report to t
 | `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json`, `executive` |
 | `--output` / `-o` | `.` | Directory to write the report file |
 | `--fail-on` | (none) | Exit with code 1 if any finding is at or above this severity: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
-| `--checks` | *(all)* | Comma-separated check IDs to run instead of all 82 (e.g. `hardcoded-credentials,apex-sharing`) |
+| `--checks` | *(all)* | Comma-separated check IDs to run instead of all 88 (e.g. `hardcoded-credentials,apex-sharing`) |
 | `--scoring-config` | (none) | Path to a custom scoring config JSON file to override weights and grade thresholds |
 | `--prepared-for` | (none) | Client name for the executive report cover line |
 | `--branding` | (none) | Path to a `report-branding.json` to override CloudCounsel defaults (executive format) |
 | `--top` | `5` | Number of executive priorities to highlight (executive format) |
-| `--frameworks` | `universal` | Compliance matrix scope (executive format): `universal` (OWASP/SOC 2/ISO 27001), `nz` (ISO/HISO/Privacy Act/NZISM), `all`, or a comma list (e.g. `owasp,iso,nzism`) |
+| `--frameworks` | `universal` | Compliance matrix scope (executive format): `universal` (OWASP/SOC 2/ISO 27001), `nz` (ISO/HISO/Privacy Act/NZISM), `all`, or a comma list (e.g. `owasp,owasp-llm,iso,nzism`) |
+| `--resolve-domains` | `false` | Makes **outbound DNS queries from this machine** to verify CSP trusted domains still resolve (flags unresolvable / parked domains as exfiltration channels). Off by default; a default run contacts **only the target org** and never reaches out to any other host. |
 
 ### Examples
 
@@ -94,15 +95,15 @@ sf audit security --target-org myOrg --format executive --branding ./report-bran
 ```
 
 Compliance controls are mapped from authoritative, version-pinned sources (OWASP Top 10:2021,
-AICPA TSC, ISO/IEC 27001:2022, the Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029,
-NZISM). Only source-verified controls render. "No findings detected" is **not** an attestation of
+OWASP Top 10 for LLM Applications 2025, AICPA TSC, ISO/IEC 27001:2022, the Security Benchmark for
+Salesforce, NZ Privacy Act, HISO 10029, NZISM). Only source-verified controls render. "No findings detected" is **not** an attestation of
 compliance (see the report's Scope & Liability section).
 
 The report file is written as `sf-audit-<orgId>-<timestamp>.<ext>` in the output directory (e.g. `sf-audit-00D000000000001-1711234567890.html`).
 
 ## What It Checks
 
-The audit runs **82 read-only checks**. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into nine domains below.
+The audit runs **88 read-only checks**. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into ten domains below.
 
 ### Org Health & Configuration
 | Check | What it looks for |
@@ -222,6 +223,20 @@ The audit runs **82 read-only checks**. Every finding is risk-rated (CRITICAL �
 | Anomalous Successful Logins | Accounts with successful logins from an unusually high number of distinct source IPs (credential-sharing / compromise signature) |
 | SIEM Integration Signals | Evidence of SIEM or external monitoring integration |
 
+### AI & Agents (Agentforce / GenAI)
+| Check | What it looks for |
+|-------|------------------|
+| Agent Inventory | Every Agentforce agent, its active version, and its run-as user (inventory findings); flags an active agent whose run-as identity is inactive or frozen |
+| Agent User Privilege | Agent / run-as users with Modify All Data or View All Data, broad object write access, or read access to objects classified as sensitive — the data a prompt injection inherits |
+| Agent Action Surface | Write-capable agent actions (Apex/Flow that create, update, or delete) and agents with an unusually large action surface |
+| Agentforce Channel Exposure | Correlates active agents with the channels that reach them (Experience Cloud sites, embedded deployments, messaging channels); flags guest-reachable exposure |
+| Agentforce Monitoring Coverage | Active agents running with no Event Monitoring capture and no Transaction Security policy (the monitoring gap in the ForcedLeak pattern); points at `sf audit events pull` |
+| Trusted URL Hygiene | Reviews the CSP trusted-sites allowlist for non-Salesforce domains that could be repurposed as exfiltration channels; with `--resolve-domains`, DNS-checks each for unresolvable or parked entries |
+
+Two named attack chains correlate these findings: **Prompt injection blast radius** (guest-reachable channel + over-privileged agent user + write-capable actions) and **ForcedLeak pattern** (active agents + a stale/unresolvable trusted URL + no event capture).
+
+The five agent-specific checks stay silent in orgs where Agentforce is not enabled (the GenAI objects do not exist, so the inventory records `not-enabled` and the dependent checks return nothing). Trusted URL Hygiene runs everywhere, since the CSP allowlist is an org-wide exfiltration surface regardless of Agentforce.
+
 ### Known limitations (advisory-only checks)
 
 A small number of checks emit an **advisory** rather than a pass/fail verdict because the underlying setting is not exposed to the read APIs this plugin uses (SOQL/Tooling/REST/Metadata read):
@@ -233,11 +248,12 @@ Advisory findings are surfaced as `INFO` and never inflate the health score.
 
 ## Compliance frameworks
 
-Findings are mapped to controls across seven security and privacy frameworks. The mapping is built on a **sourced control catalog** (each control carries its framework, **pinned version**, official title, and a citation) so a finding's compliance reference ties to an exact, defensible requirement rather than a bare tag.
+Findings are mapped to controls across eight security and privacy frameworks. The mapping is built on a **sourced control catalog** (each control carries its framework, **pinned version**, official title, and a citation) so a finding's compliance reference ties to an exact, defensible requirement rather than a bare tag.
 
 | Framework | Version | Notes |
 |-----------|---------|-------|
 | OWASP Top 10 | 2021 | Web application risk categories |
+| OWASP LLM Top 10 | 2025 | LLM/GenAI application risks (LLM01 Prompt Injection, LLM02 Sensitive Information Disclosure, LLM05 Improper Output Handling, LLM06 Excessive Agency); mapped by the AI & Agents checks |
 | SOC 2 | AICPA TSC 2017 | Common Criteria (CC6–CC9) |
 | ISO/IEC 27001 | 2022 | Annex A controls |
 | Security Benchmark for Salesforce (SBS) | current | Salesforce-native benchmark: [docs.securitybenchmark.org](https://docs.securitybenchmark.org) |
@@ -251,8 +267,8 @@ Findings are mapped to controls across seven security and privacy frameworks. Th
 
 - `universal` *(default)*: OWASP, SOC 2, ISO 27001
 - `nz`: ISO 27001, HISO 10029, NZ Privacy Act, NZISM (for NZ health/government engagements)
-- `all`: every framework
-- a comma list of aliases, e.g. `owasp,iso,nzism`
+- `all`: every framework (includes OWASP LLM Top 10)
+- a comma list of aliases, e.g. `owasp,owasp-llm,iso,nzism` (`owasp-llm` / `llm` selects the OWASP LLM Top 10)
 
 > **Not an attestation.** A control rendering "No findings detected" means this audit's checks surfaced no issues mapped to it. It is **not** a statement of compliance or certification. See [Scope & Liability](#scope--liability).
 
