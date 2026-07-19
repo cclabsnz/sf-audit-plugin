@@ -87,6 +87,9 @@ import { SandboxDataMaskingCheck } from './impl/SandboxDataMaskingCheck.js';
 // Access-control depth: effective-permission resolution + combination analysis
 import { PrivilegedAccessCheck } from './impl/PrivilegedAccessCheck.js';
 import { SeparationOfDutiesCheck } from './impl/SeparationOfDutiesCheck.js';
+// AI & Agents — Agentforce / GenAI checks (v1.5). AgentInventoryCheck is the single point
+// of agent queries; the dependent checks (Phase 2) read the cache keys it populates.
+import { AgentInventoryCheck } from './impl/AgentInventoryCheck.js';
 
 // Order matters: a check's dependsOnCache must be satisfied by a preceding check's populatesCache.
 // CheckEngine.validateCacheOrdering() enforces this at startup.
@@ -162,6 +165,9 @@ export const CHECKS: SecurityCheck[] = [
   new ExperienceCspCheck(),               // Experience Cloud CSP / Lightning Web Security advisory
   new SandboxDataMaskingCheck(),          // sandbox with populated (likely unmasked) PII
   new PrivilegedAccessCheck(),            // writes: effectivePermissions; shadow-admin detection
+  // AI & Agents block (v1.5) — Agentforce / GenAI. AgentInventoryCheck writes agentInventory,
+  // agentUsers, agentAccess; the Phase 2 dependent checks are registered after it.
+  new AgentInventoryCheck(),              // writes: agentInventory, agentUsers, agentAccess
   // Cache-dependent checks — must come after their producers
   new DeploymentIdentityCheck(),   // reads connectedAppNames
   new ApexLoggingCheck(),          // reads apexBodies + scheduledApexClassNames

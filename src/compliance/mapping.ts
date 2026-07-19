@@ -87,6 +87,10 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'encryption-coverage':     ['OWASP-A02', 'SOC2-CC6.1', 'ISO-A.8.24'],
   'experience-csp':          ['OWASP-A05', 'SOC2-CC6.6', 'ISO-A.8.26'],
   'sandbox-data-masking':    ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.5.12'],
+  // AI & Agents (v1.5). The dedicated OWASP LLM Top 10 framework and its precise mappings
+  // land in Phase 3; for now the inventory maps to the access-governance / least-privilege
+  // and monitoring controls its findings speak to (agent identities + run-as access).
+  'agent-inventory':         ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.5.18'],
 };
 
 // NZ pack crosswalk — each check belongs to one domain; the domain's NZ control ids are

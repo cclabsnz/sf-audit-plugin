@@ -35,6 +35,47 @@ export interface EventLogSummary {
   accessError?: EventLogAccess;
 }
 
+// Why the Agentforce/GenAI Tooling queries returned nothing. Mirrors EventLogAccess:
+//   'not-enabled' : the GenAI/Bot objects do not exist in this org (Agentforce is not
+//                   provisioned) — BotDefinition/GenAiPlannerDefinition raise
+//                   INVALID_TYPE / "sObject type not supported". The org has no agents.
+//   'unknown'     : the queries failed for a reason we could not attribute (e.g. a
+//                   partial failure or a permission gap). Consumers stay silent rather
+//                   than assert an inventory they could not fully build.
+// 'ok' is set only when the agent queries succeeded (even if zero agents were found).
+export type AgentAccess = 'ok' | 'not-enabled' | 'unknown';
+
+// AgentDefinition: one Agentforce agent or classic Einstein Bot. Populated by
+// AgentInventoryCheck from Tooling BotDefinition + BotVersion (+ GenAiPlannerDefinition),
+// consumed by the AI & Agents dependent checks (agent-user-privilege, agent-channel-exposure,
+// agent-action-surface, agent-monitoring-coverage).
+export interface AgentDefinition {
+  developerName: string;
+  label: string;
+  // 'agent' = Agentforce/GenAI agent; 'classic-bot' = legacy Einstein Bot.
+  type: 'agent' | 'classic-bot';
+  isActive: boolean;
+  // Active BotVersion number, when a version is active.
+  activeVersion?: number;
+  // The user the agent executes as, when resolvable from the definition.
+  runAsUserId?: string;
+  // False when the run-as user is inactive or frozen; undefined when not resolved.
+  runAsUserActive?: boolean;
+}
+
+// AgentUser: a user on the "Einstein Agent User" profile or holding an Agentforce /
+// Einstein Agent permission set license. Populated by AgentInventoryCheck, consumed by
+// agent-user-privilege. permissionSetIds / permissionSetLicenseNames come from the
+// PermissionSetAssignment / PermissionSetLicenseAssign joins.
+export interface AgentUser {
+  userId: string;
+  username: string;
+  profileName: string;
+  isActive: boolean;
+  permissionSetIds: string[];
+  permissionSetLicenseNames: string[];
+}
+
 // MfaRegistration: one entry per user with at least one registered MFA method.
 // Populated by MfaRegistrationCheck, consumed by MfaMethodStrengthCheck.
 export interface MfaRegistration {
@@ -79,4 +120,9 @@ export interface AuditCache {
   vfPageBodies?: VfPageBody[];
   // Populated by PrivilegedAccessCheck — consumed by SeparationOfDutiesCheck
   effectivePermissions?: EffectivePermissionGrant[];
+  // Populated by AgentInventoryCheck — consumed by the AI & Agents dependent checks
+  agentInventory?: AgentDefinition[];
+  agentUsers?: AgentUser[];
+  // Why the agent queries returned nothing (mirrors eventLogSummary.accessError semantics).
+  agentAccess?: AgentAccess;
 }

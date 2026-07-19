@@ -88,6 +88,7 @@ export const CHECK_META: Record<string, CheckMeta> = {
   'encryption-coverage':     { effort: 'moderate', impact: 'Fields labelled PII/PHI but stored in plaintext are unprotected at rest and on export — the sensitivity is known, the protection is missing.' },
   'experience-csp':          { effort: 'moderate', impact: 'Relaxed CSP or disabled Lightning Web Security on a public site lets injected/third-party scripts run against unauthenticated visitors.' },
   'sandbox-data-masking':    { effort: 'moderate', impact: 'Unmasked production PII/PHI copied into a sandbox spreads sensitive data into a lower-trust environment with broader access and weaker monitoring.' },
+  'agent-inventory':         { effort: 'quick',    impact: 'Untracked Agentforce agents each run as a user with real data access; an active agent whose run-as identity is disabled is a latent misconfiguration and a way to smuggle access back in on reactivation.' },
 };
 
 export function getCheckMeta(id: string): CheckMeta | undefined {
