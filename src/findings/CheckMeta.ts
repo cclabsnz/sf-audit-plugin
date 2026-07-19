@@ -89,6 +89,11 @@ export const CHECK_META: Record<string, CheckMeta> = {
   'experience-csp':          { effort: 'moderate', impact: 'Relaxed CSP or disabled Lightning Web Security on a public site lets injected/third-party scripts run against unauthenticated visitors.' },
   'sandbox-data-masking':    { effort: 'moderate', impact: 'Unmasked production PII/PHI copied into a sandbox spreads sensitive data into a lower-trust environment with broader access and weaker monitoring.' },
   'agent-inventory':         { effort: 'quick',    impact: 'Untracked Agentforce agents each run as a user with real data access; an active agent whose run-as identity is disabled is a latent misconfiguration and a way to smuggle access back in on reactivation.' },
+  'agent-user-privilege':    { effort: 'moderate', impact: 'An Agentforce agent runs as its user, so a prompt injection inherits that user\'s access; Modify/View All Data or broad object write turns one injected prompt into org-wide read, edit, or exfiltration of classified data.' },
+  'agent-action-surface':    { effort: 'moderate', impact: 'Write-capable agent actions (Apex/Flow that create, update, or delete) let an injected prompt take state-changing operations, not just read data — the difference between a leak and active tampering on an exposed agent.' },
+  'agent-channel-exposure':  { effort: 'moderate', impact: 'An agent bound to a guest-reachable channel lets any unauthenticated visitor send prompt-injection input to an agent that executes with its run-as user\'s data access: the public-input half of the ForcedLeak pattern.' },
+  'agent-monitoring-coverage':{ effort: 'moderate', impact: 'Active agents with no Event Monitoring capture and no Transaction Security policy leave prompt injection, mass reads, and exfiltration with no auditable trail and no automated response.' },
+  'trusted-url-hygiene':     { effort: 'quick',    impact: 'A non-Salesforce CSP-trusted domain that has lapsed or been parked is an allowlisted exfiltration channel: whoever re-registers it can receive prompt-injected data from Lightning and Agentforce output — the exact ForcedLeak exfil vector.' },
 };
 
 export function getCheckMeta(id: string): CheckMeta | undefined {

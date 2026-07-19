@@ -3,7 +3,7 @@ import { SoqlClientImpl } from '../api/SoqlClientImpl.js';
 import { ToolingClientImpl } from '../api/ToolingClientImpl.js';
 import { RestClientImpl } from '../api/RestClientImpl.js';
 import { MetadataClientImpl } from '../api/MetadataClientImpl.js';
-import type { AuditContext } from '../context/AuditContext.js';
+import type { AuditContext, AuditOptions } from '../context/AuditContext.js';
 import type { OrgInfo } from '../context/OrgInfo.js';
 
 export function buildApiClients(conn: Connection) {
@@ -32,7 +32,11 @@ export async function resolveOrgInfo(conn: Connection): Promise<OrgInfo> {
   };
 }
 
-export function buildAuditContext(conn: Connection, orgInfo: OrgInfo): AuditContext {
+export function buildAuditContext(
+  conn: Connection,
+  orgInfo: OrgInfo,
+  options?: AuditOptions,
+): AuditContext {
   const clients = buildApiClients(conn);
   return {
     soql: clients.soql,
@@ -40,6 +44,7 @@ export function buildAuditContext(conn: Connection, orgInfo: OrgInfo): AuditCont
     rest: clients.rest,
     metadata: clients.metadata,
     orgInfo,
+    options,
     cache: {},
   };
 }

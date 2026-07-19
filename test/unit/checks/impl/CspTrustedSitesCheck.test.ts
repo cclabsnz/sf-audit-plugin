@@ -60,4 +60,31 @@ describe('CspTrustedSitesCheck', () => {
     expect(result.findings.some(f => f.passed)).toBe(true);
     expect(result.findings.every(f => f.riskLevel !== 'HIGH')).toBe(true);
   });
+
+  it('declares that it populates the cspTrustedSites cache', () => {
+    expect(check.populatesCache).toEqual(['cspTrustedSites']);
+  });
+
+  it('populates ctx.cache.cspTrustedSites with the active sites (findings unchanged)', async () => {
+    const ctx = makeCtx([
+      { Id: '1', DeveloperName: 'Cdn', EndpointUrl: 'https://cdn.example.com', Context: 'ALL', IsActive: true },
+      { Id: '2', DeveloperName: 'Fonts', EndpointUrl: 'https://fonts.googleapis.com', Context: 'LWC', IsActive: true },
+    ]);
+    const result = await check.run(ctx);
+
+    // Cache is populated.
+    expect(ctx.cache.cspTrustedSites).toEqual([
+      { developerName: 'Cdn', endpointUrl: 'https://cdn.example.com', isActive: true, context: 'ALL' },
+      { developerName: 'Fonts', endpointUrl: 'https://fonts.googleapis.com', isActive: true, context: 'LWC' },
+    ]);
+    // Findings unchanged: all HTTPS still yields a passing finding, no HIGH/MEDIUM.
+    expect(result.findings.some(f => f.passed)).toBe(true);
+    expect(result.findings.every(f => f.riskLevel !== 'HIGH' && f.riskLevel !== 'MEDIUM')).toBe(true);
+  });
+
+  it('populates an empty cache array when no CSP trusted sites exist', async () => {
+    const ctx = makeCtx([]);
+    await check.run(ctx);
+    expect(ctx.cache.cspTrustedSites).toEqual([]);
+  });
 });

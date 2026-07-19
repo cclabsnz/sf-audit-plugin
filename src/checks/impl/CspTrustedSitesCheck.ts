@@ -3,6 +3,7 @@ import type { AuditContext } from '../../context/AuditContext.js';
 
 interface CspTrustedSite {
   Id: string;
+  DeveloperName?: string;
   EndpointUrl: string;
   Context: string;
   IsActive: boolean;
@@ -15,10 +16,21 @@ export class CspTrustedSitesCheck implements SecurityCheck {
   readonly description =
     'Checks Content Security Policy trusted sites for insecure HTTP endpoints that allow mixed-content loading.';
 
+  // Shares the fetched trusted-sites allowlist with TrustedUrlHygieneCheck (AI & Agents)
+  // so it does not re-query CspTrustedSite. Findings/behavior are unchanged by this.
+  readonly populatesCache = ['cspTrustedSites'] as const;
+
   async run(ctx: AuditContext): Promise<CheckResult> {
     const sites = await ctx.soql.queryAll<CspTrustedSite>(
-      `SELECT Id, EndpointUrl, Context, IsActive FROM CspTrustedSite WHERE IsActive = true`,
+      `SELECT Id, DeveloperName, EndpointUrl, Context, IsActive FROM CspTrustedSite WHERE IsActive = true`,
     );
+
+    ctx.cache.cspTrustedSites = sites.map((s) => ({
+      developerName: s.DeveloperName ?? '',
+      endpointUrl: s.EndpointUrl,
+      isActive: s.IsActive,
+      context: s.Context,
+    }));
 
     if (sites.length === 0) {
       return {

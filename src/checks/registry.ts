@@ -90,6 +90,11 @@ import { SeparationOfDutiesCheck } from './impl/SeparationOfDutiesCheck.js';
 // AI & Agents — Agentforce / GenAI checks (v1.5). AgentInventoryCheck is the single point
 // of agent queries; the dependent checks (Phase 2) read the cache keys it populates.
 import { AgentInventoryCheck } from './impl/AgentInventoryCheck.js';
+import { AgentUserPrivilegeCheck } from './impl/AgentUserPrivilegeCheck.js';
+import { AgentActionSurfaceCheck } from './impl/AgentActionSurfaceCheck.js';
+import { AgentChannelExposureCheck } from './impl/AgentChannelExposureCheck.js';
+import { AgentMonitoringCoverageCheck } from './impl/AgentMonitoringCoverageCheck.js';
+import { TrustedUrlHygieneCheck } from './impl/TrustedUrlHygieneCheck.js';
 
 // Order matters: a check's dependsOnCache must be satisfied by a preceding check's populatesCache.
 // CheckEngine.validateCacheOrdering() enforces this at startup.
@@ -183,4 +188,12 @@ export const CHECKS: SecurityCheck[] = [
                                    //   connectedAppNames, scheduledApexClassNames, eventLogSummary
   new MfaMethodStrengthCheck(),    // reads mfaRegistrations
   new SeparationOfDutiesCheck(),   // reads effectivePermissions — toxic permission combinations
+  // AI & Agents dependent checks (v1.5) — registered after all their cache producers:
+  // AgentInventoryCheck (agentInventory/agentUsers/agentAccess) above, EventMonitoringCheck
+  // (eventLogSummary) and CspTrustedSitesCheck (cspTrustedSites) earlier in the list.
+  new AgentUserPrivilegeCheck(),      // reads agentUsers, agentAccess
+  new AgentActionSurfaceCheck(),      // reads agentInventory, agentAccess
+  new AgentChannelExposureCheck(),    // reads agentInventory, agentAccess
+  new AgentMonitoringCoverageCheck(), // reads agentInventory, agentAccess, eventLogSummary
+  new TrustedUrlHygieneCheck(),       // reads cspTrustedSites (runs even without Agentforce)
 ];

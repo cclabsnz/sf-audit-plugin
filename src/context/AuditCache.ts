@@ -76,6 +76,17 @@ export interface AgentUser {
   permissionSetLicenseNames: string[];
 }
 
+// CspTrustedSite: one active CSP Trusted Site row. Populated by CspTrustedSitesCheck
+// (which already queries CspTrustedSite for its own HTTP-endpoint check) and consumed by
+// TrustedUrlHygieneCheck, so the trusted-URL allowlist is fetched once. Fields mirror the
+// CspTrustedSite sObject; context is the Salesforce "Context" column (ALL / LWC / CMS / ...).
+export interface CspTrustedSite {
+  developerName: string;
+  endpointUrl: string;
+  isActive: boolean;
+  context?: string;
+}
+
 // MfaRegistration: one entry per user with at least one registered MFA method.
 // Populated by MfaRegistrationCheck, consumed by MfaMethodStrengthCheck.
 export interface MfaRegistration {
@@ -118,6 +129,8 @@ export interface AuditCache {
   mfaRegistrations?: MfaRegistration[];
   // Populated by VisualforceXssCheck — available for future VF-scanning checks
   vfPageBodies?: VfPageBody[];
+  // Populated by CspTrustedSitesCheck — consumed by TrustedUrlHygieneCheck
+  cspTrustedSites?: CspTrustedSite[];
   // Populated by PrivilegedAccessCheck — consumed by SeparationOfDutiesCheck
   effectivePermissions?: EffectivePermissionGrant[];
   // Populated by AgentInventoryCheck — consumed by the AI & Agents dependent checks

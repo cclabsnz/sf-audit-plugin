@@ -71,6 +71,11 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
       summary: 'Compliance frameworks for the executive matrix: universal | nz | all | a comma list (executive format).',
       default: 'universal',
     }),
+    'resolve-domains': Flags.boolean({
+      summary:
+        'Make outbound DNS queries from this machine to verify CSP trusted domains resolve. Off by default; default runs contact only the target org.',
+      default: false,
+    }),
   };
 
   public async run(): Promise<AuditResult> {
@@ -84,7 +89,9 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
 
     const conn = flags['target-org'].getConnection('62.0') as any;
     const orgInfo = await resolveOrgInfo(conn);
-    const ctx = buildAuditContext(conn, orgInfo);
+    const ctx = buildAuditContext(conn, orgInfo, {
+      resolveDomains: flags['resolve-domains'],
+    });
 
     const knownCheckIds = new Set(CHECKS.map((c) => c.id));
     const scoringConfig = loadScoringConfig(
