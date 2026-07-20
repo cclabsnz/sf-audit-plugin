@@ -1,3 +1,7 @@
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { Readable } from 'node:stream';
 import { jest } from '@jest/globals';
 import { RestClientImpl } from '../../../src/api/RestClientImpl.js';
 
@@ -54,6 +58,45 @@ describe('RestClientImpl', () => {
       fakeConn.request.mockResolvedValue(csv);
       const result = await client.getRaw('/sobjects/EventLogFile/ID/LogFile');
       expect(result).toBe(csv);
+    });
+  });
+
+  describe('getRawToFile', () => {
+    let tmp: string;
+    const origFetch = global.fetch;
+
+    beforeEach(() => {
+      tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rest-getrawtofile-'));
+      fakeConn.instanceUrl = 'https://example.my.salesforce.com';
+      fakeConn.accessToken = 'TOKEN123';
+    });
+
+    afterEach(() => {
+      global.fetch = origFetch;
+      fs.rmSync(tmp, { recursive: true, force: true });
+    });
+
+    it('streams the body to disk (creating parent dirs) and returns the byte count', async () => {
+      const csv = 'EVENT_TYPE,TIMESTAMP\nLogin,20260707T101500.000Z\n';
+      const body = Readable.toWeb(Readable.from([Buffer.from(csv)]));
+      global.fetch = jest.fn(async () => ({ ok: true, status: 200, body })) as any;
+
+      const dest = path.join(tmp, 'Sites', 'out.csv'); // nested dir does not exist yet
+      const bytes = await client.getRawToFile('/sobjects/EventLogFile/ID/LogFile', dest);
+
+      expect(fs.readFileSync(dest, 'utf-8')).toBe(csv);
+      expect(bytes).toBe(Buffer.byteLength(csv, 'utf-8'));
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://example.my.salesforce.com/services/data/v62.0/sobjects/EventLogFile/ID/LogFile',
+        { headers: { Authorization: 'Bearer TOKEN123' } }
+      );
+    });
+
+    it('throws and leaves no file on a non-2xx response', async () => {
+      global.fetch = jest.fn(async () => ({ ok: false, status: 404, body: null })) as any;
+      const dest = path.join(tmp, 'out.csv');
+      await expect(client.getRawToFile('/x/LogFile', dest)).rejects.toThrow();
+      expect(fs.existsSync(dest)).toBe(false);
     });
   });
 });

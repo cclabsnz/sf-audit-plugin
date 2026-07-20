@@ -74,11 +74,15 @@ describe('pullEventLogs', () => {
   });
 
   function restReturning(map: Record<string, string>) {
-    const getRaw = jest.fn(async (p: any) => {
+    // Mirrors RestClientImpl.getRawToFile: streams the body to destPath and returns byte count.
+    const getRawToFile = jest.fn(async (p: any, dest: any) => {
       const id = String(p).split('/')[3]; // /sobjects/EventLogFile/{id}/LogFile
-      return map[id] ?? '';
+      const body = map[id] ?? '';
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.writeFileSync(dest, body, 'utf-8');
+      return Buffer.byteLength(body, 'utf-8');
     });
-    return { getRaw } as any;
+    return { getRawToFile } as any;
   }
 
   it('downloads every row, saves CSV verbatim, and returns a summary + manifest', async () => {
@@ -96,7 +100,7 @@ describe('pullEventLogs', () => {
 
     const loginFile = path.join(tmpDir, ORG, 'Login', '2026-07-07-0AT0001.csv');
     expect(fs.readFileSync(loginFile, 'utf-8')).toBe(CSV_A);
-    expect(rest.getRaw).toHaveBeenCalledWith('/sobjects/EventLogFile/0AT0001/LogFile');
+    expect(rest.getRawToFile).toHaveBeenCalledWith('/sobjects/EventLogFile/0AT0001/LogFile', loginFile);
   });
 
   it('skips rows already on disk and does not re-download them (dedup / idempotency)', async () => {
@@ -104,13 +108,13 @@ describe('pullEventLogs', () => {
     const rest = restReturning({ '0AT0001': CSV_A, '0AT0002': CSV_B });
 
     await pullEventLogs({ soql, rest, store, orgId: ORG }, { since: 1 });
-    rest.getRaw.mockClear();
+    rest.getRawToFile.mockClear();
 
     const second = await pullEventLogs({ soql, rest, store, orgId: ORG }, { since: 1 });
     expect(second.found).toBe(2);
     expect(second.skipped).toBe(2);
     expect(second.downloaded).toBe(0);
-    expect(rest.getRaw).not.toHaveBeenCalled();
+    expect(rest.getRawToFile).not.toHaveBeenCalled();
   });
 
   it('returns found: 0 with no download attempts for an empty result set (no throw)', async () => {
@@ -121,7 +125,7 @@ describe('pullEventLogs', () => {
     expect(result.found).toBe(0);
     expect(result.downloaded).toBe(0);
     expect(result.manifestPath).toBeUndefined();
-    expect(rest.getRaw).not.toHaveBeenCalled();
+    expect(rest.getRawToFile).not.toHaveBeenCalled();
   });
 
   it('classifies a permission failure instead of throwing', async () => {
@@ -135,6 +139,6 @@ describe('pullEventLogs', () => {
     const result = await pullEventLogs({ soql, rest, store, orgId: ORG }, { since: 1 });
     expect(result.found).toBe(0);
     expect(result.accessError).toBe('no-permission');
-    expect(rest.getRaw).not.toHaveBeenCalled();
+    expect(rest.getRawToFile).not.toHaveBeenCalled();
   });
 });
