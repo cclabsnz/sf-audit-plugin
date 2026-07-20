@@ -104,9 +104,9 @@ export async function pullEventLogs(deps: PullDeps, opts: PullOptions): Promise<
     }
 
     try {
-      const body = await rest.getRaw(`/sobjects/EventLogFile/${row.Id}/LogFile`);
-      const savedPath = store.save(orgId, row.EventType, logDate, row.Id, body);
-      const bytes = Buffer.byteLength(body, 'utf-8');
+      // Stream straight to disk — never buffer the body — so large daily logs don't blow the heap.
+      const savedPath = store.pathFor(orgId, row.EventType, logDate, row.Id);
+      const bytes = await rest.getRawToFile(`/sobjects/EventLogFile/${row.Id}/LogFile`, savedPath);
       base.downloaded += 1;
       base.totalBytes += bytes;
       base.logs.push({ id: row.Id, eventType: row.EventType, logDate, bytes, savedPath, status: 'downloaded' });
