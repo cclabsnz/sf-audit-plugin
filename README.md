@@ -34,6 +34,12 @@ sf audit security --target-org <orgAlias>
 
 This runs all 88 security checks against the target org and writes a report to the current directory.
 
+List every available check id (the values you pass to `--checks`):
+
+```bash
+sf audit list
+```
+
 ### Options
 
 | Flag | Default | Description |
@@ -498,6 +504,24 @@ Pulling free EventLogFile logs for org: My Org (00D000000000001)
   Saved to: ~/.sf/event-baseline/00D000000000001
   Manifest: ~/.sf/event-baseline/00D000000000001/_manifests/manifest-...-....json
 ```
+
+### Analyzing the captured logs
+
+`events pull` is the collection half. To triage those `EventLogFile` CSVs for exploit and
+abuse patterns, use the companion CLI **[sfelf-triage](https://github.com/cclabsnz/sfelf-triage)**.
+It reads downloaded EventLogFile CSVs and emits a per-IP verdict
+(`BENIGN_SCANNER | SUSPICIOUS | LIKELY_ABUSE`), answering *"is this guest/community IP a
+vulnerability scanner or a real threat?"* — with **zero network egress** and no org connection.
+
+sfelf-triage reads this plugin's `~/.sf/event-baseline/<orgId>` layout directly, so the two
+tools chain with no glue:
+
+```bash
+sf audit events pull --target-org myOrg          # capture (this plugin)
+sfelf-triage analyze ~/.sf/event-baseline/<orgId>  # triage (companion)
+```
+
+See the [sfelf-triage README](https://github.com/cclabsnz/sfelf-triage#readme) for install and usage.
 
 ## Requirements
 
