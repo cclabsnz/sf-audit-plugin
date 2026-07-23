@@ -8,6 +8,7 @@ A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audi
 - **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
 - **History & diff:** archives each run and shows security-posture drift over time
 - **Free event baseline:** `sf audit events pull` captures the org's free daily `EventLogFile` logs to local disk before the 1-day retention window drops them — no Event Monitoring / Shield add-on needed
+- **Connected-app least-privilege:** `sf audit apps` reads the `RestApi` EventLogFile to see which objects each connected app actually uses, compares that against what its run-as user is granted, and reports the over-grant per object and read/write bit — plus a suggested least-privilege permission set
 - Strictly read-only (SOQL/Tooling/REST GETs + Metadata API reads); see [PERMISSIONS.md](PERMISSIONS.md) for the least-privilege access it needs
 
 ## Installation
@@ -522,6 +523,50 @@ sfelf-triage analyze ~/.sf/event-baseline/<orgId>  # triage (companion)
 ```
 
 See the [sfelf-triage README](https://github.com/cclabsnz/sfelf-triage#readme) for install and usage.
+
+## Connected-app least-privilege
+
+Connected-app over-privilege was at the centre of the 2025-2026 wave of Salesforce data-theft
+via OAuth: apps authorized with more scope than they use, and integration users with far more
+object access than the app ever touches. The static checks (`connected-apps`, `connected-app-scope`,
+`connected-app-inactivity`) tell you what was *granted*. `sf audit apps` tells you what is actually
+*used*, so it can point at the specific access to remove.
+
+```bash
+sf audit apps --target-org myOrg --since 7
+```
+
+It reads the `RestApi` `EventLogFile` to see which objects each connected app touched, compares that
+against the objects its run-as user can reach, and reports the over-grant per object and read/write
+bit — plus a generated least-privilege permission set granting exactly what was observed. App IDs are
+resolved to human-readable names (`AppMenuItem` / `ConnectedApplication` / a bundled standard-app
+catalog / `LoginHistory` correlation), and anything unresolved is flagged loudly rather than hidden.
+
+It is **read-only**: the suggested permission set is emitted as data, never deployed.
+
+**Honest bounds.** `RestApi` attributes roughly half of API traffic to a connected app (the rest is
+UI-API / session traffic), so *used* is a lower bound. Findings carry the observation window and
+attribution rate, and revoke recommendations are suppressed below a soak window and for apps used by
+many interactive users. Reading `EventLogFile` needs the **View Event Log Files** permission (the same
+one `events pull` uses).
+
+**Flags:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--target-org` | Org alias or username | required |
+| `--since` | Days of `RestApi` log to analyze | `7` |
+| `--from` | Read `RestApi` CSVs from a local `events pull` baseline dir instead of downloading | *(download)* |
+| `--soak` | Minimum window (days) before asserting revoke recommendations | `7` |
+| `--format` | `table` / `json` / `md` | `table` |
+
+```bash
+# Reuse an events-pull baseline instead of downloading again
+sf audit apps --target-org myOrg --from ~/.sf/event-baseline/00Dxxx
+
+# Machine-readable output
+sf audit apps --target-org myOrg --format json
+```
 
 ## Requirements
 
