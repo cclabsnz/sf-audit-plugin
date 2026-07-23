@@ -46,7 +46,8 @@
         "subtopics": {
           "events": {
             "description": "Capture free EventLogFile logs to local disk"
-          }
+          },
+          "apps": { "description": "Analyze connected-app least-privilege from EventLogFile usage" }
         }
       }
     }
