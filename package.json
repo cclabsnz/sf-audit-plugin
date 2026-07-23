@@ -57,16 +57,12 @@
   "pnpm": {
     "overrides": {
       "form-data": "^4.0.6",
-      "js-yaml@3": "^3.15.0"
-    }
-  },
-  "overrides": {
-    "handlebars": "^4.7.9",
-    "minimatch@5": {
-      "brace-expansion": "^2.0.3"
-    },
-    "minimatch@10": {
-      "brace-expansion": "^5.0.5"
+      "js-yaml@3": "^3.15.0",
+      "handlebars": "^4.7.9",
+      "brace-expansion@1": "^1.1.16",
+      "brace-expansion@2": "^2.1.2",
+      "brace-expansion@5": "^5.0.7",
+      "fast-uri@3": "^3.1.4"
     }
   },
   "files": [
