@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { resolveOrgInfo, buildAuditContext } from '../../lib/wire.js';
@@ -50,7 +50,11 @@ export default class AuditAppsCommand extends SfCommand<AppFinding[]> {
         // Stream each RestApi log to a temp file and read it back (getRawToFile never buffers the body).
         const tmp = join(process.env.TMPDIR ?? '/tmp', `sfaudit-restapi-${r.Id}.csv`);
         await ctx.rest.getRawToFile(`/sobjects/EventLogFile/${r.Id}/LogFile`, tmp);
-        restApiCsv += '\n' + readFileSync(tmp, 'utf-8');
+        try {
+          restApiCsv += '\n' + readFileSync(tmp, 'utf-8');
+        } finally {
+          try { unlinkSync(tmp); } catch { /* ignore if already gone */ }
+        }
       }
     }
 

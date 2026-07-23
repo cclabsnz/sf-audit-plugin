@@ -4,12 +4,18 @@ function parseCsv(text: string): Record<string, string>[] {
   const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
   if (lines.length === 0) return [];
   const header = splitCsvLine(lines[0]);
-  return lines.slice(1).map((line) => {
+  const headerToken = header[0]; // e.g. "EVENT_TYPE"
+  const rows: Record<string, string>[] = [];
+  for (const line of lines.slice(1)) {
+    // Skip embedded header rows (from multi-file concatenation) and blank lines.
+    const firstCell = splitCsvLine(line)[0];
+    if (firstCell === headerToken) continue;
     const cells = splitCsvLine(line);
     const row: Record<string, string> = {};
     header.forEach((h, i) => (row[h] = cells[i] ?? ''));
-    return row;
-  });
+    rows.push(row);
+  }
+  return rows;
 }
 
 // Minimal RFC-4180 line splitter (handles quoted cells; EventLogFile has no embedded newlines

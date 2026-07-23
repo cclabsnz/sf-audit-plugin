@@ -7,6 +7,15 @@ const REST = `"EVENT_TYPE","CONNECTED_APP_ID","USER_ID","METHOD","ENTITY_NAME","
 "RestApi","","005U9","GET","Case","3"
 `;
 
+// Simulates two EventLogFile CSVs naively concatenated (each has its own header row).
+const REST_MULTI_FILE = `"EVENT_TYPE","CONNECTED_APP_ID","USER_ID","METHOD","ENTITY_NAME","ROWS_PROCESSED"
+"RestApi","0H4app0000001","005U1","GET","Account","10"
+"RestApi","0H4app0000001","005U1","POST","Account","1"
+"EVENT_TYPE","CONNECTED_APP_ID","USER_ID","METHOD","ENTITY_NAME","ROWS_PROCESSED"
+"RestApi","0H4app0000001","005U2","GET","Contact","5"
+"RestApi","","005U9","GET","Case","3"
+`;
+
 describe('collectUsage', () => {
   it('aggregates per-app objects and verbs from RestApi rows', () => {
     const r = collectUsage(REST);
@@ -24,5 +33,30 @@ describe('collectUsage', () => {
     expect(r.totalRows).toBe(4);
     expect(r.attributedRows).toBe(3);
     expect(r.attributionRatePct).toBe(75);
+  });
+
+  describe('multi-file concatenation (embedded header rows)', () => {
+    it('does not produce a phantom app with appId === CONNECTED_APP_ID', () => {
+      const r = collectUsage(REST_MULTI_FILE);
+      expect(r.usage.find((a) => a.appId === 'CONNECTED_APP_ID')).toBeUndefined();
+    });
+
+    it('correctly aggregates the real app usage across both files', () => {
+      const r = collectUsage(REST_MULTI_FILE);
+      const app = r.usage.find((a) => a.appId === '0H4app0000001')!;
+      expect(app).toBeDefined();
+      expect(app.requests).toBe(3);
+      expect(app.rowsProcessed).toBe(16);
+      expect(app.userIds.sort()).toEqual(['005U1', '005U2']);
+      expect(app.objects.map((o) => o.object).sort()).toEqual(['Account', 'Contact']);
+    });
+
+    it('excludes embedded header rows from totalRows and attribution', () => {
+      const r = collectUsage(REST_MULTI_FILE);
+      // 4 real data rows (3 attributed + 1 blank-app), 1 embedded header skipped
+      expect(r.totalRows).toBe(4);
+      expect(r.attributedRows).toBe(3);
+      expect(r.attributionRatePct).toBe(75);
+    });
   });
 });
