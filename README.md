@@ -1,5 +1,12 @@
 # @cclabsnz/sf-audit
 
+[![CI](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/codeql.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cclabsnz/sf-audit-plugin/badge)](https://securityscorecards.dev/viewer/?uri=github.com/cclabsnz/sf-audit-plugin)
+[![npm version](https://img.shields.io/npm/v/@cclabsnz/sf-audit)](https://www.npmjs.com/package/@cclabsnz/sf-audit)
+[![npm provenance](https://img.shields.io/badge/npm-provenance-blue)](https://www.npmjs.com/package/@cclabsnz/sf-audit#provenance)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audit against any Salesforce org, risk-scores it with an A–F grade, and turns the result into a report your security team (or your client's) can act on.
 
 - **88 read-only checks** across identity, access, data, code, integrations, monitoring, and Agentforce / GenAI
@@ -293,6 +300,15 @@ Findings are mapped to controls across eight security and privacy frameworks. Th
 **Authorisation.** Run this tool only against orgs you own or are **explicitly authorised in writing** to assess. You are responsible for obtaining the necessary permissions and for handling generated reports (which may contain sensitive security configuration) in accordance with your organisation's data-handling and confidentiality obligations.
 
 **No warranty.** This software is provided "as is", without warranty of any kind, express or implied. To the maximum extent permitted by law, the authors and CloudCounsel Limited accept no liability for any loss, damage, or claim arising from use of this tool or reliance on its output. Findings are informational and should be validated by a qualified Salesforce security practitioner before any remediation action is taken.
+
+## Trust & verification
+
+Because this tool authenticates against production orgs, "is it safe to run?" deserves a verifiable answer, not just a claim. Here's how you can check for yourself:
+
+- **Read-only, enforced in CI.** The "no writes to your org" promise is a passing test, not a footnote. `test/unit/api/readonly-invariant.test.ts` statically scans the entire source tree and fails the build if any jsforce mutation API, HTTP write verb, or bulk/composite write path ever appears. Every org request funnels through `src/api/*ClientImpl.ts`, which issue only SOQL queries, REST **GET**s, and Metadata reads.
+- **What you install matches the public source.** Releases are published from GitHub Actions with [npm provenance](https://docs.npmjs.com/generating-provenance-statements) — the npm page shows a signed attestation linking the tarball to the exact public commit that built it, so you can audit the code on GitHub and trust the bytes `sf plugins install` pulls down.
+- **Independent scans.** [CodeQL](https://github.com/cclabsnz/sf-audit-plugin/security/code-scanning) static analysis and an [OpenSSF Scorecard](https://securityscorecards.dev/viewer/?uri=github.com/cclabsnz/sf-audit-plugin) supply-chain review run on every change (badges above), and Dependabot plus a CI `pnpm audit` gate keep dependencies current. Each release ships a CycloneDX SBOM.
+- **Least privilege & disclosure.** See [PERMISSIONS.md](PERMISSIONS.md) for the minimal access it needs and [SECURITY.md](SECURITY.md) for private vulnerability reporting.
 
 ## Scoring
 

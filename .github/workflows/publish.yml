@@ -1,0 +1,59 @@
+name: Publish
+
+# Publishes @cclabsnz/sf-audit to npm *with build provenance*, so the npm page shows a
+# verified "Built and signed on GitHub Actions" attestation linking the published tarball
+# to this exact public commit. A generated CycloneDX SBOM is attached to the release.
+#
+# Trigger is a published GitHub Release (you cut the release manually — this keeps you in
+# control of when a version ships) or a manual run. Requires the `NPM_TOKEN` repo secret
+# (an npm automation/granular token with publish rights).
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # attach SBOM asset to the release
+      id-token: write # REQUIRED for npm provenance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Test
+        run: pnpm test
+
+      - name: Publish to npm with provenance
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          format: cyclonedx-json
+          output-file: sbom.cyclonedx.json
+
+      - name: Attach SBOM to the release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sbom.cyclonedx.json

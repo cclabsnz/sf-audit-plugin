@@ -45,3 +45,16 @@ In scope: the plugin's code and its handling of org data, credentials, and repor
 output. Out of scope: vulnerabilities in Salesforce itself, in the `sf` CLI, or in
 third-party dependencies (report those upstream; we will bump dependencies promptly
 via Dependabot).
+
+## Release integrity & assurance
+
+- **Read-only, enforced.** A CI test (`test/unit/api/readonly-invariant.test.ts`)
+  fails the build if any org-mutating API, HTTP write verb, or bulk/composite write
+  path is introduced into the source.
+- **Build provenance.** Packages are published from GitHub Actions with npm provenance;
+  verify on the package's npm page or via `npm view @cclabsnz/sf-audit --json` (the
+  `dist.attestations` field).
+- **Static analysis & supply chain.** CodeQL and OpenSSF Scorecard run on every change,
+  and a CycloneDX SBOM is attached to each GitHub Release.
+- **To verify what you installed:** `sf plugins inspect @cclabsnz/sf-audit` for the
+  version, then compare against the signed release and provenance attestation.
