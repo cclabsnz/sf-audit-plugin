@@ -9,14 +9,25 @@ release checklist for every version.
 These make the badges live and unlock provenance. They can only be done in the GitHub UI
 / npm account — they are not in the repo.
 
-### 1. npm publish token
+### 1. npm Trusted Publishing (OIDC) — no stored token
 
-1. On npmjs.com → **Access Tokens** → generate a **Granular Access Token** scoped to
-   publish `@cclabsnz/sf-audit` (or a classic **Automation** token).
-2. In GitHub → repo **Settings → Secrets and variables → Actions → New repository
-   secret**: name `NPM_TOKEN`, value = the token.
-3. `publish.yml` already requests `id-token: write`; combined with `npm publish
-   --provenance` this produces the signed attestation. No other config needed.
+The account enforces 2FA, and npm is deprecating 2FA-bypass tokens, so we publish via
+**Trusted Publishing**: the workflow exchanges a GitHub OIDC id-token for a short-lived
+npm credential at publish time. Nothing long-lived is stored in the repo.
+
+1. On npmjs.com, open the **@cclabsnz/sf-audit** package → **Settings → Trusted
+   Publishing → Add a publisher** (GitHub Actions):
+   - Organization / user: `cclabsnz`
+   - Repository: `sf-audit-plugin`
+   - Workflow filename: `publish.yml`
+   - Environment: *(leave blank unless you add one)*
+2. That's it — no `NPM_TOKEN` secret. `publish.yml` already requests `id-token: write`,
+   upgrades to a current npm CLI, and runs `npm publish --provenance`, which auto-detects
+   OIDC and produces the signed provenance attestation.
+
+> If you ever need a fallback token instead of OIDC, create a **Granular Access Token**
+> (npmjs.com → Access Tokens) scoped to publish this package, store it as the `NPM_TOKEN`
+> repo secret, and set `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` on the publish step.
 
 ### 2. Branch protection on `main` (Scorecard rewards this)
 
