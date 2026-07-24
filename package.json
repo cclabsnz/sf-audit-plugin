@@ -4,6 +4,7 @@
   "description": "Salesforce Security Audit — native sf plugin",
   "license": "Apache-2.0",
   "type": "module",
+  "packageManager": "pnpm@10.33.0",
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
