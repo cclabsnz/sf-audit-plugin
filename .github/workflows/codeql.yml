@@ -2,6 +2,7 @@ name: CodeQL
 
 # GitHub's static analysis (SAST). Results surface in the repo Security tab and as a
 # code-scanning badge. Runs on push/PR and weekly to catch newly-disclosed query rules.
+# Actions pinned to commit SHAs; trailing comment = human-readable version.
 on:
   push:
     branches: [main]
@@ -24,11 +25,11 @@ jobs:
       matrix:
         language: [javascript-typescript]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
       - name: Analyze
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@4187e74d05793876e9989daffde9c3e66b4acd07 # v3

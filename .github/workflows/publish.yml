@@ -7,6 +7,8 @@ name: Publish
 # Trigger is a published GitHub Release (you cut the release manually — this keeps you in
 # control of when a version ships) or a manual run. Requires the `NPM_TOKEN` repo secret
 # (an npm automation/granular token with publish rights).
+#
+# Actions pinned to commit SHAs; trailing comment = human-readable version.
 on:
   release:
     types: [published]
@@ -22,11 +24,11 @@ jobs:
       contents: write # attach SBOM asset to the release
       id-token: write # REQUIRED for npm provenance
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
@@ -47,13 +49,13 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Generate CycloneDX SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
           format: cyclonedx-json
           output-file: sbom.cyclonedx.json
 
       - name: Attach SBOM to the release
         if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: sbom.cyclonedx.json

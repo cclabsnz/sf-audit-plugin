@@ -598,3 +598,5 @@ npm test               # run all tests
 npm run test:unit      # unit tests only
 npm run clean          # remove compiled output
 ```
+
+Maintainers: see **[docs/RELEASE.md](docs/RELEASE.md)** for the release checklist and the one-time repository-hardening steps (npm provenance token, branch protection, and the CodeQL / Scorecard setup behind the badges above).
