@@ -607,3 +607,11 @@ npm run clean          # remove compiled output
 ```
 
 Maintainers: see **[docs/RELEASE.md](docs/RELEASE.md)** for the release checklist and the one-time repository-hardening steps (npm provenance token, branch protection, and the CodeQL / Scorecard setup behind the badges above).
+
+## Further reading
+
+Deep dives on Salesforce security — guest-user exposure, Enhanced Domains, Agentforce / GenAI risk, and the reasoning behind the checks this tool runs — are on our engineering blog, **[softwareinsights.dev](https://softwareinsights.dev)**.
+
+## Commercial support
+
+`sf-audit` is free and open source. If you'd like hands-on help — interpreting findings, prioritising remediation, or a full Salesforce security and architecture review — **[CloudCounsel](https://cloudcounsel.co.nz)**, the team behind this plugin, offers Salesforce security consulting. Reach us at [hello@cloudcounsel.co.nz](mailto:hello@cloudcounsel.co.nz).
