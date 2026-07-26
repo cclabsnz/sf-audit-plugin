@@ -4,7 +4,7 @@
 [![CodeQL](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/codeql.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cclabsnz/sf-audit-plugin/badge)](https://securityscorecards.dev/viewer/?uri=github.com/cclabsnz/sf-audit-plugin)
 [![npm version](https://img.shields.io/npm/v/@cclabsnz/sf-audit)](https://www.npmjs.com/package/@cclabsnz/sf-audit)
-[![npm provenance](https://img.shields.io/badge/npm-provenance-blue)](https://www.npmjs.com/package/@cclabsnz/sf-audit#provenance)
+[![npm provenance](https://img.shields.io/badge/npm-signed%20provenance-brightgreen)](https://www.npmjs.com/package/@cclabsnz/sf-audit#provenance)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
 A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audit against any Salesforce org, risk-scores it with an A–F grade, and turns the result into a report your security team (or your client's) can act on.
@@ -306,8 +306,13 @@ Findings are mapped to controls across eight security and privacy frameworks. Th
 Because this tool authenticates against production orgs, "is it safe to run?" deserves a verifiable answer, not just a claim. Here's how you can check for yourself:
 
 - **Read-only, enforced in CI.** The "no writes to your org" promise is a passing test, not a footnote. `test/unit/api/readonly-invariant.test.ts` statically scans the entire source tree and fails the build if any jsforce mutation API, HTTP write verb, or bulk/composite write path ever appears. Every org request funnels through `src/api/*ClientImpl.ts`, which issue only SOQL queries, REST **GET**s, and Metadata reads.
-- **What you install matches the public source.** Releases are published from GitHub Actions with [npm provenance](https://docs.npmjs.com/generating-provenance-statements) — the npm page shows a signed attestation linking the tarball to the exact public commit that built it, so you can audit the code on GitHub and trust the bytes `sf plugins install` pulls down.
-- **Independent scans.** [CodeQL](https://github.com/cclabsnz/sf-audit-plugin/security/code-scanning) static analysis and an [OpenSSF Scorecard](https://securityscorecards.dev/viewer/?uri=github.com/cclabsnz/sf-audit-plugin) supply-chain review run on every change (badges above), and Dependabot plus a CI `pnpm audit` gate keep dependencies current. Each release ships a CycloneDX SBOM.
+- **What you install matches the public source.** Releases are published from GitHub Actions via [npm trusted publishing (OIDC)](https://docs.npmjs.com/trusted-publishers) with [build provenance](https://docs.npmjs.com/generating-provenance-statements) — no long-lived token, and the npm page shows a signed attestation linking the tarball to the exact public commit that built it. Verify it yourself:
+
+  ```bash
+  npm audit signatures   # reports "verified attestations" for @cclabsnz/sf-audit
+  ```
+
+- **Independent scans on every change.** [CodeQL](https://github.com/cclabsnz/sf-audit-plugin/security/code-scanning) static analysis (of both the source **and** the CI workflows), an [OpenSSF Scorecard](https://securityscorecards.dev/viewer/?uri=github.com/cclabsnz/sf-audit-plugin) supply-chain review, a PR **dependency-review** gate, and a `pnpm audit` gate (fails on known high-severity advisories) — plus Dependabot for updates. All GitHub Actions are pinned to commit SHAs. Each release ships a CycloneDX **SBOM**.
 - **Least privilege & disclosure.** See [PERMISSIONS.md](PERMISSIONS.md) for the minimal access it needs and [SECURITY.md](SECURITY.md) for private vulnerability reporting.
 
 ## Scoring
