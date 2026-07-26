@@ -4,9 +4,14 @@ name: Publish
 # verified "Built and signed on GitHub Actions" attestation linking the published tarball
 # to this exact public commit. A generated CycloneDX SBOM is attached to the release.
 #
+# Auth is npm Trusted Publishing (OIDC) — NO long-lived npm token is stored. The job
+# exchanges its GitHub OIDC id-token for a short-lived npm credential at publish time.
+# One-time setup: on npmjs.com, the package's Settings -> Trusted Publishing must list a
+# GitHub Actions publisher for cclabsnz/sf-audit-plugin with workflow `publish.yml`.
+# See docs/RELEASE.md.
+#
 # Trigger is a published GitHub Release (you cut the release manually — this keeps you in
-# control of when a version ships) or a manual run. Requires the `NPM_TOKEN` repo secret
-# (an npm automation/granular token with publish rights).
+# control of when a version ships) or a manual run.
 #
 # Actions pinned to commit SHAs; trailing comment = human-readable version.
 on:
@@ -28,10 +33,12 @@ jobs:
 
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
 
+      # NOTE: no `registry-url` — it makes setup-node write an .npmrc with a
+      # placeholder _authToken, which blocks npm's OIDC trusted-publishing exchange
+      # (results in E404 on publish). Omitting it lets `npm publish` do the OIDC flow.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
           cache: pnpm
 
       - name: Install (frozen lockfile)
@@ -43,10 +50,17 @@ jobs:
       - name: Test
         run: pnpm test
 
-      - name: Publish to npm with provenance
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # Trusted Publishing (OIDC) needs a recent npm CLI (>= 11.5.1).
+      - name: Upgrade npm (>= 11.5.1 required for OIDC trusted publishing)
+        run: |
+          npm install -g npm@latest
+          echo "node: $(node -v)"
+          echo "npm:  $(npm -v)  (path: $(which npm))"
+
+      - name: Publish to npm with provenance (OIDC trusted publishing)
+        run: |
+          node -v && npm -v
+          npm publish --provenance --access public
 
       - name: Generate CycloneDX SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
