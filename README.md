@@ -614,7 +614,14 @@ Maintainers: see **[docs/RELEASE.md](docs/RELEASE.md)** for the release checklis
 
 ## Further reading
 
-Deep dives on Salesforce security — guest-user exposure, Enhanced Domains, Agentforce / GenAI risk, and the reasoning behind the checks this tool runs — are on our engineering blog, **[softwareinsights.dev](https://softwareinsights.dev)**.
+Deep dives on the topics this tool checks, from our engineering blog **[softwareinsights.dev](https://softwareinsights.dev)**:
+
+- [How sf-audit works — checks, attack chains, and compliance mapping](https://softwareinsights.dev/posts/sf-audit-61-checks-attack-chains-compliance-mapping/)
+- [Hardening Agentforce against prompt injection (post-ForcedLeak)](https://softwareinsights.dev/posts/salesforce-agentforce-forcedleak-prompt-injection-hardening/) — feeds the Agentforce / GenAI checks
+- [Salesforce MFA enforcement: the revised 2026 dates](https://softwareinsights.dev/posts/salesforce-mfa-enforcement-paused-revised-dates-2026/) — feeds the MFA checks
+- [Summer '26: SAML retirement & Apex secure-by-default](https://softwareinsights.dev/posts/salesforce-summer-26-saml-retirement-apex-secure-by-default/) — feeds the SSO / Apex checks
+- [Salesforce security enforcement in 2026 — every change and date](https://softwareinsights.dev/posts/salesforce-security-enforcement-2026-complete-guide/) — the overall posture this tool measures
+- [Report-export step-up enforcement: known issues](https://softwareinsights.dev/posts/salesforce-transaction-security-policy-report-export-known-issues/) — feeds the data-export / transaction-security checks
 
 ## Commercial support
 
