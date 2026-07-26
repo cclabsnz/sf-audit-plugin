@@ -23,7 +23,8 @@ jobs:
       contents: read
     strategy:
       matrix:
-        language: [javascript-typescript]
+        # `actions` scans the workflow files themselves (token perms, unpinned deps, ...).
+        language: [javascript-typescript, actions]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Initialize CodeQL
