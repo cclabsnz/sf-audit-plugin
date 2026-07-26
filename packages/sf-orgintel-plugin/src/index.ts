@@ -10,4 +10,10 @@ export * from './probe/types.js';
 export { renderProbeHtml } from './report/probeReport.js';
 export { htmlDocument } from './report/shell.js';
 
+// Discover
+export { runDiscover } from './discover/runDiscover.js';
+export type { DiscoverOptions } from './discover/runDiscover.js';
+export * from './discover/types.js';
+export { DEFAULT_WEIGHTS, type DiscoverWeights } from './discover/scoringConfig.js';
+
 export { TOOL_VERSION, API_VERSION } from './version.js';
