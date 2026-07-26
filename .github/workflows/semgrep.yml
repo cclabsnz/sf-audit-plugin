@@ -1,0 +1,42 @@
+name: Semgrep
+
+# Second static-analysis lens alongside CodeQL. Runs the public Semgrep rulesets
+# (no account/token needed) and uploads findings to the Security tab as code-scanning
+# alerts. Non-blocking by design — it informs review rather than hard-failing PRs, the
+# same posture as CodeQL alerts. Actions pinned to commit SHAs.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '41 6 * * 1' # Mondays 06:41 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write # upload SARIF
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Semgrep
+        run: pipx install semgrep # pipx is preinstalled on GitHub-hosted runners
+
+      - name: Scan (public rulesets)
+        run: |
+          semgrep scan \
+            --config p/default \
+            --config p/typescript \
+            --config p/security-audit \
+            --config p/owasp-top-ten \
+            --sarif --output semgrep.sarif || true
+
+      - name: Upload findings to code scanning
+        uses: github/codeql-action/upload-sarif@4187e74d05793876e9989daffde9c3e66b4acd07 # v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
