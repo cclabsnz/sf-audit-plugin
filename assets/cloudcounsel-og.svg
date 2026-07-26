@@ -1,63 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="CloudCounsel — Salesforce Platform Architecture, Auckland NZ">
-
-  <!-- Background: slate paper -->
   <rect width="1200" height="630" fill="#e9e9e3"/>
-
-  <!-- Subtle top and bottom rule to frame the card -->
   <line x1="0" y1="0" x2="1200" y2="0" stroke="#1a1d24" stroke-opacity="0.18" stroke-width="3"/>
   <line x1="0" y1="627" x2="1200" y2="627" stroke="#1a1d24" stroke-opacity="0.18" stroke-width="3"/>
 
-  <!-- Watermark: large faint logo mark, right side background -->
-  <g transform="translate(750, 63) scale(7.5)" opacity="0.04">
-    <circle cx="16" cy="16" r="13" fill="none" stroke="#1a1d24" stroke-width="1"/>
-    <path d="M20.9 12.6 A6 6 0 1 0 20.9 19.4" fill="none" stroke="#1a1d24" stroke-width="5" stroke-linecap="round"/>
-  </g>
-
-  <!-- Logo mark: 72×72, centered at x=600, y=237 -->
-  <g transform="translate(564, 201) scale(2.25)">
+  <!-- Watermark: faint FULL mark (ring + arc + dot), right side -->
+  <g transform="translate(770, 70) scale(7.5)" opacity="0.05">
     <circle cx="16" cy="16" r="13" fill="none" stroke="#1a1d24" stroke-width="1" opacity=".4"/>
     <path d="M20.9 12.6 A6 6 0 1 0 20.9 19.4" fill="none" stroke="#1a1d24" stroke-width="5" stroke-linecap="round"/>
     <circle cx="16" cy="16" r="1.5" fill="#3a5a82"/>
   </g>
 
-  <!-- Wordmark: "CloudCounsel" -->
-  <text
-    x="600" y="360"
-    text-anchor="middle"
-    font-family="Georgia, 'Times New Roman', serif"
-    font-size="86"
-    font-weight="400"
-    fill="#1a1d24"
-    letter-spacing="-1.5">CloudCounsel</text>
+  <!-- Horizontal lockup: mark + wordmark -->
+  <g transform="translate(225, 242) scale(2.7)">
+    <circle cx="16" cy="16" r="13" fill="none" stroke="#1a1d24" stroke-width="1" opacity=".4"/>
+    <path d="M20.9 12.6 A6 6 0 1 0 20.9 19.4" fill="none" stroke="#1a1d24" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="16" cy="16" r="1.5" fill="#3a5a82"/>
+  </g>
+  <text x="339" y="315" font-family="DM Serif Display, Georgia, serif" font-size="86" fill="#1a1d24" letter-spacing="-1.5">CloudCounsel<tspan font-family="DM Sans, sans-serif" font-size="30" font-weight="500" fill="#636770" letter-spacing="1" dx="10" dy="-34">ltd</tspan></text>
 
-  <!-- Ltd: manually offset to sit after wordmark (right edge ~935px at this size/font) -->
-  <text
-    x="938" y="323"
-    font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif"
-    font-size="22"
-    font-weight="500"
-    fill="#636770"
-    letter-spacing="0.5">Ltd</text>
+  <text x="600" y="405" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="26" fill="#636770" letter-spacing="5.5">SALESFORCE PLATFORM ARCHITECTURE · AUCKLAND, NZ</text>
 
-  <!-- Tagline -->
-  <text
-    x="600" y="412"
-    text-anchor="middle"
-    font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif"
-    font-size="17"
-    fill="#636770"
-    letter-spacing="3.5">SALESFORCE PLATFORM ARCHITECTURE · AUCKLAND, NZ</text>
-
-  <!-- Hairline divider -->
   <line x1="100" y1="542" x2="1100" y2="542" stroke="#1a1d24" stroke-opacity="0.14" stroke-width="1"/>
-
-  <!-- Bottom badge -->
   <circle cx="104" cy="572" r="5" fill="#3a5a82"/>
-  <text
-    x="120" y="578"
-    font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif"
-    font-size="15"
-    fill="#636770"
-    letter-spacing="1.5">Architecture-first since 2008</text>
-
+  <text x="120" y="578" font-family="DM Sans, sans-serif" font-size="17" fill="#636770" letter-spacing="1.5">Architecture-first since 2008</text>
 </svg>
