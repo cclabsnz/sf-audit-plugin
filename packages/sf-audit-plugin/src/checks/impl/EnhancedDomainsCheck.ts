@@ -19,8 +19,21 @@ interface OrgRecord {
 // 1. My Domain exists (prerequisite)
 // 2. The instance URL uses the enhanced domain format (contains .my.salesforce.com or .develop.my.salesforce.com)
 // 3. Org is not still on a shared instance URL like na1.salesforce.com
-const ENHANCED_DOMAIN_PATTERN = /\.my\.salesforce\.com|\.sandbox\.my\.salesforce\.com|\.develop\.my\.salesforce\.com|\.scratch\.my\.salesforce\.com/i;
-const LEGACY_INSTANCE_PATTERN = /^https:\/\/[a-z]{2}\d+\.salesforce\.com/i;
+// Patterns are matched against the parsed hostname and anchored to its end, so a URL
+// that merely *contains* the string (e.g. https://evil.example.com/x.my.salesforce.com)
+// cannot be mistaken for an enhanced-domain org. All enhanced variants
+// (sandbox/develop/scratch) are subdomains of my.salesforce.com, so one suffix suffices.
+const ENHANCED_DOMAIN_PATTERN = /\.my\.salesforce\.com$/i;
+const LEGACY_INSTANCE_PATTERN = /^[a-z]{2}\d+\.salesforce\.com$/i;
+
+/** Parse the hostname from an instance URL; fall back to the raw string if unparseable. */
+function hostnameOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
 
 export class EnhancedDomainsCheck implements SecurityCheck {
   readonly id = 'enhanced-domains';
@@ -53,10 +66,11 @@ export class EnhancedDomainsCheck implements SecurityCheck {
 
     const { MyDomain: myDomain, IsSandbox: isSandbox } = org;
     const instanceUrl = baseUrl;
+    const instanceHost = hostnameOf(instanceUrl);
 
     // Check if Enhanced Domains is active based on the instance URL format
-    const hasEnhancedDomainUrl = ENHANCED_DOMAIN_PATTERN.test(instanceUrl);
-    const hasLegacyUrl = LEGACY_INSTANCE_PATTERN.test(instanceUrl);
+    const hasEnhancedDomainUrl = ENHANCED_DOMAIN_PATTERN.test(instanceHost);
+    const hasLegacyUrl = LEGACY_INSTANCE_PATTERN.test(instanceHost);
     const hasMyDomain = !!myDomain;
 
     if (!hasMyDomain) {

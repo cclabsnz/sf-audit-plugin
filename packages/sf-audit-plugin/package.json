@@ -1,6 +1,6 @@
 {
   "name": "@cclabsnz/sf-audit",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Salesforce Security Audit — native sf plugin",
   "license": "Apache-2.0",
   "type": "module",
@@ -18,7 +18,7 @@
     "@oclif/core": "^4",
     "@salesforce/core": "^8",
     "@salesforce/sf-plugins-core": "^12",
-    "zod": "^3"
+    "zod": "^4"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",

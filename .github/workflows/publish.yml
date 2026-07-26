@@ -29,14 +29,16 @@ jobs:
       contents: write # attach SBOM asset to the release
       id-token: write # REQUIRED for npm provenance
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
 
+      # NOTE: no `registry-url` — it makes setup-node write an .npmrc with a
+      # placeholder _authToken, which blocks npm's OIDC trusted-publishing exchange
+      # (results in E404 on publish). Omitting it lets `npm publish` do the OIDC flow.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
           cache: pnpm
 
       - name: Install (frozen lockfile)
@@ -49,11 +51,16 @@ jobs:
         run: pnpm test
 
       # Trusted Publishing (OIDC) needs a recent npm CLI (>= 11.5.1).
-      - name: Upgrade npm
-        run: npm install -g npm@latest
+      - name: Upgrade npm (>= 11.5.1 required for OIDC trusted publishing)
+        run: |
+          npm install -g npm@latest
+          echo "node: $(node -v)"
+          echo "npm:  $(npm -v)  (path: $(which npm))"
 
       - name: Publish to npm with provenance (OIDC trusted publishing)
-        run: npm publish --provenance --access public
+        run: |
+          node -v && npm -v
+          npm publish --provenance --access public
 
       - name: Generate CycloneDX SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
