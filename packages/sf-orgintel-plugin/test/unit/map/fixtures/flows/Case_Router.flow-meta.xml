@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <label>Case Router</label>
+    <processType>AutoLaunchedFlow</processType>
+    <status>Active</status>
+    <start>
+        <triggerType>RecordAfterSave</triggerType>
+        <object>Case</object>
+        <recordTriggerType>CreateAndUpdate</recordTriggerType>
+    </start>
+    <recordLookups>
+        <name>Get_Related_Account</name>
+        <object>Account</object>
+    </recordLookups>
+    <recordCreates>
+        <name>Create_WorkOrder</name>
+        <object>WorkOrder</object>
+    </recordCreates>
+    <recordUpdates>
+        <name>Flag_Case</name>
+        <object>Case</object>
+    </recordUpdates>
+    <recordUpdates>
+        <name>Touch_WorkOrder</name>
+        <object>WorkOrder</object>
+    </recordUpdates>
+    <actionCalls>
+        <name>Notify</name>
+        <actionType>apex</actionType>
+        <actionName>CaseRoutingService</actionName>
+    </actionCalls>
+    <decisions>
+        <name>Is_High_Priority</name>
+    </decisions>
+</Flow>

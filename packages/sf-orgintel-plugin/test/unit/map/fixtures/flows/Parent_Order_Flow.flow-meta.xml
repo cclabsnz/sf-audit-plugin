@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <label>Parent Order Flow</label>
+    <processType>AutoLaunchedFlow</processType>
+    <status>Active</status>
+    <start>
+        <triggerType>RecordAfterSave</triggerType>
+        <object>Order</object>
+        <recordTriggerType>Create</recordTriggerType>
+    </start>
+    <recordUpdates>
+        <name>Stamp_Order</name>
+        <object>Order</object>
+    </recordUpdates>
+    <subflows>
+        <name>Call_Fulfillment</name>
+        <flowName>Child_Fulfillment_Flow</flowName>
+    </subflows>
+</Flow>

@@ -6,6 +6,7 @@ import { resolveOrgInfo, buildIntelContext } from '../../lib/wire.js';
 import { runProbe } from '../../probe/runProbe.js';
 import type { ProbeResult } from '../../probe/types.js';
 import { renderProbeHtml } from '../../report/probeReport.js';
+import { OrgIntelCache } from '../../lib/cache.js';
 import { TOOL_VERSION, API_VERSION } from '../../version.js';
 
 export default class IntelProbeCommand extends SfCommand<ProbeResult> {
@@ -63,6 +64,9 @@ export default class IntelProbeCommand extends SfCommand<ProbeResult> {
       },
       ...data,
     };
+
+    // Cache the result so `intel map`/`discover` can reuse the evidence tier.
+    new OrgIntelCache(orgInfo.id).set('probe', 'latest', result);
 
     if (flags.html) {
       const overrides = flags.branding

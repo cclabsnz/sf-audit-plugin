@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>61.0</apiVersion>
+    <label>New Case Screen</label>
+    <processType>Flow</processType>
+    <status>Active</status>
+    <recordLookups>
+        <name>Find_Account</name>
+        <object>Account</object>
+    </recordLookups>
+    <recordCreates>
+        <name>Create_Case</name>
+        <object>Case</object>
+    </recordCreates>
+    <screens>
+        <name>Collect_Details</name>
+    </screens>
+    <screens>
+        <name>Confirmation</name>
+    </screens>
+    <decisions>
+        <name>Has_Existing</name>
+    </decisions>
+</Flow>

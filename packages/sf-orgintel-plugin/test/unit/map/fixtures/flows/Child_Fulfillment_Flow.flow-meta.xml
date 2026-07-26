@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <label>Child Fulfillment Flow</label>
+    <processType>AutoLaunchedFlow</processType>
+    <status>Active</status>
+    <recordCreates>
+        <name>Create_Shipment</name>
+        <object>Shipment__c</object>
+    </recordCreates>
+    <recordUpdates>
+        <name>Close_Order</name>
+        <object>Order</object>
+    </recordUpdates>
+</Flow>

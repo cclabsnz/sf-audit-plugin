@@ -4,6 +4,7 @@ import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { resolveOrgInfo, buildIntelContext } from '../../lib/wire.js';
 import { runDiscover } from '../../discover/runDiscover.js';
 import type { DiscoverResult } from '../../discover/types.js';
+import { OrgIntelCache } from '../../lib/cache.js';
 import { TOOL_VERSION, API_VERSION } from '../../version.js';
 
 export default class IntelDiscoverCommand extends SfCommand<DiscoverResult> {
@@ -62,6 +63,9 @@ export default class IntelDiscoverCommand extends SfCommand<DiscoverResult> {
       },
       ...data,
     };
+
+    // Cache so `intel map` can show ranked anchors alongside the coupling graph.
+    new OrgIntelCache(orgInfo.id).set('discover', 'latest', result);
 
     if (!flags['no-fingerprint-file']) {
       fs.mkdirSync(flags.output, { recursive: true });

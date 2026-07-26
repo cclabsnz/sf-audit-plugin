@@ -107,6 +107,9 @@ importers:
       '@types/node':
         specifier: ^22
         version: 22.19.20
+      ajv:
+        specifier: ^8
+        version: 8.20.0
       jest:
         specifier: ^29
         version: 29.7.0(@types/node@22.19.20)(ts-node@10.9.2(@types/node@22.19.20)(typescript@5.9.3))
