@@ -1,0 +1,56 @@
+{
+  "name": "@cclabsnz/sf-orgintel",
+  "version": "0.1.0",
+  "description": "Understand how a Salesforce org actually works — its processes, people, and couplings — from metadata and behavioral data, entirely locally.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests",
+    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js test/unit --passWithNoTests",
+    "prepack": "npm run build",
+    "clean": "rm -rf lib"
+  },
+  "dependencies": {
+    "@cclabsnz/sf-core": "workspace:*",
+    "@oclif/core": "^4",
+    "@salesforce/core": "^8",
+    "@salesforce/sf-plugins-core": "^12"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29",
+    "@types/node": "^22",
+    "jest": "^29",
+    "ts-jest": "^29",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cclabsnz/sf-audit-plugin.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "oclif": {
+    "bin": "sf",
+    "dirname": "sf",
+    "commands": "./lib/commands",
+    "pluginType": "jit",
+    "flexibleTaxonomy": true,
+    "devPlugins": [],
+    "topics": {
+      "intel": {
+        "description": "Understand how a Salesforce org actually works — capabilities, domains, and cross-object couplings, computed locally."
+      }
+    }
+  },
+  "files": [
+    "/lib",
+    "/messages",
+    "!/lib/**/*.map"
+  ]
+}
