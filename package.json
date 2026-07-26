@@ -17,7 +17,7 @@
     "@oclif/core": "^4",
     "@salesforce/core": "^8",
     "@salesforce/sf-plugins-core": "^12",
-    "zod": "^3"
+    "zod": "^4"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
