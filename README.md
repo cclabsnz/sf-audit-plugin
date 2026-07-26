@@ -1,3 +1,7 @@
+<p align="center">
+  <a href="https://cloudcounsel.co.nz"><img src="assets/cloudcounsel-icon.svg" width="56" height="56" alt="CloudCounsel" /></a>
+</p>
+
 # @cclabsnz/sf-audit
 
 [![CI](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/ci.yml)
