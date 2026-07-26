@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cclabs.nz/schemas/process-graph.schema.json",
+  "title": "OrgIntel Process Graph",
+  "description": "Per-anchor process graph. Reserved for the paid mining/conformance tier — defined now so free-tier emitted artifacts and paid-tier consumed artifacts share one contract. Nothing in the free MVP populates this.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "anchorObject", "provenance", "nodes", "edges"],
+  "properties": {
+    "version": { "const": 1 },
+    "anchorObject": { "type": "string" },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "toolVersion", "generatedAt", "orgId"],
+      "properties": {
+        "tool": { "const": "orgintel" },
+        "toolVersion": { "type": "string" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "orgId": { "type": "string" },
+        "referenceModel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "version", "source"],
+          "properties": {
+            "id": { "type": ["string", "null"] },
+            "version": { "type": ["string", "null"] },
+            "source": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "label"],
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "type": "string", "enum": ["state", "automation", "human", "integration"] },
+          "label": { "type": "string" },
+          "object": { "type": "string" }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to", "trigger"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "trigger": { "type": "string" },
+          "observed": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["count", "p50_mins", "error_rate"],
+            "properties": {
+              "count": { "type": "integer", "minimum": 0 },
+              "p50_mins": { "type": "number", "minimum": 0 },
+              "error_rate": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

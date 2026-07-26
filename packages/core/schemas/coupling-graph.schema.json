@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cclabs.nz/schemas/coupling-graph.schema.json",
+  "title": "OrgIntel Coupling Graph",
+  "description": "Object-pair coupling graph emitted by `sf intel map`. Nodes are Salesforce objects; edges are aggregated cross-object couplings derived from flows, triggers, and Apex.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "provenance", "nodes", "edges"],
+  "properties": {
+    "version": { "const": 1 },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "toolVersion", "generatedAt", "orgId", "evidenceTier"],
+      "properties": {
+        "tool": { "const": "orgintel" },
+        "toolVersion": { "type": "string" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "orgId": { "type": "string" },
+        "evidenceTier": { "type": "string", "enum": ["A", "B", "C", "D"] }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["object", "custom", "automationCounts", "recordCount90d"],
+        "properties": {
+          "object": { "type": "string" },
+          "custom": { "type": "boolean" },
+          "automationCounts": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["flows", "triggers", "approvals"],
+            "properties": {
+              "flows": { "type": "integer", "minimum": 0 },
+              "triggers": { "type": "integer", "minimum": 0 },
+              "approvals": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "recordCount90d": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to", "weight", "operations", "components"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "weight": { "type": "integer", "minimum": 0 },
+          "operations": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["read", "create", "update", "delete"] }
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type", "name", "confidence"],
+              "properties": {
+                "type": { "type": "string" },
+                "name": { "type": "string" },
+                "confidence": { "type": "string", "enum": ["high", "approximate"] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

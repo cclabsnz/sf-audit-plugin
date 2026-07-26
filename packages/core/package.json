@@ -1,0 +1,45 @@
+{
+  "name": "@cclabsnz/sf-core",
+  "version": "0.1.0",
+  "description": "Shared platform layer for CloudCounsel Salesforce sf plugins — API clients, org context, event log pull, report shell, and versioned IR schemas.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "private": true,
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./schemas/*": "./schemas/*"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests",
+    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js test/unit --passWithNoTests",
+    "prepack": "npm run build",
+    "clean": "rm -rf lib"
+  },
+  "dependencies": {
+    "@salesforce/core": "^8"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29",
+    "@types/node": "^22",
+    "jest": "^29",
+    "ts-jest": "^29",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "/lib",
+    "/schemas",
+    "/src/assets",
+    "!/lib/**/*.map"
+  ]
+}

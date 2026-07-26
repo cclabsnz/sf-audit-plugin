@@ -1,0 +1,80 @@
+import type { Finding } from './Finding.js';
+import type { OrgMetrics } from '@cclabsnz/sf-core';
+import type { AuditResult } from './AuditResult.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
+import { EMPTY_METRICS } from '@cclabsnz/sf-core';
+import { DEFAULT_SCORING_CONFIG } from './ScoringConfig.js';
+import type { ScoringConfig } from './ScoringConfig.js';
+import type { AttackChain } from '../chains/AttackChain.js';
+
+type Grade = AuditResult['grade'];
+
+function meetsConditions(
+  conditions: ScoringConfig['gradeThresholds'][Grade],
+  healthScore: number,
+  criticalCount: number,
+  highCount: number,
+  mediumCount: number,
+): boolean {
+  if (conditions.minScore !== undefined && healthScore < conditions.minScore) return false;
+  if (conditions.maxCritical !== undefined && criticalCount > conditions.maxCritical) return false;
+  if (conditions.maxHigh !== undefined && highCount > conditions.maxHigh) return false;
+  if (conditions.maxMedium !== undefined && mediumCount > conditions.maxMedium) return false;
+  return true;
+}
+
+export function buildAuditResult(
+  ctx: AuditContext,
+  findings: Finding[],
+  metrics: Partial<OrgMetrics>,
+  config: ScoringConfig = DEFAULT_SCORING_CONFIG,
+  attackChains: AttackChain[] = [],
+): AuditResult {
+  // Passed and inconclusive findings carry no penalty — exclude from numerator.
+  // They remain in maxPossible so a broad passing audit still dilutes real failures.
+  const totalScore = findings.reduce(
+    (sum, f) => {
+      if (f.passed || f.inconclusive) return sum;
+      return sum + (f.checkId !== undefined ? (config.checkWeights[f.checkId] ?? config.riskScores[f.riskLevel]) : config.riskScores[f.riskLevel]);
+    },
+    0,
+  );
+  const chainScore = attackChains.reduce((sum, c) => sum + config.riskScores[c.severity], 0);
+  const totalWithChains = totalScore + chainScore;
+  const maxPossible = (findings.length + attackChains.length) * 10;
+  const healthScore = Math.max(
+    0,
+    100 - Math.round((totalWithChains / Math.max(maxPossible, 1)) * 100),
+  );
+
+  const chainCrit = attackChains.filter((c) => c.severity === 'CRITICAL').length;
+  const chainHigh = attackChains.filter((c) => c.severity === 'HIGH').length;
+  const chainMed = attackChains.filter((c) => c.severity === 'MEDIUM').length;
+  const criticalCount = findings.filter((f) => f.riskLevel === 'CRITICAL').length + chainCrit;
+  const highCount = findings.filter((f) => f.riskLevel === 'HIGH').length + chainHigh;
+  const mediumCount = findings.filter((f) => f.riskLevel === 'MEDIUM').length + chainMed;
+
+  const grades: Grade[] = ['A', 'B', 'C', 'D'];
+  let grade: Grade = 'F';
+  for (const g of grades) {
+    if (meetsConditions(config.gradeThresholds[g], healthScore, criticalCount, highCount, mediumCount)) {
+      grade = g;
+      break;
+    }
+  }
+
+  return {
+    generatedAt: new Date(),
+    orgId: ctx.orgInfo.id,
+    orgName: ctx.orgInfo.name,
+    orgType: ctx.orgInfo.type,
+    isSandbox: ctx.orgInfo.isSandbox,
+    instance: ctx.orgInfo.instance,
+    instanceUrl: ctx.orgInfo.instanceUrl,
+    findings,
+    metrics: { ...EMPTY_METRICS, ...metrics },
+    healthScore,
+    grade,
+    attackChains,
+  };
+}

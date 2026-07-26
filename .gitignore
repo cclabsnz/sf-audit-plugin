@@ -1,5 +1,6 @@
 node_modules/
-/lib/
+lib/
+lib-test/
 *.js.map
 .DS_Store
 *.tsbuildinfo
@@ -27,5 +28,5 @@ sf-audit-diff-*.json
 sf-audit-history-*.html
 
 # Internal docs — kept locally, never published to the public repo
-/CLAUDE.md
+CLAUDE.md
 /docs/superpowers/
