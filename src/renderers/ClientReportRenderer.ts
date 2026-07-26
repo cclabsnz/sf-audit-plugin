@@ -222,7 +222,10 @@ ${tier('Projects', 'weeks', roadmap.project)}`;
   }
 
   private footer(b: Branding): string {
+    const site = b.website
+      ? ` · <a href="https://${esc(b.website.replace(/^https?:\/\//, ''))}">${esc(b.website.replace(/^https?:\/\//, ''))}</a>`
+      : '';
     return `<footer><span class="label">Scope &amp; Liability</span>
-Read-only, point-in-time configuration review: not a penetration test, not a code audit. The grade is a prioritisation aid, not a certification. Validate findings before remediation. © ${new Date().getFullYear()} ${esc(b.firmName)} · ${esc(b.contact)}</footer>`;
+Read-only, point-in-time configuration review: not a penetration test, not a code audit. The grade is a prioritisation aid, not a certification. Validate findings before remediation. © ${new Date().getFullYear()} ${esc(b.firmName)} · ${esc(b.contact)}${site}</footer>`;
   }
 }
