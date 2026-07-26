@@ -9,6 +9,7 @@ export interface Branding {
   fontDisplay: string;
   fontBody: string;
   contact: string;
+  website?: string;
   logoPath?: string;
   preparedFor?: string;
 }
@@ -24,6 +25,7 @@ export const DEFAULT_BRANDING: Branding = {
   fontDisplay: 'DM Serif Display',
   fontBody: 'DM Sans',
   contact: 'hello@cloudcounsel.co.nz',
+  website: 'cloudcounsel.co.nz',
 };
 
 export type BrandingOverrides = Partial<Branding>;
