@@ -1,6 +1,10 @@
 node_modules/
-lib/
-lib-test/
+# Build output only — anchored so it never swallows source dirs named lib/
+# (e.g. packages/sf-orgintel-plugin/src/lib).
+/lib/
+/lib-test/
+packages/*/lib/
+packages/*/lib-test/
 *.js.map
 .DS_Store
 *.tsbuildinfo
