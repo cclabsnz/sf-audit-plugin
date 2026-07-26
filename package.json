@@ -20,6 +20,7 @@
     "zod": "^3"
   },
   "devDependencies": {
+    "@jest/globals": "^29.7.0",
     "@types/jest": "^29",
     "@types/node": "^22",
     "jest": "^29",
