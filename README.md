@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://cloudcounsel.co.nz"><img src="assets/cloudcounsel-lockup.png" width="240" alt="CloudCounsel Ltd" /></a>
+  <a href="https://cloudcounsel.co.nz"><img src="https://raw.githubusercontent.com/cclabsnz/sf-audit-plugin/main/assets/cloudcounsel-lockup.png" width="240" alt="CloudCounsel Ltd" /></a>
 </p>
 
 # @cclabsnz/sf-audit
