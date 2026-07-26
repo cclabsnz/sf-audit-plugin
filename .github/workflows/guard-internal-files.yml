@@ -7,6 +7,10 @@ on:
   push:
   pull_request:
 
+# Least-privilege token: this workflow only reads the repo (CodeQL Token-Permissions).
+permissions:
+  contents: read
+
 jobs:
   guard:
     runs-on: ubuntu-latest
