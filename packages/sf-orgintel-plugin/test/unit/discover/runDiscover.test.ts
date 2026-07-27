@@ -48,6 +48,11 @@ const DESCRIBES = {
 function context(): IntelContext {
   return {
     soql: mockSoql([
+      // FlowDefinitionView is a STANDARD object — it must arrive on the SOQL client, never Tooling.
+      {
+        test: (q) => q.includes('FROM FlowDefinitionView'),
+        records: [{ TriggerType: 'RecordAfterSave', TriggerObjectOrEventLabel: 'Case', IsActive: true }],
+      },
       { test: (q) => q.includes('FROM ProcessDefinition'), records: [] },
       { test: (q) => q.includes('FROM RecordType'), records: [{ SobjectType: 'Case', DeveloperName: 'Support', Name: 'Support' }] },
       { test: (q) => q.includes('FROM AppMenuItem'), records: [{ Label: 'Service', Name: 'std__service' }] },
@@ -63,10 +68,6 @@ function context(): IntelContext {
         ],
       },
       { test: (q) => q.includes('FROM WorkflowRule'), records: [] },
-      {
-        test: (q) => q.includes('FROM FlowDefinitionView'),
-        records: [{ TriggerType: 'RecordAfterSave', TriggerObjectOrEventLabel: 'Case', IsActive: true }],
-      },
       { test: (q) => q.includes('FROM InstalledSubscriberPackage'), records: [] },
     ]),
     rest: mockRest(CATALOG, DESCRIBES),

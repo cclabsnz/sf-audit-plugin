@@ -25,6 +25,10 @@ const tooling = mockTooling([
     ],
   },
   { test: (q) => q.includes('FROM WorkflowRule'), records: [{ TableEnumOrId: 'Account' }] },
+]);
+
+const soql = mockSoql([
+  // FlowDefinitionView is a STANDARD object — it must arrive on the SOQL client, never Tooling.
   {
     test: (q) => q.includes('FROM FlowDefinitionView'),
     records: [
@@ -34,9 +38,6 @@ const tooling = mockTooling([
       { TriggerType: 'RecordAfterSave', TriggerObjectOrEventLabel: 'Account', IsActive: false }, // inactive
     ],
   },
-]);
-
-const soql = mockSoql([
   {
     test: (q) => q.includes('FROM ProcessDefinition'),
     records: [{ TableEnumOrId: 'Account', Type: 'Approval', State: 'Active' }],

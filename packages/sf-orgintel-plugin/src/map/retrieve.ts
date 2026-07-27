@@ -11,6 +11,19 @@ export interface RetrieveFlowOptions {
   includeInactive?: boolean;
 }
 
+/**
+ * Salesforce error text, trimmed to something that fits in a note.
+ *
+ * Swallowing these is how `intel map` silently produced an Apex-only graph against a real org
+ * while reporting only "not queryable" — the operator could not tell a permissions problem from
+ * a wrong-API bug. A degraded run must always say *why* it degraded.
+ */
+function describeError(e: unknown): string {
+  const raw = e instanceof Error ? e.message : String(e);
+  const oneLine = raw.replace(/\s+/g, ' ').trim();
+  return oneLine.length > 180 ? oneLine.slice(0, 177) + '…' : oneLine;
+}
+
 interface FlowDefView {
   ApiName: string;
   IsActive: boolean;
@@ -31,11 +44,13 @@ export async function retrieveFlows(
 ): Promise<FlowSummary[]> {
   let defs: FlowDefView[];
   try {
-    defs = await ctx.tooling.query<FlowDefView>(
+    // FlowDefinitionView is a STANDARD object, not a Tooling one — the Tooling endpoint answers
+    // "sObject type 'FlowDefinitionView' is not supported." (Flow.Metadata below *is* Tooling.)
+    defs = await ctx.soql.queryAll<FlowDefView>(
       'SELECT ApiName, IsActive, ActiveVersionId, LatestVersionId FROM FlowDefinitionView',
     );
-  } catch {
-    notes.push('FlowDefinitionView is not queryable; flow coupling skipped.');
+  } catch (e) {
+    notes.push(`FlowDefinitionView is not queryable; flow coupling skipped. (${describeError(e)})`);
     return [];
   }
 
@@ -47,8 +62,8 @@ export async function retrieveFlows(
     try {
       const summary = await withCache(cache, 'flow', versionId, () => fetchFlowSummary(ctx.tooling, versionId, d.ApiName));
       if (summary) summaries.push(summary);
-    } catch {
-      notes.push(`Flow ${d.ApiName} metadata was unavailable; skipped.`);
+    } catch (e) {
+      notes.push(`Flow ${d.ApiName} metadata was unavailable; skipped. (${describeError(e)})`);
     }
   }
   return summaries;
@@ -67,7 +82,8 @@ interface ApexClassRow {
   Body: string | null;
   SymbolTable: SymbolTableLike | null;
 }
-interface ApexTriggerRow extends ApexClassRow {
+/** ApexTrigger has no SymbolTable column — only ApexClass does. Body drives the fallback. */
+interface ApexTriggerRow extends Omit<ApexClassRow, 'SymbolTable'> {
   TableEnumOrId: string;
 }
 
@@ -87,13 +103,13 @@ export async function retrieveApex(
       body: usableBody(r.Body),
       symbolTable: r.SymbolTable ?? null,
     }));
-  } catch {
-    notes.push('ApexClass is not queryable; class coupling skipped.');
+  } catch (e) {
+    notes.push(`ApexClass is not queryable; class coupling skipped. (${describeError(e)})`);
   }
 
   try {
     const rows = await ctx.tooling.query<ApexTriggerRow>(
-      'SELECT Name, NamespacePrefix, TableEnumOrId, Body, SymbolTable FROM ApexTrigger',
+      'SELECT Name, NamespacePrefix, TableEnumOrId, Body FROM ApexTrigger',
     );
     triggers = rows
       .map((r) => ({
@@ -101,11 +117,11 @@ export async function retrieveApex(
         namespace: r.NamespacePrefix ?? null,
         object: resolver.resolve(r.TableEnumOrId) ?? r.TableEnumOrId,
         body: usableBody(r.Body),
-        symbolTable: r.SymbolTable ?? null,
+        symbolTable: null,
       }))
       .filter((t) => !!t.object);
-  } catch {
-    notes.push('ApexTrigger is not queryable; trigger coupling skipped.');
+  } catch (e) {
+    notes.push(`ApexTrigger is not queryable; trigger coupling skipped. (${describeError(e)})`);
   }
 
   return { classes, triggers };

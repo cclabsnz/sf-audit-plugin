@@ -73,10 +73,11 @@ export async function buildAutomationIndex(
     }
   });
 
-  // Record-triggered flows — FlowDefinitionView (Tooling); mapped by trigger-object label.
+  // Record-triggered flows — FlowDefinitionView is a STANDARD object (SOQL), not Tooling;
+  // mapped by trigger-object label.
   await safe(notes, 'Record-triggered flows', async () => {
     const labelToApi = buildLabelIndex(catalog);
-    const rows = await tooling.query<FlowDefRow>(
+    const rows = await soql.queryAll<FlowDefRow>(
       'SELECT TriggerType, TriggerObjectOrEventLabel, IsActive FROM FlowDefinitionView',
     );
     for (const r of rows) {
