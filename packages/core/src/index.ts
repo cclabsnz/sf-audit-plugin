@@ -42,7 +42,7 @@ export { classifyEventLogAccessError } from './events/eventLogAccess.js';
 // --- Report shell ---
 export type { Branding, BrandingOverrides } from './report/branding.js';
 export { DEFAULT_BRANDING, resolveBranding } from './report/branding.js';
-export { fontFaceCss } from './report/fonts.js';
+export { fontFaceCss, firaFontFaceCss } from './report/fonts.js';
 export { esc } from './renderers/html-utils.js';
 
 // --- Findings (generic) ---

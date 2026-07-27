@@ -1,0 +1,31 @@
+# Socket.dev configuration — https://docs.socket.dev/docs/socket-yml
+#
+# Triage for the supply-chain alerts Socket raises against these packages. Both remaining
+# alerts are inherent to what a local-first CLI security auditor does; neither is a
+# vulnerability. They are acknowledged here rather than silently ignored.
+version: 2
+
+projectIgnorePaths:
+  # Test fixtures contain deliberately hostile-looking sample data (anonymised event-log
+  # rows, RFC 5737 IPs, malicious-URL examples) used to assert detection logic.
+  - "packages/*/test/**"
+
+issueRules:
+  # "Filesystem access" — expected and required.
+  # sf-audit and sf-orgintel are CLIs whose entire job is to write audit reports
+  # (HTML/MD/JSON) to disk and read local inputs: report-branding overrides, event-log
+  # baselines under ~/.sf/audit-history, and the ~/.orgintel analysis cache. All reads and
+  # writes are to paths the operator supplies or to the tool's own dot-directory.
+  filesystemAccess: false
+
+  # "URL strings" — citation links only, as of the CDN removal.
+  # The URLs remaining in the shipped lib/ are inert href targets rendered into reports:
+  # OWASP, NZISM, NZ Privacy Act / legislation.govt.nz, Te Whatu Ora, and CIS-style
+  # benchmark references cited by compliance findings. The package makes no outbound
+  # network call except to the authenticated Salesforce org the operator targets.
+  #
+  # Generated reports are fully self-contained — fonts are embedded as data URIs and
+  # Chart.js is inlined, so a report never fetches script or styles from a third party.
+  # This is enforced by tests: see the "is fully self-contained" cases in
+  # test/unit/renderers/HtmlRenderer.test.ts and HistoryRenderer.test.ts.
+  urlStrings: false

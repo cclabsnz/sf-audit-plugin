@@ -20,8 +20,8 @@ interface OrgRecord {
 // 2. The instance URL uses the enhanced domain format (contains .my.salesforce.com or .develop.my.salesforce.com)
 // 3. Org is not still on a shared instance URL like na1.salesforce.com
 // Patterns are matched against the parsed hostname and anchored to its end, so a URL
-// that merely *contains* the string (e.g. https://evil.example.com/x.my.salesforce.com)
-// cannot be mistaken for an enhanced-domain org. All enhanced variants
+// that merely *contains* the string (an attacker-controlled host with a path of
+// `/x.my.salesforce.com`) cannot be mistaken for an enhanced-domain org. All enhanced variants
 // (sandbox/develop/scratch) are subdomains of my.salesforce.com, so one suffix suffices.
 const ENHANCED_DOMAIN_PATTERN = /\.my\.salesforce\.com$/i;
 const LEGACY_INSTANCE_PATTERN = /^[a-z]{2}\d+\.salesforce\.com$/i;

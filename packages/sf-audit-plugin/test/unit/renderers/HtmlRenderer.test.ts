@@ -75,4 +75,20 @@ describe('HtmlRenderer', () => {
     expect(html).toContain('Attack Paths');
     expect(html).toContain('Unauthenticated bulk exfiltration');
   });
+
+  it('is fully self-contained — no external asset fetches', () => {
+    const html = renderer.render(makeResult());
+    // The report claims to be offline-first and carries sensitive org findings; it must not
+    // fetch fonts, styles or script from a third party when a client opens it.
+    expect(html).not.toMatch(/<script[^>]+\ssrc=/i);
+    expect(html).not.toMatch(/<link[^>]+\srel=["']?(stylesheet|preconnect)/i);
+    expect(html).not.toContain('fonts.googleapis.com');
+    expect(html).not.toContain('fonts.gstatic.com');
+  });
+
+  it('embeds the report webfonts as data URIs', () => {
+    const html = renderer.render(makeResult());
+    expect(html).toContain("@font-face{font-family: 'Fira Sans'");
+    expect(html).toContain('src:url(data:font/woff2;base64,');
+  });
 });
