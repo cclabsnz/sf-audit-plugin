@@ -1,6 +1,7 @@
 import type { ToolingClient } from '@cclabsnz/sf-core';
 import type { IntelContext } from '../lib/wire.js';
 import type { OrgIntelCache } from '../lib/cache.js';
+import { contentHash } from '../lib/cache.js';
 import type { FlowSummary } from './flow/flowTypes.js';
 import type { ApexClassInput, ApexTriggerInput, SymbolTableLike } from './apex/apexTypes.js';
 import { summarizeFlow } from './flow/parseFlow.js';
@@ -54,26 +55,87 @@ export async function retrieveFlows(
     return [];
   }
 
-  const summaries: FlowSummary[] = [];
+  const wanted: Array<{ id: string; apiName: string }> = [];
+  let managed = 0;
   for (const d of defs) {
     const versionId = opts.includeInactive ? d.LatestVersionId ?? d.ActiveVersionId : d.ActiveVersionId;
     if (!versionId) continue;
     if (!opts.includeInactive && !d.IsActive) continue;
-    try {
-      const summary = await withCache(cache, 'flow', versionId, () => fetchFlowSummary(ctx.tooling, versionId, d.ApiName));
-      if (summary) summaries.push(summary);
-    } catch (e) {
-      notes.push(`Flow ${d.ApiName} metadata was unavailable; skipped. (${describeError(e)})`);
+    // Managed-package flows come back with a durable name (`ns__Flow-1`) instead of an Id.
+    // Their metadata is not readable anyway, so skip them rather than emit a SOQL error each.
+    if (!isSalesforceId(versionId)) {
+      managed++;
+      continue;
     }
+    wanted.push({ id: versionId, apiName: d.ApiName });
   }
-  return summaries;
+  if (managed > 0) {
+    notes.push(`${managed} managed-package flow(s) skipped — metadata is not readable for managed flows.`);
+  }
+
+  // Serve what the cache already has, then fetch only the misses — in batches, because one
+  // Tooling round trip per flow took 7 minutes on a real org with ~300 flows.
+  const summaries: FlowSummary[] = [];
+  const misses: Array<{ id: string; apiName: string }> = [];
+  for (const w of wanted) {
+    const hit = cache?.get<FlowSummary>('flow', contentHash(w.id)) ?? null;
+    if (hit) summaries.push(hit);
+    else misses.push(w);
+  }
+
+  // The Tooling API refuses multi-row retrieval of Metadata/FullName ("the query
+  // qualifications must specify no more than one row"), so each flow needs its own query.
+  // Bounded concurrency is the only lever: ~300 sequential round trips took 7 minutes.
+  await mapWithConcurrency(misses, FLOW_CONCURRENCY, async (w) => {
+    let rows: Array<{ Id?: string; Metadata?: XmlObject }>;
+    try {
+      rows = await ctx.tooling.query<{ Id?: string; Metadata?: XmlObject }>(
+        `SELECT Id, Metadata FROM Flow WHERE Id = '${w.id}'`,
+      );
+    } catch (e) {
+      notes.push(`Flow ${w.apiName} metadata was unavailable; skipped. (${describeError(e)})`);
+      return;
+    }
+    const md = rows[0]?.Metadata;
+    if (!md) {
+      notes.push(`Flow ${w.apiName} returned no metadata; skipped.`);
+      return;
+    }
+    try {
+      const summary = summarizeFlow(md, w.apiName);
+      summaries.push(summary);
+      cache?.set('flow', contentHash(w.id), summary);
+    } catch (e) {
+      notes.push(`Flow ${w.apiName} could not be parsed; skipped. (${describeError(e)})`);
+    }
+  });
+  // Deterministic regardless of completion order.
+  notes.sort();
+  return summaries.sort((a, b) => a.apiName.localeCompare(b.apiName));
 }
 
-async function fetchFlowSummary(tooling: ToolingClient, versionId: string, apiName: string): Promise<FlowSummary> {
-  const rows = await tooling.query<{ Metadata?: XmlObject }>(`SELECT Metadata FROM Flow WHERE Id = '${versionId}'`);
-  const md = rows[0]?.Metadata;
-  if (!md) throw new Error('no metadata');
-  return summarizeFlow(md, apiName);
+/** Concurrent Tooling requests in flight while fetching flow metadata. */
+const FLOW_CONCURRENCY = 8;
+
+/**
+ * True for a real 15- or 18-character Salesforce Id. FlowDefinitionView returns a durable
+ * name (`ns__Flow-1`) instead of an Id for managed-package flows; feeding that to a WHERE
+ * clause yields "invalid ID field".
+ */
+function isSalesforceId(v: string): boolean {
+  return /^[a-zA-Z0-9]{15}$|^[a-zA-Z0-9]{18}$/.test(v);
+}
+
+/** Run `fn` over items with at most `limit` in flight. Order of completion is not preserved. */
+async function mapWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      await fn(items[i]);
+    }
+  });
+  await Promise.all(workers);
 }
 
 interface ApexClassRow {

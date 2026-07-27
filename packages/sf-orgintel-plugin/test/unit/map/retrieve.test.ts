@@ -49,14 +49,14 @@ describe('retrieveFlows', () => {
     const soql = mockSoql([
       {
         test: (q) => q.includes('FROM FlowDefinitionView'),
-        records: [{ ApiName: 'Case_Router', IsActive: true, ActiveVersionId: '301xx', LatestVersionId: '301xx' }],
+        records: [{ ApiName: 'Case_Router', IsActive: true, ActiveVersionId: '30109000000AbCdEAA', LatestVersionId: '30109000000AbCdEAA' }],
       },
     ]);
     const tooling = toolingRejectingStandardObjects([
       {
         // Flow.Metadata genuinely IS a Tooling object — that part was always correct.
         test: (q) => q.includes('FROM Flow ') || q.includes('FROM Flow\n') || /FROM Flow\b/.test(q),
-        records: [{ Metadata: { processType: 'AutoLaunchedFlow', status: 'Active', start: {}, recordUpdates: [] } }],
+        records: [{ Id: '30109000000AbCdEAA', Metadata: { processType: 'AutoLaunchedFlow', status: 'Active', start: {}, recordUpdates: [] } }],
       },
     ]);
     const notes: string[] = [];
@@ -116,5 +116,89 @@ describe('retrieveApex', () => {
     // ApexClass keeps SymbolTable — only the trigger query must drop it.
     expect(classes).toHaveLength(1);
     expect(seen.some((q) => q.includes('FROM ApexClass') && q.includes('SymbolTable'))).toBe(true);
+  });
+});
+
+describe('retrieveFlows — managed packages and batching', () => {
+  const defs = (rows: Array<[string, string]>) =>
+    mockSoql([
+      {
+        test: (q) => q.includes('FROM FlowDefinitionView'),
+        records: rows.map(([apiName, versionId]) => ({
+          ApiName: apiName,
+          IsActive: true,
+          ActiveVersionId: versionId,
+          LatestVersionId: versionId,
+        })),
+      },
+    ]);
+
+  const META = { processType: 'AutoLaunchedFlow', status: 'Active', start: {}, recordUpdates: [] };
+
+  it('skips managed-package flows whose ActiveVersionId is not a real Id', async () => {
+    // FlowDefinitionView returns a durable string (`ns__Name-1`) for managed flows, not an Id.
+    // Querying it produced "invalid ID field" once per flow — 28 of them against a real org.
+    const soql = defs([
+      ['Case_Router', '30109000000AbCdEAA'],
+      ['CaseContact', 'service_email__CaseContact-1'],
+      ['DraftServiceEmail', 'service_email__DraftServiceEmail-1'],
+    ]);
+    const queries: string[] = [];
+    const tooling: ToolingClient = {
+      async query<T>(q: string): Promise<T[]> {
+        queries.push(q);
+        if (/FROM FlowDefinitionView/.test(q)) throw NOT_SUPPORTED('FlowDefinitionView');
+        return [{ Id: '30109000000AbCdEAA', Metadata: META }] as T[];
+      },
+      async getRecord<T>(): Promise<T> { throw new Error('ni'); },
+    };
+    const notes: string[] = [];
+
+    const flows = await retrieveFlows(ctxOf(soql, tooling), {}, notes);
+
+    expect(flows.map((f) => f.apiName)).toEqual(['Case_Router']);
+    // No malformed id may ever reach a SOQL WHERE clause.
+    expect(queries.some((q) => q.includes('service_email__'))).toBe(false);
+    // One aggregated note, not one per flow.
+    const skipped = notes.filter((n) => /managed/i.test(n));
+    expect(skipped).toHaveLength(1);
+    expect(skipped[0]).toContain('2');
+  });
+
+  it('fetches flow metadata concurrently, one row per query', async () => {
+    // The Tooling API refuses multi-row retrieval of Metadata/FullName:
+    //   "the query qualifications must specify no more than one row for retrieval"
+    // so an IN(...) batch is impossible. Concurrency is the only lever — without it a real
+    // org with ~300 flows took 7 minutes.
+    const rows: Array<[string, string]> = Array.from({ length: 12 }, (_, i) => [
+      `Flow_${i}`,
+      `30109000000Ab${String(i).padStart(2, '0')}EAA`,
+    ]);
+    const metaQueries: string[] = [];
+    let inFlight = 0;
+    let peak = 0;
+    const tooling: ToolingClient = {
+      async query<T>(q: string): Promise<T[]> {
+        if (/FROM FlowDefinitionView/.test(q)) throw NOT_SUPPORTED('FlowDefinitionView');
+        metaQueries.push(q);
+        inFlight++;
+        peak = Math.max(peak, inFlight);
+        await new Promise((r) => setTimeout(r, 5));
+        inFlight--;
+        const id = /'([^']+)'/.exec(q)![1];
+        return [{ Id: id, Metadata: META }] as T[];
+      },
+      async getRecord<T>(): Promise<T> { throw new Error('ni'); },
+    };
+    const notes: string[] = [];
+
+    const flows = await retrieveFlows(ctxOf(defs(rows), tooling), {}, notes);
+
+    expect(flows).toHaveLength(12);
+    // One row per query — never an IN clause, which the platform rejects outright.
+    expect(metaQueries.every((q) => !q.includes(' IN ('))).toBe(true);
+    expect(metaQueries).toHaveLength(12);
+    // But not serial: several requests must be in flight at once.
+    expect(peak).toBeGreaterThan(1);
   });
 });
