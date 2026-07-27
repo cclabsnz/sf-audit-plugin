@@ -16,9 +16,12 @@ export interface LayoutOptions {
 
 /**
  * Deterministic force-directed layout (Fruchterman–Reingold style). Nodes are seeded on a
- * circle by sorted index — no randomness — so the same graph always yields the same picture.
- * Both the HTML report and the landscape manifest consume these coordinates, keeping "same
- * org in, same picture out" true for the visual layer.
+ * circle by sorted index — no randomness — so the same graph always yields the same picture,
+ * keeping "same org in, same picture out" true for the visual layer.
+ *
+ * Called for three distinct coordinate spaces, each laid out independently: the HTML report's
+ * top-N picture, the manifest's L0 landscape (clusters against each other), and the manifest's
+ * L1 domains (one space per cluster). Coordinates are only comparable within one space.
  */
 export function computeLayout(nodes: string[], edges: LayoutEdge[], opts: LayoutOptions = {}): Map<string, Point> {
   const width = opts.width ?? 960;

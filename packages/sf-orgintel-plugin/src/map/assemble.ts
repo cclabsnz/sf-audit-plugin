@@ -64,7 +64,9 @@ export function assembleCouplingArtifacts(input: AssembleInput): MapArtifacts {
   const nodeNames = nodes.map((n) => n.object);
   const clusters = clusterGraph(nodeNames, edges, score);
 
-  // Lay out the top-ranked nodes for the report/manifest visual.
+  // Lay out the top-ranked nodes for the report picture only. The manifest lays itself out
+  // completely and separately (see buildManifest) — a viewer must be able to zoom to every
+  // domain, not just the ones that fit in the report's top-N view.
   const topLayout = input.topLayout ?? 20;
   const topNodes = [...nodeNames].sort((a, b) => score(b) - score(a) || a.localeCompare(b)).slice(0, topLayout);
   const topSet = new Set(topNodes);
@@ -78,7 +80,7 @@ export function assembleCouplingArtifacts(input: AssembleInput): MapArtifacts {
     edges,
   };
 
-  const manifest = buildManifest(input.manifestProvenance, clusters, layout, nodes, input.labelOf);
+  const manifest = buildManifest(input.manifestProvenance, clusters, edges, nodes, input.labelOf);
 
   return { couplingGraph, manifest, clusters, layout, notes };
 }
