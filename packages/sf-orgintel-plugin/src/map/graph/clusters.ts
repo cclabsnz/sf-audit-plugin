@@ -11,10 +11,22 @@ export interface Cluster {
 }
 
 /**
- * Partition the coupling graph into domain clusters via connected components, splitting on
- * weak bridges: bridge edges (whose removal disconnects the graph) with the minimum weight
- * are cut first, so tenuous single-component links don't fuse two real domains. Deterministic
- * and dependency-free (Tarjan bridge-finding + BFS components).
+ * A bridge is cut only if its weight is below this fraction of the median internal edge
+ * weight on *both* sides — i.e. it is weak relative to the domains it joins, not merely the
+ * lightest edge in the graph. An absolute "cut the minimum-weight bridge" rule shatters any
+ * tree, because in a tree every edge is a bridge; a uniform-weight hub-and-spoke org (the
+ * canonical Salesforce shape) would come back as N domains of one object each.
+ */
+const WEAK_BRIDGE_RATIO = 0.5;
+
+/** Never shear off a side smaller than this — a one-object "domain" is not a useful answer. */
+const MIN_SPLIT_SIZE = 2;
+
+/**
+ * Partition the coupling graph into domain clusters via connected components, splitting only
+ * on bridges that are weak *relative to* the domains they join (see `WEAK_BRIDGE_RATIO`), so
+ * a tenuous link doesn't fuse two real domains and a uniform-weight graph isn't shattered.
+ * Deterministic and dependency-free (Tarjan bridge-finding + BFS components).
  */
 export function clusterGraph(
   nodes: string[],
@@ -32,15 +44,23 @@ export function clusterGraph(
   }
 
   const bridges = findBridges(nodes.length, adj);
-  // Cut only the weakest bridges (weight === minimum bridge weight).
-  const bridgeWeights = edges
-    .filter((e) => bridges.has(edgeKey(index.get(e.from)!, index.get(e.to)!)))
-    .map((e) => e.weight);
-  const minBridgeWeight = bridgeWeights.length > 0 ? Math.min(...bridgeWeights) : Infinity;
+  const cut = new Set<string>();
+  // Sorted for determinism: the decision for one bridge never depends on iteration order,
+  // but keeping the sweep ordered makes the behaviour reproducible and easy to reason about.
+  for (const e of [...edges].sort(byEdgeKey(index))) {
+    const a = index.get(e.from);
+    const b = index.get(e.to);
+    if (a === undefined || b === undefined) continue;
+    const key = edgeKey(a, b);
+    if (!bridges.has(key)) continue;
+    if (isWeakBridge(e, key, a, b, nodes.length, adj, edges, index)) cut.add(key);
+  }
 
   const keep: GraphEdgeLite[] = edges.filter((e) => {
-    const k = edgeKey(index.get(e.from)!, index.get(e.to)!);
-    return !(bridges.has(k) && e.weight <= minBridgeWeight);
+    const a = index.get(e.from);
+    const b = index.get(e.to);
+    if (a === undefined || b === undefined) return true;
+    return !cut.has(edgeKey(a, b));
   });
 
   const components = connectedComponents(nodes, keep);
@@ -53,6 +73,79 @@ export function clusterGraph(
     .sort((a, b) => b.objects.length - a.objects.length || a.anchorObject.localeCompare(b.anchorObject));
 
   return clusters.map((c, i) => ({ id: `cluster-${i + 1}`, objects: c.objects, anchorObject: c.anchorObject }));
+}
+
+/** Order edges by their canonical key so the bridge sweep is reproducible. */
+function byEdgeKey(index: Map<string, number>) {
+  return (x: GraphEdgeLite, y: GraphEdgeLite): number => {
+    const kx = edgeKey(index.get(x.from) ?? -1, index.get(x.to) ?? -1);
+    const ky = edgeKey(index.get(y.from) ?? -1, index.get(y.to) ?? -1);
+    return kx < ky ? -1 : kx > ky ? 1 : 0;
+  };
+}
+
+/**
+ * True if removing this bridge separates two sides that are each substantial and each
+ * internally much more strongly coupled than the bridge itself.
+ */
+function isWeakBridge(
+  bridge: GraphEdgeLite,
+  key: string,
+  a: number,
+  b: number,
+  nodeCount: number,
+  adj: number[][],
+  edges: GraphEdgeLite[],
+  index: Map<string, number>,
+): boolean {
+  const sideA = reachableWithout(a, key, nodeCount, adj);
+  if (sideA.size < MIN_SPLIT_SIZE) return false;
+  const sideB = reachableWithout(b, key, nodeCount, adj);
+  if (sideB.size < MIN_SPLIT_SIZE) return false;
+
+  const medianA = medianInternalWeight(sideA, edges, index);
+  const medianB = medianInternalWeight(sideB, edges, index);
+  // A side with no internal edges gives us nothing to compare against — don't guess.
+  if (medianA === null || medianB === null) return false;
+
+  return bridge.weight < WEAK_BRIDGE_RATIO * medianA && bridge.weight < WEAK_BRIDGE_RATIO * medianB;
+}
+
+/** Nodes reachable from `start` when the given edge is removed. */
+function reachableWithout(start: number, excludedKey: string, nodeCount: number, adj: number[][]): Set<number> {
+  const seen = new Array<boolean>(nodeCount).fill(false);
+  const out = new Set<number>();
+  const queue = [start];
+  seen[start] = true;
+  while (queue.length > 0) {
+    const u = queue.shift()!;
+    out.add(u);
+    for (const v of adj[u]) {
+      if (seen[v] || edgeKey(u, v) === excludedKey) continue;
+      seen[v] = true;
+      queue.push(v);
+    }
+  }
+  return out;
+}
+
+/** Median weight of edges with both endpoints inside `side`; null if there are none. */
+function medianInternalWeight(
+  side: Set<number>,
+  edges: GraphEdgeLite[],
+  index: Map<string, number>,
+): number | null {
+  const weights: number[] = [];
+  for (const e of edges) {
+    const a = index.get(e.from);
+    const b = index.get(e.to);
+    if (a === undefined || b === undefined) continue;
+    if (side.has(a) && side.has(b)) weights.push(e.weight);
+  }
+  if (weights.length === 0) return null;
+  weights.sort((x, y) => x - y);
+  const mid = weights.length >> 1;
+  return weights.length % 2 === 1 ? weights[mid] : (weights[mid - 1] + weights[mid]) / 2;
 }
 
 function findBridges(n: number, adj: number[][]): Set<string> {
