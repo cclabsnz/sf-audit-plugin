@@ -12,6 +12,10 @@
       "types": "./lib/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./testing": {
+      "types": "./lib/testing/invariants.d.ts",
+      "default": "./lib/testing/invariants.js"
+    },
     "./schemas/*": "./schemas/*"
   },
   "scripts": {
