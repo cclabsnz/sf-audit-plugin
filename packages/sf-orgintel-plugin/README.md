@@ -28,3 +28,29 @@ pnpm -r build
 sf plugins link packages/sf-orgintel-plugin
 sf intel probe --target-org <alias>
 ```
+
+## Trust & verification
+
+The two claims at the top of this README — strictly read-only, and local-first — are enforced
+as tests, not asserted in prose:
+
+- **Read-only.** `test/unit/invariants/readonly-invariant.test.ts` statically scans this
+  package's entire source tree and fails the build if any jsforce mutation API, HTTP write
+  verb, or bulk/composite write path appears. All org I/O funnels through the
+  `@cclabsnz/sf-core` clients (SOQL / Tooling / REST **GET** / Metadata reads only); this
+  package issues no direct network calls of its own.
+- **Local-first.** `test/unit/invariants/network-egress.test.ts` fails the build on any
+  third-party HTTP client, raw `node:http`/`https` use, telemetry/analytics/LLM endpoint,
+  websocket, or remote asset in a generated report. No metadata leaves your machine: the
+  only network destination is the org you authenticated against. No LLM/AI calls, no
+  telemetry, no analytics.
+
+Run both yourself:
+
+```
+pnpm --filter @cclabsnz/sf-orgintel test test/unit/invariants
+```
+
+Analysis is also **deterministic** — same org in, same findings out — and cached under
+`~/.orgintel/cache/<orgId>` keyed by a content hash of the component analysed, so the cache
+is a pure memo and never changes a result.

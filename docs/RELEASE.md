@@ -96,14 +96,18 @@ resolves after the first successful run:
 - **If a scan goes red:** CodeQL findings appear under **Security → Code scanning**;
   Scorecard details are in the public viewer. Treat a failing **read-only invariant** test
   as a release blocker — it means a write path was introduced (see
-  `test/unit/api/readonly-invariant.test.ts`; the intended escape hatch is a reviewed
-  `// readonly-invariant:allow` line comment, used only for genuine false positives).
+  `packages/*/test/unit/invariants/readonly-invariant.test.ts`; the intended escape hatch is
+  a reviewed `// invariant:allow` line comment, used only for genuine false positives).
+  Treat a failing **network-egress invariant** the same way — it means the tool, or a report
+  it generates, would contact something other than the authenticated org. Every package runs
+  both guards against its own `src/`, so check the failing package, not just core.
 
 ## The credibility signals at a glance
 
 | Signal | Where | Proves |
 | ------ | ----- | ------ |
-| Read-only invariant | `test/unit/api/readonly-invariant.test.ts` (CI) | The tool cannot write to a target org |
+| Read-only invariant | `packages/*/test/unit/invariants/readonly-invariant.test.ts` (CI) | The tool cannot write to a target org |
+| Network-egress invariant | `packages/*/test/unit/invariants/network-egress.test.ts` (CI) | No telemetry, no LLM calls, no CDN assets in reports |
 | npm provenance | `publish.yml` → npm page | Installed bytes = this public commit |
 | CodeQL | `codeql.yml` → Security tab | No known SAST-detectable vulns |
 | OpenSSF Scorecard | `scorecard.yml` → public dashboard | Healthy supply-chain practices |
