@@ -49,5 +49,8 @@ export { esc } from './renderers/html-utils.js';
 export type { RiskLevel } from './findings/RiskLevel.js';
 export { RISK_LEVELS } from './findings/RiskLevel.js';
 
+// --- Platform behaviour (API routing, Id validation, repositories) ---
+export * from './platform/index.js';
+
 // --- IR schemas (typed contracts + JSON schema access) ---
 export * from './schemas/index.js';

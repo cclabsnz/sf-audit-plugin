@@ -1,3 +1,4 @@
+import { FlowRepository } from '@cclabsnz/sf-core';
 import type { SoqlClient, ToolingClient } from '@cclabsnz/sf-core';
 import type { AutomationCounts } from './types.js';
 import type { ObjectResolver } from './objectResolver.js';
@@ -27,12 +28,6 @@ interface ProcessDefinitionRow {
   Type: string;
   State?: string;
 }
-interface FlowDefRow {
-  TriggerType: string | null;
-  TriggerObjectOrEventLabel: string | null;
-  IsActive: boolean;
-}
-
 const RECORD_TRIGGER_TYPES = new Set(['RecordAfterSave', 'RecordBeforeSave']);
 
 export async function buildAutomationIndex(
@@ -73,17 +68,15 @@ export async function buildAutomationIndex(
     }
   });
 
-  // Record-triggered flows — FlowDefinitionView is a STANDARD object (SOQL), not Tooling;
-  // mapped by trigger-object label.
+  // Record-triggered flows — routed through the core FlowRepository, which owns the fact
+  // that FlowDefinitionView is a standard object and not a Tooling one.
   await safe(notes, 'Record-triggered flows', async () => {
     const labelToApi = buildLabelIndex(catalog);
-    const rows = await soql.queryAll<FlowDefRow>(
-      'SELECT TriggerType, TriggerObjectOrEventLabel, IsActive FROM FlowDefinitionView',
-    );
+    const rows = await new FlowRepository(soql, tooling).listTriggerViews();
     for (const r of rows) {
-      if (!r.IsActive) continue;
-      if (!r.TriggerType || !RECORD_TRIGGER_TYPES.has(r.TriggerType)) continue;
-      const api = r.TriggerObjectOrEventLabel ? labelToApi.get(r.TriggerObjectOrEventLabel.toLowerCase()) : undefined;
+      if (!r.isActive) continue;
+      if (!r.triggerType || !RECORD_TRIGGER_TYPES.has(r.triggerType)) continue;
+      const api = r.triggerObjectOrEventLabel ? labelToApi.get(r.triggerObjectOrEventLabel.toLowerCase()) : undefined;
       if (api) bump(flows, api);
     }
     notes.push('Flow trigger-object matched by label (approximate); `intel map` resolves flows exactly.');
