@@ -1,3 +1,4 @@
+import { louvainCommunities } from './louvain.js';
 export interface GraphEdgeLite {
   from: string;
   to: string;
@@ -9,6 +10,28 @@ export interface Cluster {
   objects: string[];
   anchorObject: string;
 }
+
+export interface ClusterOptions {
+  /**
+   * Largest domain a consultant should be handed. Resolution is raised until every community
+   * fits, or until raising it would only fragment the graph into singletons.
+   */
+  targetDomainSize?: number;
+}
+
+/**
+ * Default ceiling on domain size. On a real 202-object org this lands ~24 domains with no
+ * singletons; pushing smaller starts shedding isolated objects rather than finding structure.
+ */
+const DEFAULT_TARGET_DOMAIN_SIZE = 25;
+
+/**
+ * A graph with average degree below 2 is a forest — it has no cycles, and therefore no
+ * community structure for modularity to find. (A forest has at most n-1 edges, so 2m/n < 2.)
+ * Modularity shatters a chain into adjacent pairs at every resolution, so these are clustered
+ * structurally instead.
+ */
+const FOREST_AVG_DEGREE = 2;
 
 /**
  * A bridge is cut only if its weight is below this fraction of the median internal edge
@@ -32,7 +55,45 @@ export function clusterGraph(
   nodes: string[],
   edges: GraphEdgeLite[],
   score: (object: string) => number,
+  opts: ClusterOptions = {},
 ): Cluster[] {
+  if (nodes.length === 0) return [];
+
+  // Pick the algorithm by density. Neither is valid across both regimes: modularity is
+  // undefined on a forest, and bridge-cutting is useless on a dense graph (a real org has
+  // ~2000 edges over ~200 objects and almost no bridges, so everything lands in one blob).
+  const averageDegree = nodes.length > 0 ? (2 * edges.length) / nodes.length : 0;
+  const groups =
+    averageDegree < FOREST_AVG_DEGREE
+      ? structuralComponents(nodes, edges)
+      : modularityCommunities(nodes, edges, opts.targetDomainSize ?? DEFAULT_TARGET_DOMAIN_SIZE);
+
+  return finalise(groups, score);
+}
+
+/**
+ * Raise resolution until the largest community fits the target, stopping early if the graph
+ * is only fragmenting (singletons appearing) rather than resolving real structure.
+ */
+function modularityCommunities(
+  nodes: string[],
+  edges: GraphEdgeLite[],
+  targetDomainSize: number,
+): string[][] {
+  let best = louvainCommunities(nodes, edges, 1);
+  for (const resolution of [1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) {
+    if (best[0] !== undefined && best[0].length <= targetDomainSize) break;
+    const attempt = louvainCommunities(nodes, edges, resolution);
+    const singletons = attempt.filter((c) => c.length === 1).length;
+    // Fragmenting more than a fifth of the graph into singletons is not structure.
+    if (singletons > Math.max(2, attempt.length / 5)) break;
+    best = attempt;
+  }
+  return best;
+}
+
+/** Connected components after cutting bridges that are weak relative to both sides. */
+function structuralComponents(nodes: string[], edges: GraphEdgeLite[]): string[][] {
   const index = new Map(nodes.map((n, i) => [n, i]));
   const adj: number[][] = nodes.map(() => []);
   for (const e of edges) {
@@ -63,16 +124,19 @@ export function clusterGraph(
     return !cut.has(edgeKey(a, b));
   });
 
-  const components = connectedComponents(nodes, keep);
-  const clusters = components
+  return connectedComponents(nodes, keep);
+}
+
+/** Sort, anchor and number the groups. Deterministic for a given membership. */
+function finalise(groups: string[][], score: (object: string) => number): Cluster[] {
+  return groups
     .map((objects) => {
       const sorted = [...objects].sort();
       const anchorObject = sorted.reduce((best, o) => (score(o) > score(best) ? o : best), sorted[0]);
       return { objects: sorted, anchorObject };
     })
-    .sort((a, b) => b.objects.length - a.objects.length || a.anchorObject.localeCompare(b.anchorObject));
-
-  return clusters.map((c, i) => ({ id: `cluster-${i + 1}`, objects: c.objects, anchorObject: c.anchorObject }));
+    .sort((a, b) => b.objects.length - a.objects.length || a.anchorObject.localeCompare(b.anchorObject))
+    .map((c, i) => ({ id: `cluster-${i + 1}`, objects: c.objects, anchorObject: c.anchorObject }));
 }
 
 /** Order edges by their canonical key so the bridge sweep is reproducible. */

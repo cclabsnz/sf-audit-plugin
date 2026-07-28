@@ -2,116 +2,124 @@ import { describe, it, expect } from '@jest/globals';
 import { clusterGraph, type GraphEdgeLite } from '../../../src/map/graph/clusters.js';
 
 /**
- * Domain clustering must survive the topologies real Salesforce orgs actually have.
+ * Domain clustering must survive the topologies real Salesforce orgs actually have — both the
+ * sparse ones (a small org is often a tree) and the dense ones (a mature org's coupling graph
+ * has an average degree above 20).
  *
- * The rule under test: a bridge is cut only when it is weak *relative to* the domains it
- * joins — not merely the lightest edge in the graph. In a tree every edge is a bridge, so an
- * absolute "cut the minimum-weight bridge" rule shatters uniform-weight graphs into singletons.
+ * No single algorithm covers both. Modularity is undefined on a forest: a chain has no
+ * community structure, and modularity optimisation shatters it into adjacent pairs at every
+ * resolution. Bridge-cutting is undefined on a dense graph: with 2000+ edges over 200 nodes
+ * there are almost no bridges, so it returns one giant blob. The implementation therefore
+ * selects by density — see `clusterGraph`.
  */
 
 const e = (from: string, to: string, weight = 1): GraphEdgeLite => ({ from, to, weight });
-
-/** Uniform score — anchor selection falls back to alphabetical order. */
 const flat = (): number => 1;
-
-const sizes = (clusters: Array<{ objects: string[] }>): number[] =>
-  clusters.map((c) => c.objects.length).sort((a, b) => b - a);
+const sizes = (cs: Array<{ objects: string[] }>): number[] => cs.map((c) => c.objects.length).sort((a, b) => b - a);
 
 /** A fully-connected core with heavy internal edges. */
 function core(prefix: string, n: number, weight: number): { nodes: string[]; edges: GraphEdgeLite[] } {
   const nodes = Array.from({ length: n }, (_, i) => `${prefix}${i + 1}`);
   const edges: GraphEdgeLite[] = [];
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) edges.push(e(nodes[i], nodes[j], weight));
+  for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) edges.push(e(nodes[i], nodes[j], weight));
+  return { nodes, edges };
+}
+
+/**
+ * k dense communities, each internally complete, cross-linked by *several* light edges.
+ *
+ * Multiple cross-links matter: with a single link every join is a bridge, which the old
+ * bridge-cutting implementation handled. Real orgs are not like that — poph-gaurav has 2078
+ * edges over 202 objects and therefore almost no bridges, which is why bridge-cutting put
+ * 165 of 169 objects in one cluster. This fixture reproduces that.
+ */
+function communities(k: number, size: number, crossLinks = 3): { nodes: string[]; edges: GraphEdgeLite[] } {
+  const nodes: string[] = [];
+  const edges: GraphEdgeLite[] = [];
+  for (let c = 0; c < k; c++) {
+    const { nodes: n, edges: es } = core(`D${c}_`, size, 10);
+    nodes.push(...n);
+    edges.push(...es);
+    if (c > 0) {
+      for (let l = 0; l < crossLinks; l++) {
+        edges.push(e(`D${c - 1}_${(l % size) + 1}`, `D${c}_${(l % size) + 1}`, 1));
+      }
+    }
   }
   return { nodes, edges };
 }
 
 describe('clusterGraph', () => {
-  describe('does not shatter tree topologies', () => {
+  describe('sparse graphs (forest — no community structure exists)', () => {
     it('keeps a uniform-weight hub and its spokes as one domain', () => {
-      // The canonical Salesforce shape: Account at the centre, everything hanging off it.
       const spokes = ['Asset', 'Case', 'Contact', 'Contract', 'Opportunity', 'Order', 'Quote', 'Task'];
-      const nodes = ['Account', ...spokes];
-      const edges = spokes.map((s) => e('Account', s));
-
-      const clusters = clusterGraph(nodes, edges, flat);
+      const clusters = clusterGraph(['Account', ...spokes], spokes.map((s) => e('Account', s)), flat);
 
       expect(clusters).toHaveLength(1);
       expect(clusters[0].objects).toHaveLength(9);
-      expect(clusters[0].objects).toContain('Account');
     });
 
     it('keeps a uniform-weight chain as one domain', () => {
-      // Lead -> Opportunity -> Order -> Invoice style hand-offs.
-      const nodes = ['Lead', 'Opportunity', 'Order', 'Invoice__c', 'Payment__c', 'Receipt__c'];
-      const edges = nodes.slice(0, -1).map((n, i) => e(n, nodes[i + 1]));
-
-      const clusters = clusterGraph(nodes, edges, flat);
-
-      expect(clusters).toHaveLength(1);
-      expect(clusters[0].objects).toHaveLength(6);
-    });
-
-    it('does not shear a lightly-coupled leaf off a dense core', () => {
-      // Cutting here would invent a one-object "domain", which is never a useful answer.
-      const c = core('A', 3, 10);
-      const nodes = [...c.nodes, 'Leaf__c'];
-      const edges = [...c.edges, e('A1', 'Leaf__c', 1)];
-
-      const clusters = clusterGraph(nodes, edges, flat);
+      // Modularity shatters this into 11 adjacent pairs at every resolution — the density
+      // gate is what stops that.
+      const nodes = Array.from({ length: 22 }, (_, i) => `C${String(i).padStart(2, '0')}__c`);
+      const clusters = clusterGraph(nodes, nodes.slice(0, -1).map((n, i) => e(n, nodes[i + 1])), flat);
 
       expect(clusters).toHaveLength(1);
-      expect(clusters[0].objects).toHaveLength(4);
+      expect(clusters[0].objects).toHaveLength(22);
     });
 
     it('keeps genuinely separate components separate', () => {
-      const nodes = ['A1', 'A2', 'B1', 'B2'];
-      const edges = [e('A1', 'A2'), e('B1', 'B2')];
-
-      const clusters = clusterGraph(nodes, edges, flat);
+      const clusters = clusterGraph(['A1', 'A2', 'B1', 'B2'], [e('A1', 'A2'), e('B1', 'B2')], flat);
 
       expect(sizes(clusters)).toEqual([2, 2]);
     });
 
-    it('handles an isolated node with no edges', () => {
-      const clusters = clusterGraph(['Lonely__c'], [], flat);
-
-      expect(clusters).toHaveLength(1);
-      expect(clusters[0].objects).toEqual(['Lonely__c']);
-    });
-
-    it('handles an empty graph', () => {
+    it('handles an isolated node and an empty graph', () => {
+      expect(clusterGraph(['Lonely__c'], [], flat)[0].objects).toEqual(['Lonely__c']);
       expect(clusterGraph([], [], flat)).toEqual([]);
     });
   });
 
-  describe('still splits genuinely weak bridges', () => {
-    it('splits two dense cores joined by one thin edge', () => {
-      // The case the bridge-cutting exists for: a tenuous link must not fuse two real domains.
-      const a = core('A', 3, 10);
-      const b = core('B', 3, 10);
-      const nodes = [...a.nodes, ...b.nodes];
-      const edges = [...a.edges, ...b.edges, e('A1', 'B1', 1)];
+  describe('dense graphs (modularity)', () => {
+    it('separates dense communities joined by thin links', () => {
+      const { nodes, edges } = communities(4, 5);
 
       const clusters = clusterGraph(nodes, edges, flat);
 
-      expect(sizes(clusters)).toEqual([3, 3]);
-      const withA1 = clusters.find((c) => c.objects.includes('A1'))!;
-      expect(withA1.objects).toEqual(['A1', 'A2', 'A3']);
+      expect(clusters).toHaveLength(4);
+      expect(sizes(clusters)).toEqual([5, 5, 5, 5]);
     });
 
-    it('does not split cores joined by a proportionally strong edge', () => {
-      // Same shape, but the connecting edge is comparable to the internal ones — one domain.
-      const a = core('A', 3, 10);
-      const b = core('B', 3, 10);
-      const nodes = [...a.nodes, ...b.nodes];
-      const edges = [...a.edges, ...b.edges, e('A1', 'B1', 9)];
+    it('does not shear a lightly-coupled leaf off a dense core', () => {
+      const c = core('A', 4, 10);
+      const clusters = clusterGraph([...c.nodes, 'Leaf__c'], [...c.edges, e('A1', 'Leaf__c', 1)], flat);
+
+      expect(clusters).toHaveLength(1);
+      expect(clusters[0].objects).toHaveLength(5);
+    });
+
+    it('keeps domains actionable on an org-scale graph', () => {
+      // A 200-object graph of 10 real communities. Domains a consultant cannot act on are
+      // as useless as one giant blob, so resolution is tuned to a target size.
+      const { nodes, edges } = communities(10, 20);
 
       const clusters = clusterGraph(nodes, edges, flat);
 
-      expect(clusters).toHaveLength(1);
-      expect(clusters[0].objects).toHaveLength(6);
+      expect(clusters.length).toBeGreaterThanOrEqual(10);
+      expect(sizes(clusters)[0]).toBeLessThanOrEqual(25);
+    });
+
+    it('treats the target domain size as a ceiling, never inflating domains', () => {
+      // The knob only tightens. If modularity already resolves finer than the target, that
+      // stands; a smaller target must never hand back *larger* domains.
+      const { nodes, edges } = communities(6, 30, 4);
+
+      const loose = clusterGraph(nodes, edges, flat, { targetDomainSize: 40 });
+      const tight = clusterGraph(nodes, edges, flat, { targetDomainSize: 10 });
+
+      expect(sizes(tight)[0]).toBeLessThanOrEqual(sizes(loose)[0]);
+      expect(tight.length).toBeGreaterThanOrEqual(loose.length);
     });
   });
 
@@ -119,34 +127,30 @@ describe('clusterGraph', () => {
     it('anchors each cluster on its highest-scoring object', () => {
       const nodes = ['Account', 'Case', 'Contact'];
       const edges = [e('Account', 'Case'), e('Case', 'Contact')];
-      const score = (o: string): number => (o === 'Case' ? 100 : 1);
 
-      const clusters = clusterGraph(nodes, edges, score);
+      const clusters = clusterGraph(nodes, edges, (o) => (o === 'Case' ? 100 : 1));
 
       expect(clusters[0].anchorObject).toBe('Case');
     });
 
-    it('is deterministic across repeated runs', () => {
-      const a = core('A', 3, 10);
-      const b = core('B', 3, 10);
-      const nodes = [...a.nodes, ...b.nodes];
-      const edges = [...a.edges, ...b.edges, e('A1', 'B1', 1)];
+    it('is deterministic regardless of input order', () => {
+      const { nodes, edges } = communities(5, 8);
 
-      const first = clusterGraph(nodes, edges, flat);
-      const second = clusterGraph(nodes, edges, flat);
+      const a = clusterGraph(nodes, edges, flat);
+      const b = clusterGraph([...nodes].reverse(), [...edges].reverse(), flat);
 
-      expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+      expect(JSON.stringify(a)).toBe(JSON.stringify(b));
     });
 
-    it('numbers clusters largest-first', () => {
-      const a = core('A', 4, 10);
-      const nodes = [...a.nodes, 'B1', 'B2'];
-      const edges = [...a.edges, e('B1', 'B2')];
+    it('numbers clusters largest-first and partitions every node exactly once', () => {
+      const { nodes, edges } = communities(3, 6);
 
       const clusters = clusterGraph(nodes, edges, flat);
 
-      expect(clusters.map((c) => c.id)).toEqual(['cluster-1', 'cluster-2']);
-      expect(clusters[0].objects).toHaveLength(4);
+      expect(clusters.map((c) => c.id)).toEqual(['cluster-1', 'cluster-2', 'cluster-3']);
+      const seen = clusters.flatMap((c) => c.objects);
+      expect(seen.slice().sort()).toEqual([...nodes].sort());
+      expect(new Set(seen).size).toBe(nodes.length);
     });
   });
 });
