@@ -29,9 +29,10 @@ function core(prefix: string, n: number, weight: number): { nodes: string[]; edg
  * k dense communities, each internally complete, cross-linked by *several* light edges.
  *
  * Multiple cross-links matter: with a single link every join is a bridge, which the old
- * bridge-cutting implementation handled. Real orgs are not like that — poph-gaurav has 2078
- * edges over 202 objects and therefore almost no bridges, which is why bridge-cutting put
- * 165 of 169 objects in one cluster. This fixture reproduces that.
+ * bridge-cutting implementation handled. Real orgs are not like that — a mature production
+ * org measured roughly 2000 edges over 200 objects and therefore almost no bridges, which is
+ * why bridge-cutting put all but a handful of objects into a single cluster. This fixture
+ * reproduces that.
  */
 function communities(k: number, size: number, crossLinks = 3): { nodes: string[]; edges: GraphEdgeLite[] } {
   const nodes: string[] = [];
