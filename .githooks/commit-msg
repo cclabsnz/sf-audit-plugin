@@ -1,0 +1,10 @@
+#!/bin/sh
+# Blocks a commit *message* naming a real Salesforce org — the leak people forget.
+set -u
+if grep -InE '00D[A-Za-z0-9]{12,15}|[A-Za-z0-9-]+\.sandbox\.my\.salesforce\.com' "$1" >/dev/null 2>&1; then
+  echo "commit-msg: the message references a real Salesforce org:" >&2
+  grep -InE '00D[A-Za-z0-9]{12,15}|[A-Za-z0-9-]+\.sandbox\.my\.salesforce\.com' "$1" | head -3 >&2
+  echo "Describe the result without identifying the org." >&2
+  exit 1
+fi
+exit 0

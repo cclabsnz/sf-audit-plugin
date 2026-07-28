@@ -1,0 +1,33 @@
+#!/bin/sh
+# Blocks a commit that would introduce real Salesforce org data into staged content.
+# Enable once per clone:  git config core.hooksPath .githooks
+#
+# POSIX ERE only — BSD grep (macOS) has no -P, and a hook that silently fails to match is
+# worse than no hook at all.
+set -u
+
+ORG_ID='00D[A-Za-z0-9]{12,15}'
+SANDBOX_HOST='[A-Za-z0-9-]+\.sandbox\.my\.salesforce\.com'
+fail=0
+
+for f in $(git diff --cached --name-only --diff-filter=ACM); do
+  case "$f" in
+    .githooks/*|.github/workflows/guard-org-data.yml) continue ;;
+  esac
+  if git show ":$f" 2>/dev/null | grep -InE "$ORG_ID|$SANDBOX_HOST" >/dev/null 2>&1; then
+    echo "pre-commit: $f references a real Salesforce org:" >&2
+    git show ":$f" 2>/dev/null | grep -InE "$ORG_ID|$SANDBOX_HOST" | head -3 >&2
+    fail=1
+  fi
+done
+
+if git diff --cached --name-only | grep -IE 'sf-audit-00D.*\.(json|html|md)$|orgintel-.*\.(json|html)$|^(coupling-graph|landscape-manifest)\.json$' >/dev/null 2>&1; then
+  echo "pre-commit: a generated report artefact is staged. These contain org data." >&2
+  fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "Use a fixture id (00Dxx0000000000EAA) or host (acme.my.salesforce.com)." >&2
+  exit 1
+fi
+exit 0
