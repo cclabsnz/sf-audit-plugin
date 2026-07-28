@@ -1,14 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-
-interface FlowRecord {
-  Id: string;
-  MasterLabel: string;
-  ProcessType: string;
-  Status: string;
-  RunInMode: string | null;
-}
+import { FlowRepository } from '@cclabsnz/sf-core';
 
 export class FlowsWithoutSharingCheck implements SecurityCheck {
   readonly id = 'flows-without-sharing';
@@ -20,22 +13,20 @@ export class FlowsWithoutSharingCheck implements SecurityCheck {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
 
-    const flows = await ctx.tooling.query<FlowRecord>(
-      "SELECT Id, MasterLabel, ProcessType, Status, RunInMode FROM Flow WHERE Status = 'Active'"
-    );
+    const flows = await new FlowRepository(ctx.soql, ctx.tooling).listActiveVersions();
 
     const total = flows.length;
 
     const autolaunchedWithoutSharing = flows.filter(
       (f) =>
-        f.ProcessType === 'AutoLaunchedFlow' &&
-        (f.RunInMode === 'DefaultMode' || f.RunInMode === null)
+        f.processType === 'AutoLaunchedFlow' &&
+        (f.runInMode === 'DefaultMode' || f.runInMode === null)
     );
 
     const screenWithoutSharing = flows.filter(
       (f) =>
-        f.ProcessType === 'Flow' &&
-        (f.RunInMode === 'DefaultMode' || f.RunInMode === null)
+        f.processType === 'Flow' &&
+        (f.runInMode === 'DefaultMode' || f.runInMode === null)
     );
 
     if (autolaunchedWithoutSharing.length > 0) {
@@ -46,8 +37,8 @@ export class FlowsWithoutSharingCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${count} autolaunched flow(s) run without user sharing context`,
         affectedItems: autolaunchedWithoutSharing.map((f) => ({
-          label: f.MasterLabel,
-          url: `${baseUrl}/builder_platform_interaction/flowBuilder.app?flowId=${f.Id}`,
+          label: f.masterLabel,
+          url: `${baseUrl}/builder_platform_interaction/flowBuilder.app?flowId=${f.id}`,
           note: 'Set "Run Flow As" to "User" or document why system context is required',
         })),
         detail:
@@ -65,8 +56,8 @@ export class FlowsWithoutSharingCheck implements SecurityCheck {
         riskLevel: 'MEDIUM',
         title: `${count} screen flow(s) run without user sharing context`,
         affectedItems: screenWithoutSharing.map((f) => ({
-          label: f.MasterLabel,
-          url: `${baseUrl}/builder_platform_interaction/flowBuilder.app?flowId=${f.Id}`,
+          label: f.masterLabel,
+          url: `${baseUrl}/builder_platform_interaction/flowBuilder.app?flowId=${f.id}`,
           note: 'Review and set "Run Flow As" to "User" where appropriate',
         })),
         detail:

@@ -28,6 +28,7 @@ function toolingLike(handler: (soql: string) => unknown[]): ToolingClient {
       if (/FROM FlowDefinitionView/.test(soql)) throw NOT_SUPPORTED('FlowDefinitionView');
       if (/FROM ApexTrigger/.test(soql) && /SymbolTable/.test(soql)) throw NO_COLUMN('SymbolTable', 'ApexTrigger');
       if (/FROM Flow\b/.test(soql) && / IN \(/.test(soql)) throw MULTI_ROW_METADATA;
+      if (/\bexpr0\b/.test(soql)) throw new Error('alias is reserved: expr0');
       const bad = /WHERE Id = '([^']+)'/.exec(soql)?.[1];
       if (bad && !isSalesforceId(bad)) throw INVALID_ID(bad);
       return handler(soql) as T[];
@@ -184,5 +185,102 @@ describe('mapWithConcurrency', () => {
 
   it('rejects a nonsensical limit rather than hanging', async () => {
     await expect(mapWithConcurrency([1], 0, async () => {})).rejects.toThrow(/>= 1/);
+  });
+});
+
+/**
+ * Extensions covering the query shapes sf-audit needs, so both plugins reach Apex and Flow
+ * through the same layer instead of hand-writing SOQL per check.
+ */
+describe('ApexRepository — sf-audit query shapes', () => {
+  it('excludes managed classes when asked', async () => {
+    const seen: string[] = [];
+    const repo = new ApexRepository(
+      toolingLike((q) => {
+        seen.push(q);
+        return [{ Name: 'Svc', NamespacePrefix: null, Body: 'class Svc{}', SymbolTable: null }];
+      }),
+    );
+
+    await repo.listClasses({ excludeManaged: true });
+
+    expect(seen[0]).toContain('WHERE NamespacePrefix = null');
+  });
+
+  it('counts classes and triggers without fetching bodies', async () => {
+    const seen: string[] = [];
+    const repo = new ApexRepository(
+      toolingLike((q) => {
+        seen.push(q);
+        // The org echoes back whatever alias the query asked for.
+        const alias = /COUNT\(Id\)\s+(\w+)/.exec(q)?.[1] ?? 'expr0';
+        return [{ [alias]: 42 }];
+      }),
+    );
+
+    const classes = await repo.countClasses({ excludeManaged: true });
+    const triggers = await repo.countTriggers({ excludeManaged: true });
+
+    expect(classes).toBe(42);
+    expect(triggers).toBe(42);
+    expect(seen.every((q) => q.includes('COUNT(Id)'))).toBe(true);
+    expect(seen.every((q) => !q.includes('Body'))).toBe(true);
+    // `expr0` is reserved — the Tooling API answers "alias is reserved: expr0".
+    expect(seen.every((q) => !/\bexpr0\b/.test(q))).toBe(true);
+  });
+
+  it('resolves class names by id and refuses malformed ids', async () => {
+    const seen: string[] = [];
+    const repo = new ApexRepository(
+      toolingLike((q) => {
+        seen.push(q);
+        return [{ Id: ID_A, Name: 'GuestSvc' }];
+      }),
+    );
+
+    const names = await repo.namesByIds([ID_A, 'not-an-id', ID_A]);
+
+    expect(names.get(ID_A)).toBe('GuestSvc');
+    // A malformed id must never reach the WHERE clause — that is "invalid ID field".
+    expect(seen[0]).not.toContain('not-an-id');
+    // Deduplicated.
+    expect(seen[0].match(/'/g)).toHaveLength(2);
+  });
+
+  it('returns an empty map without querying when no ids are valid', async () => {
+    let called = false;
+    const repo = new ApexRepository(
+      toolingLike(() => {
+        called = true;
+        return [];
+      }),
+    );
+
+    const names = await repo.namesByIds(['nope', '']);
+
+    expect(names.size).toBe(0);
+    expect(called).toBe(false);
+  });
+});
+
+describe('FlowRepository — active flow versions', () => {
+  it('lists active flow versions via Tooling without selecting Metadata', async () => {
+    const seen: string[] = [];
+    const repo = new FlowRepository(
+      soqlLike(() => []),
+      toolingLike((q) => {
+        seen.push(q);
+        return [{ Id: ID_A, MasterLabel: 'Case Router', ProcessType: 'AutoLaunchedFlow', Status: 'Active', RunInMode: 'DefaultMode' }];
+      }),
+    );
+
+    const flows = await repo.listActiveVersions();
+
+    expect(flows).toEqual([
+      { id: ID_A, masterLabel: 'Case Router', processType: 'AutoLaunchedFlow', status: 'Active', runInMode: 'DefaultMode' },
+    ]);
+    // Metadata must not appear — selecting it would impose the one-row-per-query rule.
+    expect(seen[0]).not.toContain('Metadata');
+    expect(seen[0]).toContain("Status = 'Active'");
   });
 });

@@ -1,6 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { ApexRepository } from '@cclabsnz/sf-core';
 
 interface ApexClassRecord {
   Id: string;
@@ -49,9 +50,13 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
     const baseUrl = ctx.orgInfo.instanceUrl;
     const apexClassesUrl = `${baseUrl}/lightning/setup/ApexClasses/home`;
 
-    const records = await ctx.tooling.query<ApexClassRecord>(
-      'SELECT Id, Name, Body, LengthWithoutComments, NamespacePrefix FROM ApexClass WHERE NamespacePrefix = null'
-    );
+    const records = (await new ApexRepository(ctx.tooling).listClasses({ excludeManaged: true })).map((c) => ({
+      Id: c.name,
+      Name: c.name,
+      Body: c.body ?? '',
+      LengthWithoutComments: (c.body ?? '').length,
+      NamespacePrefix: c.namespace,
+    }));
 
     // Cache apex bodies for downstream checks — exclude test classes and filter null bodies
     const nonTestRecords = records.filter((r) => !IS_TEST_CLASS.test(r.Body ?? ''));

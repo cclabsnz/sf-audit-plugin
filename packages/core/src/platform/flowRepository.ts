@@ -23,6 +23,15 @@ export interface FlowVersionRef {
   apiName: string;
 }
 
+/** An active flow version as the security checks need it (no Metadata — see class doc). */
+export interface ActiveFlowVersion {
+  id: string;
+  masterLabel: string;
+  processType: string | null;
+  status: string | null;
+  runInMode: string | null;
+}
+
 export interface SelectedFlowVersions {
   versions: FlowVersionRef[];
   /** Managed-package flows whose version "Id" was a durable name and so cannot be read. */
@@ -112,5 +121,26 @@ export class FlowRepository {
       `SELECT Id, Metadata FROM Flow WHERE Id = '${versionId}'`,
     );
     return rows[0]?.Metadata ?? null;
+  }
+
+  /**
+   * Active flow versions with their run mode. Tooling, but deliberately *without* Metadata —
+   * selecting it would impose the one-row-per-query rule and make this unusable in bulk.
+   */
+  public async listActiveVersions(): Promise<ActiveFlowVersion[]> {
+    const rows = await this.tooling.query<{
+      Id: string;
+      MasterLabel: string;
+      ProcessType: string | null;
+      Status: string | null;
+      RunInMode: string | null;
+    }>("SELECT Id, MasterLabel, ProcessType, Status, RunInMode FROM Flow WHERE Status = 'Active'");
+    return rows.map((r) => ({
+      id: r.Id,
+      masterLabel: r.MasterLabel,
+      processType: r.ProcessType ?? null,
+      status: r.Status ?? null,
+      runInMode: r.RunInMode ?? null,
+    }));
   }
 }

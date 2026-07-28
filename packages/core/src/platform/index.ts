@@ -13,6 +13,7 @@ export type {
   FlowTriggerRecord,
   FlowVersionRef,
   SelectedFlowVersions,
+  ActiveFlowVersion,
 } from './flowRepository.js';
 export { ApexRepository } from './apexRepository.js';
-export type { ApexClassRecord, ApexTriggerRecord } from './apexRepository.js';
+export type { ApexClassRecord, ApexTriggerRecord, ApexScopeOptions } from './apexRepository.js';

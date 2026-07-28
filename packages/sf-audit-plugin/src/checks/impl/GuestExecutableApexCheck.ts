@@ -1,6 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { ApexRepository } from '@cclabsnz/sf-core';
 
 interface GuestUser { Id: string; ProfileId: string; Username: string; }
 interface SetupAccess { SetupEntityId: string; ParentId: string; }
@@ -61,11 +62,9 @@ export class GuestExecutableApexCheck implements SecurityCheck {
       return { findings };
     }
 
-    const idList = classIds.map((id) => `'${id}'`).join(', ');
-    const names = await ctx.tooling.query<ApexName>(
-      `SELECT Id, Name FROM ApexClass WHERE Id IN (${idList})`,
-    );
-    const nameById = new Map(names.map((n) => [n.Id, n.Name]));
+    // Ids are validated inside the repository: one malformed value in an IN(...) clause
+    // fails the whole query with "invalid ID field", losing every good row with it.
+    const nameById = await new ApexRepository(ctx.tooling).namesByIds(classIds);
 
     const bodies = ctx.cache.apexBodies ?? [];
     const bodyByName = new Map(bodies.map((b) => [b.name, b.body]));

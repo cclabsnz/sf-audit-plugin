@@ -32,9 +32,9 @@ describe('GuestExecutableApexCheck', () => {
   it('flags an unprotected (without sharing) guest-executable class as CRITICAL', async () => {
     const ctx = makeCtx(
       {
-        guestUsers: [{ Id: '005g', ProfileId: '00eP', Username: 'guest@site' }],
-        setupAccess: [{ SetupEntityId: '01pA', ParentId: '00eP' }],
-        apexNames: [{ Id: '01pA', Name: 'PublicController' }],
+        guestUsers: [{ Id: '005g', ProfileId: '00eP0000000AbCdEAA', Username: 'guest@site' }],
+        setupAccess: [{ SetupEntityId: '01pA0000000AbCdEAA', ParentId: '00eP0000000AbCdEAA' }],
+        apexNames: [{ Id: '01pA0000000AbCdEAA', Name: 'PublicController' }],
       },
       [{ name: 'PublicController', body: 'public without sharing class PublicController { void f(){ [SELECT Id FROM Account]; } }' }],
     );
@@ -47,9 +47,9 @@ describe('GuestExecutableApexCheck', () => {
 
   it('flags guest-executable classes (no body available) as HIGH exposed', async () => {
     const ctx = makeCtx({
-      guestUsers: [{ Id: '005g', ProfileId: '00eP', Username: 'guest@site' }],
-      setupAccess: [{ SetupEntityId: '01pA', ParentId: '00eP' }],
-      apexNames: [{ Id: '01pA', Name: 'SomeController' }],
+      guestUsers: [{ Id: '005g', ProfileId: '00eP0000000AbCdEAA', Username: 'guest@site' }],
+      setupAccess: [{ SetupEntityId: '01pA0000000AbCdEAA', ParentId: '00eP0000000AbCdEAA' }],
+      apexNames: [{ Id: '01pA0000000AbCdEAA', Name: 'SomeController' }],
     });
     const result = await check.run(ctx);
     const f = result.findings.find((x) => x.id === 'guest-executable-apex-exposed');
@@ -59,7 +59,7 @@ describe('GuestExecutableApexCheck', () => {
 
   it('passes when guests can execute no Apex classes', async () => {
     const ctx = makeCtx({
-      guestUsers: [{ Id: '005g', ProfileId: '00eP', Username: 'guest@site' }],
+      guestUsers: [{ Id: '005g', ProfileId: '00eP0000000AbCdEAA', Username: 'guest@site' }],
       setupAccess: [],
       apexNames: [],
     });
