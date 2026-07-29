@@ -31,6 +31,14 @@ sf-audit-diff-*.html
 sf-audit-diff-*.json
 sf-audit-history-*.html
 
-# Internal docs — kept locally, never published to the public repo
+# Internal docs and agent artefacts — kept locally, never published.
+# Anchored at the root so a nested .gitignore going missing cannot expose them.
 CLAUDE.md
+DESIGN_BRIEF.md
 /docs/superpowers/
+/.superpowers/
+# Generated audit/intel output — always contains real org data
+orgintel-*.html
+orgintel-*.json
+/coupling-graph.json
+/landscape-manifest.json
