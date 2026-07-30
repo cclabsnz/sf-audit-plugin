@@ -21,7 +21,10 @@ for f in $(git diff --cached --name-only --diff-filter=ACM); do
   fi
 done
 
-if git diff --cached --name-only | grep -IE 'sf-audit-00D.*\.(json|html|md)$|orgintel-.*\.(json|html)$|^(coupling-graph|landscape-manifest)\.json$' >/dev/null 2>&1; then
+# Added/modified files only (a deletion cannot leak), matched on basename so a path like
+# packages/sf-orgintel-plugin/package.json is not mistaken for an orgintel-*.json report.
+if git diff --cached --name-only --diff-filter=ACM \
+  | grep -IE '(^|/)(sf-audit-00D[A-Za-z0-9]*-[0-9]+|orgintel-(map|fingerprint)-[A-Za-z0-9]+-[0-9]+)\.(json|html|md)$|(^|/)(coupling-graph|landscape-manifest)\.json$' >/dev/null 2>&1; then
   echo "pre-commit: a generated report artefact is staged. These contain org data." >&2
   fail=1
 fi
