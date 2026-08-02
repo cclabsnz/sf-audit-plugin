@@ -1,5 +1,6 @@
 // src/renderers/HistoryRenderer.ts
 import type { AuditResult } from '../findings/AuditResult.js';
+import { chartJsScript } from './chartAsset.js';
 
 function fmtDate(d: Date): string {
   return d.toISOString().replace('T', ' ').substring(0, 16);
@@ -79,7 +80,7 @@ export class HistoryRenderer {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SF Audit History: ${orgName}</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>${chartJsScript()}</script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; max-width: 1100px; margin: 2rem auto; padding: 0 1.25rem 4rem; line-height: 1.6; }

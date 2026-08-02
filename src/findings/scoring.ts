@@ -1,8 +1,8 @@
 import type { Finding } from './Finding.js';
-import type { OrgMetrics } from '../context/OrgMetrics.js';
+import type { OrgMetrics } from '@cclabsnz/sf-core';
 import type { AuditResult } from './AuditResult.js';
-import type { AuditContext } from '../context/AuditContext.js';
-import { EMPTY_METRICS } from '../context/OrgMetrics.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
+import { EMPTY_METRICS } from '@cclabsnz/sf-core';
 import { DEFAULT_SCORING_CONFIG } from './ScoringConfig.js';
 import type { ScoringConfig } from './ScoringConfig.js';
 import type { AttackChain } from '../chains/AttackChain.js';

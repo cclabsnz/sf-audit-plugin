@@ -1,4 +1,4 @@
-import type { RiskLevel } from './RiskLevel.js';
+import type { RiskLevel } from '@cclabsnz/sf-core';
 import type { Capability } from '../chains/Capability.js';
 
 export interface AffectedItem {

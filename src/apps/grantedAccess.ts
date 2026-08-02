@@ -1,5 +1,5 @@
 import type { GrantedAccess, Verb } from './types.js';
-import type { SoqlClient } from '../api/SoqlClient.js';
+import type { SoqlClient } from '@cclabsnz/sf-core';
 
 interface PsaRow { AssigneeId: string; PermissionSetId: string }
 interface ObjPermRow {

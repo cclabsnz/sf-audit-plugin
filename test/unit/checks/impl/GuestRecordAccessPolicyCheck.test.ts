@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { GuestRecordAccessPolicyCheck } from '../../../../src/checks/impl/GuestRecordAccessPolicyCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(opts: { guests?: unknown[]; guestsThrow?: boolean; updates?: unknown[]; updatesThrow?: boolean }): AuditContext {
   const queryAll = jest.fn() as any;

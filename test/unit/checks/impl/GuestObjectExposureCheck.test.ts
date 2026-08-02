@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { GuestObjectExposureCheck } from '../../../../src/checks/impl/GuestObjectExposureCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(
   queryAllSeq: unknown[][],

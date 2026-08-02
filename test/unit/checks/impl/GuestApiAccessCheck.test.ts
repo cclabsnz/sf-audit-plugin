@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { GuestApiAccessCheck } from '../../../../src/checks/impl/GuestApiAccessCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(opts: { guests?: unknown[]; guestsThrow?: boolean; psa?: unknown[]; psaThrow?: boolean }): AuditContext {
   const queryAll = jest.fn() as any;

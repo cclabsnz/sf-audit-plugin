@@ -1,10 +1,10 @@
 import type { Connection } from '@salesforce/core';
-import { SoqlClientImpl } from '../api/SoqlClientImpl.js';
-import { ToolingClientImpl } from '../api/ToolingClientImpl.js';
-import { RestClientImpl } from '../api/RestClientImpl.js';
-import { MetadataClientImpl } from '../api/MetadataClientImpl.js';
-import type { AuditContext, AuditOptions } from '../context/AuditContext.js';
-import type { OrgInfo } from '../context/OrgInfo.js';
+import { SoqlClientImpl } from '@cclabsnz/sf-core';
+import { ToolingClientImpl } from '@cclabsnz/sf-core';
+import { RestClientImpl } from '@cclabsnz/sf-core';
+import { MetadataClientImpl } from '@cclabsnz/sf-core';
+import type { AuditContext, AuditOptions } from '@cclabsnz/sf-core';
+import type { OrgInfo } from '@cclabsnz/sf-core';
 
 export function buildApiClients(conn: Connection) {
   return {

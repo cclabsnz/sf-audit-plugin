@@ -1,7 +1,7 @@
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import type { RiskLevel } from '../../findings/RiskLevel.js';
+import type { RiskLevel } from '@cclabsnz/sf-core';
 
 interface ToxicCombo {
   id: string;

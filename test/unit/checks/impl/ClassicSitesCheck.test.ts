@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { ClassicSitesCheck } from '../../../../src/checks/impl/ClassicSitesCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(opts: { sites?: unknown[]; throw?: boolean }): AuditContext {
   const queryAll = jest.fn() as any;

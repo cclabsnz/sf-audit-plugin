@@ -1,4 +1,4 @@
-import type { OrgMetrics } from '../context/OrgMetrics.js';
+import type { OrgMetrics } from '@cclabsnz/sf-core';
 
 export interface MetricMeta {
   label: string;

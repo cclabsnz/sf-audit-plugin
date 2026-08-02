@@ -1,7 +1,7 @@
-import type { AuditContext } from '../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { Finding } from '../findings/Finding.js';
-import type { AuditCache } from '../context/AuditCache.js';
-import type { OrgMetrics } from '../context/OrgMetrics.js';
+import type { AuditCache } from '@cclabsnz/sf-core';
+import type { OrgMetrics } from '@cclabsnz/sf-core';
 
 export interface CheckResult {
   findings: Finding[];

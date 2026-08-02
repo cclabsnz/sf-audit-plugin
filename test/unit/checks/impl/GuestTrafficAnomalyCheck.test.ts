@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { GuestTrafficAnomalyCheck } from '../../../../src/checks/impl/GuestTrafficAnomalyCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 const GUEST_ID18 = '005000000000001AAA'; // 15-char prefix 005000000000001
 

@@ -1,0 +1,54 @@
+name: Guard org data
+
+# Fails the build if anything identifying a real Salesforce org reaches the repository:
+# org ids, instance hostnames, customer/tenant names, or generated audit artefacts.
+#
+# This exists because a plugin that audits customer orgs is run against customer orgs, and
+# the easiest way to leak a client is a commit message quoting a real result. Content AND
+# commit messages are both scanned — the messages are the part people forget.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Scan tracked content
+        run: |
+          set -euo pipefail
+          # Real org ids (00D + 12-15 alnum), real instance hosts, generated artefacts.
+          # Fixture hosts (acme/example/test/myorg) are explicitly allowed.
+          PAT='00D[A-Za-z0-9]{12,15}|https://(?!acme|example|test|myorg|www)[a-z0-9-]+\.my\.salesforce\.com|\.sandbox\.my\.salesforce\.com'
+          if git grep -InE "$PAT" -- . ':!*.test.ts' ':!.github/workflows/guard-org-data.yml' ; then
+            echo "::error::Content appears to reference a real Salesforce org."
+            exit 1
+          fi
+          echo "content: clean"
+
+      - name: Scan for generated report artefacts
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -EI 'sf-audit-00D.*\.(json|html|md)$|orgintel-.*\.(json|html)$|^(coupling-graph|landscape-manifest)\.json$' ; then
+            echo "::error::A generated report artefact is tracked. These contain org data."
+            exit 1
+          fi
+          echo "artefacts: none tracked"
+
+      - name: Scan commit messages
+        run: |
+          set -euo pipefail
+          PAT='00D[A-Za-z0-9]{12,15}|\.sandbox\.my\.salesforce\.com'
+          if git log --format='%H%n%s%n%b' | grep -InE "$PAT" ; then
+            echo "::error::A commit message references a real Salesforce org."
+            exit 1
+          fi
+          echo "commit messages: clean"

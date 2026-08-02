@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { PublicContentExposureCheck } from '../../../../src/checks/impl/PublicContentExposureCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(opts: {
   documents?: unknown[] | Error;

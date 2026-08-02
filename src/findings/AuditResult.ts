@@ -1,5 +1,5 @@
 import type { Finding } from './Finding.js';
-import type { OrgMetrics } from '../context/OrgMetrics.js';
+import type { OrgMetrics } from '@cclabsnz/sf-core';
 import type { AttackChain } from '../chains/AttackChain.js';
 
 export interface AuditResult {

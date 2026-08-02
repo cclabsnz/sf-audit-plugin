@@ -1,6 +1,6 @@
 // src/history/AuditDiff.ts
 import type { Finding } from '../findings/Finding.js';
-import type { OrgMetrics } from '../context/OrgMetrics.js';
+import type { OrgMetrics } from '@cclabsnz/sf-core';
 import type { AuditResult } from '../findings/AuditResult.js';
 
 export type FindingChangeType =

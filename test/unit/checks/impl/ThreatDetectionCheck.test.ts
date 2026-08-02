@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { ThreatDetectionCheck } from '../../../../src/checks/impl/ThreatDetectionCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(queryAll: any): AuditContext {
   return {

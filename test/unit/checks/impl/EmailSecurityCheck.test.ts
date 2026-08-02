@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { EmailSecurityCheck } from '../../../../src/checks/impl/EmailSecurityCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 // queryAll is dispatched by the SOQL text; map each FROM object to its canned rows.
 function makeCtx(byObject: Record<string, unknown[] | Error>): AuditContext {

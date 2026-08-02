@@ -1,7 +1,7 @@
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import type { MfaRegistration } from '../../context/AuditCache.js';
+import type { MfaRegistration } from '@cclabsnz/sf-core';
 
 const PHISHING_RESISTANT = new Set(['U2F', 'FIDO2', 'WEBAUTHN', 'BUILT_IN_AUTHENTICATOR']);
 const STRONG = new Set(['TOTP', 'SALESFORCE_AUTHENTICATOR']);

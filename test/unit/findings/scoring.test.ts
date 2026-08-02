@@ -1,6 +1,6 @@
 import { buildAuditResult } from '../../../src/findings/scoring.js';
 import type { Finding } from '../../../src/findings/Finding.js';
-import type { AuditContext } from '../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { AttackChain } from '../../../src/chains/AttackChain.js';
 
 function makeCtx(): AuditContext {

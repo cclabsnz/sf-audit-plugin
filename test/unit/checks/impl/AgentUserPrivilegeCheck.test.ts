@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 import { AgentUserPrivilegeCheck } from '../../../../src/checks/impl/AgentUserPrivilegeCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
-import type { AgentUser } from '../../../../src/context/AuditCache.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
+import type { AgentUser } from '@cclabsnz/sf-core';
 
 // Route each query by the sObject it hits so a fixture can supply per-object records
 // (or per-object errors) without depending on call order.

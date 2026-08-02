@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { EncryptionCoverageCheck } from '../../../../src/checks/impl/EncryptionCoverageCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(opts: { classified?: unknown[]; classifiedThrow?: boolean; describe?: Record<string, unknown>; describeThrow?: boolean }): AuditContext {
   const toolingQuery = jest.fn() as any;

@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 import { CheckEngine } from '../../../src/checks/CheckEngine.js';
 import type { SecurityCheck, CheckResult } from '../../../src/checks/SecurityCheck.js';
-import type { AuditContext } from '../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import { CHECK_CONTROL_MAP } from '../../../src/compliance/mapping.js';
 import { getComplianceTags } from '../../../src/compliance/resolve.js';
 

@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 import { AgentMonitoringCoverageCheck } from '../../../../src/checks/impl/AgentMonitoringCoverageCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
-import type { AgentDefinition, AgentAccess, EventLogSummary } from '../../../../src/context/AuditCache.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
+import type { AgentDefinition, AgentAccess, EventLogSummary } from '@cclabsnz/sf-core';
 
 type Handler = (soql: string) => Promise<unknown[]>;
 
