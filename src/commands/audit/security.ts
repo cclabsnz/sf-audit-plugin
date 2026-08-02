@@ -127,6 +127,9 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     this.log('');
     this.printSummary(result);
 
+    this.log('');
+    this.log('  Deep dives: https://softwareinsights.dev   ·   Remediation help: https://cloudcounsel.co.nz');
+
     if (flags['fail-on']) {
       this.handleFailOn(result, flags['fail-on'] as RiskLevel);
     }

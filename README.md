@@ -1,7 +1,12 @@
+<p align="center">
+  <a href="https://cloudcounsel.co.nz"><img src="https://raw.githubusercontent.com/cclabsnz/sf-audit-plugin/main/assets/cloudcounsel-lockup.png" width="240" alt="CloudCounsel Ltd" /></a>
+</p>
+
 # @cclabsnz/sf-audit
 
 [![CI](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/codeql.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/codeql.yml)
+[![Semgrep](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/semgrep.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/semgrep.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cclabsnz/sf-audit-plugin/badge)](https://securityscorecards.dev/viewer/?uri=github.com/cclabsnz/sf-audit-plugin)
 [![npm version](https://img.shields.io/npm/v/@cclabsnz/sf-audit)](https://www.npmjs.com/package/@cclabsnz/sf-audit)
 [![npm provenance](https://img.shields.io/badge/npm-signed%20provenance-brightgreen)](https://www.npmjs.com/package/@cclabsnz/sf-audit#provenance)
@@ -286,7 +291,7 @@ Findings are mapped to controls across eight security and privacy frameworks. Th
 
 > **Not an attestation.** A control rendering "No findings detected" means this audit's checks surfaced no issues mapped to it. It is **not** a statement of compliance or certification. See [Scope & Liability](#scope--liability).
 
-**Further reading:** [Mapping Salesforce security to NZISM, the NZ Privacy Act and ISO 27001](https://www.softwareinsights.dev/posts/salesforce-security-nzism-nz-privacy-act) and [Why Salesforce Health Cloud needs its own security review](https://www.softwareinsights.dev/posts/salesforce-health-cloud-security-review).
+**Further reading:** [Mapping Salesforce security to NZISM, the NZ Privacy Act and ISO 27001](https://softwareinsights.dev/posts/salesforce-security-nzism-nz-privacy-act/) and [Why Salesforce Health Cloud needs its own security review](https://softwareinsights.dev/posts/salesforce-health-cloud-security-review/). More in [Further reading](#further-reading).
 
 ## Scope & Liability
 
@@ -317,7 +322,8 @@ Because this tool authenticates against production orgs, "is it safe to run?" de
   npm audit signatures   # reports "verified attestations" for @cclabsnz/sf-audit
   ```
 
-- **Independent scans on every change.** [CodeQL](https://github.com/cclabsnz/sf-audit-plugin/security/code-scanning) static analysis (of both the source **and** the CI workflows), an [OpenSSF Scorecard](https://securityscorecards.dev/viewer/?uri=github.com/cclabsnz/sf-audit-plugin) supply-chain review, a PR **dependency-review** gate, and a `pnpm audit` gate (fails on known high-severity advisories) — plus Dependabot for updates. All GitHub Actions are pinned to commit SHAs. Each release ships a CycloneDX **SBOM**.
+- **Independent scans on every change.** Two static-analysis engines — [CodeQL](https://github.com/cclabsnz/sf-audit-plugin/security/code-scanning) (`security-extended`, of both the source **and** the CI workflows) and [Semgrep](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/semgrep.yml) (OWASP Top 10 + security-audit rulesets) — an [OpenSSF Scorecard](https://securityscorecards.dev/viewer/?uri=github.com/cclabsnz/sf-audit-plugin) supply-chain review, a PR **dependency-review** gate (vulnerabilities **and** a copyleft-license policy), and a `pnpm audit` gate — plus Dependabot, and GitHub secret scanning with push protection. All GitHub Actions are pinned to commit SHAs. Each release ships a CycloneDX **SBOM**.
+- **Regulated-environment readiness.** The above give reviewers a paper trail for procurement: SBOM per release, an enforced dependency **license policy**, signed provenance, and independent SAST/supply-chain scans.
 - **Least privilege & disclosure.** See [PERMISSIONS.md](PERMISSIONS.md) for the minimal access it needs and [SECURITY.md](SECURITY.md) for private vulnerability reporting.
 
 ### What third-party scanners flag, and why
@@ -640,3 +646,48 @@ npm run clean          # remove compiled output
 ```
 
 Maintainers: see **[docs/RELEASE.md](docs/RELEASE.md)** for the release checklist and the one-time repository-hardening steps (npm provenance token, branch protection, and the CodeQL / Scorecard setup behind the badges above).
+
+## Further reading
+
+Deep dives on this tool and the topics it checks, from our engineering blog **[softwareinsights.dev](https://softwareinsights.dev)**.
+
+**How the commands work:**
+
+- [How sf-audit works — checks, attack chains, and compliance mapping](https://softwareinsights.dev/posts/sf-audit-61-checks-attack-chains-compliance-mapping/) — the design walkthrough behind `sf audit security`
+- [Free Salesforce Event Monitoring: a baseline from EventLogFile without Shield](https://softwareinsights.dev/posts/salesforce-free-event-monitoring-eventlogfile-baseline/) — why [`sf audit events pull`](#free-event-baseline) exists and how to cron it
+- [Which connected apps use less than they're granted? Ask your own logs](https://softwareinsights.dev/posts/salesforce-connected-app-least-privilege-granted-vs-used/) — the granted-vs-used method behind [`sf audit apps`](#connected-app-least-privilege)
+- [Scanner or breach? Triage EventLogFile in one command](https://softwareinsights.dev/posts/salesforce-eventlogfile-guest-traffic-triage-scanner-or-breach/) — pairing an `events pull` baseline with the [sfelf-triage](https://github.com/cclabsnz/sfelf-triage) companion
+- [Salesforce guest user exposure, graded by real reachability](https://softwareinsights.dev/posts/sf-audit-guest-user-exposure-reachability/) — the UI-API reachability tiering behind the [guest checks](#guest--external-facing-access)
+- [sf-audit vs sf-cli-security-audit](https://softwareinsights.dev/posts/sf-audit-vs-sf-cli-security-audit/) — how this plugin differs from a configurable policy engine, and when to reach for each
+
+**The access model the privilege checks encode** — the reasoning behind [Users, Permissions & Privilege](#users-permissions--privilege):
+
+- [Why your developers don't need Modify All Data](https://softwareinsights.dev/posts/salesforce-developers-modify-all-data-what-they-need-instead/) — part 1 of a four-part series on delivery-team access; feeds Users & Admins and Privileged Access & Shadow Admins
+- [The access model: tiers and roles](https://softwareinsights.dev/posts/salesforce-delivery-team-access-model-tiers-and-roles/) — the tiering that Separation of Duties and Privilege Escalation Permissions test against
+- [Sizing the model to your team](https://softwareinsights.dev/posts/salesforce-access-model-sizing-internal-vs-external-admin-teams/) — internal vs external admins, and what the model costs to run
+- [Deployable permission sets](https://softwareinsights.dev/posts/salesforce-delivery-team-deployable-permission-sets/) — the metadata and the CI identity, which the Integration / Service Accounts check inventories
+
+**Platform changes the checks track:**
+
+- [Hardening Agentforce against prompt injection (post-ForcedLeak)](https://softwareinsights.dev/posts/salesforce-agentforce-forcedleak-prompt-injection-hardening/) — feeds the Agentforce / GenAI checks
+- [Audit your Agentforce footprint: every agent, agent user, and permission](https://softwareinsights.dev/posts/salesforce-agentforce-footprint-audit/) — the manual SOQL behind Agent Inventory
+- [Agentforce agent user least privilege](https://softwareinsights.dev/posts/salesforce-agentforce-agent-user-least-privilege/) — feeds the Agent User Privilege check
+- [Salesforce MFA enforcement: the revised 2026 dates](https://softwareinsights.dev/posts/salesforce-mfa-enforcement-paused-revised-dates-2026/) — feeds the MFA checks
+- [The MFA enforcement admin guide](https://softwareinsights.dev/posts/salesforce-mfa-enforcement-2026-admin-guide/) — what the MFA Enforcement / Registration / Method Strength checks are measuring against
+- [MFA lockout recovery and break-glass accounts](https://softwareinsights.dev/posts/salesforce-mfa-lockout-recovery-break-glass-accounts/) — the operational side of the MFA and High Assurance Session checks
+- [OAuth username-password (ROPC) flow retirement in Winter '27](https://softwareinsights.dev/posts/salesforce-oauth-username-password-flow-retirement-winter-27/) — feeds the SSO Enforcement and Connected App OAuth Scopes checks
+- [Email change verification retirement and Authorized Email Domains](https://softwareinsights.dev/posts/salesforce-email-change-verification-retirement-authorized-email-domains/) — feeds the Email Security check
+- [Summer '26: SAML retirement & Apex secure-by-default](https://softwareinsights.dev/posts/salesforce-summer-26-saml-retirement-apex-secure-by-default/) — feeds the SSO / Apex checks
+- [Salesforce security enforcement in 2026 — every change and date](https://softwareinsights.dev/posts/salesforce-security-enforcement-2026-complete-guide/) — the overall posture this tool measures
+- [Report-export step-up enforcement: known issues](https://softwareinsights.dev/posts/salesforce-transaction-security-policy-report-export-known-issues/) — feeds the data-export / transaction-security checks
+
+**Compliance and NZ context** — background for the [framework mappings](#compliance-frameworks):
+
+- [Mapping Salesforce security to NZISM, the NZ Privacy Act and ISO 27001](https://softwareinsights.dev/posts/salesforce-security-nzism-nz-privacy-act/)
+- [Data sovereignty for New Zealand Salesforce orgs](https://softwareinsights.dev/posts/salesforce-data-sovereignty-new-zealand/) — residency vs sovereignty, and why the `nz` framework pack exists
+- [IPP 3A indirect collection notices](https://softwareinsights.dev/posts/salesforce-nz-privacy-ipp3a-indirect-collection-notice/) — feeds the NZ Privacy Act control mappings
+- [Why Salesforce Health Cloud needs its own security review](https://softwareinsights.dev/posts/salesforce-health-cloud-security-review/) — the HISO 10029 context
+
+## Commercial support
+
+`sf-audit` is free and open source. If you'd like hands-on help — interpreting findings, prioritising remediation, or a full Salesforce security and architecture review — **[CloudCounsel](https://cloudcounsel.co.nz)**, the team behind this plugin, offers Salesforce security consulting. Reach us at [hello@cloudcounsel.co.nz](mailto:hello@cloudcounsel.co.nz).

@@ -1,0 +1,6 @@
+# Renders the "Sponsor" button on the repo. These are plain links — no wallet, crypto,
+# or payment setup required. We route interest to consulting and the engineering blog
+# rather than donations.
+custom:
+  - https://cloudcounsel.co.nz
+  - https://softwareinsights.dev

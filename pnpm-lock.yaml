@@ -16,8 +16,8 @@ importers:
   .:
     dependencies:
       '@cclabsnz/sf-core':
-        specifier: ^0.1.0
-        version: 0.1.0
+        specifier: ^0.1.4
+        version: 0.1.4
       '@oclif/core':
         specifier: ^4
         version: 4.13.0
@@ -272,6 +272,10 @@ packages:
 
   '@cclabsnz/sf-core@0.1.0':
     resolution: {integrity: sha512-4Iv78srKrErZFIe9CbcainR0SZv1HoS5LocbzOHrmeQxSpnC1D4oBmN4UPX1X4uEeeQJ06Q52ZY/sKtcW2xnJQ==}
+    engines: {node: '>=18.0.0'}
+
+  '@cclabsnz/sf-core@0.1.4':
+    resolution: {integrity: sha512-BpKJaa56s9O8Z4dDQ+sCtKoPvQvXnZpVwMEMM+CrauKCnT6zvuYbKiNkZaCJHZ/w/Qw+AbCcMkchKlf9FloIXw==}
     engines: {node: '>=18.0.0'}
 
   '@cspotcode/source-map-support@0.8.1':
@@ -2375,6 +2379,10 @@ snapshots:
   '@bcoe/v8-coverage@0.2.3': {}
 
   '@cclabsnz/sf-core@0.1.0':
+    dependencies:
+      '@salesforce/core': 8.32.6
+
+  '@cclabsnz/sf-core@0.1.4':
     dependencies:
       '@salesforce/core': 8.32.6
 

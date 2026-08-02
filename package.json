@@ -1,7 +1,7 @@
 {
   "name": "@cclabsnz/sf-audit",
   "version": "1.6.1",
-  "description": "Salesforce Security Audit \u2014 native sf plugin",
+  "description": "Salesforce Security Audit — native sf plugin",
   "license": "Apache-2.0",
   "type": "module",
   "packageManager": "pnpm@10.33.0",
@@ -15,7 +15,7 @@
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "dependencies": {
-    "@cclabsnz/sf-core": "^0.1.0",
+    "@cclabsnz/sf-core": "^0.1.4",
     "@oclif/core": "^4",
     "@salesforce/core": "^8",
     "@salesforce/sf-plugins-core": "^12",

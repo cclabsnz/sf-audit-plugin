@@ -68,3 +68,8 @@ jobs:
       - uses: actions/dependency-review-action@cc4f6536e38d1126c5e3b0683d469a14f23bfea4 # v3
         with:
           fail-on-severity: high
+          # License policy (regulated-environment readiness): block newly-introduced
+          # dependencies under strong-copyleft licenses that are problematic to
+          # redistribute in a permissively-licensed (Apache-2.0) CLI. Applies to
+          # PR-added deps only; tune the list as needed.
+          deny-licenses: AGPL-1.0-only, AGPL-1.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later, GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later
