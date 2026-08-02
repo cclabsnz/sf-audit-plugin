@@ -1,10 +1,9 @@
 node_modules/
-# Build output only — anchored so it never swallows source dirs named lib/
-# (e.g. packages/sf-orgintel-plugin/src/lib).
+# Build output only — anchored so it never swallows a source dir named lib/
+# (src/lib holds wire.ts). An unanchored `lib/` here silently excluded it once already,
+# and the package then built locally from untracked files and failed in CI.
 /lib/
 /lib-test/
-packages/*/lib/
-packages/*/lib-test/
 *.js.map
 .DS_Store
 *.tsbuildinfo

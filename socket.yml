@@ -8,7 +8,7 @@ version: 2
 projectIgnorePaths:
   # Test fixtures contain deliberately hostile-looking sample data (anonymised event-log
   # rows, RFC 5737 IPs, malicious-URL examples) used to assert detection logic.
-  - "packages/*/test/**"
+  - "test/**"
 
 issueRules:
   # "Filesystem access" — expected and required.

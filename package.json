@@ -1,16 +1,35 @@
 {
-  "name": "cclabs-sf-audit",
-  "version": "0.0.0",
-  "description": "CloudCounsel sf-audit Salesforce security audit plugin.",
+  "name": "@cclabsnz/sf-audit",
+  "version": "1.6.1",
+  "description": "Salesforce Security Audit \u2014 native sf plugin",
   "license": "Apache-2.0",
-  "private": true,
   "type": "module",
   "packageManager": "pnpm@10.33.0",
+  "main": "lib/index.js",
   "scripts": {
-    "build": "pnpm -r build",
-    "test": "pnpm -r test",
-    "clean": "pnpm -r clean",
+    "build": "tsc -p tsconfig.json",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests",
+    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js test/unit --passWithNoTests",
+    "prepack": "npm run build",
+    "clean": "rm -rf lib",
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
+  },
+  "dependencies": {
+    "@cclabsnz/sf-core": "^0.1.0",
+    "@oclif/core": "^4",
+    "@salesforce/core": "^8",
+    "@salesforce/sf-plugins-core": "^12",
+    "chart.js": "^4.5.1",
+    "zod": "^4"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29",
+    "@types/node": "^22",
+    "jest": "^29",
+    "ts-jest": "^29",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
   },
   "repository": {
     "type": "git",
@@ -19,6 +38,33 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "oclif": {
+    "bin": "sf",
+    "dirname": "sf",
+    "commands": "./lib/commands",
+    "pluginType": "jit",
+    "flexibleTaxonomy": true,
+    "devPlugins": [],
+    "topics": {
+      "audit": {
+        "description": "Salesforce security audit commands",
+        "subtopics": {
+          "events": {
+            "description": "Capture free EventLogFile logs to local disk"
+          },
+          "apps": {
+            "description": "Analyze connected-app least-privilege from EventLogFile usage"
+          }
+        }
+      }
+    }
+  },
+  "files": [
+    "/lib",
+    "/messages",
+    "/config",
+    "!/lib/**/*.map"
+  ],
   "pnpm": {
     "overrides": {
       "form-data": "^4.0.6",
