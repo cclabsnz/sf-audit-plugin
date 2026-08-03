@@ -16,8 +16,8 @@ importers:
   .:
     dependencies:
       '@cclabsnz/sf-core':
-        specifier: ^0.1.5
-        version: 0.1.5(@salesforce/core@9.1.0)
+        specifier: ^0.2.0
+        version: 0.2.0(@salesforce/core@9.1.0)
       '@oclif/core':
         specifier: ^4
         version: 4.13.0
@@ -229,8 +229,8 @@ packages:
   '@bcoe/v8-coverage@0.2.3':
     resolution: {integrity: sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==}
 
-  '@cclabsnz/sf-core@0.1.5':
-    resolution: {integrity: sha512-PJ9FFvbp+sI3djrID5uZoQUVxNDufg1le07Nryu7vek3t7tkRf1jaA0fvZFvP6ohcr88WJ8qES2SnTTIM7i0nQ==}
+  '@cclabsnz/sf-core@0.2.0':
+    resolution: {integrity: sha512-lzi5TyNDm6/y+2h4P20/ZfQmUM7VahjcIBmez56Gi4E+aF4iaxlrQOBE5XiZCUm/1rk0+NVAenn3lWcHQn3cqg==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       '@salesforce/core': ^8 || ^9
@@ -2497,7 +2497,7 @@ snapshots:
 
   '@bcoe/v8-coverage@0.2.3': {}
 
-  '@cclabsnz/sf-core@0.1.5(@salesforce/core@9.1.0)':
+  '@cclabsnz/sf-core@0.2.0(@salesforce/core@9.1.0)':
     dependencies:
       '@salesforce/core': 9.1.0
 

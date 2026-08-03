@@ -124,8 +124,18 @@ describe('pullEventLogs', () => {
     const result = await pullEventLogs({ soql, rest, store, orgId: ORG }, { since: 1 });
     expect(result.found).toBe(0);
     expect(result.downloaded).toBe(0);
-    expect(result.manifestPath).toBeUndefined();
     expect(rest.getRawToFile).not.toHaveBeenCalled();
+
+    // A run that captured nothing still writes its coverage manifest. This assertion used to
+    // be the opposite, and the opposite is the more dangerous behaviour: with no manifest, a
+    // later reader cannot tell "we looked and the hour was empty" from "we never looked at
+    // that hour". `sf audit timeline` branches on exactly that distinction before it reports
+    // an absence, so the empty run is the one whose record matters most.
+    expect(result.manifestPath).toBeDefined();
+    const coverage = JSON.parse(fs.readFileSync(result.manifestPath!, 'utf-8'));
+    expect(coverage.orgId).toBe(ORG);
+    expect(coverage.elf.captured).toEqual([]);
+    expect(coverage.elf.failed).toEqual([]);
   });
 
   it('classifies a permission failure instead of throwing', async () => {
