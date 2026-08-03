@@ -1,11 +1,17 @@
 name: Guard org data
 
 # Fails the build if anything identifying a real Salesforce org reaches the repository:
-# org ids, instance hostnames, customer/tenant names, or generated audit artefacts.
+# org ids, sandbox hostnames, or generated audit artefacts. Content AND commit messages are
+# both scanned — the messages are the part people forget.
 #
-# This exists because a plugin that audits customer orgs is run against customer orgs, and
-# the easiest way to leak a client is a commit message quoting a real result. Content AND
-# commit messages are both scanned — the messages are the part people forget.
+# Test fixtures are excluded by shape: a real org id never contains 'xx' or six consecutive
+# zeros, whereas fixtures conventionally do (00Dxx0000000000EAA, 00D000000000001). A guard
+# that rejects the ids its own message recommends gets switched off by the first developer
+# who hits it.
+#
+# Do not paste a real org id here to illustrate the rule. An earlier revision of this file
+# did exactly that, and the comment explaining how to spot a real id was itself the leak.
+# These files are therefore scanned like any other — see the absence of exemptions below.
 on:
   push:
   pull_request:
@@ -13,6 +19,21 @@ on:
 
 permissions:
   contents: read
+
+# POSIX ERE throughout — GitHub runners have GNU grep, but these patterns are shared with the
+# local hooks, which run on BSD grep where -P does not exist. ERE has no negative lookahead,
+# so fixtures are removed by filtering the extracted matches rather than by an inline (?!...).
+# The previous revision used (?!...) with -E: it silently matched nothing, so every real
+# instance host passed while the step still reported "clean".
+env:
+  ORG_ID: '00D[A-Za-z0-9]{12,15}'
+  FIXTURE_ID: '00D[A-Za-z0-9]*([xX]{2}|0{6,})'
+  # Matches the whole dotted host so a sandbox host keeps its org name. The fixture pattern is
+  # anchored at both ends, so the ENTIRE host must be a fixture: unanchored, any real host
+  # whose name merely begins with an allowed word would be waved through. Described rather
+  # than illustrated — a literal example here is itself a host this guard must flag.
+  HOST: '[A-Za-z0-9][A-Za-z0-9.-]*\.my\.salesforce\.com'
+  FIXTURE_HOST: '^(acme|example|test|myorg|sample|demo|localhost|develop|sandbox|scratch|x)(--[A-Za-z0-9-]+)?(\.sandbox|\.develop)?\.my\.salesforce\.com$'
 
 jobs:
   guard:
@@ -24,20 +45,25 @@ jobs:
 
       - name: Scan tracked content
         run: |
-          set -euo pipefail
-          # Real org ids (00D + 12-15 alnum), real instance hosts, generated artefacts.
-          # Fixture hosts (acme/example/test/myorg) are explicitly allowed.
-          PAT='00D[A-Za-z0-9]{12,15}|https://(?!acme|example|test|myorg|www)[a-z0-9-]+\.my\.salesforce\.com|\.sandbox\.my\.salesforce\.com'
-          if git grep -InE "$PAT" -- . ':!*.test.ts' ':!.github/workflows/guard-org-data.yml' ; then
-            echo "::error::Content appears to reference a real Salesforce org."
+          set -uo pipefail
+          # Ids and hosts are counted separately. Filtering both on one line would let a line
+          # holding a fixture host *and* a real id pass, because the fixture would clear the
+          # whole line. -o judges each match on its own.
+          ids=$(git grep -hoIE "$ORG_ID" -- . | grep -vcE "$FIXTURE_ID")
+          hosts=$(git grep -hoIE "$HOST" -- . | grep -vcE "$FIXTURE_HOST")
+          if [ "$ids" -ne 0 ] || [ "$hosts" -ne 0 ]; then
+            git grep -InE "$ORG_ID" -- . | grep -vE "$FIXTURE_ID" | head -5
+            git grep -InE "$HOST" -- . | grep -vE "$FIXTURE_HOST" | head -5
+            echo "::error::Content references a real Salesforce org ($ids id(s), $hosts host(s))."
             exit 1
           fi
           echo "content: clean"
 
       - name: Scan for generated report artefacts
         run: |
-          set -euo pipefail
-          if git ls-files | grep -EI 'sf-audit-00D.*\.(json|html|md)$|orgintel-.*\.(json|html)$|^(coupling-graph|landscape-manifest)\.json$' ; then
+          set -uo pipefail
+          if git ls-files \
+            | grep -IE '(^|/)(sf-audit-00D[A-Za-z0-9]*-[0-9]+|orgintel-(map|fingerprint)-[A-Za-z0-9]+-[0-9]+)\.(json|html|md)$|(^|/)(coupling-graph|landscape-manifest)\.json$' ; then
             echo "::error::A generated report artefact is tracked. These contain org data."
             exit 1
           fi
@@ -45,10 +71,11 @@ jobs:
 
       - name: Scan commit messages
         run: |
-          set -euo pipefail
-          PAT='00D[A-Za-z0-9]{12,15}|\.sandbox\.my\.salesforce\.com'
-          if git log --format='%H%n%s%n%b' | grep -InE "$PAT" ; then
-            echo "::error::A commit message references a real Salesforce org."
+          set -uo pipefail
+          ids=$(git log --format='%s%n%b' | grep -hoE "$ORG_ID" | grep -vcE "$FIXTURE_ID")
+          hosts=$(git log --format='%s%n%b' | grep -hoE "$HOST" | grep -vcE "$FIXTURE_HOST")
+          if [ "$ids" -ne 0 ] || [ "$hosts" -ne 0 ]; then
+            echo "::error::A commit message references a real Salesforce org ($ids id(s), $hosts host(s))."
             exit 1
           fi
           echo "commit messages: clean"

@@ -1,10 +1,37 @@
 #!/bin/sh
-# Blocks a commit *message* naming a real Salesforce org — the leak people forget.
+# Blocks a commit message that names a real Salesforce org, or that looks like pasted output
+# from one. Object names describe a client's data model and identify them as surely as an org
+# id, so they are checked structurally — a denylist of client prefixes would publish in this
+# file the very names it exists to protect.
 set -u
-if grep -InE '00D[A-Za-z0-9]{12,15}|[A-Za-z0-9-]+\.sandbox\.my\.salesforce\.com' "$1" >/dev/null 2>&1; then
-  echo "commit-msg: the message references a real Salesforce org:" >&2
-  grep -InE '00D[A-Za-z0-9]{12,15}|[A-Za-z0-9-]+\.sandbox\.my\.salesforce\.com' "$1" | head -3 >&2
-  echo "Describe the result without identifying the org." >&2
+MSG="$1"
+FIXTURE='00D[A-Za-z0-9]*([xX]{2}|0{6,})'
+
+if grep -InE '00D[A-Za-z0-9]{12,15}|[A-Za-z0-9-]+\.sandbox\.my\.salesforce\.com' "$MSG" \
+  | grep -vE "$FIXTURE" | grep -q .; then
+  echo "commit-msg: the message references a real Salesforce org." >&2
+  exit 1
+fi
+
+# Flags a burst of Salesforce custom-object names — the signature of pasted org output.
+# Structural rather than a denylist: naming the prefixes it protects would publish them.
+# A legitimate message references an object or two; real output arrives in threes and chains.
+count_objects() {
+  grep -oE '[A-Za-z][A-Za-z0-9_]*__(c|mdt|e|x)\b' "$1" 2>/dev/null | sort -u | wc -l | tr -d ' '
+}
+has_chain() {
+  grep -qE '[A-Za-z][A-Za-z0-9_]*(__(c|mdt|e|x))?[[:space:]]*(->|→)[[:space:]]*[A-Za-z][A-Za-z0-9_]*[[:space:]]*(->|→)' "$1" 2>/dev/null
+}
+
+if [ "$(count_objects "$MSG")" -ge 3 ]; then
+  echo "commit-msg: the message lists several custom objects, which usually means real org" >&2
+  echo "  output was pasted in. Describe shapes and counts instead of names." >&2
+  exit 1
+fi
+
+if has_chain "$MSG"; then
+  echo "commit-msg: the message contains an object chain (A -> B -> C), which is org output." >&2
+  echo "  Describe the shape instead: how many chains, how long, how heavy." >&2
   exit 1
 fi
 exit 0
