@@ -6,23 +6,47 @@
 # worse than no hook at all.
 set -u
 
+# A real org id is 00D + 12 or 15 more alphanumerics. Test fixtures conventionally use
+# 'xx' or a long run of zeros (00Dxx0000000000EAA, 00D000000000001); real ids never carry
+# six consecutive zeros. Excluding fixtures matters: a guard that rejects the very id its
+# own error message recommends gets disabled by the first developer who hits it.
+#
+# Do not paste a real org id here to illustrate the rule. An earlier revision of this file
+# did exactly that, and the comment explaining how to spot a real id was itself the leak.
 ORG_ID='00D[A-Za-z0-9]{12,15}'
-SANDBOX_HOST='[A-Za-z0-9-]+\.sandbox\.my\.salesforce\.com'
+FIXTURE_ID='00D[A-Za-z0-9]*([xX]{2}|0{6,})'
+# Matches the whole dotted host, not just the last label, so a sandbox host keeps its org
+# name. The fixture pattern is anchored at both ends, so the ENTIRE host must be a
+# fixture: unanchored, any real host whose name merely begins with an allowed word
+# would be waved through. Bare Salesforce suffixes (develop, sandbox, scratch) carry no
+# org name, so they are allowed too - they appear in code describing the domain format.
+# would be waved through. Describe that case rather than spelling one out - a literal
+# example here is itself a host this guard must flag.
+HOST='[A-Za-z0-9][A-Za-z0-9.-]*\.my\.salesforce\.com'
+FIXTURE_HOST='^(acme|example|test|myorg|sample|demo|localhost|develop|sandbox|scratch|x)(--[A-Za-z0-9-]+)?(\.sandbox|\.develop)?\.my\.salesforce\.com$'
 fail=0
 
+# The guard files are scanned like everything else. Exempting them is how a leak hides in
+# the exemption list, and nothing here needs the exemption: the regex literals below are not
+# themselves org ids, and the fixture in the error message is excluded by shape.
+#
+# Ids and hosts are counted separately, on extracted matches rather than whole lines. Filtered
+# per line, a line holding a fixture host and a real id would pass — the fixture would clear
+# the id along with itself.
 for f in $(git diff --cached --name-only --diff-filter=ACM); do
-  case "$f" in
-    .githooks/*|.github/workflows/guard-org-data.yml) continue ;;
-  esac
-  if git show ":$f" 2>/dev/null | grep -InE "$ORG_ID|$SANDBOX_HOST" >/dev/null 2>&1; then
-    echo "pre-commit: $f references a real Salesforce org:" >&2
-    git show ":$f" 2>/dev/null | grep -InE "$ORG_ID|$SANDBOX_HOST" | head -3 >&2
+  blob=$(git show ":$f" 2>/dev/null)
+  ids=$(printf '%s' "$blob" | grep -oE "$ORG_ID" | grep -vcE "$FIXTURE_ID")
+  hosts=$(printf '%s' "$blob" | grep -oE "$HOST" | grep -vcE "$FIXTURE_HOST")
+  if [ "$ids" -ne 0 ] || [ "$hosts" -ne 0 ]; then
+    echo "pre-commit: $f references a real Salesforce org ($ids id(s), $hosts host(s)):" >&2
+    printf '%s' "$blob" | grep -nE "$ORG_ID" | grep -vE "$FIXTURE_ID" | head -2 >&2
+    printf '%s' "$blob" | grep -nE "$HOST" | grep -vE "$FIXTURE_HOST" | head -2 >&2
     fail=1
   fi
 done
 
-# Added/modified files only (a deletion cannot leak), matched on basename so a path like
-# packages/sf-orgintel-plugin/package.json is not mistaken for an orgintel-*.json report.
+# Added/modified files only (a deletion cannot leak), matched on basename so an ordinary
+# path ending in package.json is not mistaken for an orgintel-*.json report.
 if git diff --cached --name-only --diff-filter=ACM \
   | grep -IE '(^|/)(sf-audit-00D[A-Za-z0-9]*-[0-9]+|orgintel-(map|fingerprint)-[A-Za-z0-9]+-[0-9]+)\.(json|html|md)$|(^|/)(coupling-graph|landscape-manifest)\.json$' >/dev/null 2>&1; then
   echo "pre-commit: a generated report artefact is staged. These contain org data." >&2
