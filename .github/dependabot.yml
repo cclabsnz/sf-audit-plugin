@@ -5,6 +5,12 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Wait before adopting a brand-new release. A compromised publish is usually caught and
+    # unpublished within days, and this repository holds a token that can publish to npm, so
+    # there is no reason to be first in line. Security advisories bypass the cooldown.
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore(deps)"
@@ -20,5 +26,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Wait before adopting a brand-new release. A compromised publish is usually caught and
+    # unpublished within days, and this repository holds a token that can publish to npm, so
+    # there is no reason to be first in line. Security advisories bypass the cooldown.
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
     commit-message:
       prefix: "chore(ci)"

@@ -14,6 +14,10 @@ permissions:
 jobs:
   guard:
     runs-on: ubuntu-latest
+    # Repeated at job level: CodeQL's actions/missing-workflow-permissions wants the grant
+    # visible on the job, and an explicit least-privilege token here costs nothing.
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Fail if internal or secret files are tracked
