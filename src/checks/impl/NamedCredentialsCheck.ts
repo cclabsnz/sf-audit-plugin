@@ -1,12 +1,14 @@
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { ApexRepository } from '@cclabsnz/sf-core';
 
 interface NamedCredentialRecord {
   Id: string;
   MasterLabel: string;
   DeveloperName: string;
-  Endpoint: string;
+  // Nullable: modern External Credential-backed entries carry no endpoint URL.
+  Endpoint: string | null;
   // PrincipalType: 'Anonymous' | 'NamedUser' | 'PerUser'
   // AuthTokenEndpointUrl is present only for OAuth-type credentials
   PrincipalType: string | null;
@@ -38,7 +40,7 @@ export class NamedCredentialsCheck implements SecurityCheck {
     const count = records.length;
 
     // Cache the endpoints for use by HardcodedCredentialsCheck
-    ctx.cache.namedCredentialEndpoints = records.map((r) => r.Endpoint);
+    ctx.cache.namedCredentialEndpoints = records.map((r) => r.Endpoint).filter((e): e is string => !!e);
 
     if (count === 0) {
       findings.push({
@@ -60,10 +62,8 @@ export class NamedCredentialsCheck implements SecurityCheck {
 
     if (apexBodies.length === 0) {
       try {
-        const apexRecords = await ctx.tooling.query<ApexClassRecord>(
-          'SELECT Name, Body FROM ApexClass WHERE NamespacePrefix = null'
-        );
-        apexBodies = apexRecords.map((r) => ({ name: r.Name, body: r.Body ?? '' }));
+        const apexRecords = await new ApexRepository(ctx.tooling).listClasses({ excludeManaged: true });
+        apexBodies = apexRecords.map((r) => ({ name: r.name, body: r.body ?? '' }));
       } catch {
         // If we can't scan Apex, emit inventory only
         findings.push({
@@ -76,7 +76,7 @@ export class NamedCredentialsCheck implements SecurityCheck {
           affectedItems: records.map((r) => ({
             label: r.MasterLabel,
             url: setupUrl,
-            note: r.Endpoint,
+            note: r.Endpoint ?? '(no endpoint — External Credential)',
           })),
         });
         return { findings, metrics: { namedCredentialsCount: count, unusedNamedCredentialsCount: 0 } };
@@ -105,7 +105,7 @@ export class NamedCredentialsCheck implements SecurityCheck {
       affectedItems: records.map((r) => ({
         label: r.MasterLabel,
         url: setupUrl,
-        note: r.Endpoint,
+        note: r.Endpoint ?? '(no endpoint — External Credential)',
       })),
     });
 
@@ -129,7 +129,7 @@ export class NamedCredentialsCheck implements SecurityCheck {
     }
 
     // SBS-INT-003: flag plaintext HTTP endpoints — credentials transmitted unencrypted in transit.
-    const httpEndpoints = records.filter((r) => r.Endpoint.startsWith('http://'));
+    const httpEndpoints = records.filter((r) => r.Endpoint?.startsWith('http://') ?? false);
     if (httpEndpoints.length > 0) {
       findings.push({
         id: 'named-credentials-http-endpoint',

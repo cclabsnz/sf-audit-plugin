@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { ExperienceCspCheck } from '../../../../src/checks/impl/ExperienceCspCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(opts: { networks?: unknown[]; throw?: boolean }): AuditContext {
   const queryAll = jest.fn() as any;

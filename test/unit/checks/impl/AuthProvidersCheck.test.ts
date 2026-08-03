@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { AuthProvidersCheck } from '../../../../src/checks/impl/AuthProvidersCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(opts: { providers?: unknown[]; providersThrow?: boolean; saml?: unknown[] }): AuditContext {
   const queryAll = jest.fn() as any;

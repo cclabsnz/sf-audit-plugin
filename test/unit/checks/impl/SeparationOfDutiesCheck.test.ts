@@ -1,6 +1,6 @@
 import { SeparationOfDutiesCheck } from '../../../../src/checks/impl/SeparationOfDutiesCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
-import type { EffectivePermissionGrant } from '../../../../src/context/AuditCache.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
+import type { EffectivePermissionGrant } from '@cclabsnz/sf-core';
 
 function makeCtx(grants?: EffectivePermissionGrant[]): AuditContext {
   return {

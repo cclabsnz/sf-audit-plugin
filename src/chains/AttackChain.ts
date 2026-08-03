@@ -1,5 +1,5 @@
 // src/chains/AttackChain.ts
-import type { RiskLevel } from '../findings/RiskLevel.js';
+import type { RiskLevel } from '@cclabsnz/sf-core';
 import type { Capability } from './Capability.js';
 
 export interface AttackChainStep {

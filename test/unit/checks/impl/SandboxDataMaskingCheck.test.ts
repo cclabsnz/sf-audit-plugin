@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { SandboxDataMaskingCheck } from '../../../../src/checks/impl/SandboxDataMaskingCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(opts: { isSandbox: boolean; totalSize?: number; queryThrow?: boolean }): AuditContext {
   const query = jest.fn() as any;

@@ -1,10 +1,10 @@
 // src/commands/audit/events/pull.ts
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { buildAuditContext, resolveOrgInfo } from '../../../lib/wire.js';
-import { EventBaselineStore } from '../../../events/EventBaselineStore.js';
-import { pullEventLogs, type EventsPullResult } from '../../../events/pullEventLogs.js';
-import { sanitizeTypes } from '../../../events/eventLogQuery.js';
-import type { EventLogAccess } from '../../../context/AuditCache.js';
+import { EventBaselineStore } from '@cclabsnz/sf-core';
+import { pullEventLogs, type EventsPullResult } from '@cclabsnz/sf-core';
+import { sanitizeTypes } from '@cclabsnz/sf-core';
+import type { EventLogAccess } from '@cclabsnz/sf-core';
 
 export default class AuditEventsPullCommand extends SfCommand<EventsPullResult> {
   public static summary = 'Capture free EventLogFile daily logs to local disk';

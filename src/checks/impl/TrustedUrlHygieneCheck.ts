@@ -1,8 +1,8 @@
 import { resolve as dnsResolve } from 'node:dns/promises';
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import type { CspTrustedSite } from '../../context/AuditCache.js';
+import type { CspTrustedSite } from '@cclabsnz/sf-core';
 
 // Domains treated as "Salesforce family" and therefore not flagged. This is a review
 // heuristic to cut noise, NOT an allowlist: an attacker-controlled subdomain of a

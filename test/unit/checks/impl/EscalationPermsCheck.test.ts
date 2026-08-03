@@ -1,7 +1,7 @@
 // test/unit/checks/impl/EscalationPermsCheck.test.ts
 import { jest } from '@jest/globals';
 import { EscalationPermsCheck } from '../../../../src/checks/impl/EscalationPermsCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(records: unknown[], throws = false): AuditContext {
   return {

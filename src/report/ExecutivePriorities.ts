@@ -1,5 +1,5 @@
 import type { Finding } from '../findings/Finding.js';
-import type { RiskLevel } from '../findings/RiskLevel.js';
+import type { RiskLevel } from '@cclabsnz/sf-core';
 
 const RANK: Record<RiskLevel, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4 };
 

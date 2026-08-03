@@ -1,7 +1,7 @@
 // test/unit/renderers/HistoryRenderer.test.ts
 import { HistoryRenderer } from '../../../src/renderers/HistoryRenderer.js';
 import type { AuditResult } from '../../../src/findings/AuditResult.js';
-import { EMPTY_METRICS } from '../../../src/context/OrgMetrics.js';
+import { EMPTY_METRICS } from '@cclabsnz/sf-core';
 
 function makeResult(overrides: Partial<AuditResult> = {}): AuditResult {
   return {
@@ -60,10 +60,22 @@ describe('HistoryRenderer', () => {
   });
 
   describe('renderHtml', () => {
-    it('produces a valid HTML document with Chart.js', () => {
+    it('produces a valid HTML document with Chart.js inlined', () => {
       const html = renderer.renderHtml([R1, R2]);
       expect(html).toContain('<!DOCTYPE html>');
-      expect(html).toContain('chart.js');
+      // The Chart.js UMD bundle is embedded, not linked.
+      expect(html).toContain('Chart.js v');
+      expect(html).toContain('new Chart(');
+    });
+
+    it('is fully self-contained — no external asset fetches', () => {
+      const html = renderer.renderHtml([R1, R2]);
+      // An audit deliverable must never fetch script/styles/fonts from a third party:
+      // the report carries sensitive org findings and is often opened offline.
+      expect(html).not.toMatch(/<script[^>]+\ssrc=/i);
+      expect(html).not.toMatch(/<link[^>]+\srel=["']?stylesheet/i);
+      expect(html).not.toContain('cdn.jsdelivr.net');
+      expect(html).not.toContain('fonts.googleapis.com');
     });
 
     it('includes org name', () => {

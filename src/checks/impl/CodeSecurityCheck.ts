@@ -1,6 +1,7 @@
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { ApexRepository } from '@cclabsnz/sf-core';
 
 interface ApexCoverageRecord {
   PercentCovered: number;
@@ -31,13 +32,12 @@ export class CodeSecurityCheck implements SecurityCheck {
     // Fire all three independent Tooling queries in parallel.
     // COUNT(Id) expr0 puts the result in records[0].expr0; COUNT() without a field
     // puts it in totalSize which is not in the typed return value.
-    const [classCountResults, triggerCountResults, coverageResults] = await Promise.all([
-      ctx.tooling.query<CountResult>('SELECT COUNT(Id) expr0 FROM ApexClass WHERE NamespacePrefix = null'),
-      ctx.tooling.query<CountResult>('SELECT COUNT(Id) expr0 FROM ApexTrigger WHERE NamespacePrefix = null'),
+    const apex = new ApexRepository(ctx.tooling);
+    const [classCount, triggerCount, coverageResults] = await Promise.all([
+      apex.countClasses({ excludeManaged: true }),
+      apex.countTriggers({ excludeManaged: true }),
       ctx.tooling.query<ApexCoverageRecord>('SELECT PercentCovered FROM ApexOrgWideCoverage'),
     ]);
-    const classCount = classCountResults[0]?.expr0 ?? 0;
-    const triggerCount = triggerCountResults[0]?.expr0 ?? 0;
 
     if (coverageResults.length > 0) {
       const coverage = coverageResults[0].PercentCovered;

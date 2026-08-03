@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 import { AgentActionSurfaceCheck } from '../../../../src/checks/impl/AgentActionSurfaceCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
-import type { AgentDefinition } from '../../../../src/context/AuditCache.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
+import type { AgentDefinition } from '@cclabsnz/sf-core';
 
 type Handler = (soql: string) => Promise<unknown[]>;
 

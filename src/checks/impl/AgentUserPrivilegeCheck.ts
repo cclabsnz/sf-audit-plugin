@@ -1,7 +1,7 @@
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import type { AgentUser } from '../../context/AuditCache.js';
+import type { AgentUser } from '@cclabsnz/sf-core';
 
 // One PermissionSet row, queried for the system permissions that define admin-equivalent
 // blast radius. Field names are PermissionSet.Permissions* API names (same vocabulary as

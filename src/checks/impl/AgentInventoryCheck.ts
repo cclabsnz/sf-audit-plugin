@@ -1,8 +1,8 @@
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import type { AgentDefinition, AgentUser } from '../../context/AuditCache.js';
-import { isApiError } from '../../api/ApiError.js';
+import type { AgentDefinition, AgentUser } from '@cclabsnz/sf-core';
+import { isApiError } from '@cclabsnz/sf-core';
 
 // BotDefinition rows carry both classic Einstein Bots and Agentforce agents; Type
 // separates them. BotUserId is the run-as user where the platform exposes it.

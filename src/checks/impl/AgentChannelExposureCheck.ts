@@ -1,7 +1,7 @@
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import type { AgentDefinition } from '../../context/AuditCache.js';
+import type { AgentDefinition } from '@cclabsnz/sf-core';
 
 // A live Experience Cloud (Network) site with an active guest user is a
 // guest-reachable channel — anyone on the internet can hit it without a login.

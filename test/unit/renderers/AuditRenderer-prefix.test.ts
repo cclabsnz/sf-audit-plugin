@@ -1,5 +1,5 @@
 import { ClientReportRenderer } from '../../../src/renderers/ClientReportRenderer.js';
-import { DEFAULT_BRANDING } from '../../../src/report/branding.js';
+import { DEFAULT_BRANDING } from '@cclabsnz/sf-core';
 
 it('exposes a filenamePrefix the command can use to avoid collisions', () => {
   const r = new ClientReportRenderer({ branding: DEFAULT_BRANDING, topN: 5, frameworks: ['OWASP'] });

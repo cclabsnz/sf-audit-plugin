@@ -1,6 +1,6 @@
 # Minimum Salesforce Permissions for `sf-audit`
 
-`sf audit security` is **strictly read-only**. Every one of the 66 checks issues
+`sf audit security` is **strictly read-only**. Every check issues
 SOQL / Tooling / REST **GET** queries only: no DML, no Metadata API writes, no
 record modification. The account running the audit needs only enough permission
 to *read* security configuration, setup metadata, and audit/login data.
@@ -57,7 +57,7 @@ security team is right to refuse them:
   but for this tool it is used purely to *read* Apex source via Tooling. It does
   not let the audit account modify data or deploy code. If your security policy
   forbids it, omit it: the ~9 code-security checks will report **inconclusive**
-  and the other 57 checks run normally.
+  and every other check runs normally.
 - **Feature/licence-gated checks.** The Event Monitoring and SIEM checks require
   **Event Monitoring / Shield** to be licensed in the org; the Shield
   Platform Encryption portion of Data Classification likewise. Where a feature

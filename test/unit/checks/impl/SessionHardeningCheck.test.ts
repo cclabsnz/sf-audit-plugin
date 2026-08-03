@@ -1,5 +1,5 @@
 import { SessionHardeningCheck } from '../../../../src/checks/impl/SessionHardeningCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(healthCheckRisks: unknown, sessionSettings?: Record<string, unknown>): AuditContext {
   const metadata = sessionSettings ? { read: (async () => ({ sessionSettings })) as any } : undefined;

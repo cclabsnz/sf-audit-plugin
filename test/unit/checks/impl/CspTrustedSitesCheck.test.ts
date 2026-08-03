@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { CspTrustedSitesCheck } from '../../../../src/checks/impl/CspTrustedSitesCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(records: unknown[]): AuditContext {
   return {

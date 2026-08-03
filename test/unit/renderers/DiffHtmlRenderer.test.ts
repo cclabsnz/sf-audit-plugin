@@ -2,7 +2,7 @@
 import { DiffHtmlRenderer } from '../../../src/renderers/DiffHtmlRenderer.js';
 import { computeDiff } from '../../../src/history/DiffEngine.js';
 import type { AuditResult } from '../../../src/findings/AuditResult.js';
-import { EMPTY_METRICS } from '../../../src/context/OrgMetrics.js';
+import { EMPTY_METRICS } from '@cclabsnz/sf-core';
 
 function makeResult(overrides: Partial<AuditResult> = {}): AuditResult {
   return {

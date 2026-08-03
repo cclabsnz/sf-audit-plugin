@@ -1,5 +1,5 @@
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 interface CspTrustedSite {
   Id: string;

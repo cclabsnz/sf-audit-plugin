@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { CorsAllowlistCheck } from '../../../../src/checks/impl/CorsAllowlistCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(records: unknown[], throws = false): AuditContext {
   return {
