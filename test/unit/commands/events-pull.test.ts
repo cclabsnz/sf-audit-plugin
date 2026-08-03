@@ -2,9 +2,9 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { jest } from '@jest/globals';
-import { buildEventLogQuery, sanitizeTypes, toLogDate } from '../../../src/events/eventLogQuery.js';
-import { pullEventLogs } from '../../../src/events/pullEventLogs.js';
-import { EventBaselineStore } from '../../../src/events/EventBaselineStore.js';
+import { buildEventLogQuery, sanitizeTypes, toLogDate } from '@cclabsnz/sf-core';
+import { pullEventLogs } from '@cclabsnz/sf-core';
+import { EventBaselineStore } from '@cclabsnz/sf-core';
 
 describe('buildEventLogQuery', () => {
   it('builds the default daily window query (since 1, no types)', () => {

@@ -1,6 +1,7 @@
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { ApexRepository } from '@cclabsnz/sf-core';
 
 interface ApexClassRecord {
   Id: string;
@@ -46,10 +47,8 @@ export class ApexSharingCheck implements SecurityCheck {
 
     if (!apexBodies) {
       // Fall back to querying if cache not populated
-      const records = await ctx.tooling.query<ApexClassRecord>(
-        'SELECT Id, Name, Body, NamespacePrefix FROM ApexClass WHERE NamespacePrefix = null'
-      );
-      apexBodies = records.map((r) => ({ name: r.Name, body: r.Body }));
+      const records = await new ApexRepository(ctx.tooling).listClasses({ excludeManaged: true });
+      apexBodies = records.map((r) => ({ name: r.name, body: r.body ?? '' }));
     }
 
     const withSharingClasses: string[] = [];

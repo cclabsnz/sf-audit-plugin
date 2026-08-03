@@ -1,7 +1,7 @@
 import type { SecurityCheck } from './SecurityCheck.js';
-import type { AuditContext } from '../context/AuditContext.js';
-import type { AuditCache } from '../context/AuditCache.js';
-import type { OrgMetrics } from '../context/OrgMetrics.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
+import type { AuditCache } from '@cclabsnz/sf-core';
+import type { OrgMetrics } from '@cclabsnz/sf-core';
 import type { Finding } from '../findings/Finding.js';
 import type { AuditResult } from '../findings/AuditResult.js';
 import type { ScoringConfig } from '../findings/ScoringConfig.js';

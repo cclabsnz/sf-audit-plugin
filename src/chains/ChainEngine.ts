@@ -1,6 +1,6 @@
 // src/chains/ChainEngine.ts
 import type { Finding } from '../findings/Finding.js';
-import type { RiskLevel } from '../findings/RiskLevel.js';
+import type { RiskLevel } from '@cclabsnz/sf-core';
 import type { AttackChain, AttackChainStep } from './AttackChain.js';
 import type { Capability } from './Capability.js';
 import { SOURCE_CAPS, HIGH_IMPACT_SINKS } from './Capability.js';

@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 import { AgentChannelExposureCheck } from '../../../../src/checks/impl/AgentChannelExposureCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
-import type { AgentDefinition, AgentAccess } from '../../../../src/context/AuditCache.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
+import type { AgentDefinition, AgentAccess } from '@cclabsnz/sf-core';
 
 // Route each SOQL/Tooling query by the sObject it hits so a fixture can supply
 // per-object records (or per-object errors) without depending on call order.

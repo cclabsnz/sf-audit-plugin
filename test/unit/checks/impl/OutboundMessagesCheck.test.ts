@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { OutboundMessagesCheck } from '../../../../src/checks/impl/OutboundMessagesCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(records: unknown[], throws = false): AuditContext {
   return {

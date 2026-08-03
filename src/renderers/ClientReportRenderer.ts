@@ -1,10 +1,10 @@
 import type { AuditResult } from '../findings/AuditResult.js';
 import type { Finding } from '../findings/Finding.js';
-import type { RiskLevel } from '../findings/RiskLevel.js';
+import type { RiskLevel } from '@cclabsnz/sf-core';
 import type { AuditRenderer } from './AuditRenderer.js';
-import type { Branding } from '../report/branding.js';
-import { esc } from './html-utils.js';
-import { fontFaceCss } from '../report/fonts.js';
+import type { Branding } from '@cclabsnz/sf-core';
+import { esc } from '@cclabsnz/sf-core';
+import { fontFaceCss } from '@cclabsnz/sf-core';
 import { getCheckMeta } from '../findings/CheckMeta.js';
 import { selectPriorities } from '../report/ExecutivePriorities.js';
 import { buildRoadmap, type Roadmap } from '../report/RemediationRoadmap.js';

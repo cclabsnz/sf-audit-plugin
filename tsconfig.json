@@ -12,6 +12,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    // Required by the NodeNext module kind; also silences ts-jest TS151002.
+    "isolatedModules": true,
     "lib": ["ES2022"]
   },
   "include": ["src/**/*.ts"],

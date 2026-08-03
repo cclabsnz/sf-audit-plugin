@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
-import type { AuditContext, AuditOptions } from '../../../../src/context/AuditContext.js';
-import type { CspTrustedSite } from '../../../../src/context/AuditCache.js';
+import type { AuditContext, AuditOptions } from '@cclabsnz/sf-core';
+import type { CspTrustedSite } from '@cclabsnz/sf-core';
 
 // Mock node:dns/promises before importing the check (ESM module mock). `resolve` is the
 // only DNS entry point the check uses (resolve(domain, 'NS')). No real network.

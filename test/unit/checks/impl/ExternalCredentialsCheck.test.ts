@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { ExternalCredentialsCheck } from '../../../../src/checks/impl/ExternalCredentialsCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(opts: { creds?: unknown[]; throw?: boolean }): AuditContext {
   const queryAll = jest.fn() as any;

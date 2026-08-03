@@ -1,5 +1,5 @@
 // src/chains/namedChains.ts
-import type { RiskLevel } from '../findings/RiskLevel.js';
+import type { RiskLevel } from '@cclabsnz/sf-core';
 import type { Finding } from '../findings/Finding.js';
 import type { Capability } from './Capability.js';
 

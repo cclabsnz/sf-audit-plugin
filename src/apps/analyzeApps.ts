@@ -1,5 +1,5 @@
 import type { AppFinding } from './types.js';
-import type { SoqlClient } from '../api/SoqlClient.js';
+import type { SoqlClient } from '@cclabsnz/sf-core';
 import { collectUsage } from './usageCollector.js';
 import { resolveApps } from './appResolver.js';
 import { computeGranted } from './grantedAccess.js';

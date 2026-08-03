@@ -1,6 +1,6 @@
 import type { AppCategory, ResolvedApp } from './types.js';
 import { lookupStandardApp } from './standardAppCatalog.js';
-import type { SoqlClient } from '../api/SoqlClient.js';
+import type { SoqlClient } from '@cclabsnz/sf-core';
 
 interface AppMenuRow {
   ApplicationId: string;

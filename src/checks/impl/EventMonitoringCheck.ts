@@ -1,7 +1,7 @@
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { classifyEventLogAccessError } from '../eventLogAccess.js';
+import { classifyEventLogAccessError } from '@cclabsnz/sf-core';
 
 interface EventLogGroupRecord {
   EventType: string;

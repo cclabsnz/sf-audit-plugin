@@ -1,7 +1,7 @@
 import { MarkdownRenderer } from '../../../src/renderers/MarkdownRenderer.js';
 import type { AuditResult } from '../../../src/findings/AuditResult.js';
 import type { AttackChain } from '../../../src/chains/AttackChain.js';
-import { EMPTY_METRICS } from '../../../src/context/OrgMetrics.js';
+import { EMPTY_METRICS } from '@cclabsnz/sf-core';
 
 const SAMPLE_CHAIN: AttackChain = {
   id: 'unauth-bulk-exfil',

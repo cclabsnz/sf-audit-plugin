@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { LoginAnomalyCheck } from '../../../../src/checks/impl/LoginAnomalyCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(opts: { rows?: unknown[]; throw?: boolean }): AuditContext {
   const queryAll = jest.fn() as any;

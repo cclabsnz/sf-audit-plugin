@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { RiskLevel } from './RiskLevel.js';
+import type { RiskLevel } from '@cclabsnz/sf-core';
 
 const nonNegativeInt = z.number().int().nonnegative();
 

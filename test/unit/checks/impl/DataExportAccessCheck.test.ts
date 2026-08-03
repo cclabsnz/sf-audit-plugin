@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { DataExportAccessCheck } from '../../../../src/checks/impl/DataExportAccessCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(opts: { rows?: unknown[]; throw?: boolean }): AuditContext {
   const queryAll = jest.fn() as any;

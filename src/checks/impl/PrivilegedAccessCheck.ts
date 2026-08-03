@@ -1,7 +1,7 @@
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import type { EffectivePermissionGrant } from '../../context/AuditCache.js';
+import type { EffectivePermissionGrant } from '@cclabsnz/sf-core';
 import { DANGEROUS_PERMS } from '../permCatalog.js';
 
 interface PsaRow {

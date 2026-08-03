@@ -1,7 +1,7 @@
 // src/history/DiffEngine.ts
 import type { AuditResult } from '../findings/AuditResult.js';
 import type { Finding } from '../findings/Finding.js';
-import type { OrgMetrics } from '../context/OrgMetrics.js';
+import type { OrgMetrics } from '@cclabsnz/sf-core';
 import type { AuditDiff, FindingChange, MetricDelta } from './AuditDiff.js';
 import { METRIC_META, metricDirection } from './metricMeta.js';
 

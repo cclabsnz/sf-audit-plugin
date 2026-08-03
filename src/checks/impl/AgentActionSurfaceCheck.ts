@@ -1,7 +1,7 @@
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { isApiError } from '../../api/ApiError.js';
+import { isApiError } from '@cclabsnz/sf-core';
 
 // One GenAI action (function). GenAiFunction / GenAiFunctionDefinition expose the same
 // core fields across releases; we query defensively and fall back between them. Invocation

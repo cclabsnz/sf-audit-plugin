@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { AgentInventoryCheck } from '../../../../src/checks/impl/AgentInventoryCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 // Route each query by the sObject it hits so a fixture can supply per-object records
 // (or per-object errors) without depending on call order.

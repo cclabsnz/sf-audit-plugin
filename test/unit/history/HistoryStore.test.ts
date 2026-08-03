@@ -4,7 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { HistoryStore } from '../../../src/history/HistoryStore.js';
 import type { AuditResult } from '../../../src/findings/AuditResult.js';
-import { EMPTY_METRICS } from '../../../src/context/OrgMetrics.js';
+import { EMPTY_METRICS } from '@cclabsnz/sf-core';
 
 function makeResult(overrides: Partial<AuditResult> = {}): AuditResult {
   return {

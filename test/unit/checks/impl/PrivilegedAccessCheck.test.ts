@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { PrivilegedAccessCheck } from '../../../../src/checks/impl/PrivilegedAccessCheck.js';
-import type { AuditContext } from '../../../../src/context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 // Build a PermissionSetAssignment row. `perms` is the set of Permissions* fields that are true.
 function psaRow(username: string, profile: string, perms: string[], name = username) {

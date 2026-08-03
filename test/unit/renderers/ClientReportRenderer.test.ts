@@ -1,5 +1,5 @@
 import { ClientReportRenderer } from '../../../src/renderers/ClientReportRenderer.js';
-import { DEFAULT_BRANDING } from '../../../src/report/branding.js';
+import { DEFAULT_BRANDING } from '@cclabsnz/sf-core';
 import type { AuditResult } from '../../../src/findings/AuditResult.js';
 
 function makeResult(): AuditResult {

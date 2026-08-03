@@ -1,7 +1,7 @@
 import type { AuditResult } from '../findings/AuditResult.js';
-import type { OrgMetrics } from '../context/OrgMetrics.js';
+import type { OrgMetrics } from '@cclabsnz/sf-core';
 import type { AuditRenderer } from './AuditRenderer.js';
-import { esc } from './html-utils.js';
+import { esc, firaFontFaceCss } from '@cclabsnz/sf-core';
 
 const RISK_COLORS: Record<string, string> = {
   CRITICAL: '#dc2626',
@@ -285,9 +285,8 @@ export class HtmlRenderer implements AuditRenderer {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SF Security Audit: ${esc(result.orgName)}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap">
 <style>
+${firaFontFaceCss()}
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Fira Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;

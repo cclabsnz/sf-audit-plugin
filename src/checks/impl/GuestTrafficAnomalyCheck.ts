@@ -1,8 +1,8 @@
-import type { AuditContext } from '../../context/AuditContext.js';
+import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import type { EventLogAccess } from '../../context/AuditCache.js';
-import { classifyEventLogAccessError } from '../eventLogAccess.js';
+import type { EventLogAccess } from '@cclabsnz/sf-core';
+import { classifyEventLogAccessError } from '@cclabsnz/sf-core';
 
 interface GuestUser {
   Id: string;
