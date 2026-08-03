@@ -50,10 +50,15 @@ jobs:
       - name: Test
         run: pnpm test
 
-      # Trusted Publishing (OIDC) needs a recent npm CLI (>= 11.5.1).
+      # Trusted Publishing (OIDC) needs a recent npm CLI (>= 11.5.1); the runner's Node 22
+      # ships 10.x, so npm is upgraded here.
+      #
+      # Pinned, not `@latest`. This step runs in the job that holds the OIDC token, so an
+      # unpinned global install hands whatever npm published in the last hour a credential
+      # that can publish this package. 12.0.2 is the version the 1.7.0 release used.
       - name: Upgrade npm (>= 11.5.1 required for OIDC trusted publishing)
         run: |
-          npm install -g npm@latest
+          npm install -g npm@12.0.2
           echo "node: $(node -v)"
           echo "npm:  $(npm -v)  (path: $(which npm))"
 
