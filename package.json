@@ -15,12 +15,12 @@
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "dependencies": {
-    "@cclabsnz/sf-core": "^0.1.4",
     "@oclif/core": "^4",
-    "@salesforce/core": "^8",
-    "@salesforce/sf-plugins-core": "^12",
+    "@salesforce/core": "^9",
+    "@salesforce/sf-plugins-core": "^13",
     "chart.js": "^4.5.1",
-    "zod": "^4"
+    "zod": "^4",
+    "@cclabsnz/sf-core": "^0.1.5"
   },
   "devDependencies": {
     "@jest/globals": "^30.4.1",
