@@ -45,15 +45,18 @@ jobs:
 
       - name: Scan tracked content
         run: |
+          # GitHub runs `run:` under `bash -e`. `grep -c` exits 1 when the count is zero, so a
+          # bare assignment would abort the step before it could report anything - the guard
+          # would fail the build on a clean tree. `|| true` keeps the count and drops the status.
           set -uo pipefail
           # Ids and hosts are counted separately. Filtering both on one line would let a line
           # holding a fixture host *and* a real id pass, because the fixture would clear the
           # whole line. -o judges each match on its own.
-          ids=$(git grep -hoIE "$ORG_ID" -- . | grep -vcE "$FIXTURE_ID")
-          hosts=$(git grep -hoIE "$HOST" -- . | grep -vcE "$FIXTURE_HOST")
+          ids=$(git grep -hoIE "$ORG_ID" -- . | grep -vcE "$FIXTURE_ID" || true)
+          hosts=$(git grep -hoIE "$HOST" -- . | grep -vcE "$FIXTURE_HOST" || true)
           if [ "$ids" -ne 0 ] || [ "$hosts" -ne 0 ]; then
-            git grep -InE "$ORG_ID" -- . | grep -vE "$FIXTURE_ID" | head -5
-            git grep -InE "$HOST" -- . | grep -vE "$FIXTURE_HOST" | head -5
+            git grep -InE "$ORG_ID" -- . | grep -vE "$FIXTURE_ID" | head -5 || true
+            git grep -InE "$HOST" -- . | grep -vE "$FIXTURE_HOST" | head -5 || true
             echo "::error::Content references a real Salesforce org ($ids id(s), $hosts host(s))."
             exit 1
           fi
@@ -72,8 +75,8 @@ jobs:
       - name: Scan commit messages
         run: |
           set -uo pipefail
-          ids=$(git log --format='%s%n%b' | grep -hoE "$ORG_ID" | grep -vcE "$FIXTURE_ID")
-          hosts=$(git log --format='%s%n%b' | grep -hoE "$HOST" | grep -vcE "$FIXTURE_HOST")
+          ids=$(git log --format='%s%n%b' | grep -hoE "$ORG_ID" | grep -vcE "$FIXTURE_ID" || true)
+          hosts=$(git log --format='%s%n%b' | grep -hoE "$HOST" | grep -vcE "$FIXTURE_HOST" || true)
           if [ "$ids" -ne 0 ] || [ "$hosts" -ne 0 ]; then
             echo "::error::A commit message references a real Salesforce org ($ids id(s), $hosts host(s))."
             exit 1
