@@ -10,6 +10,7 @@ overrides:
   handlebars: ^4.7.9
   brace-expansion: ^5.0.8
   fast-uri@3: ^3.1.4
+  '@salesforce/core': ^9
 
 importers:
 
@@ -22,11 +23,11 @@ importers:
         specifier: ^4
         version: 4.13.0
       '@salesforce/core':
-        specifier: ^8
-        version: 8.32.6
+        specifier: ^9
+        version: 9.1.0
       '@salesforce/sf-plugins-core':
-        specifier: ^12
-        version: 12.2.28(@types/node@22.19.20)
+        specifier: ^13
+        version: 13.0.0(@types/node@22.19.20)
       chart.js:
         specifier: ^4.5.1
         version: 4.5.1
@@ -477,16 +478,32 @@ packages:
     resolution: {integrity: sha512-ZR973WoqCgi6cR58WhgokbHVZOaADNKHiuM1FAwS5pTLQnC91xYi04i2e/gpAX2AUf7Ya6zjbusYtZNpSyKKAQ==}
     engines: {node: '>=18.0.0'}
 
+  '@salesforce/core@9.1.0':
+    resolution: {integrity: sha512-ID9g4YH0yZBeWI0eKJv2IJRRN6ZuNjwpIOjEZm9a79Gzxa3IITsV4PCvD8q7JA3PKqiln57p8yJE458Kn5KW1g==}
+    engines: {node: '>=22.0.0'}
+
   '@salesforce/kit@3.2.6':
     resolution: {integrity: sha512-O8S4LWerHa9Zosqh+IoQjgLtpxMOfObRxaRnUdRV4MLtFUi+bQxQiyFvve6eEaBaMP1b1xVDQpvSvQ+PXEDGFQ==}
+
+  '@salesforce/kit@4.0.0':
+    resolution: {integrity: sha512-VwxhSH/8PQ5YmPAdhmLaJGCgR0n/pOm8T2y+/odMFthd5SA0xsO/kTdaRLFnFQAxxNj1nYtNHRb+BoMuAatzew==}
+    engines: {node: '>=22.0.0'}
 
   '@salesforce/sf-plugins-core@12.2.28':
     resolution: {integrity: sha512-amfPBfdlgYoM9LCQewtoLWOe29kY7urLnYH1a5G7QLWN74tJeXEkvc1OyM18n+f2MHmpK0/ICAg5Wq276HwxHQ==}
     engines: {node: '>=18.0.0'}
 
+  '@salesforce/sf-plugins-core@13.0.0':
+    resolution: {integrity: sha512-enKeAfswRyqWN6mcs0HkN+oMnJzUwJIs+Aea8U6NZsdvAdzVEZP4e7vHTPhIQ6esQeGAIf+miPJ8hOITCrDK/A==}
+    engines: {node: '>=22.0.0'}
+
   '@salesforce/ts-types@2.0.12':
     resolution: {integrity: sha512-BIJyduJC18Kc8z+arUm5AZ9VkPRyw1KKAm+Tk+9LT99eOzhNilyfKzhZ4t+tG2lIGgnJpmytZfVDZ0e2kFul8g==}
     engines: {node: '>=18.0.0'}
+
+  '@salesforce/ts-types@3.0.1':
+    resolution: {integrity: sha512-NWkveMYT2I3O7EAYwWHi6/ba2YUwp9MFi/zJzA+czK5MVqJfdD6FZbiQrTbALZNvFzgFSdq9BvHm6ygRmtROzw==}
+    engines: {node: '>=22.0.0'}
 
   '@sinclair/typebox@0.27.10':
     resolution: {integrity: sha512-MTBk/3jGLNB2tVxv6uLlFh1iu64iYOQ2PbdOSK3NW8JZsmlaOh2q6sdtKowBhfw8QFLmYNzTW4/oK4uATIi6ZA==}
@@ -2384,7 +2401,7 @@ snapshots:
 
   '@cclabsnz/sf-core@0.1.4':
     dependencies:
-      '@salesforce/core': 8.32.6
+      '@salesforce/core': 9.1.0
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
@@ -2733,9 +2750,35 @@ snapshots:
       ts-retry-promise: 0.8.1
       zod: 4.4.3
 
+  '@salesforce/core@9.1.0':
+    dependencies:
+      '@jsforce/jsforce-node': 3.10.19
+      '@salesforce/kit': 4.0.0
+      '@salesforce/ts-types': 3.0.1
+      ajv: 8.20.0
+      change-case: 4.1.2
+      fast-levenshtein: 3.0.0
+      faye: 1.4.1
+      form-data: 4.0.6
+      js2xmlparser: 4.0.2
+      jsonwebtoken: 9.0.3
+      jszip: 3.10.1
+      memfs: 4.38.1
+      pino: 9.14.0
+      pino-abstract-transport: 1.2.0
+      pino-pretty: 11.3.0
+      proper-lockfile: 4.1.2
+      semver: 7.8.5
+      ts-retry-promise: 0.8.1
+      zod: 4.4.3
+
   '@salesforce/kit@3.2.6':
     dependencies:
       '@salesforce/ts-types': 2.0.12
+
+  '@salesforce/kit@4.0.0':
+    dependencies:
+      '@salesforce/ts-types': 3.0.1
 
   '@salesforce/sf-plugins-core@12.2.28(@types/node@22.19.20)':
     dependencies:
@@ -2755,7 +2798,27 @@ snapshots:
       - react-devtools-core
       - utf-8-validate
 
+  '@salesforce/sf-plugins-core@13.0.0(@types/node@22.19.20)':
+    dependencies:
+      '@inquirer/confirm': 6.1.1(@types/node@22.19.20)
+      '@inquirer/password': 5.1.1(@types/node@22.19.20)
+      '@oclif/core': 4.13.0
+      '@oclif/table': 0.5.9
+      '@salesforce/core': 9.1.0
+      '@salesforce/kit': 4.0.0
+      '@salesforce/ts-types': 3.0.1
+      ansis: 3.17.0
+      cli-progress: 3.12.0
+      terminal-link: 3.0.0
+    transitivePeerDependencies:
+      - '@types/node'
+      - bufferutil
+      - react-devtools-core
+      - utf-8-validate
+
   '@salesforce/ts-types@2.0.12': {}
+
+  '@salesforce/ts-types@3.0.1': {}
 
   '@sinclair/typebox@0.27.10': {}
 
