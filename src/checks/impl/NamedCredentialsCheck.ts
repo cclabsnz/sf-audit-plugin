@@ -2,7 +2,7 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 import { ApexRepository } from '@cclabsnz/sf-core';
-import { escapeRegExp } from '../../lib/regex.js';
+import { referencesCallout } from '../../lib/apexRefs.js';
 
 interface NamedCredentialRecord {
   Id: string;
@@ -88,11 +88,13 @@ export class NamedCredentialsCheck implements SecurityCheck {
 
     const unusedCredentials = records.filter((r) => {
       // Named credentials are referenced as callout:DeveloperName or callout:MasterLabel
-      // Escaped: MasterLabel is free text from Setup, so an unescaped bracket throws and an
-      // unescaped quantifier quietly matches something other than the credential's name.
-      const refPatternDev = new RegExp(`callout:${escapeRegExp(r.DeveloperName)}\\b`, 'i');
-      const refPatternLabel = new RegExp(`callout:${escapeRegExp(r.MasterLabel.replace(/\s+/g, '_'))}\\b`, 'i');
-      return !refPatternDev.test(combinedApexSource) && !refPatternLabel.test(combinedApexSource);
+      // Literal search, not a pattern built from the credential's own name: MasterLabel is free
+      // text from Setup, and a bracket in it used to crash the check while a quantifier quietly
+      // matched the wrong thing.
+      return (
+        !referencesCallout(combinedApexSource, r.DeveloperName) &&
+        !referencesCallout(combinedApexSource, r.MasterLabel.replace(/\s+/g, '_'))
+      );
     });
 
     const usedCredentials = records.filter((r) => !unusedCredentials.includes(r));

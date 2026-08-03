@@ -69,6 +69,33 @@ describe('NamedCredentialsCheck — labels containing regex metacharacters', () 
     expect(unusedCount(result)).toBe(1);
   });
 
+  it('does not treat a longer credential name as a reference to a shorter one', async () => {
+    // `callout:Rate_v2` names a different credential. Without a boundary check, every
+    // credential whose name is a prefix of another would be reported as used.
+    const result = await new NamedCredentialsCheck().run(ctx(['Rate'], 'String x = callout:Rate_v2;'));
+
+    expect(unusedCount(result)).toBe(1);
+  });
+
+  it('matches a reference sitting at the very end of the source', async () => {
+    // Nothing follows the name, so there is no character to test for a boundary. End of input
+    // is a boundary; treating it as "not matched" would miss the last line of a class.
+    const result = await new NamedCredentialsCheck().run(ctx(['Billing API'], 'x = callout:Billing_API'));
+
+    expect(unusedCount(result)).toBe(0);
+  });
+
+  it('does not let an empty name match a bare callout token', async () => {
+    // Salesforce should never hand back a blank label, but if it did, an empty needle reduces to
+    // "callout:". Against ordinary Apex the boundary check already rejects that, since a real
+    // reference continues into a name — so the case that actually needs guarding is a bare
+    // `callout:` followed by punctuation, where the boundary test would otherwise succeed.
+    // Reporting a credential as used is the failure mode that hides findings.
+    const result = await new NamedCredentialsCheck().run(ctx([''], 'String x = callout:;'));
+
+    expect(unusedCount(result)).toBe(1);
+  });
+
   it('still matches a label that genuinely appears in Apex', async () => {
     // The escaping must not break the ordinary case: spaces become underscores and match.
     const result = await new NamedCredentialsCheck().run(ctx(['Billing API'], 'String x = callout:Billing_API;'));
