@@ -210,6 +210,23 @@ function inWindow(row: Record<string, unknown>, request: LoadRequest, out: Loade
   return at >= request.startMs && at < request.endMs;
 }
 
+/**
+ * A file that exists but holds nothing is not a capture.
+ *
+ * sf-core 0.3.0 made presence on disk mean complete: the capture writes atomically and treats a
+ * zero-byte file as absent, because a run killed between create and write leaves one behind and
+ * counting it as captured retires that hour permanently. The reader has to agree, or a gap the
+ * capture side now refuses to hide reappears here as a window reported captured with no data in
+ * it — which is precisely the ambiguity this command exists to remove.
+ */
+function nonEmpty(filePath: string): boolean {
+  try {
+    return fs.statSync(filePath).size > 0;
+  } catch {
+    return false;
+  }
+}
+
 function safeReadDir(dir: string, out: LoadedCaptures): string[] {
   try {
     return fs.readdirSync(dir);
@@ -232,6 +249,7 @@ function safeReadDir(dir: string, out: LoadedCaptures): string[] {
  */
 function loadElf(typeDir: string, request: LoadRequest, out: LoadedCaptures): void {
   const readFile = (full: string): void => {
+    if (!nonEmpty(full)) return;
     out.windowPresent = true;
     let text: string;
     try {
@@ -275,6 +293,7 @@ function loadRealtime(realtimeDir: string, request: LoadRequest, out: LoadedCapt
       if (!request.hours.includes(hour) || !file.endsWith('.ndjson')) continue;
 
       const full = path.join(dayDir, file);
+      if (!nonEmpty(full)) continue;
       out.windowPresent = true;
       let text: string;
       try {

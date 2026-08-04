@@ -100,7 +100,15 @@ describe('pullEventLogs', () => {
 
     const loginFile = path.join(tmpDir, ORG, 'Login', '2026-07-07-0AT0001.csv');
     expect(fs.readFileSync(loginFile, 'utf-8')).toBe(CSV_A);
-    expect(rest.getRawToFile).toHaveBeenCalledWith('/sobjects/EventLogFile/0AT0001/LogFile', loginFile);
+
+    // The download targets a temporary file that is renamed into place, so the destination
+    // passed to the client is not the final path. Asserted on the resource and the eventual
+    // file rather than the intermediate name: a half-written capture that later runs skipped
+    // for ever is the defect the atomic write exists to prevent, and pinning the temp path
+    // here would make that fix look like a regression.
+    const [resource, destination] = rest.getRawToFile.mock.calls[0] as [string, string];
+    expect(resource).toBe('/sobjects/EventLogFile/0AT0001/LogFile');
+    expect(destination.startsWith(loginFile)).toBe(true);
   });
 
   it('skips rows already on disk and does not re-download them (dedup / idempotency)', async () => {

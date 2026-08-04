@@ -142,3 +142,51 @@ describe('parseWindow — instants for row filtering', () => {
     expect(w.hours).toEqual(['04']);
   });
 });
+
+describe('loadCaptures — a partial file is not a capture', () => {
+  let dir: string;
+
+  beforeEach(() => { dir = fs.mkdtempSync(path.join(os.tmpdir(), 'partial-cap-')); });
+  afterEach(() => { fs.rmSync(dir, { recursive: true, force: true }); });
+
+  const write = (rel: string, body: string): void => {
+    const full = path.join(dir, rel);
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, body, 'utf-8');
+  };
+
+  const load = () => {
+    const w = parseWindow('2026-08-02T04:00Z/PT1H');
+    return loadCaptures({ base: dir, orgId: ORG, date: w.date, hours: w.hours, startMs: w.startMs, endMs: w.endMs });
+  };
+
+  it('does not treat a zero-byte file as a captured window', () => {
+    // sf-core 0.3.0 made presence on disk mean complete: a run killed between create and write
+    // leaves an empty file, and counting it as coverage would report a window as captured when
+    // nothing was ever written to it. The reader has to agree with the writer about that, or a
+    // gap the capture side now refuses to hide reappears here.
+    write(`${ORG}/URI/2026-08-02-0AT1.csv`, '');
+
+    expect(load().windowPresent).toBe(false);
+  });
+
+  it('ignores an in-progress download rather than reading half a file', () => {
+    // The atomic write leaves a .part file while a download is running. It is not a capture and
+    // must not be read as one, least of all mid-write.
+    write(`${ORG}/URI/2026-08-02-0AT1.csv.12345.part`, 'EVENT_TYPE\nURI\n');
+
+    const loaded = load();
+    expect(loaded.windowPresent).toBe(false);
+    expect(loaded.rows).toHaveLength(0);
+  });
+
+  it('still reads a complete file sitting beside a partial one', () => {
+    write(`${ORG}/URI/2026-08-02-0AT1.csv`, '');
+    write(`${ORG}/AuraRequest/2026-08-02-0AT2.csv`,
+      'EVENT_TYPE,TIMESTAMP_DERIVED\nAuraRequest,2026-08-02T04:30:00.000Z\n');
+
+    const loaded = load();
+    expect(loaded.windowPresent).toBe(true);
+    expect(loaded.rows).toHaveLength(1);
+  });
+});
