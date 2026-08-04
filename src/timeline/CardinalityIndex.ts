@@ -1,7 +1,6 @@
-import { joinKeysOf, type JoinKeys } from './JoinKeys.js';
+import { joinKeysOf, JOIN_KEY_TYPES, type JoinKeyType } from './JoinKeys.js';
 
-/** The join-key types the index tracks. Mirrors the optional fields of {@link JoinKeys}. */
-export type JoinKeyType = keyof JoinKeys;
+export type { JoinKeyType };
 
 export interface CardinalityIndex {
   /**
@@ -12,8 +11,6 @@ export interface CardinalityIndex {
    */
   cardinality(type: JoinKeyType, value: string): number;
 }
-
-const KEY_TYPES: readonly JoinKeyType[] = ['requestId', 'clientIp', 'sessionKey', 'loginKey', 'userId'];
 
 /**
  * Count distinct actors behind each join-key value across a window.
@@ -33,14 +30,14 @@ const KEY_TYPES: readonly JoinKeyType[] = ['requestId', 'clientIp', 'sessionKey'
 export function buildCardinalityIndex(rows: ReadonlyArray<Record<string, unknown>>): CardinalityIndex {
   // type -> value -> set of distinct actor addresses
   const actors = new Map<JoinKeyType, Map<string, Set<string>>>();
-  for (const type of KEY_TYPES) actors.set(type, new Map());
+  for (const type of JOIN_KEY_TYPES) actors.set(type, new Map());
 
   for (const row of rows) {
     const keys = joinKeysOf(row);
     // Blank values already came back undefined, so nothing blank can accumulate a count.
     const actor = keys.clientIp;
 
-    for (const type of KEY_TYPES) {
+    for (const type of JOIN_KEY_TYPES) {
       const value = keys[type];
       if (value === undefined) continue;
 

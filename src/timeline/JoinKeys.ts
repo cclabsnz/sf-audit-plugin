@@ -11,7 +11,40 @@ export interface JoinKeys {
   sessionKey?: string;
   loginKey?: string;
   userId?: string;
+  /**
+   * One Salesforce transaction — a save and everything it cascaded into. The strongest causal
+   * link available: rows sharing it did not merely happen near each other, they happened
+   * *because* of each other.
+   */
+  transactionId?: string;
+  /** A real-time event's own identity, which other events point at. */
+  eventIdentifier?: string;
+  /**
+   * The event this one was caused by. Points at another row's {@link eventIdentifier}, so
+   * following it walks from an action to its consequences rather than to its neighbours.
+   */
+  relatedEventIdentifier?: string;
 }
+
+/**
+ * Every key type, in one place.
+ *
+ * The cardinality index and the correlation engine both walk this list. Kept here so adding a
+ * key cannot reach one of them and miss the other — a key the engine expands through but the
+ * index does not measure would bypass the cardinality gate entirely.
+ */
+export const JOIN_KEY_TYPES = [
+  'requestId',
+  'clientIp',
+  'sessionKey',
+  'loginKey',
+  'userId',
+  'transactionId',
+  'eventIdentifier',
+  'relatedEventIdentifier',
+] as const satisfies ReadonlyArray<keyof JoinKeys>;
+
+export type JoinKeyType = (typeof JOIN_KEY_TYPES)[number];
 
 /**
  * Read a key from a raw event row, or `undefined` if it is unusable.
@@ -48,8 +81,13 @@ export function joinKeysOf(row: Record<string, unknown>): JoinKeys {
     // CLIENT_IP as a column but leaves it empty in practice, so an unusable value must fall
     // through rather than shadow a SourceIp that would have identified the row.
     clientIp: usable(row.CLIENT_IP) ?? usable(row.SourceIp),
-    sessionKey: usable(row.SESSION_KEY),
-    loginKey: usable(row.LOGIN_KEY),
-    userId: usable(row.USER_ID),
+    // RTE spells these without underscores; accept both so one row type does not silently
+    // drop out of the join graph because of a naming convention.
+    sessionKey: usable(row.SESSION_KEY) ?? usable(row.SessionKey),
+    loginKey: usable(row.LOGIN_KEY) ?? usable(row.LoginKey),
+    userId: usable(row.USER_ID) ?? usable(row.UserId),
+    transactionId: usable(row.TRANSACTION_ID) ?? usable(row.TransactionId),
+    eventIdentifier: usable(row.EVENT_IDENTIFIER) ?? usable(row.EventIdentifier),
+    relatedEventIdentifier: usable(row.RELATED_EVENT_IDENTIFIER) ?? usable(row.RelatedEventIdentifier),
   };
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import { buildCardinalityIndex } from '../../../src/timeline/CardinalityIndex.js';
+import { JOIN_KEY_TYPES } from '../../../src/timeline/JoinKeys.js';
 
 /**
  * Invariant 2 — a shared identity does not expand.
@@ -21,6 +22,30 @@ import { buildCardinalityIndex } from '../../../src/timeline/CardinalityIndex.js
 const row = (clientIp: string | undefined, keys: Record<string, string>): Record<string, unknown> => ({
   ...(clientIp === undefined ? {} : { CLIENT_IP: clientIp }),
   ...keys,
+});
+
+describe('buildCardinalityIndex — every expandable key is measurable', () => {
+  it('measures every key type the engine can expand through', () => {
+    // The gate only protects keys it measures. A key added to the join set but missed here
+    // would expand with no cardinality ceiling at all — the shared-identity blowup, silently
+    // reintroduced. Both sides read one list so they cannot drift, and this asserts it.
+    const index = buildCardinalityIndex([
+      {
+        CLIENT_IP: '203.0.113.10',
+        REQUEST_ID: 'r', SESSION_KEY: 's', LOGIN_KEY: 'l', USER_ID: 'u',
+        TRANSACTION_ID: 't', EventIdentifier: 'e', RelatedEventIdentifier: 'p',
+      },
+    ]);
+
+    const values: Record<string, string> = {
+      requestId: 'r', clientIp: '203.0.113.10', sessionKey: 's', loginKey: 'l',
+      userId: 'u', transactionId: 't', eventIdentifier: 'e', relatedEventIdentifier: 'p',
+    };
+
+    for (const type of JOIN_KEY_TYPES) {
+      expect(index.cardinality(type, values[type])).toBe(1);
+    }
+  });
 });
 
 describe('buildCardinalityIndex', () => {
