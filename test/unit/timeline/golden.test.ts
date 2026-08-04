@@ -178,6 +178,6 @@ describe('golden — the rendered schema', () => {
     });
 
     // A quoted newline anywhere in the data would break this, which is the point.
-    expect(csv.split('\n')).toHaveLength(rows.length + 1);
+    expect(csv.split('\n').filter((l) => l !== '')).toHaveLength(rows.length + 1);
   });
 });

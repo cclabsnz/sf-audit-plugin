@@ -41,7 +41,10 @@ export function renderCsv(output: TimelineOutput): string {
   for (const row of chronological(output.rows)) {
     lines.push(EVENT_ROW_COLUMNS.map((column) => csvCell(row[column])).join(','));
   }
-  return lines.join('\n');
+  // Trailing newline: every line is terminated, which is what POSIX text tools assume. Without
+  // it `wc -l` reports one fewer line than the file holds, and a row count taken that way is
+  // quietly wrong — in an evidence export that is a miscount someone may rely on.
+  return lines.join('\n') + '\n';
 }
 
 /**

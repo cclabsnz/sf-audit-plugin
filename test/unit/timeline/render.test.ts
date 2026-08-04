@@ -68,6 +68,15 @@ describe('renderCsv', () => {
     expect(csv).toContain('"say ""hi"""');
   });
 
+  it('terminates the final line, so line-counting tools agree with the row count', () => {
+    // `wc -l` counts newlines. Without a trailing one it reports a row fewer than the file
+    // holds, and a count taken that way from an evidence export is quietly wrong.
+    const csv = renderCsv(output({ rows: [row({}), row({ seq: 2 })] }));
+
+    expect(csv.endsWith('\n')).toBe(true);
+    expect(csv.split('\n').filter((l) => l !== '')).toHaveLength(3); // header + 2 rows
+  });
+
   it('escapes a value containing a newline, so one row stays one line', () => {
     const csv = renderCsv(output({ rows: [row({ graphql_query: 'query {\n  a\n}' })] }));
     const dataLines = csv.split('\n').slice(1);

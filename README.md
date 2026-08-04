@@ -676,6 +676,44 @@ The `rows_processed` and `records_returned` columns are populated only from Real
 objects — no `EventLogFile` type records them — and when none were captured the summary says the
 question is unanswerable rather than going quiet, since silence there reads as *"nothing left"*.
 
+### Checking a claim against its control group
+
+When a seed's rows share an identity with many other people — a community guest user, a shared
+integration account — *"this actor did X"* needs something to be checked against. Otherwise the
+claim is unfalsifiable: nobody can tell your 15 rows from the other 600 behind the same user.
+
+The refusal message already gives you the denominator:
+
+```
+Expansion refused: userId 005xx000000000 is shared by 1371 distinct addresses (threshold 8).
+```
+
+To see the peer set itself, run the command a second time seeded on that identity, with expansion
+allowed:
+
+```bash
+# 1. The claim — narrow, seeded on something that identifies one actor
+sf audit timeline --window 2026-08-02T04:00Z/PT1H --seed request:REQ000000 \
+  --output ./evidence/actor
+
+# 2. The control — everyone behind the identity those rows share
+sf audit timeline --window 2026-08-02T04:00Z/PT1H --seed user:005xx000000000 \
+  --allow-shared-identity --output ./evidence/peers
+```
+
+Both use the same schema, so they concatenate and diff directly:
+
+```bash
+# How much of the identity's activity is actually your actor?
+# (tail -n +2 skips the header row, so these are data rows)
+echo "actor:   $(tail -n +2 ./evidence/actor/timeline.csv | wc -l)"
+echo "control: $(tail -n +2 ./evidence/peers/timeline.csv | wc -l)"
+```
+
+An actor accounting for 15 of 603 rows — 2.5%, and separable by request id — is a different
+finding from one accounting for 580 of 603. The second command is what lets a reviewer tell
+which they are looking at, rather than taking the first on trust.
+
 > `sf audit timeline` adds **no checks** and does not affect the security grade. It is an
 > investigation command, not a `SecurityCheck`.
 
