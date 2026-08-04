@@ -10,6 +10,10 @@ export interface LoadRequest {
   date: string;
   /** Hours within that date, two digits. */
   hours: ReadonlyArray<string>;
+  /** Window start, inclusive. Omit to keep every row in the selected files. */
+  startMs?: number;
+  /** Window end, exclusive. */
+  endMs?: number;
 }
 
 export interface LoadedCaptures {
@@ -21,6 +25,8 @@ export interface LoadedCaptures {
   malformed: number;
   /** Files that could not be read. Reported, never fatal. */
   unreadable: number;
+  /** Rows kept despite an unreadable timestamp — they could not be placed in or out of the window. */
+  undated: number;
 }
 
 /** Salesforce org ids are 15 or 18 characters and start 00D. */
@@ -146,7 +152,7 @@ export function parseCsv(text: string): Array<Record<string, string>> {
  */
 export function loadCaptures(request: LoadRequest): LoadedCaptures {
   const orgDir = path.join(request.base, request.orgId);
-  const out: LoadedCaptures = { rows: [], coverage: undefined, windowPresent: false, malformed: 0, unreadable: 0 };
+  const out: LoadedCaptures = { rows: [], coverage: undefined, windowPresent: false, malformed: 0, unreadable: 0, undated: 0 };
 
   if (!fs.existsSync(orgDir)) return out;
 
@@ -160,6 +166,50 @@ export function loadCaptures(request: LoadRequest): LoadedCaptures {
   return out;
 }
 
+/**
+ * When did this row happen?
+ *
+ * EventLogFile carries both an ISO timestamp and Salesforce's own compact form; real-time
+ * objects carry EventDate. Any one of them will do, and the compact form has to be assembled
+ * because it does not parse as a date on its own.
+ */
+function rowTimeMs(row: Record<string, unknown>): number | undefined {
+  for (const key of ['TIMESTAMP_DERIVED', 'EventDate', 'CreatedDate']) {
+    const value = row[key];
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = Date.parse(value);
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+  }
+  // 20260802043000.000 — year month day hour minute second, no separators.
+  const compact = row.TIMESTAMP;
+  if (typeof compact === 'string') {
+    const m = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:\.(\d+))?$/.exec(compact.trim());
+    if (m) {
+      return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6], m[7] ? +m[7].slice(0, 3) : 0);
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Keep a row if it falls in the window — or if its time cannot be read at all.
+ *
+ * A daily capture file spans twenty-four hours, so selecting the file is not selecting the
+ * window; without this, asking for one hour returns the day. The window is half-open so two
+ * consecutive windows partition their rows instead of both claiming the boundary.
+ *
+ * A row whose timestamp will not parse is kept rather than dropped. It cannot be placed in or
+ * out of the window, and dropping it would lose evidence with no trace; kept, it appears in the
+ * output with an empty timestamp where a reviewer can see it and judge.
+ */
+function inWindow(row: Record<string, unknown>, request: LoadRequest, out: LoadedCaptures): boolean {
+  if (request.startMs === undefined || request.endMs === undefined) return true;
+  const at = rowTimeMs(row);
+  if (at === undefined) { out.undated++; return true; }
+  return at >= request.startMs && at < request.endMs;
+}
+
 function safeReadDir(dir: string, out: LoadedCaptures): string[] {
   try {
     return fs.readdirSync(dir);
@@ -169,27 +219,48 @@ function safeReadDir(dir: string, out: LoadedCaptures): string[] {
   }
 }
 
-/** `{EventType}/{date}/{HH}-{id}.csv` */
+/**
+ * Both EventLogFile layouts.
+ *
+ *   `{EventType}/{date}-{id}.csv`        daily — what the free tier serves, and what
+ *                                        `sf audit events pull` writes by default
+ *   `{EventType}/{date}/{HH}-{id}.csv`   hourly
+ *
+ * Reading only the hourly form would make this command blind to the captures it exists to read.
+ * A day can hold both at once, so both are read and the rows are filtered to the window
+ * afterwards.
+ */
 function loadElf(typeDir: string, request: LoadRequest, out: LoadedCaptures): void {
-  const dayDir = path.join(typeDir, request.date);
-  if (!fs.existsSync(dayDir)) return;
-
-  for (const file of safeReadDir(dayDir, out)) {
-    const hour = file.slice(0, 2);
-    if (!request.hours.includes(hour) || !file.endsWith('.csv')) continue;
-
-    const full = path.join(dayDir, file);
+  const readFile = (full: string): void => {
     out.windowPresent = true;
     let text: string;
     try {
       text = fs.readFileSync(full, 'utf-8');
     } catch {
       out.unreadable++;
-      continue;
+      return;
     }
     for (const row of parseCsv(text)) {
-      out.rows.push({ ...row, __sourceFile: full, __source: 'EventLogFile' });
+      const record = { ...row, __sourceFile: full, __source: 'EventLogFile' };
+      if (inWindow(record, request, out)) out.rows.push(record);
     }
+  };
+
+  // Daily: a file named for the date, directly under the event type.
+  for (const entry of safeReadDir(typeDir, out)) {
+    if (entry.startsWith(`${request.date}-`) && entry.endsWith('.csv')) {
+      readFile(path.join(typeDir, entry));
+    }
+  }
+
+  // Hourly: a directory named for the date, holding a file per hour.
+  const dayDir = path.join(typeDir, request.date);
+  if (!fs.existsSync(dayDir) || !fs.statSync(dayDir).isDirectory()) return;
+
+  for (const file of safeReadDir(dayDir, out)) {
+    const hour = file.slice(0, 2);
+    if (!request.hours.includes(hour) || !file.endsWith('.csv')) continue;
+    readFile(path.join(dayDir, file));
   }
 }
 
@@ -217,12 +288,13 @@ function loadRealtime(realtimeDir: string, request: LoadRequest, out: LoadedCapt
         try {
           const parsed: unknown = JSON.parse(line);
           if (parsed && typeof parsed === 'object') {
-            out.rows.push({
+            const record = {
               ...(parsed as Record<string, unknown>),
               EVENT_TYPE: (parsed as Record<string, unknown>).EVENT_TYPE ?? object,
               __sourceFile: full,
               __source: 'RealTimeEventMonitoring',
-            });
+            };
+            if (inWindow(record, request, out)) out.rows.push(record);
           } else out.malformed++;
         } catch {
           // One bad line loses one row, not the file.

@@ -3,6 +3,10 @@ export interface Window {
   date: string;
   /** Two-digit UTC hours to read, ascending. */
   hours: string[];
+  /** Window start, inclusive. */
+  startMs: number;
+  /** Window end, exclusive — so consecutive windows partition rows rather than sharing a boundary. */
+  endMs: number;
 }
 
 const FORM = 'Expected an ISO 8601 interval: <start>/<duration> or <start>/<end>, e.g. 2026-08-02T04:00Z/PT1H';
@@ -57,5 +61,5 @@ export function parseWindow(interval: string): Window {
   const hours: string[] = [];
   for (let h = firstHour; h <= lastHour; h++) hours.push(String(h).padStart(2, '0'));
 
-  return { date, hours };
+  return { date, hours, startMs: start.getTime(), endMs: end.getTime() };
 }

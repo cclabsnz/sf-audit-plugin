@@ -112,7 +112,10 @@ export default class AuditTimelineCommand extends SfCommand<TimelineResult> {
     const base = flags.input ?? EventBaselineStore.defaultRoot();
     const orgId = resolveOrgId(base, flags['org-id']);
 
-    const loaded = loadCaptures({ base, orgId, date: window.date, hours: window.hours });
+    const loaded = loadCaptures({
+      base, orgId, date: window.date, hours: window.hours,
+      startMs: window.startMs, endMs: window.endMs,
+    });
 
     // Fail fast rather than reporting a confident emptiness. An operator who has not captured
     // the window needs the command that captures it, not a clean bill of health.
@@ -167,6 +170,11 @@ export default class AuditTimelineCommand extends SfCommand<TimelineResult> {
     this.log(coverage.statement(rows.length));
     if (loaded.malformed > 0 || loaded.unreadable > 0) {
       this.log(`Skipped ${loaded.malformed} unparseable line(s) and ${loaded.unreadable} unreadable file(s).`);
+    }
+    if (loaded.undated > 0) {
+      // Kept rather than dropped, and said out loud: these rows could not be placed in or out
+      // of the window, so a reader needs to know they are here on sufferance.
+      this.log(`${loaded.undated} row(s) had no readable timestamp and were kept regardless of the window.`);
     }
     for (const refusal of result.refusals) {
       this.log(
