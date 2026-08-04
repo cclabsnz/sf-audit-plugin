@@ -23,6 +23,68 @@ export interface LoadedCaptures {
   unreadable: number;
 }
 
+/** Salesforce org ids are 15 or 18 characters and start 00D. */
+const ORG_ID = /^00D[A-Za-z0-9]{12}([A-Za-z0-9]{3})?$/;
+
+/**
+ * Which orgs have captures under this base directory.
+ *
+ * The store is keyed by org id, so the directory names already hold the answer. Reading them
+ * keeps the command offline: resolving an alias would mean asking Salesforce, and this command
+ * exists to work when the org is unreachable or its credentials are gone.
+ *
+ * Filtered by shape because the base directory belongs to the operator and may hold anything —
+ * notes, exports, an unrelated folder.
+ */
+export function discoverCapturedOrgs(base: string): string[] {
+  try {
+    return fs
+      .readdirSync(base, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && ORG_ID.test(e.name))
+      .map((e) => e.name)
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Settle on the org to read, or explain why that is not possible.
+ *
+ * Inferring the only captured org removes a step that exists for no reason; an operator with one
+ * capture directory should not have to retype an eighteen-character identifier they cannot check
+ * by eye. Where the answer is genuinely ambiguous the command asks rather than picks: choosing
+ * one of several would analyse the wrong org and produce output that looks entirely correct.
+ */
+export function resolveOrgId(base: string, explicit: string | undefined): string {
+  const captured = discoverCapturedOrgs(base);
+
+  if (explicit) {
+    if (captured.length > 0 && !captured.includes(explicit)) {
+      throw new Error(
+        `No captures for ${explicit} under ${base}.\n` +
+          `Captured here: ${captured.join(', ')}\n` +
+          'If that id is right, capture the org first: sf audit events pull --target-org <alias>',
+      );
+    }
+    return explicit;
+  }
+
+  if (captured.length === 1) return captured[0];
+
+  if (captured.length === 0) {
+    throw new Error(
+      `No captures found under ${base}.\n` +
+        'Capture an org first:  sf audit events pull --target-org <alias>',
+    );
+  }
+
+  throw new Error(
+    `Several orgs are captured under ${base}; name the one to read with --org-id.\n` +
+      captured.map((id) => `  ${id}`).join('\n'),
+  );
+}
+
 /**
  * A real CSV reader.
  *

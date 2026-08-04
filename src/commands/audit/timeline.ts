@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { EventBaselineStore } from '@cclabsnz/sf-core';
 import { parseWindow } from '../../timeline/parseWindow.js';
-import { loadCaptures } from '../../timeline/loadCaptures.js';
+import { loadCaptures, resolveOrgId } from '../../timeline/loadCaptures.js';
 import { assessCoverage } from '../../timeline/CaptureIndex.js';
 import { correlate, DEFAULT_MAX_CARDINALITY, type Seed } from '../../timeline/CorrelationEngine.js';
 import { normaliseRow } from '../../timeline/normalise.js';
@@ -13,6 +13,7 @@ import type { JoinKeyType } from '../../timeline/JoinKeys.js';
 import type { EventSource } from '../../timeline/EventRow.js';
 
 export interface TimelineResult {
+  orgId: string;
   window: string;
   rows: number;
   coverage: string;
@@ -57,6 +58,7 @@ export default class AuditTimelineCommand extends SfCommand<TimelineResult> {
     'never mistaken for a quiet one.';
 
   public static examples = [
+    '<%= config.bin %> <%= command.id %> --window 2026-08-02T04:00Z/PT1H --seed ip:203.0.113.50',
     '<%= config.bin %> <%= command.id %> --org-id 00Dxx0000000000EAA --window 2026-08-02T04:00Z/PT1H --seed ip:203.0.113.50',
     '<%= config.bin %> <%= command.id %> --org-id 00Dxx0000000000EAA --window 2026-08-02T04:00Z/PT1H --seed user:005xx1 --allow-shared-identity',
     '<%= config.bin %> <%= command.id %> --org-id 00Dxx0000000000EAA --window 2026-08-02T04:00Z/PT2H --seed request:abc --format json',
@@ -64,10 +66,12 @@ export default class AuditTimelineCommand extends SfCommand<TimelineResult> {
 
   public static flags = {
     // Deliberately not requiredOrg(): this command reads disk and must not need, or take, a
-    // live connection. The org id names which capture directory to read.
+    // live connection. The org id names which capture directory to read, and is optional
+    // because the capture store is keyed by it — with one org captured there is nothing to
+    // disambiguate, and making someone retype an eighteen-character id they cannot check by
+    // eye only invites a typo that reads back as "no captures found".
     'org-id': Flags.string({
-      summary: 'Org id whose captures to read. No org connection is opened.',
-      required: true,
+      summary: 'Org id whose captures to read. Inferred when only one org has captures. No org connection is opened.',
     }),
     input: Flags.string({
       summary: 'Capture base directory. Defaults to the events-pull location.',
@@ -106,15 +110,16 @@ export default class AuditTimelineCommand extends SfCommand<TimelineResult> {
     const window = parseWindow(flags.window);
     const seeds = (flags.seed ?? []).map(parseSeed);
     const base = flags.input ?? EventBaselineStore.defaultRoot();
+    const orgId = resolveOrgId(base, flags['org-id']);
 
-    const loaded = loadCaptures({ base, orgId: flags['org-id'], date: window.date, hours: window.hours });
+    const loaded = loadCaptures({ base, orgId, date: window.date, hours: window.hours });
 
     // Fail fast rather than reporting a confident emptiness. An operator who has not captured
     // the window needs the command that captures it, not a clean bill of health.
     if (!loaded.windowPresent) {
       throw new Error(
-        `No captures found for ${flags.window} under ${path.join(base, flags['org-id'])}.\n` +
-          `Capture it first:  sf audit events pull --target-org <alias>`,
+        `No captures for ${flags.window} under ${path.join(base, orgId)}.\n` +
+          'The org is captured but not that window. Capture it:  sf audit events pull --target-org <alias>',
       );
     }
 
@@ -156,6 +161,7 @@ export default class AuditTimelineCommand extends SfCommand<TimelineResult> {
     if (formats.has('md')) write('summary.md', renderSummary(output));
 
     // Coverage first on the console too, for the same reason it leads the file outputs.
+    if (!flags['org-id']) this.log(`Org: ${orgId} (only org with captures under ${base})`);
     this.log(coverage.banner());
     this.log('');
     this.log(coverage.statement(rows.length));
@@ -171,6 +177,7 @@ export default class AuditTimelineCommand extends SfCommand<TimelineResult> {
     for (const target of written) this.log(`Written: ${target}`);
 
     return {
+      orgId,
       window: flags.window,
       rows: rows.length,
       coverage: coverage.state,
