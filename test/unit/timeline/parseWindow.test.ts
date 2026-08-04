@@ -10,17 +10,28 @@ import { parseWindow } from '../../../src/timeline/parseWindow.js';
  */
 describe('parseWindow', () => {
   it('expands a duration into the hours it covers', () => {
-    expect(parseWindow('2026-08-02T04:00Z/PT1H')).toEqual({ date: '2026-08-02', hours: ['04'] });
+    expect(parseWindow('2026-08-02T04:00Z/PT1H')).toEqual({
+      date: '2026-08-02',
+      hours: ['04'],
+      startMs: Date.parse('2026-08-02T04:00:00Z'),
+      endMs: Date.parse('2026-08-02T05:00:00Z'),
+    });
   });
 
   it('covers every hour of a multi-hour duration', () => {
-    expect(parseWindow('2026-08-02T04:00Z/PT3H')).toEqual({ date: '2026-08-02', hours: ['04', '05', '06'] });
+    expect(parseWindow('2026-08-02T04:00Z/PT3H')).toMatchObject({
+      date: '2026-08-02',
+      hours: ['04', '05', '06'],
+      endMs: Date.parse('2026-08-02T07:00:00Z'),
+    });
   });
 
   it('accepts an explicit end instant', () => {
-    expect(parseWindow('2026-08-02T04:00Z/2026-08-02T06:00Z')).toEqual({
+    expect(parseWindow('2026-08-02T04:00Z/2026-08-02T06:00Z')).toMatchObject({
       date: '2026-08-02',
       hours: ['04', '05'],
+      startMs: Date.parse('2026-08-02T04:00:00Z'),
+      endMs: Date.parse('2026-08-02T06:00:00Z'),
     });
   });
 
