@@ -639,7 +639,7 @@ No activity in captured sources. Coverage incomplete — 2 sources missing.
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--window` | ISO 8601 interval, `<start>/<duration>` or `<start>/<end>` | required |
+| `--window` | When to look — see below | required |
 | `--seed` | Typed and repeatable: `ip:` `user:` `session:` `request:` `login:` `transaction:` `event:` | *(whole window)* |
 | `--org-id` | Which captured org to read | *(inferred when unambiguous)* |
 | `--input` | Capture base directory | `~/.sf/event-baseline` |
@@ -648,9 +648,26 @@ No activity in captured sources. Coverage incomplete — 2 sources missing.
 | `--format` | Comma-separated: `csv,json,md` | all three |
 | `--output` | Directory to write into | `.` |
 
+**Saying when.** `--window` takes whichever form is nearest to hand — you should not have to
+compose an ISO 8601 interval while an incident is running:
+
+| You type | You get |
+|---|---|
+| `yesterday` | the whole of yesterday, UTC |
+| `today` | midnight UTC until now |
+| `2h` · `90m` | the last two hours; the last ninety minutes |
+| `2026-08-02` | that whole day — the shape the free tier captures in |
+| `2026-08-02T04:17Z` | the hour containing that instant, for a timestamp pasted from an alert |
+| `2026-08-02T04:00Z/PT1H` | an exact interval, start and duration |
+| `2026-08-02T04:00Z/2026-08-02T06:00Z` | an exact interval, start and end |
+
+Times are UTC, because every capture is stored in UTC — a bare timestamp with no zone is read
+that way rather than as local time. A window has to fall inside one UTC day; one that crosses
+midnight is refused, and the error names the two runs that would cover it.
+
 ```bash
 # Follow one address across every captured event type
-sf audit timeline --window 2026-08-02T04:00Z/PT1H --seed ip:203.0.113.50
+sf audit timeline --window yesterday --seed ip:203.0.113.50
 
 # Start from a request and walk outward, including its Apex cascade
 sf audit timeline --window 2026-08-02T04:00Z/PT1H --seed request:abc123

@@ -51,21 +51,28 @@ describe('parseWindow', () => {
     expect(parseWindow('2026-08-02T00:00Z/PT1H').hours).toEqual(['00']);
   });
 
-  it('rejects a window that crosses midnight rather than silently truncating it', () => {
+  it('rejects a window that crosses midnight, and names the two runs that would cover it', () => {
     // The store is keyed by date, so a cross-day window needs more than one date. Refusing is
-    // honest; quietly reading only the first day would under-report.
-    expect(() => parseWindow('2026-08-02T23:00Z/PT2H')).toThrow(/single (UTC )?day/i);
+    // honest; quietly reading only the first day would under-report. Naming both dates saves
+    // the reader working out what to run instead.
+    expect(() => parseWindow('2026-08-02T23:00Z/PT2H')).toThrow(/one UTC day/i);
+    expect(() => parseWindow('2026-08-02T23:00Z/PT2H')).toThrow(/2026-08-02[\s\S]*2026-08-03/);
   });
 
-  it('rejects malformed input with a message naming the expected form', () => {
-    expect(() => parseWindow('yesterday')).toThrow(/ISO 8601/i);
-    expect(() => parseWindow('2026-08-02T04:00Z')).toThrow(/ISO 8601/i);
-    expect(() => parseWindow('2026-08-02T04:00Z/PTfoo')).toThrow(/ISO 8601/i);
-    // A bare `PT` carries no components. It is a malformed duration rather than a zero-length
-    // window, so the operator needs the syntax back, not a remark about window length. Anchored
-    // because the zero-length message also quotes the syntax, and an unanchored match cannot
-    // tell the two apart.
-    expect(() => parseWindow('2026-08-02T04:00Z/PT')).toThrow(/^Expected an ISO 8601/);
+  it('answers malformed input with worked examples, not a grammar', () => {
+    // The person reading this is mid-incident with a timestamp in front of them. Naming the
+    // standard they failed to satisfy does not help; showing what to type does.
+    let message = '';
+    try { parseWindow('sometime last week'); } catch (e) { message = (e as Error).message; }
+
+    expect(message).toMatch(/yesterday/i);
+    expect(message).toContain('2026-08-02');
+    expect(message).toMatch(/\b2h\b/);
+
+    // A bare `PT` carries no duration. It is malformed rather than zero-length, so the reader
+    // gets the forms back rather than a remark about window length. Anchored, because the
+    // zero-length message also quotes the forms and an unanchored match cannot tell them apart.
+    expect(() => parseWindow('2026-08-02T04:00Z/PT')).toThrow(/^Could not read that window/);
   });
 
   it('rejects an end that precedes its start', () => {

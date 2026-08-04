@@ -58,6 +58,9 @@ export default class AuditTimelineCommand extends SfCommand<TimelineResult> {
     'never mistaken for a quiet one.';
 
   public static examples = [
+    '<%= config.bin %> <%= command.id %> --window yesterday --seed ip:203.0.113.50',
+    '<%= config.bin %> <%= command.id %> --window 2h --seed user:005xx000000000',
+    '<%= config.bin %> <%= command.id %> --window 2026-08-02 --seed request:REQ000000',
     '<%= config.bin %> <%= command.id %> --window 2026-08-02T04:00Z/PT1H --seed ip:203.0.113.50',
     '<%= config.bin %> <%= command.id %> --org-id 00Dxx0000000000EAA --window 2026-08-02T04:00Z/PT1H --seed ip:203.0.113.50',
     '<%= config.bin %> <%= command.id %> --org-id 00Dxx0000000000EAA --window 2026-08-02T04:00Z/PT1H --seed user:005xx1 --allow-shared-identity',
@@ -77,9 +80,11 @@ export default class AuditTimelineCommand extends SfCommand<TimelineResult> {
       summary: 'Capture base directory. Defaults to the events-pull location.',
     }),
     window: Flags.string({
-      summary: 'ISO 8601 interval, <start>/<duration> or <start>/<end>.',
+      summary:
+        'When to look. yesterday | today | 2h | 90m | 2026-08-02 (whole day) | ' +
+        '2026-08-02T04:17Z (that hour) | 2026-08-02T04:00Z/PT1H (exact). UTC, within one day.',
       required: true,
-      helpValue: '2026-08-02T04:00Z/PT1H',
+      helpValue: 'yesterday',
     }),
     seed: Flags.string({
       summary: 'Typed seed, repeatable: ip: user: session: request: transaction: event:',
