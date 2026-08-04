@@ -586,6 +586,99 @@ sfelf-triage analyze ~/.sf/event-baseline/<orgId>  # triage (companion)
 
 See the [sfelf-triage README](https://github.com/cclabsnz/sfelf-triage#readme) for install and usage.
 
+## Forensic timeline
+
+Salesforce splits one actor's activity across many event types, and each carries a different
+subset of identifying fields — so no single log answers *"what did this actor do"*. Filtering by
+IP finds the requests but misses every SOQL execution, because the query log has no `CLIENT_IP`
+column at all. Filtering by user finds everything the *guest* user did, which on a community is
+everyone.
+
+`sf audit timeline` correlates a seed across every captured event type and writes a defensible
+timeline:
+
+```bash
+sf audit timeline --window 2026-08-02T04:00Z/PT1H --seed ip:203.0.113.50
+```
+
+It runs **entirely offline** against captures written by `sf audit events pull` — no org
+connection is opened, so it still works long after the org's retention window has expired or its
+credentials have been revoked. The org id is inferred from the capture directory when only one
+org has been captured.
+
+### What it will not do
+
+Cross-event correlation is easy to get confidently wrong, and a wrong answer here reads as
+evidence. Two rules are enforced and both are visible in the output:
+
+- **A blank field is never a join key.** A blank `REQUEST_ID` used as a key stops identifying
+  anything and starts matching every other row whose value is also blank — quietly attributing
+  strangers' sessions to your actor.
+- **A shared identity is not expanded.** A community guest user can stand for hundreds of
+  distinct visitors. Expanding through it would present the whole crowd's activity as one
+  actor's, so it is refused by default and the refusal is reported with its evidence:
+
+  ```
+  Expansion refused: userId 005xx0000000000 is shared by 1371 distinct addresses
+    (threshold 8). Override with --allow-shared-identity.
+  ```
+
+Every output also leads with what was actually captured, because *"no rows matched"* means two
+entirely different things — the actor did nothing, or nobody captured the hour they did it in:
+
+```
+Window — coverage INCOMPLETE
+  captured   AuraRequest, ListViewEvent
+  MISSING    LightningInteraction (not-in-core-set)
+  MISSING    GuestUserAnomalyEventStore (storage-disabled)
+
+No activity in captured sources. Coverage incomplete — 2 sources missing.
+```
+
+**Flags:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--window` | ISO 8601 interval, `<start>/<duration>` or `<start>/<end>` | required |
+| `--seed` | Typed and repeatable: `ip:` `user:` `session:` `request:` `login:` `transaction:` `event:` | *(whole window)* |
+| `--org-id` | Which captured org to read | *(inferred when unambiguous)* |
+| `--input` | Capture base directory | `~/.sf/event-baseline` |
+| `--allow-shared-identity` | Expand through identities shared by many actors | `false` |
+| `--max-cardinality` | Distinct-actor ceiling above which a key is not expanded | `8` |
+| `--format` | Comma-separated: `csv,json,md` | all three |
+| `--output` | Directory to write into | `.` |
+
+```bash
+# Follow one address across every captured event type
+sf audit timeline --window 2026-08-02T04:00Z/PT1H --seed ip:203.0.113.50
+
+# Start from a request and walk outward, including its Apex cascade
+sf audit timeline --window 2026-08-02T04:00Z/PT1H --seed request:abc123
+
+# Several orgs captured — name the one to read
+sf audit timeline --org-id 00Dxx0000000000EAA --window 2026-08-02T04:00Z/PT2H --seed user:005xx000000000
+
+# Machine-readable only, into an evidence directory
+sf audit timeline --window 2026-08-02T04:00Z/PT1H --seed ip:203.0.113.50 \
+  --format json --output ./evidence/incident-2026-08-02
+```
+
+**Outputs:**
+
+| File | Contents |
+|------|----------|
+| `timeline.csv` | The correlated rows, one schema across all sources, chronological |
+| `timeline.json` | The same rows plus the provenance — seeds, every key expanded through, and every refusal |
+| `summary.md` | Narrative: coverage, per-type counts, what tied each row in, refusals, and whether records left |
+
+Each row records **which join key tied it in**, so attribution is checkable rather than asserted.
+The `rows_processed` and `records_returned` columns are populated only from Real-Time Event
+objects — no `EventLogFile` type records them — and when none were captured the summary says the
+question is unanswerable rather than going quiet, since silence there reads as *"nothing left"*.
+
+> `sf audit timeline` adds **no checks** and does not affect the security grade. It is an
+> investigation command, not a `SecurityCheck`.
+
 ## Connected-app least-privilege
 
 Connected-app over-privilege was at the centre of the 2025-2026 wave of Salesforce data-theft
