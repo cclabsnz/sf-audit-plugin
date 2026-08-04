@@ -1,0 +1,155 @@
+{
+  "orgId": "00Dxx0000000000EAA",
+  "capturedAt": "2026-08-02T05:00:00.000Z",
+  "interval": "Hourly",
+  "elf": {
+    "requestedTypes": [
+      "ApexCallout",
+      "ApexExecution",
+      "ApexTrigger",
+      "ApexUnexpectedException",
+      "ApiTotalUsage",
+      "DatabaseSave",
+      "FlowExecution",
+      "Login",
+      "Logout",
+      "NamedCredential",
+      "QueuedExecution",
+      "RestApi",
+      "URI",
+      "UniqueQuery",
+      "LightningInteraction"
+    ],
+    "captured": [
+      {
+        "type": "ApexCallout",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      },
+      {
+        "type": "ApexExecution",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      },
+      {
+        "type": "ApexTrigger",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      },
+      {
+        "type": "ApexUnexpectedException",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      },
+      {
+        "type": "ApiTotalUsage",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      },
+      {
+        "type": "DatabaseSave",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      },
+      {
+        "type": "FlowExecution",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      },
+      {
+        "type": "Login",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      },
+      {
+        "type": "Logout",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      },
+      {
+        "type": "NamedCredential",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      },
+      {
+        "type": "QueuedExecution",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      },
+      {
+        "type": "RestApi",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      },
+      {
+        "type": "URI",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      },
+      {
+        "type": "UniqueQuery",
+        "id": "0AT000",
+        "logDate": "2026-08-02",
+        "hour": "04",
+        "bytes": 1,
+        "path": "fixture"
+      }
+    ],
+    "skipped": [
+      {
+        "type": "LightningInteraction",
+        "reason": "not-in-core-set"
+      }
+    ],
+    "failed": []
+  },
+  "rte": {
+    "captured": [],
+    "unavailable": [
+      {
+        "object": "GuestUserAnomalyEventStore",
+        "reason": "storage-disabled"
+      }
+    ]
+  },
+  "accessErrors": []
+}
