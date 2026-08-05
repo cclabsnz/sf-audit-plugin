@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { EventBaselineStore } from '@cclabsnz/sf-core';
 import { parseWindow } from '../../timeline/parseWindow.js';
-import { loadCaptures, resolveOrgId } from '../../timeline/loadCaptures.js';
+import { loadCaptures, resolveOrgId, describeCaptures } from '../../timeline/loadCaptures.js';
 import { assessCoverage } from '../../timeline/CaptureIndex.js';
 import { correlate, DEFAULT_MAX_CARDINALITY, type Seed } from '../../timeline/CorrelationEngine.js';
 import { normaliseRow } from '../../timeline/normalise.js';
@@ -123,12 +123,24 @@ export default class AuditTimelineCommand extends SfCommand<TimelineResult> {
     });
 
     // Fail fast rather than reporting a confident emptiness. An operator who has not captured
-    // the window needs the command that captures it, not a clean bill of health.
+    // the window needs the command that captures it, not a clean bill of health — and, more
+    // usefully, the windows that *are* on disk, so they are not sent to re-pull data they
+    // already have under a date they guessed wrong.
     if (!loaded.windowPresent) {
-      throw new Error(
-        `No captures for ${flags.window} under ${path.join(base, orgId)}.\n` +
-          'The org is captured but not that window. Capture it:  sf audit events pull --target-org <alias>',
-      );
+      const available = describeCaptures(base, orgId);
+      const lines = [`No captures for ${flags.window} under ${path.join(base, orgId)}.`];
+
+      if (available.length === 0) {
+        lines.push('', 'Nothing is captured for this org yet:', '  sf audit events pull --target-org <alias>');
+      } else {
+        lines.push('', 'Captured days for this org:');
+        for (const day of available) {
+          const hours = day.hours.length > 0 ? `hours ${day.hours.join(',')}` : 'whole day';
+          lines.push(`  ${day.date}   ${String(day.types).padStart(2)} event type(s), ${hours}`);
+        }
+        lines.push('', `Try:  --window ${available[available.length - 1].date}`);
+      }
+      throw new Error(lines.join('\n'));
     }
 
     const coverage = assessCoverage({ coverage: loaded.coverage });
@@ -170,6 +182,11 @@ export default class AuditTimelineCommand extends SfCommand<TimelineResult> {
 
     // Coverage first on the console too, for the same reason it leads the file outputs.
     if (!flags['org-id']) this.log(`Org: ${orgId} (only org with captures under ${base})`);
+    if (seeds.length === 0) {
+      // Said plainly, because an uncorrelated window looks exactly like a correlated one in the
+      // output and the difference is the whole basis for trusting it.
+      this.log('No --seed given: showing the whole window, uncorrelated. Seed with ip: user: session: request: to follow one actor.');
+    }
     this.log(coverage.banner());
     this.log('');
     this.log(coverage.statement(rows.length));

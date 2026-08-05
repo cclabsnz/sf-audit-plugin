@@ -91,6 +91,88 @@ export function resolveOrgId(base: string, explicit: string | undefined): string
   );
 }
 
+/** One captured day, and how much of it there is. */
+export interface CapturedDay {
+  date: string;
+  /** How many event types have a capture for that date. */
+  types: number;
+  /** Hours captured in the hourly layout. Empty for a daily capture, which covers the day. */
+  hours: string[];
+}
+
+/**
+ * Which days have captures, read off the store's own layout.
+ *
+ * "No captures for that window" is only half an answer. The operator's next question is which
+ * windows do exist, and without it they go and re-pull data that may already be on disk under a
+ * date they guessed wrong. The store is keyed by date, so it already knows.
+ *
+ * An empty file does not count, matching what counts as captured everywhere else — a partial
+ * write is not a capture, and offering it as an available window would send somebody to
+ * investigate an hour that holds nothing.
+ */
+export function describeCaptures(base: string, orgId: string): CapturedDay[] {
+  const orgDir = path.join(base, orgId);
+  const days = new Map<string, { types: Set<string>; hours: Set<string> }>();
+
+  const note = (date: string, type: string, hour?: string): void => {
+    let day = days.get(date);
+    if (!day) days.set(date, (day = { types: new Set(), hours: new Set() }));
+    day.types.add(type);
+    if (hour) day.hours.add(hour);
+  };
+
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(orgDir);
+  } catch {
+    return [];
+  }
+
+  for (const entry of entries) {
+    if (entry === '_manifests') continue;
+    const entryPath = path.join(orgDir, entry);
+
+    if (entry === '_realtime') {
+      for (const object of safeList(entryPath)) {
+        for (const date of safeList(path.join(entryPath, object))) {
+          for (const file of safeList(path.join(entryPath, object, date))) {
+            if (file.endsWith('.ndjson') && nonEmpty(path.join(entryPath, object, date, file))) {
+              note(date, object, file.slice(0, 2));
+            }
+          }
+        }
+      }
+      continue;
+    }
+
+    for (const child of safeList(entryPath)) {
+      const full = path.join(entryPath, child);
+      // Daily: {date}-{id}.csv
+      const daily = /^(\d{4}-\d{2}-\d{2})-.*\.csv$/.exec(child);
+      if (daily && nonEmpty(full)) { note(daily[1], entry); continue; }
+      // Hourly: a directory named for the date.
+      if (/^\d{4}-\d{2}-\d{2}$/.test(child)) {
+        for (const file of safeList(full)) {
+          if (file.endsWith('.csv') && nonEmpty(path.join(full, file))) note(child, entry, file.slice(0, 2));
+        }
+      }
+    }
+  }
+
+  return [...days]
+    .map(([date, d]) => ({ date, types: d.types.size, hours: [...d.hours].sort() }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function safeList(dir: string): string[] {
+  try {
+    return fs.readdirSync(dir);
+  } catch {
+    return [];
+  }
+}
+
 /**
  * A real CSV reader.
  *
