@@ -100,7 +100,15 @@ describe('pullEventLogs', () => {
 
     const loginFile = path.join(tmpDir, ORG, 'Login', '2026-07-07-0AT0001.csv');
     expect(fs.readFileSync(loginFile, 'utf-8')).toBe(CSV_A);
-    expect(rest.getRawToFile).toHaveBeenCalledWith('/sobjects/EventLogFile/0AT0001/LogFile', loginFile);
+
+    // The download targets a temporary file that is renamed into place, so the destination
+    // passed to the client is not the final path. Asserted on the resource and the eventual
+    // file rather than the intermediate name: a half-written capture that later runs skipped
+    // for ever is the defect the atomic write exists to prevent, and pinning the temp path
+    // here would make that fix look like a regression.
+    const [resource, destination] = rest.getRawToFile.mock.calls[0] as [string, string];
+    expect(resource).toBe('/sobjects/EventLogFile/0AT0001/LogFile');
+    expect(destination.startsWith(loginFile)).toBe(true);
   });
 
   it('skips rows already on disk and does not re-download them (dedup / idempotency)', async () => {
@@ -124,8 +132,18 @@ describe('pullEventLogs', () => {
     const result = await pullEventLogs({ soql, rest, store, orgId: ORG }, { since: 1 });
     expect(result.found).toBe(0);
     expect(result.downloaded).toBe(0);
-    expect(result.manifestPath).toBeUndefined();
     expect(rest.getRawToFile).not.toHaveBeenCalled();
+
+    // A run that captured nothing still writes its coverage manifest. This assertion used to
+    // be the opposite, and the opposite is the more dangerous behaviour: with no manifest, a
+    // later reader cannot tell "we looked and the hour was empty" from "we never looked at
+    // that hour". `sf audit timeline` branches on exactly that distinction before it reports
+    // an absence, so the empty run is the one whose record matters most.
+    expect(result.manifestPath).toBeDefined();
+    const coverage = JSON.parse(fs.readFileSync(result.manifestPath!, 'utf-8'));
+    expect(coverage.orgId).toBe(ORG);
+    expect(coverage.elf.captured).toEqual([]);
+    expect(coverage.elf.failed).toEqual([]);
   });
 
   it('classifies a permission failure instead of throwing', async () => {
