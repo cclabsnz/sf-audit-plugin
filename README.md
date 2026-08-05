@@ -648,6 +648,20 @@ No activity in captured sources. Coverage incomplete — 2 sources missing.
 | `--format` | Comma-separated: `csv,json,md` | all three |
 | `--output` | Directory to write into | `.` |
 
+**Finding your way in.** Two things you do not have to know up front. Omit `--seed` and you get
+the whole window, uncorrelated — which is where you look to find something worth seeding on.
+Ask for a window that was never captured and the error lists the days that *were*:
+
+```
+No captures for 2026-07-01 under ~/.sf/event-baseline/00Dxx0000000000EAA.
+
+Captured days for this org:
+  2026-08-01   11 event type(s), whole day
+  2026-08-02   14 event type(s), whole day
+
+Try:  --window 2026-08-02
+```
+
 **Saying when.** `--window` takes whichever form is nearest to hand — you should not have to
 compose an ISO 8601 interval while an incident is running:
 
