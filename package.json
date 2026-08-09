@@ -48,7 +48,7 @@
     "jest": "^30",
     "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^7"
   },
   "repository": {
     "type": "git",
