@@ -820,10 +820,16 @@ sf audit apps --target-org myOrg --format json
 
 ```bash
 npm run build          # compile TypeScript
-npm test               # run all tests
-npm run test:unit      # unit tests only
+npm run typecheck      # type-check src + test (tsc --noEmit)
+npm test               # typecheck, then run all tests
+npm run test:unit      # typecheck, then unit tests only
+npm run test:jest      # tests without the typecheck — fast inner loop
 npm run clean          # remove compiled output
 ```
+
+Jest transforms with [swc](https://swc.rs), which strips types without checking them, so
+`npm run typecheck` is what catches type errors in tests — it runs ahead of Jest in
+`npm test`. Use `npm run test:jest` while iterating, but don't treat it as a green run.
 
 Maintainers: see **[docs/RELEASE.md](docs/RELEASE.md)** for the release checklist and the one-time repository-hardening steps (npm provenance token, branch protection, and the CodeQL / Scorecard setup behind the badges above).
 

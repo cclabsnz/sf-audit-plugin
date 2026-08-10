@@ -20,6 +20,11 @@ sf audit security --target-org <alias>
 - **Package manager:** the lockfile is `pnpm-lock.yaml`. Use `pnpm` to add
   dependencies; npm scripts (`npm run build`, `npm test`) are fine for running.
 - **ESM/NodeNext:** relative imports must end in `.js` even inside `.ts` files.
+- **Types are checked separately from tests.** Jest transforms with swc, which strips
+  types without checking them, so a type error will *not* fail `npx jest`. `npm test`
+  runs `npm run typecheck` (`tsc --noEmit` over `src` + `test`) first for that reason.
+  `npm run test:jest` skips it when you want a fast inner loop — just don't read it as
+  a green run.
 - After editing commands or checks, re-run `npm run build`. `oclif.pluginType`
   is `jit` and the command dir is `lib/`, so a "missing" command usually means
   you forgot to build.
@@ -53,7 +58,7 @@ the source-of-truth listing.
 ## Before you open a pull request
 
 - `npm run build` is clean.
-- `npm test` is green (Jest, ESM). New/changed checks ship with unit tests.
+- `npm test` is green (typecheck + Jest, ESM). New/changed checks ship with unit tests.
 - Registry ordering still validates and every new check id has a compliance
   mapping and `CHECK_META` entry.
 - README counts/flags are updated if user-facing behaviour changed.

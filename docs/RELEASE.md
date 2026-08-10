@@ -68,10 +68,13 @@ resolves after the first successful run:
 2. **Green locally.**
    ```bash
    pnpm install --frozen-lockfile
-   pnpm run build      # clean tsc
-   pnpm test           # all suites incl. read-only invariant
+   pnpm run build      # clean tsc (src only)
+   pnpm test           # typecheck (src + test), then all suites incl. read-only invariant
    pnpm audit --prod --audit-level high
    ```
+   `pnpm test` runs `typecheck` first because Jest transforms with swc, which strips
+   types without checking them. Don't substitute `pnpm run test:jest` here — it skips
+   the type-check and will go green on code that does not compile.
 3. **Commit & push** the version bump; open a PR; let CI + CodeQL go green; merge.
 4. **Tag & GitHub Release.** Create a release whose tag matches the version (e.g.
    `v1.7.0`). Publishing the release triggers `publish.yml`, which:
@@ -93,6 +96,18 @@ resolves after the first successful run:
 - **Dependabot** opens weekly PRs for npm deps and GitHub Actions (including SHA-pinned
   actions — it updates both the SHA and the `# vN` comment). Merge promptly; security
   fixes arrive as their own PRs.
+- **`github/codeql-action/*` bumps must be merged together.** Dependabot raises `init`,
+  `analyze` and `upload-sarif` as *separate* PRs, but `init` and `analyze` both live in
+  `codeql.yml`. Merging one alone leaves the workflow mismatched and CodeQL fails with
+  `Loaded a configuration file for version 'X', but running version 'Y'` — and since
+  `analyze (javascript-typescript)` is a required check, that blocks `main`. Combine them
+  into one branch, then close the individual PRs as superseded.
+- **A Dependabot alert can outlive its fix.** Check the alert's `first_patched_version`
+  against what the lockfile actually resolves, not just whether an override exists — a
+  `pnpm.overrides` floor pinned one patch below the fix (e.g. `^3.15.0` against a fix in
+  `3.15.1`) leaves the vulnerable version installed while looking addressed. The
+  `Dependabot Updates` job may also fail outright on such an alert rather than opening
+  a PR, so a red job there is worth reading, not assuming.
 - **If a scan goes red:** CodeQL findings appear under **Security → Code scanning**;
   Scorecard details are in the public viewer. Treat a failing **read-only invariant** test
   as a release blocker — it means a write path was introduced (see
