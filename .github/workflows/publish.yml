@@ -72,6 +72,11 @@ jobs:
         with:
           format: cyclonedx-json
           output-file: sbom.cyclonedx.json
+          # Generate only — the next step does the attaching. This input defaults to true,
+          # which uploads a second, identically-sized copy of the SBOM to the release under
+          # its own name (`<repo>-<job>.cyclonedx.json`). Every release up to v1.8.2 carried
+          # both. Keep the explicit attachment, whose filename we control.
+          upload-release-assets: "false"
 
       - name: Attach SBOM to the release
         if: github.event_name == 'release'
