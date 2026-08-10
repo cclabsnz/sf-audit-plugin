@@ -6,5 +6,9 @@
     "noEmit": true,
     "types": ["jest", "node"]
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  // `exclude` is NOT merged with the base config, it is replaced — and the base excludes
+  // "test". Without restating it here, every file under test/ silently drops out of the
+  // program and `tsc -p tsconfig.test.json` type-checks src/ only.
+  "exclude": ["node_modules", "lib"]
 }
