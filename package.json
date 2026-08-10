@@ -27,28 +27,31 @@
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests",
-    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js test/unit --passWithNoTests",
+    "test": "npm run typecheck && node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests",
+    "test:unit": "npm run typecheck && node --experimental-vm-modules node_modules/jest/bin/jest.js test/unit --passWithNoTests",
     "prepack": "npm run build",
     "clean": "rm -rf lib",
-    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test:jest": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests"
   },
   "dependencies": {
+    "@cclabsnz/sf-core": "^0.3.0",
     "@oclif/core": "^4",
     "@salesforce/core": "^9",
     "@salesforce/sf-plugins-core": "^13",
     "chart.js": "^4.5.1",
-    "zod": "^4",
-    "@cclabsnz/sf-core": "^0.3.0"
+    "zod": "^4"
   },
   "devDependencies": {
     "@jest/globals": "^30.4.1",
+    "@swc/core": "^1.15.47",
+    "@swc/jest": "^0.2.39",
     "@types/jest": "^30",
     "@types/node": "^26",
     "jest": "^30",
-    "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^7.0.2"
   },
   "repository": {
     "type": "git",

@@ -28,13 +28,13 @@ const raw = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
 
 describe('joinKeysOf', () => {
   it('extracts every join key from a fully populated row', () => {
-    expect(joinKeysOf(raw())).toEqual<JoinKeys>({
+    expect(joinKeysOf(raw())).toEqual({
       requestId: 'req-1',
       clientIp: '203.0.113.10',
       sessionKey: 'sess-1',
       loginKey: 'login-1',
       userId: '005xx000000000',
-    });
+    } satisfies JoinKeys);
   });
 
   it.each([
@@ -57,13 +57,13 @@ describe('joinKeysOf', () => {
       raw({ REQUEST_ID: '', CLIENT_IP: '  ', SESSION_KEY: null, LOGIN_KEY: undefined, USER_ID: '\t' }),
     );
 
-    expect(blanked).toEqual<JoinKeys>({
+    expect(blanked).toEqual({
       requestId: undefined,
       clientIp: undefined,
       sessionKey: undefined,
       loginKey: undefined,
       userId: undefined,
-    });
+    } satisfies JoinKeys);
   });
 
   it('does not confuse a blank key with an absent one — both are unusable', () => {
