@@ -9,8 +9,12 @@ export interface CapabilityEntry {
 
 /**
  * The full attack model lives here: finding id → attacker capabilities it grants.
- * Keep this the single source of truth so the ~75 checks stay untouched.
- * Every key MUST correspond to a finding id some check can emit (see registry-integrity test).
+ * Keep this the single source of truth so the 88 checks stay untouched.
+ *
+ * Every key MUST correspond to a finding id some check can actually emit, and every id referenced
+ * by a named chain must be emittable too — a typo in either place fails silently (a key that
+ * matches nothing simply never grants, and a chain ingredient that matches nothing means the chain
+ * never fires). `test/unit/chains/registryIntegrity.test.ts` enforces both directions.
  */
 export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // Guest / unauthenticated foothold
@@ -66,6 +70,35 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'login-access-policy-login-as-enabled': { grants: ['priv-esc', 'data-read-bulk'] },
   // External federation an attacker could ride in on
   'auth-providers-social':             { grants: ['low-trust-authenticated'] },
+
+  // Toxic permission combinations held by one user. Capabilities follow each combo's own stated
+  // outcome — see COMBOS in SeparationOfDutiesCheck, where the ids are defined.
+  'separation-of-duties-self-escalation':       { grants: ['priv-esc', 'org-takeover'] },
+  'separation-of-duties-identity-takeover':     { grants: ['priv-esc', 'org-takeover'] },
+  'separation-of-duties-grant-self-data':       { grants: ['priv-esc', 'data-read-bulk'] },
+  'separation-of-duties-code-and-data':         { grants: ['code-exec', 'data-read-bulk', 'data-write'] },
+  'separation-of-duties-external-exfil-channel':{ grants: ['external-egress', 'data-read-bulk'] },
+  'separation-of-duties-tamper-and-cover':      { grants: ['data-write', 'data-read-bulk'] },
+  // Admin-equivalent users who are not on the System Administrator profile: the same reach as
+  // 'users-super-admin-combo', which is why it grants the same capability.
+  'privileged-access-shadow-admins':            { grants: ['org-takeover', 'priv-esc'] },
+  // Flows running in system context without sharing enforcement — the Flow analogue of
+  // 'portal-exposed-apex-without-sharing'. Screen flows need a user to drive them, so they do not
+  // grant the unattended write that an autolaunched flow does.
+  'flows-autolaunched-without-sharing':         { grants: ['code-exec', 'data-read', 'data-write'] },
+  'flows-screen-without-sharing':               { grants: ['code-exec', 'data-read'] },
+  // Sharing rules granting All Internal Users — bulk read for any authenticated employee. Internal
+  // by definition, so this grants no 'low-trust-authenticated' entry point of its own.
+  'public-group-sharing-exposure':              { grants: ['data-read-bulk'] },
+  // Report folders any authenticated user can view.
+  'report-folder-access-public':                { grants: ['data-read'] },
+  // "Secure guest user record access" not enforced: guest-owned records can defeat a Private OWD.
+  // The policy gap widens guest visibility rather than creating the surface itself, so it mirrors
+  // 'guest-user-sharing-exposure' rather than the confirmed bulk-read sinks.
+  'guest-record-access-policy-not-enforced':    { grants: ['unauth-foothold', 'data-read'] },
+  // Sensitive data present and readable — what every other capability is ultimately reaching for.
+  'encryption-coverage-unencrypted-sensitive':  { grants: ['data-read'] },
+  'sandbox-data-masking-pii-present':           { grants: ['data-read'] },
 };
 
 /** Resolve the effective capabilities for a finding (inline overrides registry; passed/inconclusive yield nothing). */

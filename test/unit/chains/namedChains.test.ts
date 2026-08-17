@@ -71,9 +71,13 @@ describe('NAMED_CHAINS', () => {
     expect(chain.match(present(findings), findings)).not.toBeNull();
   });
 
-  it('every named chain has a CRITICAL or HIGH severity and non-empty narrative', () => {
+  // Named chains carry a floor of MEDIUM: they are correlations someone hand-modelled, so they must
+  // outrank the emergent "potential path" output. MEDIUM is reserved for a chain that adds no new
+  // exposure of its own — `undetected-compromise` reports that exposure already present would go
+  // unobserved, which would be overstated as HIGH and is why this is not a CRITICAL/HIGH-only rule.
+  it('every named chain has at least MEDIUM severity and a non-empty narrative', () => {
     for (const c of NAMED_CHAINS) {
-      expect(['CRITICAL', 'HIGH']).toContain(c.severity);
+      expect(['CRITICAL', 'HIGH', 'MEDIUM']).toContain(c.severity);
       expect(c.narrative.length).toBeGreaterThan(0);
       expect(c.remediation.length).toBeGreaterThan(0);
     }
