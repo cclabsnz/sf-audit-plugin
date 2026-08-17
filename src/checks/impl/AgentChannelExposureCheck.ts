@@ -13,14 +13,33 @@ interface NetworkRecord {
   GuestUserId: string | null;
 }
 
-// Messaging channels (SMS/WhatsApp/etc). Not guest-web-reachable but a real
-// inbound surface; used for inventory (info) findings.
+// Messaging channels. Used for inventory (info) findings only — we never assert an
+// agent is reachable on one, because no queryable binding ties an agent to a channel.
+//
+// Do NOT describe these as internal or authenticated. `MessagingChannel` is not just
+// SMS/WhatsApp/Facebook: creating a "Messaging for In-App and Web" channel (Setup →
+// Messaging Settings → New Channel) also creates a MessagingChannel record, and that
+// one is a public web surface reachable through the messaging API's unauthenticated
+// guest access-token flow. ChannelType would distinguish them, but the literal picklist
+// values are not confirmed here, so this check reports the count as "type not
+// determined" rather than classifying reach it has not established.
 interface MessagingChannelRecord {
   Id: string;
   MasterLabel: string | null;
-  ChannelType?: string | null;
+  // The field is MessageType, NOT ChannelType — there is no ChannelType field on
+  // MessagingChannel. Selecting one fails with INVALID_FIELD, and because the query is
+  // wrapped in a catch that returns [], that failure is silent: every channel disappears.
+  MessageType?: string | null;
+  PlatformType?: string | null;
   IsActive?: boolean | null;
 }
+
+// MessageType values that are reachable from a browser, and therefore candidate public
+// surfaces. Verified against a live org's MessagingChannel describe (2026-08); the full
+// picklist also covers Text, Phone, WhatsApp, Facebook, Line, WeChat, AppleBusinessChat,
+// Rcs, Email, Voice/PstnVoice/SipVoice/WhatsAppVoice, Alexa, GoogleHome, Custom, Omega,
+// InternalCopilot, MsCopilot and VoiceIntegrationPilot, none of which is a web endpoint.
+const WEB_MESSAGE_TYPES = new Set(['EmbeddedMessaging', 'WebChat']);
 
 // Embedded Service deployment rows (chat/messaging-for-web). A deployment tied to
 // a live site or with no authentication is a public web surface. The exact schema
@@ -39,7 +58,7 @@ interface EmbeddedServiceRecord {
 
 // A discovered public channel, normalised for reporting.
 interface PublicChannel {
-  kind: 'experience-site' | 'embedded-deployment';
+  kind: 'experience-site' | 'embedded-deployment' | 'messaging-channel-web';
   id: string;
   label: string;
   note: string;
@@ -103,6 +122,25 @@ export class AgentChannelExposureCheck implements SecurityCheck {
       });
     }
 
+    // A web-type messaging channel is a browser-reachable surface: Embedded Messaging and
+    // Chat are served to the public web and, for guests, reached through the messaging API's
+    // unauthenticated access-token flow. Treat those as public channel candidates. We still
+    // cannot bind an agent to one (no queryable binding exists), so they land in the unmapped
+    // list and are reported as an unconfirmed mapping, never as an asserted exposure.
+    for (const m of messagingChannels) {
+      if (m.IsActive === false) continue;
+      if (!m.MessageType || !WEB_MESSAGE_TYPES.has(m.MessageType)) continue;
+      publicChannels.push({
+        kind: 'messaging-channel-web',
+        id: m.Id,
+        label: m.MasterLabel ?? m.Id,
+        note:
+          `Messaging channel of type ${m.MessageType}` +
+          `${m.PlatformType ? ` (${m.PlatformType})` : ''} — a web-reachable surface, ` +
+          `available to unauthenticated visitors via the messaging API's guest access-token flow`,
+      });
+    }
+
     // Resolve agent->channel bindings from Tooling deployment configs where the
     // platform exposes them. This is the only source that lets us assert exposure
     // as fact rather than inference.
@@ -160,6 +198,10 @@ export class AgentChannelExposureCheck implements SecurityCheck {
           `The Agentforce agent "${agent.label}" (${agent.developerName}) is bound to ${channel.note}. ` +
           `Unauthenticated visitors can send this agent input, so any prompt-injection payload reaches an agent ` +
           `that executes with the data access of its run-as user${agent.runAsUserId ? ` (${agent.runAsUserId})` : ''}. ` +
+          `Reachability does not depend on the site's Aura endpoint: conversations go to the org's messaging host ` +
+          `(<subdomain>.my.salesforce-scrt.com) via the Messaging for In-App and Web API, whose unauthenticated ` +
+          `access-token flow needs only the org id and this deployment's API name (the esDeveloperName), both of ` +
+          `which are present in the client-side bootstrap of any page that hosts the widget. ` +
           `This is the exact combination behind the ForcedLeak pattern: public input channel plus a privileged agent identity.`,
         remediation:
           'Confirm this agent is intended to be publicly reachable. If so, tightly scope the run-as user (least privilege), review the agent action surface for write-capable actions, and ensure Event Monitoring / Transaction Security cover the agent. If not intended, remove the guest/public binding.',
@@ -177,21 +219,29 @@ export class AgentChannelExposureCheck implements SecurityCheck {
     // internal-only inventory value. Reported once, listing the internal channels.
     const publiclyExposedDevNames = new Set(mappedExposures.map((m) => m.agent.developerName));
     const internalAgents = activeAgents.filter((a) => !publiclyExposedDevNames.has(a.developerName));
-    const internalChannels = messagingChannels.filter((m) => m.IsActive !== false);
+    // Web-type channels have already been promoted to publicChannels above, so anything left
+    // here is a non-web inbound surface (SMS, WhatsApp, Facebook, voice, email, ...).
+    const nonWebChannels = messagingChannels.filter(
+      (m) => m.IsActive !== false && !(m.MessageType && WEB_MESSAGE_TYPES.has(m.MessageType)),
+    );
     if (internalAgents.length > 0 && unmappedPublicChannels.length === 0) {
+      const types = [...new Set(nonWebChannels.map((m) => m.MessageType).filter(Boolean))];
       findings.push({
         id: 'agent-channel-exposure-internal',
         category: this.category,
         riskLevel: 'INFO',
-        title: `${internalAgents.length} active agent(s) on internal-only channels`,
+        title: `${internalAgents.length} active agent(s) with no public channel binding confirmed`,
         detail:
-          `${internalAgents.length} active agent(s) were not found on any guest-reachable Experience Cloud site or public embedded deployment. ` +
-          (internalChannels.length > 0
-            ? `${internalChannels.length} messaging channel(s) are configured (internal / authenticated inbound surfaces). `
-            : 'No public web channels were discovered. ') +
-          `Channel reachability in Salesforce is not always expressed in queryable metadata, so treat this as "no public exposure found" rather than a guarantee.`,
+          `${internalAgents.length} active agent(s) were not found on any guest-reachable Experience Cloud site, public embedded deployment, or web-type messaging channel. ` +
+          (nonWebChannels.length > 0
+            ? `${nonWebChannels.length} non-web messaging channel(s) are active${types.length > 0 ? ` (${types.join(', ')})` : ''}. ` +
+              `These are inbound surfaces whose senders are external parties identified by phone number or account handle — not ` +
+              `Salesforce-authenticated users — but they are not browser-reachable endpoints, and no queryable binding ties an ` +
+              `agent to a messaging channel, so no exposure is asserted for them either way. `
+            : 'No web-reachable channels were discovered. ') +
+          `Channel reachability in Salesforce is not always expressed in queryable metadata, so treat this as "no public exposure found" rather than a guarantee, and not as evidence that these agents are internal-only.`,
         remediation:
-          'Confirm these agents are only exposed on authenticated/internal channels. Re-check after any new Experience Cloud site or embedded deployment goes live.',
+          'Confirm in Setup → Messaging Settings whether any of these agents is deployed on a messaging channel. Any channel of type EmbeddedMessaging or WebChat is a public web surface and is reported separately; for the remaining channels, verify who can send to them and scope each agent\'s run-as user to least privilege regardless. Re-check after any new Experience Cloud site, embedded deployment, or messaging channel goes live.',
         affectedItems: internalAgents.map((a) => ({
           label: `${a.label} (${a.developerName})`,
           note: `active v${a.activeVersion ?? '?'}${a.runAsUserId ? ` | run-as: ${a.runAsUserId}` : ''}`,
@@ -250,10 +300,18 @@ export class AgentChannelExposureCheck implements SecurityCheck {
   private async queryMessagingChannels(ctx: AuditContext): Promise<MessagingChannelRecord[]> {
     try {
       return await ctx.soql.queryAll<MessagingChannelRecord>(
-        `SELECT Id, MasterLabel, ChannelType, IsActive FROM MessagingChannel`,
+        `SELECT Id, MasterLabel, MessageType, PlatformType, IsActive FROM MessagingChannel`,
       );
     } catch {
-      return [];
+      // Fall back to the minimal projection so an org missing the type fields still yields an
+      // inventory count, rather than reporting no channels at all.
+      try {
+        return await ctx.soql.queryAll<MessagingChannelRecord>(
+          `SELECT Id, MasterLabel, IsActive FROM MessagingChannel`,
+        );
+      } catch {
+        return [];
+      }
     }
   }
 

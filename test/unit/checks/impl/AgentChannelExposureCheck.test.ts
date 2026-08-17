@@ -122,8 +122,11 @@ describe('AgentChannelExposureCheck', () => {
     expect(JSON.stringify(crit[0])).toMatch(/Help Center/);
   });
 
-  // Fixture: agent + only internal channels (no guest sites, no public deployments).
-  it('emits an info finding for an agent on internal-only channels', async () => {
+  // Fixture: agent + a messaging channel, but no guest sites and no public deployments.
+  // Note this is "no public binding confirmed", NOT "internal-only": MessagingChannel also
+  // covers Messaging for In-App and Web, which is a public web surface, and nothing here ties
+  // an agent to a channel either way.
+  it('emits an info finding when no public channel binding could be confirmed', async () => {
     const ctx = makeCtx({
       agentAccess: 'ok',
       agentInventory: [agent()],
@@ -131,7 +134,7 @@ describe('AgentChannelExposureCheck', () => {
         if (/FROM Network/i.test(soql)) return Promise.resolve([]); // no live guest sites
         if (/FROM MessagingChannel/i.test(soql)) {
           return Promise.resolve([
-            { Id: 'MC1', MasterLabel: 'Internal SMS', ChannelType: 'Text', IsActive: true },
+            { Id: 'MC1', MasterLabel: 'Support SMS', MessageType: 'Text', PlatformType: 'Enhanced', IsActive: true },
           ]);
         }
         if (/FROM EmbeddedService/i.test(soql)) return Promise.resolve([]);
@@ -142,6 +145,90 @@ describe('AgentChannelExposureCheck', () => {
     expect(r.findings.some((f) => f.riskLevel === 'CRITICAL')).toBe(false);
     const info = r.findings.filter((f) => f.riskLevel === 'INFO');
     expect(info.length).toBeGreaterThanOrEqual(1);
+
+    // The channel count must not be dressed up as internal or authenticated reach. Creating a
+    // "Messaging for In-App and Web" channel also creates a MessagingChannel record, and that one
+    // is publicly reachable via the messaging API's unauthenticated guest token flow — so a
+    // blanket "internal / authenticated inbound surfaces" claim would under-report real exposure.
+    // The title must not assert internal-only reach...
+    expect(info[0].title).not.toMatch(/internal[- ]only/i);
+    // ...and the channel count must not be labelled internal or authenticated.
+    expect(info[0].detail).not.toMatch(/internal \/ authenticated/i);
+    // "internal-only" may appear in the detail, but only as the thing being ruled out.
+    for (const m of info[0].detail.matchAll(/internal[- ]only/gi)) {
+      const preceding = info[0].detail.slice(Math.max(0, m.index - 60), m.index);
+      expect(preceding).toMatch(/\bnot\b/i);
+    }
+    // A non-web channel (Text) is described accurately: external senders, not authenticated,
+    // but not a browser endpoint, and no exposure asserted because no binding exists.
+    expect(info[0].detail).toMatch(/non-web messaging channel/i);
+    expect(info[0].detail).toMatch(/Text/);
+    expect(info[0].detail).toMatch(/not\s+Salesforce-authenticated/i);
+    expect(info[0].detail).toMatch(/no queryable binding/i);
+  });
+
+  // Regression: the field is MessageType. Selecting a non-existent ChannelType raised
+  // INVALID_FIELD, which the surrounding catch swallowed — so every messaging channel silently
+  // vanished and the check could never see a web-type channel at all.
+  it('queries MessageType, never ChannelType', async () => {
+    const queries: string[] = [];
+    const ctx = makeCtx({
+      agentAccess: 'ok',
+      agentInventory: [agent()],
+      soql: (soql) => {
+        queries.push(soql);
+        return Promise.resolve([]);
+      },
+    });
+    await check.run(ctx);
+    const channelQuery = queries.find((q) => /FROM MessagingChannel/i.test(q));
+    expect(channelQuery).toBeDefined();
+    expect(channelQuery).toMatch(/MessageType/);
+    expect(channelQuery).not.toMatch(/ChannelType/);
+  });
+
+  // A web-type messaging channel is a browser-reachable surface, so it must be treated as a
+  // public channel candidate rather than counted as a benign internal one.
+  it.each(['EmbeddedMessaging', 'WebChat'])(
+    'treats a %s messaging channel as a public channel candidate',
+    async (messageType) => {
+      const ctx = makeCtx({
+        agentAccess: 'ok',
+        agentInventory: [agent()],
+        soql: (soql) => {
+          if (/FROM MessagingChannel/i.test(soql)) {
+            return Promise.resolve([
+              { Id: 'MC9', MasterLabel: 'Web Support', MessageType: messageType, PlatformType: 'Enhanced', IsActive: true },
+            ]);
+          }
+          return Promise.resolve([]);
+        },
+      });
+      const r = await check.run(ctx);
+      // No binding exists, so this is the honest MEDIUM "mapping unconfirmed" finding...
+      const medium = r.findings.filter((f) => f.riskLevel === 'MEDIUM');
+      expect(medium).toHaveLength(1);
+      expect(JSON.stringify(medium[0])).toMatch(/Web Support/);
+      // ...and it must NOT be reported as having no public channel.
+      expect(r.findings.some((f) => f.id === 'agent-channel-exposure-internal')).toBe(false);
+    },
+  );
+
+  it('does not treat an inactive web channel as public', async () => {
+    const ctx = makeCtx({
+      agentAccess: 'ok',
+      agentInventory: [agent()],
+      soql: (soql) => {
+        if (/FROM MessagingChannel/i.test(soql)) {
+          return Promise.resolve([
+            { Id: 'MC9', MasterLabel: 'Old Web', MessageType: 'EmbeddedMessaging', IsActive: false },
+          ]);
+        }
+        return Promise.resolve([]);
+      },
+    });
+    const r = await check.run(ctx);
+    expect(r.findings.some((f) => f.riskLevel === 'MEDIUM')).toBe(false);
   });
 
   // Fixture: active agents AND discovered public channels, but no resolvable binding
