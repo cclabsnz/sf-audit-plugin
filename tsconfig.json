@@ -12,7 +12,9 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    // Required by the NodeNext module kind; also silences ts-jest TS151002.
+    // Required by the NodeNext module kind. Also matches how the test transform behaves:
+    // swc strips types per-file with no cross-file type info, so anything isolatedModules
+    // rejects would compile differently under jest than under tsc.
     "isolatedModules": true,
     "lib": ["ES2022"]
   },
