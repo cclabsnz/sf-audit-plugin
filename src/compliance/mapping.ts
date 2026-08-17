@@ -1,6 +1,5 @@
 // Maps each check id to the compliance control ids it relates to.
-// Migrated from the former ComplianceMapping. HIPAA/GDPR ids are intentionally omitted
-// until their catalogs land (later plan). A08/A10 are mapped precisely:
+// Migrated from the former ComplianceMapping. A08/A10 are mapped precisely:
 //   A10 (SSRF) → egress controls (remote-sites, csp-trusted-sites, named-credentials)
 //   A08 (Software & Data Integrity) → installed-packages, deployment-identity
 // NZ pack control ids (HISO/NZISM/Privacy Act) are layered on by domain via NZ_CROSSWALK below.
@@ -108,50 +107,124 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'trusted-url-hygiene':     ['OWASP-A05', 'OWASP-A10', 'SOC2-CC6.6', 'ISO-A.8.26', 'LLM01', 'LLM05'],
 };
 
-// NZ pack crosswalk — each check belongs to one domain; the domain's NZ control ids are
-// layered onto its base entry. HISO/NZISM are domain/chapter-level drafts; Privacy Act IPPs
-// are statute-level. All verified:false until the verification pass.
-const NZ_CROSSWALK: Array<{ controls: string[]; checks: string[] }> = [
-  { controls: ['HISO-AC', 'NZISM-AC', 'PRIVACY-IPP5'],
-    checks: ['users-and-admins', 'permissions', 'sharing-model', 'public-group-sharing', 'guest-user-access',
-             'field-level-security', 'standard-profiles', 'api-client-permission', 'integration-users',
-             'escalation-perms', 'report-folder-access', 'apex-crud-fls', 'apex-rest-endpoint',
-             'guest-executable-apex', 'experience-cloud-site', 'content-links', 'apex-sharing', 'flows-without-sharing',
-             'public-content-exposure', 'privileged-access', 'separation-of-duties',
-             'guest-object-exposure', 'guest-site-options', 'guest-record-access-policy',
-             'login-access-policy', 'data-export-access', 'classic-sites', 'guest-api-access'] },
-  { controls: ['HISO-AUTH', 'NZISM-AUTH', 'PRIVACY-IPP5'],
-    checks: ['login-session', 'ip-restrictions', 'password-session-policy', 'sso-enforcement', 'mfa-enforcement',
-             'trusted-ip-ranges', 'my-domain-login-policy', 'high-assurance-session', 'internal-user-mfa',
-             'mfa-registration', 'mfa-method-strength', 'failed-login-detection', 'enhanced-domains',
-             'auth-providers'] },
-  { controls: ['HISO-CRYPTO', 'NZISM-CRYPTO', 'PRIVACY-IPP5'],
-    checks: ['named-credentials', 'hardcoded-credentials', 'custom-settings', 'certificate-expiry', 'custom-labels-credential', 'external-credentials', 'encryption-coverage'] },
-  { controls: ['HISO-LOG', 'NZISM-LOG'],
-    checks: ['audit-trail', 'apex-logging', 'event-monitoring', 'siem-integration', 'anonymous-apex-audit',
-             'debug-log-access', 'transaction-security-policy', 'threat-detection', 'guest-traffic-anomaly',
-             'login-anomaly'] },
-  { controls: ['HISO-DEV', 'NZISM-SW'],
-    checks: ['code-security', 'visualforce-xss', 'scheduled-apex'] },
-  { controls: ['HISO-COMM', 'NZISM-NET', 'PRIVACY-IPP12'],
-    checks: ['remote-sites', 'csp-trusted-sites', 'connected-apps', 'connected-app-scope', 'connected-app-inactivity', 'cors-allowlist',
-             'email-security', 'outbound-messages', 'experience-csp'] },
-  { controls: ['HISO-DATA', 'PRIVACY-IPP5'],
-    checks: ['data-classification', 'field-history-tracking', 'sandbox-data-masking'] },
-  { controls: ['HISO-GOV', 'NZISM-CONFIG'],
-    checks: ['health-check', 'api-limits', 'release-updates', 'legacy-api-version', 'installed-packages', 'deployment-identity', 'session-hardening'] },
-  { controls: ['PRIVACY-IPP9'],
-    checks: ['inactive-users'] },
+// Domain groupings. Each check belongs to exactly one domain, and a domain's control ids are
+// layered onto every base entry in it. Shared by the NZ pack and the HIPAA/GDPR crosswalk below
+// so the two cannot drift apart in which checks they consider part of a domain.
+const DOMAIN = {
+  accessControl: ['users-and-admins', 'permissions', 'sharing-model', 'public-group-sharing', 'guest-user-access',
+                  'field-level-security', 'standard-profiles', 'api-client-permission', 'integration-users',
+                  'escalation-perms', 'report-folder-access', 'apex-crud-fls', 'apex-rest-endpoint',
+                  'guest-executable-apex', 'experience-cloud-site', 'content-links', 'apex-sharing', 'flows-without-sharing',
+                  'public-content-exposure', 'privileged-access', 'separation-of-duties',
+                  'guest-object-exposure', 'guest-site-options', 'guest-record-access-policy',
+                  'login-access-policy', 'data-export-access', 'classic-sites', 'guest-api-access'],
+  authentication: ['login-session', 'ip-restrictions', 'password-session-policy', 'sso-enforcement', 'mfa-enforcement',
+                   'trusted-ip-ranges', 'my-domain-login-policy', 'high-assurance-session', 'internal-user-mfa',
+                   'mfa-registration', 'mfa-method-strength', 'failed-login-detection', 'enhanced-domains',
+                   'auth-providers'],
+  crypto: ['named-credentials', 'hardcoded-credentials', 'custom-settings', 'certificate-expiry', 'custom-labels-credential', 'external-credentials', 'encryption-coverage'],
+  logging: ['audit-trail', 'apex-logging', 'event-monitoring', 'siem-integration', 'anonymous-apex-audit',
+            'debug-log-access', 'transaction-security-policy', 'threat-detection', 'guest-traffic-anomaly',
+            'login-anomaly'],
+  devSecurity: ['code-security', 'visualforce-xss', 'scheduled-apex'],
+  network: ['remote-sites', 'csp-trusted-sites', 'connected-apps', 'connected-app-scope', 'connected-app-inactivity', 'cors-allowlist',
+            'email-security', 'outbound-messages', 'experience-csp'],
+  dataGovernance: ['data-classification', 'field-history-tracking', 'sandbox-data-masking'],
+  configGovernance: ['health-check', 'api-limits', 'release-updates', 'legacy-api-version', 'installed-packages', 'deployment-identity', 'session-hardening'],
+  accountLifecycle: ['inactive-users'],
+  // Agentforce / GenAI. The NZ pack does not map these (HISO/NZISM predate agentic platforms and
+  // have no chapter that fits); HIPAA and GDPR do, because an over-privileged agent user reading
+  // PHI or personal data is squarely an access-control and security-of-processing question.
+  aiAgents: ['agent-inventory', 'agent-user-privilege', 'agent-action-surface', 'agent-channel-exposure',
+             'agent-monitoring-coverage', 'trusted-url-hygiene'],
+} as const;
+
+// NZ pack crosswalk — HISO/NZISM are domain/chapter-level; Privacy Act IPPs are statute-level.
+const NZ_CROSSWALK: Array<{ controls: string[]; checks: readonly string[] }> = [
+  { controls: ['HISO-AC', 'NZISM-AC', 'PRIVACY-IPP5'], checks: DOMAIN.accessControl },
+  { controls: ['HISO-AUTH', 'NZISM-AUTH', 'PRIVACY-IPP5'], checks: DOMAIN.authentication },
+  { controls: ['HISO-CRYPTO', 'NZISM-CRYPTO', 'PRIVACY-IPP5'], checks: DOMAIN.crypto },
+  { controls: ['HISO-LOG', 'NZISM-LOG'], checks: DOMAIN.logging },
+  { controls: ['HISO-DEV', 'NZISM-SW'], checks: DOMAIN.devSecurity },
+  { controls: ['HISO-COMM', 'NZISM-NET', 'PRIVACY-IPP12'], checks: DOMAIN.network },
+  { controls: ['HISO-DATA', 'PRIVACY-IPP5'], checks: DOMAIN.dataGovernance },
+  { controls: ['HISO-GOV', 'NZISM-CONFIG'], checks: DOMAIN.configGovernance },
+  { controls: ['PRIVACY-IPP9'], checks: DOMAIN.accountLifecycle },
 ];
+
+// HIPAA / GDPR crosswalk — the domain-wide obligations. Anything narrower than a whole domain is
+// mapped per check in REGULATORY_PRECISE below rather than swept across the domain, because these
+// ids name a specific implementation specification or article paragraph: claiming "automatic
+// logoff" against all fourteen authentication checks would be the imprecision the sourced catalog
+// exists to avoid.
+const REGULATORY_CROSSWALK: Array<{ controls: string[]; checks: readonly string[] }> = [
+  { controls: ['HIPAA-164.312(a)(1)', 'HIPAA-164.308(a)(4)', 'GDPR-Art5(1)(f)', 'GDPR-Art25', 'GDPR-Art32(1)(b)'],
+    checks: DOMAIN.accessControl },
+  { controls: ['HIPAA-164.312(d)', 'GDPR-Art5(1)(f)', 'GDPR-Art32(1)(b)'],
+    checks: DOMAIN.authentication },
+  { controls: ['HIPAA-164.312(a)(2)(iv)', 'GDPR-Art32(1)(a)', 'GDPR-Art5(1)(f)'],
+    checks: DOMAIN.crypto },
+  { controls: ['HIPAA-164.312(b)', 'HIPAA-164.308(a)(1)(ii)(D)', 'GDPR-Art32(1)(b)', 'GDPR-Art33'],
+    checks: DOMAIN.logging },
+  { controls: ['HIPAA-164.312(c)(1)', 'GDPR-Art25', 'GDPR-Art32(1)(b)'],
+    checks: DOMAIN.devSecurity },
+  { controls: ['HIPAA-164.312(e)(1)', 'GDPR-Art44', 'GDPR-Art32(1)(b)'],
+    checks: DOMAIN.network },
+  { controls: ['HIPAA-164.308(a)(1)(ii)(A)', 'HIPAA-164.312(c)(1)', 'GDPR-Art30', 'GDPR-Art5(1)(f)'],
+    checks: DOMAIN.dataGovernance },
+  { controls: ['HIPAA-164.308(a)(1)(ii)(B)', 'HIPAA-164.308(a)(8)', 'GDPR-Art32(1)(d)'],
+    checks: DOMAIN.configGovernance },
+  { controls: ['HIPAA-164.308(a)(3)', 'GDPR-Art5(1)(f)'],
+    checks: DOMAIN.accountLifecycle },
+];
+
+// Per-check HIPAA/GDPR additions, where the obligation is narrower than its domain.
+const REGULATORY_PRECISE: Record<string, string[]> = {
+  // Shared/service identities vs "assign a unique name and/or number for identifying and tracking user identity".
+  'integration-users':          ['HIPAA-164.312(a)(2)(i)'],
+  // Session inactivity timeout is the automatic-logoff specification; password rules are their own.
+  'password-session-policy':    ['HIPAA-164.312(a)(2)(iii)', 'HIPAA-164.308(a)(5)(ii)(D)'],
+  'session-hardening':          ['HIPAA-164.312(a)(2)(iii)'],
+  // Monitoring log-in attempts and reporting discrepancies.
+  'login-session':              ['HIPAA-164.308(a)(5)(ii)(C)'],
+  'failed-login-detection':     ['HIPAA-164.308(a)(5)(ii)(C)'],
+  'login-anomaly':              ['HIPAA-164.308(a)(5)(ii)(C)'],
+  // Identifying and responding to suspected or known security incidents.
+  'transaction-security-policy':['HIPAA-164.308(a)(6)'],
+  'threat-detection':           ['HIPAA-164.308(a)(6)'],
+  'guest-traffic-anomaly':      ['HIPAA-164.308(a)(6)'],
+  // Cleartext transport of PHI/personal data — encryption in transmission.
+  'remote-sites':               ['HIPAA-164.312(e)(2)(ii)'],
+  'csp-trusted-sites':          ['HIPAA-164.312(e)(2)(ii)'],
+  'outbound-messages':          ['HIPAA-164.312(e)(2)(ii)'],
+  'email-security':             ['HIPAA-164.312(e)(2)(ii)'],
+  'experience-csp':             ['HIPAA-164.312(e)(2)(ii)'],
+  // Data Mask is pseudonymisation in the Art. 32(1)(a) sense; unmasked prod data in a sandbox is
+  // also a by-default-accessibility failure under Art. 25.
+  'sandbox-data-masking':       ['GDPR-Art32(1)(a)', 'GDPR-Art25'],
+  // Agentforce / GenAI — see DOMAIN.aiAgents.
+  'agent-inventory':            ['HIPAA-164.308(a)(4)', 'GDPR-Art30'],
+  'agent-user-privilege':       ['HIPAA-164.312(a)(1)', 'HIPAA-164.308(a)(4)', 'GDPR-Art5(1)(f)', 'GDPR-Art32(1)(b)'],
+  'agent-action-surface':       ['HIPAA-164.312(a)(1)', 'HIPAA-164.312(c)(1)', 'GDPR-Art25'],
+  'agent-channel-exposure':     ['HIPAA-164.312(a)(1)', 'GDPR-Art25', 'GDPR-Art5(1)(f)'],
+  'agent-monitoring-coverage':  ['HIPAA-164.312(b)', 'HIPAA-164.308(a)(1)(ii)(D)', 'GDPR-Art33'],
+  'trusted-url-hygiene':        ['HIPAA-164.312(e)(1)', 'GDPR-Art44'],
+};
 
 function buildCheckControlMap(): Record<string, string[]> {
   const map: Record<string, string[]> = {};
   for (const [check, ids] of Object.entries(BASE_CHECK_CONTROL_MAP)) map[check] = [...ids];
-  for (const group of NZ_CROSSWALK) {
+  for (const group of [...NZ_CROSSWALK, ...REGULATORY_CROSSWALK]) {
     for (const check of group.checks) {
       (map[check] ??= []).push(...group.controls);
     }
   }
+  for (const [check, ids] of Object.entries(REGULATORY_PRECISE)) {
+    (map[check] ??= []).push(...ids);
+  }
+  // A control can arrive from both a crosswalk and a precise entry; a compliance matrix must not
+  // render the same control twice for one check.
+  for (const check of Object.keys(map)) map[check] = [...new Set(map[check])];
   return map;
 }
 

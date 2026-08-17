@@ -2,7 +2,7 @@
 
 Controls marked verified have been checked against an authoritative source. Unverified controls stay excluded from rendered reports (provenance gate).
 
-Total controls: 89 · Verified: 89
+Total controls: 119 · Verified: 119
 
 ## OWASP — OWASP Top 10:2021 (9/9 verified)
 
@@ -17,6 +17,15 @@ Total controls: 89 · Verified: 89
 | [x] | OWASP-A08 | Software and Data Integrity Failures | OWASP Top 10:2021 A08 |
 | [x] | OWASP-A09 | Security Logging and Monitoring Failures | OWASP Top 10:2021 A09 |
 | [x] | OWASP-A10 | Server-Side Request Forgery (SSRF) | OWASP Top 10:2021 A10 |
+
+## OWASP_LLM — OWASP Top 10 for LLM Applications 2025 (4/4 verified)
+
+| ✓ | id | title | sourceRef |
+|---|---|---|---|
+| [x] | LLM01 | Prompt Injection | OWASP Top 10 for LLM Applications 2025, LLM01 |
+| [x] | LLM02 | Sensitive Information Disclosure | OWASP Top 10 for LLM Applications 2025, LLM02 |
+| [x] | LLM05 | Improper Output Handling | OWASP Top 10 for LLM Applications 2025, LLM05 |
+| [x] | LLM06 | Excessive Agency | OWASP Top 10 for LLM Applications 2025, LLM06 |
 
 ## SOC2 — AICPA TSC 2017 (Common Criteria) (11/11 verified)
 
@@ -127,4 +136,57 @@ Total controls: 89 · Verified: 89
 | [x] | NZISM-SW | Software and application security | NZISM v3.8, Ch.14 Software Security |
 | [x] | NZISM-NET | Network security and gateways | NZISM v3.8, Ch.18 Network Security / Ch.19 Gateway Security |
 | [x] | NZISM-CONFIG | System hardening and configuration | NZISM v3.8, Ch.12 Product Security (configuration and patching) |
+
+## HIPAA — 45 CFR Part 164 Subpart C (HIPAA Security Rule, 2013 Omnibus) (18/18 verified)
+
+Standard headings, implementation-specification names and each spec's Required/Addressable
+designation verified 2026-08 against the codified text of 45 CFR 164.308 and 164.312.
+
+**Version watch.** The HHS NPRM of 2025-01-06 would remove the Required/Addressable distinction and
+make encryption, MFA and network segmentation mandatory. As of 2026-08 it remains **proposed**, so
+this catalog maps the operative 2013 Omnibus rule. When the final rule publishes, re-pin `version`
+and re-verify every row rather than amending in place.
+
+Physical safeguards (164.310), contingency planning (164.308(a)(7)) and documentation (164.316) are
+out of scope for a read-only org-configuration review and are deliberately absent.
+
+| ✓ | id | title | sourceRef |
+|---|---|---|---|
+| [x] | HIPAA-164.308(a)(1)(ii)(A) | Risk analysis (Required) | 45 CFR 164.308(a)(1)(ii)(A) |
+| [x] | HIPAA-164.308(a)(1)(ii)(B) | Risk management (Required) | 45 CFR 164.308(a)(1)(ii)(B) |
+| [x] | HIPAA-164.308(a)(1)(ii)(D) | Information system activity review (Required) | 45 CFR 164.308(a)(1)(ii)(D) |
+| [x] | HIPAA-164.308(a)(3) | Workforce security | 45 CFR 164.308(a)(3) |
+| [x] | HIPAA-164.308(a)(4) | Information access management | 45 CFR 164.308(a)(4) |
+| [x] | HIPAA-164.308(a)(5)(ii)(C) | Log-in monitoring (Addressable) | 45 CFR 164.308(a)(5)(ii)(C) |
+| [x] | HIPAA-164.308(a)(5)(ii)(D) | Password management (Addressable) | 45 CFR 164.308(a)(5)(ii)(D) |
+| [x] | HIPAA-164.308(a)(6) | Security incident procedures | 45 CFR 164.308(a)(6) |
+| [x] | HIPAA-164.308(a)(8) | Evaluation | 45 CFR 164.308(a)(8) |
+| [x] | HIPAA-164.312(a)(1) | Access control | 45 CFR 164.312(a)(1) |
+| [x] | HIPAA-164.312(a)(2)(i) | Unique user identification (Required) | 45 CFR 164.312(a)(2)(i) |
+| [x] | HIPAA-164.312(a)(2)(iii) | Automatic logoff (Addressable) | 45 CFR 164.312(a)(2)(iii) |
+| [x] | HIPAA-164.312(a)(2)(iv) | Encryption and decryption (Addressable) | 45 CFR 164.312(a)(2)(iv) |
+| [x] | HIPAA-164.312(b) | Audit controls | 45 CFR 164.312(b) |
+| [x] | HIPAA-164.312(c)(1) | Integrity | 45 CFR 164.312(c)(1) |
+| [x] | HIPAA-164.312(d) | Person or entity authentication | 45 CFR 164.312(d) |
+| [x] | HIPAA-164.312(e)(1) | Transmission security | 45 CFR 164.312(e)(1) |
+| [x] | HIPAA-164.312(e)(2)(ii) | Encryption in transmission (Addressable) | 45 CFR 164.312(e)(2)(ii) |
+
+## GDPR — Regulation (EU) 2016/679 (8/8 verified)
+
+Article headings and the quoted text of Art. 5(1)(f), 25 and 32(1)(a)-(d) verified 2026-08 against
+the consolidated regulation text; OJ L 119, 4.5.2016 is the canonical reference. Where an obligation
+is a paragraph rather than a whole article, the id names the paragraph so a finding cites the
+specific duty. Articles on lawful basis, data-subject rights, DPIAs (Art. 35) and
+controller/processor contracts are out of scope for a configuration review and deliberately absent.
+
+| ✓ | id | title | sourceRef |
+|---|---|---|---|
+| [x] | GDPR-Art5(1)(f) | Integrity and confidentiality | Regulation (EU) 2016/679, Art. 5(1)(f) |
+| [x] | GDPR-Art25 | Data protection by design and by default | Regulation (EU) 2016/679, Art. 25(1)-(2) |
+| [x] | GDPR-Art30 | Records of processing activities | Regulation (EU) 2016/679, Art. 30(1) |
+| [x] | GDPR-Art32(1)(a) | Pseudonymisation and encryption of personal data | Regulation (EU) 2016/679, Art. 32(1)(a) |
+| [x] | GDPR-Art32(1)(b) | Ongoing confidentiality, integrity, availability and resilience | Regulation (EU) 2016/679, Art. 32(1)(b) |
+| [x] | GDPR-Art32(1)(d) | Regular testing and evaluation of security measures | Regulation (EU) 2016/679, Art. 32(1)(d) |
+| [x] | GDPR-Art33 | Notification of a personal data breach to the supervisory authority | Regulation (EU) 2016/679, Art. 33(1) |
+| [x] | GDPR-Art44 | General principle for transfers | Regulation (EU) 2016/679, Art. 44 |
 
