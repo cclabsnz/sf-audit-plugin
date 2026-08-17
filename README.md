@@ -15,8 +15,8 @@
 A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audit against any Salesforce org, risk-scores it with an A–F grade, and turns the result into a report your security team (or your client's) can act on.
 
 - **88 read-only checks** across identity, access, data, code, integrations, monitoring, and Agentforce / GenAI
-- **Attack-chain correlation:** links individual findings into named, multi-step attack scenarios
-- **Compliance mapping:** every finding mapped to **source-verified** controls across 8 frameworks (OWASP, OWASP LLM Top 10, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029, NZISM)
+- **Attack-chain correlation:** links individual findings into named, multi-step attack scenarios — eleven modelled chains, plus an emergent pass for combinations nobody has named yet (see [Attack chains](#attack-chains))
+- **Compliance mapping:** every finding mapped to **source-verified** controls across 10 frameworks (OWASP, OWASP LLM Top 10, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029, NZISM, HIPAA Security Rule, GDPR)
 - **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
 - **History & diff:** archives each run and shows security-posture drift over time
 - **Free event baseline:** `sf audit events pull` captures the org's free daily `EventLogFile` logs to local disk before the 1-day retention window drops them — no Event Monitoring / Shield add-on needed
@@ -84,7 +84,7 @@ sf audit list
 | `--prepared-for` | (none) | Client name for the executive report cover line |
 | `--branding` | (none) | Path to a `report-branding.json` to override CloudCounsel defaults (executive format) |
 | `--top` | `5` | Number of executive priorities to highlight (executive format) |
-| `--frameworks` | `universal` | Compliance matrix scope (executive format): `universal` (OWASP/OWASP LLM/SOC 2/ISO 27001), `nz` (ISO/HISO/Privacy Act/NZISM), `all`, or a comma list (e.g. `owasp,owasp-llm,iso,nzism`) |
+| `--frameworks` | `universal` | Compliance matrix scope (executive format): `universal` (OWASP/OWASP LLM/SOC 2/ISO 27001), `nz` (ISO/HISO/Privacy Act/NZISM), `all`, or a comma list (e.g. `owasp,owasp-llm,iso,nzism`, or `hipaa` / `gdpr` for a US healthcare or EU/UK engagement) |
 | `--resolve-domains` | `false` | Makes **outbound DNS queries from this machine** to verify CSP trusted domains still resolve (flags unresolvable / parked domains as exfiltration channels). Off by default; a default run contacts **only the target org** and never reaches out to any other host. |
 
 ### Examples
@@ -133,7 +133,8 @@ sf audit security --target-org myOrg --format executive --branding ./report-bran
 
 Compliance controls are mapped from authoritative, version-pinned sources (OWASP Top 10:2021,
 OWASP Top 10 for LLM Applications 2025, AICPA TSC, ISO/IEC 27001:2022, the Security Benchmark for
-Salesforce, NZ Privacy Act, HISO 10029, NZISM). Only source-verified controls render. "No findings detected" is **not** an attestation of
+Salesforce, NZ Privacy Act, HISO 10029, NZISM, 45 CFR Part 164 Subpart C, Regulation (EU)
+2016/679). Only source-verified controls render. "No findings detected" is **not** an attestation of
 compliance (see the report's Scope & Liability section).
 
 The report file is written as `sf-audit-<orgId>-<timestamp>.<ext>` in the output directory (e.g. `sf-audit-00D000000000001-1711234567890.html`).
@@ -270,7 +271,7 @@ The audit runs **88 read-only checks**. Every finding is risk-rated (CRITICAL �
 | Agentforce Monitoring Coverage | Active agents running with no Event Monitoring capture and no Transaction Security policy (the monitoring gap in the ForcedLeak pattern); points at `sf audit events pull` |
 | Trusted URL Hygiene | Reviews the CSP trusted-sites allowlist for non-Salesforce domains that could be repurposed as exfiltration channels; with `--resolve-domains`, DNS-checks each for unresolvable or parked entries |
 
-Two named attack chains correlate these findings: **Prompt injection blast radius** (guest-reachable channel + over-privileged agent user + write-capable actions) and **ForcedLeak pattern** (active agents + a stale/unresolvable trusted URL + no event capture).
+Two of the named [attack chains](#attack-chains) correlate these findings specifically: **Prompt injection blast radius** (guest-reachable channel + over-privileged agent user + write-capable actions) and **ForcedLeak pattern** (active agents + a stale/unresolvable trusted URL + no event capture).
 
 The five agent-specific checks stay silent in orgs where Agentforce is not enabled (the GenAI objects do not exist, so the inventory records `not-enabled` and the dependent checks return nothing). Trusted URL Hygiene runs everywhere, since the CSP allowlist is an org-wide exfiltration surface regardless of Agentforce.
 
@@ -285,7 +286,7 @@ Advisory findings are surfaced as `INFO` and never inflate the health score.
 
 ## Compliance frameworks
 
-Findings are mapped to controls across eight security and privacy frameworks. The mapping is built on a **sourced control catalog** (each control carries its framework, **pinned version**, official title, and a citation) so a finding's compliance reference ties to an exact, defensible requirement rather than a bare tag.
+Findings are mapped to controls across ten security and privacy frameworks. The mapping is built on a **sourced control catalog** (each control carries its framework, **pinned version**, official title, and a citation) so a finding's compliance reference ties to an exact, defensible requirement rather than a bare tag.
 
 | Framework | Version | Notes |
 |-----------|---------|-------|
@@ -297,6 +298,8 @@ Findings are mapped to controls across eight security and privacy frameworks. Th
 | NZ Privacy Act | 2020 | Information Privacy Principles (IPP 5/9/12) |
 | HISO 10029 | 2022 | NZ Health Information Security Framework |
 | NZISM | v3.8 | NZ Information Security Manual |
+| HIPAA Security Rule | 45 CFR Part 164 Subpart C (2013 Omnibus) | Administrative (164.308) and technical (164.312) safeguards, with each implementation specification's **Required / Addressable** designation preserved. Maps the **operative** rule: the HHS NPRM of 2025-01-06 that would make encryption, MFA and segmentation mandatory is still proposed, not final |
+| GDPR | Regulation (EU) 2016/679 | Art. 5(1)(f), 25, 30, 32(1)(a)/(b)/(d), 33 and 44. Mapped at paragraph level, so a finding cites the specific obligation rather than "Article 32" at large |
 
 **Provenance gate.** Each catalogued control is marked `verified` only after its title/reference is confirmed against the authoritative source. **Controls that are not verified do not render** in the compliance matrix. Nothing ships as "compliant-to-clause" on unconfirmed data. The current verification status is tracked in [`docs/compliance/verification-worksheet.md`](docs/compliance/verification-worksheet.md).
 
@@ -304,12 +307,57 @@ Findings are mapped to controls across eight security and privacy frameworks. Th
 
 - `universal` *(default)*: OWASP, OWASP LLM Top 10, SOC 2, ISO 27001
 - `nz`: ISO 27001, HISO 10029, NZ Privacy Act, NZISM (for NZ health/government engagements)
-- `all`: every framework
-- a comma list of aliases, e.g. `owasp,owasp-llm,iso,nzism` (`owasp-llm` / `llm` selects the OWASP LLM Top 10)
+- `all`: every framework, including HIPAA and GDPR
+- a comma list of aliases, e.g. `owasp,owasp-llm,iso,nzism` (`owasp-llm` / `llm` selects the OWASP LLM Top 10, `hipaa` the HIPAA Security Rule, `gdpr` the GDPR articles)
+
+HIPAA and GDPR are not in either named pack, because scoping them is a jurisdictional decision rather than a default — select them explicitly for a US healthcare or EU/UK engagement:
+
+```bash
+# US healthcare engagement — HIPAA Security Rule safeguards alongside the universal set
+sf audit security --target-org myOrg --format executive --frameworks owasp,soc2,iso,hipaa
+
+# EU/UK engagement — GDPR security-of-processing obligations
+sf audit security --target-org myOrg --format executive --frameworks iso,gdpr
+```
 
 > **Not an attestation.** A control rendering "No findings detected" means this audit's checks surfaced no issues mapped to it. It is **not** a statement of compliance or certification. See [Scope & Liability](#scope--liability).
 
-**Further reading:** [Mapping Salesforce security to NZISM, the NZ Privacy Act and ISO 27001](https://www.softwareinsights.dev/posts/salesforce-security-nzism-nz-privacy-act/) and [Why Salesforce Health Cloud needs its own security review](https://www.softwareinsights.dev/posts/salesforce-health-cloud-security-review/). More in [Further reading](#further-reading).
+**Further reading:** [Mapping Salesforce security to NZISM, the NZ Privacy Act and ISO 27001](https://www.softwareinsights.dev/posts/salesforce-security-nzism-nz-privacy-act/) and [Why Salesforce Health Cloud needs its own security review](https://www.softwareinsights.dev/posts/salesforce-health-cloud-security-review/). More in [Further reading](docs/FURTHER-READING.md).
+
+## Attack chains
+
+A list of findings is not a risk assessment. Three MEDIUM findings that combine into an
+unauthenticated path to bulk data matter more than a lone HIGH that leads nowhere, and reading a
+report severity-by-severity hides exactly that. So every audit also correlates its findings into
+**attack chains**: the specific combinations that turn separate misconfigurations into a route from
+an attacker's entry point to a real outcome.
+
+Correlation runs in two passes. **Named chains** are hand-modelled scenarios — a known pattern, with
+its own narrative and remediation. Where no named chain explains a combination, an **emergent pass**
+reports the remaining entry-point → outcome pairs as lower-confidence "potential attack paths", so a
+novel combination is still surfaced rather than missed. Every chain lists the findings that form its
+steps, and remediating **any one step breaks the chain** — which is what makes this actionable
+rather than alarming.
+
+The eleven named chains:
+
+| Chain | Severity | Fires when |
+|-------|----------|-----------|
+| Unauthenticated bulk exfiltration | CRITICAL | A guest foothold combines with guest-reachable code execution, public external sharing, or a guest bulk-read surface — no login required. Reached over the site's Aura endpoint (`/s/sfsites/aura`, `aura.token=null`): `RecordUiController/ACTION$executeGraphQL` for record data, or `aura.ApexAction.execute` to invoke `@AuraEnabled` Apex that runs without sharing |
+| Active guest reconnaissance against an exposed data surface | CRITICAL | `AuraRequest` / `GraphQlQueryExecution` evidence shows guests probing from anonymizer IPs, or running `totalCount`-only GraphQL sweeps against `/s/sfsites/aura` to map what is readable, **and** the org exposes objects those guests can bulk-read. Reconnaissance against a confirmed surface — likely an incident already in progress |
+| Standard user to org takeover | CRITICAL | A low-trust or unauthenticated entry point combines with a privilege-escalation path: escalation permissions, Author Apex, shadow admins, delegated admin, Login-As, or a toxic permission combination |
+| Credential theft to external pivot | CRITICAL | Exposed secrets (hardcoded credentials, credentials in Custom Labels, debug logs, broad CORS) combine with an egress path — a named credential, remote site, or a self-provisioned connected app |
+| Prompt injection blast radius | CRITICAL | A guest-reachable Agentforce channel, an over-privileged agent run-as user, and write-capable agent actions are all present, so one injected prompt can read, alter, or destroy data across the agent's reach. Reached over the messaging host (`*.my.salesforce-scrt.com`, `/iamessage/api/v2/…`), **not** the site's Aura endpoint — the API's unauthenticated access-token flow needs only the org id and the deployment's `esDeveloperName`, both public in the widget's bootstrap |
+| ForcedLeak pattern | CRITICAL | Active agents + a stale or unresolvable CSP-trusted domain + no Event Monitoring capture. The Noma Security chain (Sept 2025): re-register the lapsed domain, inject an agent into sending data to it, and nothing records it |
+| SOQL injection to mass read | HIGH | Injectable dynamic SOQL combines with a bulk-readable data sink (broad sharing, unencrypted sensitive fields, public report folders, View All Data) |
+| MFA bypass to privileged compromise | HIGH | Weak MFA enforcement or trusted-IP MFA bypass coincides with highly-privileged accounts, so phishing or credential stuffing reaches an admin without a second factor |
+| Unmasked production PII in a weakly-controlled sandbox | HIGH | A sandbox holds populated PII fields — unmasked production data — while running weaker authentication or broader sharing than the org it was refreshed from. The data is real; only the protection is not |
+| Insider bulk export without monitoring | HIGH | Data is broadly readable internally, a profile or permission set can export it en masse, **and** no monitoring would record the export — the third element is what makes it unreconstructable afterwards |
+| Exploitable access with no detection coverage | MEDIUM | A real capability (unauthenticated foothold, privilege escalation, org takeover) exists while two or more of threat detection, Event Monitoring, Transaction Security and SIEM forwarding are absent. Adds no exposure — reports that existing exposure would go unobserved |
+
+Chains appear in the technical report and drive the executive report's priorities and remediation
+roadmap. A chain is only reported when **every** one of its ingredients is actually present: a clean
+org produces none.
 
 ## Scope & Liability
 
@@ -318,7 +366,7 @@ Findings are mapped to controls across eight security and privacy frameworks. Th
 **What this tool is not.** It is **not** a penetration test, a dynamic/runtime security test, or a source-code audit of managed-package internals. It does not exploit vulnerabilities, attempt privilege escalation, or guarantee detection of every misconfiguration. The Health Score and A–F grade are **prioritisation aids**, not certifications, and do not represent compliance with, or accreditation under, any standard (OWASP, SOC 2, ISO 27001, HIPAA, GDPR, or otherwise). Compliance-framework tags indicate *relevance* to a control area only.
 
 
-**Point-in-time.** Results reflect org configuration **at the moment the audit ran**. Configuration drift, new customisations, and platform changes can invalidate findings at any time. Re-run regularly (see [History & Diff](#history--diff)).
+**Point-in-time.** Results reflect org configuration **at the moment the audit ran**. Configuration drift, new customisations, and platform changes can invalidate findings at any time. Re-run regularly (see [History & Diff](docs/COMMANDS.md)).
 
 **Authorisation.** Run this tool only against orgs you own or are **explicitly authorised in writing** to assess. You are responsible for obtaining the necessary permissions and for handling generated reports (which may contain sensitive security configuration) in accordance with your organisation's data-handling and confidentiality obligations.
 
@@ -326,489 +374,53 @@ Findings are mapped to controls across eight security and privacy frameworks. Th
 
 ## Trust & verification
 
-Because this tool authenticates against production orgs, "is it safe to run?" deserves a verifiable answer, not just a claim. Here's how you can check for yourself:
+Because this tool authenticates against production orgs, "is it safe to run?" deserves a verifiable
+answer rather than a claim. Every guarantee below is something you can check yourself:
 
-- **Read-only, enforced in CI.** The "no writes to your org" promise is a passing test, not a footnote. `test/unit/invariants/readonly-invariant.test.ts` statically scans this package's entire source tree and fails the build if any jsforce mutation API, HTTP write verb, or bulk/composite write path ever appears. Every org request funnels through the core clients (`@cclabsnz/sf-core`, `src/api/*ClientImpl.ts`), which issue only SOQL queries, REST **GET**s, and Metadata reads. Each package in the monorepo runs the same guard against its own source, so nothing is covered by omission.
-- **Nothing phones home, enforced the same way.** `test/unit/invariants/network-egress.test.ts` fails the build on any third-party HTTP client, raw `node:http`/`https` use, telemetry/analytics/LLM endpoint, or websocket — and on any remote asset (`<script src>`, `<link href>`, `@import`) in a generated report. The only network destination is the org you authenticated against. Generated HTML reports are **fully self-contained**: webfonts are embedded as data URIs and Chart.js is inlined, so opening a report never calls out to a CDN — which matters, because reports carry sensitive findings and are often opened offline. Run both guards yourself:
+- **Read-only, enforced in CI** — a test statically fails the build if any write path appears in the source
+- **No network egress** — enforced the same way; reports are fully self-contained (fonts and Chart.js inlined)
+- **Signed provenance** — released from CI via npm trusted publishing (OIDC); `npm audit signatures` verifies the tarball against the public commit
+- **Independent scans** — CodeQL (`security-extended`, source *and* workflows), Semgrep, OpenSSF Scorecard, a dependency-review licence gate, `pnpm audit`, Dependabot, secret scanning with push protection, SHA-pinned Actions, and a CycloneDX SBOM per release
 
-  ```bash
-  pnpm --filter @cclabsnz/sf-audit test test/unit/invariants
-  ```
-- **What you install matches the public source.** Releases are published from GitHub Actions via [npm trusted publishing (OIDC)](https://docs.npmjs.com/trusted-publishers) with [build provenance](https://docs.npmjs.com/generating-provenance-statements) — no long-lived token, and the npm page shows a signed attestation linking the tarball to the exact public commit that built it. Verify it yourself:
-
-  ```bash
-  npm audit signatures   # reports "verified attestations" for @cclabsnz/sf-audit
-  ```
-
-- **Independent scans on every change.** Two static-analysis engines — [CodeQL](https://github.com/cclabsnz/sf-audit-plugin/security/code-scanning) (`security-extended`, of both the source **and** the CI workflows) and [Semgrep](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/semgrep.yml) (OWASP Top 10 + security-audit rulesets) — an [OpenSSF Scorecard](https://securityscorecards.dev/viewer/?uri=github.com/cclabsnz/sf-audit-plugin) supply-chain review, a PR **dependency-review** gate (vulnerabilities **and** a copyleft-license policy), and a `pnpm audit` gate — plus Dependabot, and GitHub secret scanning with push protection. All GitHub Actions are pinned to commit SHAs. Each release ships a CycloneDX **SBOM**.
-- **Regulated-environment readiness.** The above give reviewers a paper trail for procurement: SBOM per release, an enforced dependency **license policy**, signed provenance, and independent SAST/supply-chain scans.
-- **Least privilege & disclosure.** See [PERMISSIONS.md](PERMISSIONS.md) for the minimal access it needs and [SECURITY.md](SECURITY.md) for private vulnerability reporting.
-
-### What third-party scanners flag, and why
-
-[Socket](https://socket.dev/npm/package/@cclabsnz/sf-audit) raises two **supply-chain risk** alerts against this package. Neither is a vulnerability — both are behavioural heuristics — and rather than suppress them quietly, here is exactly what triggers each and how you can confirm it. The triage is committed as [`socket.yml`](../../socket.yml).
-
-| Alert | What triggers it | Why it is expected |
-| --- | --- | --- |
-| **Filesystem access** | `node:fs` reads and writes | It is a CLI that writes your audit reports (HTML/MD/JSON) to disk and reads local inputs: report-branding overrides, event-log baselines under `~/.sf/audit-history`, and its own history archive. Every path is one you pass on the command line or the tool's own dot-directory. |
-| **URL strings** | `https://` literals in the shipped code | These are inert citation links rendered as `<a href>` in reports — OWASP, NZISM, the NZ Privacy Act, Te Whatu Ora and CIS-style benchmark references cited by compliance findings. They are never fetched. |
-
-Check the second one yourself — this lists every URL in the published build:
+Run the guards yourself:
 
 ```bash
-npm pack @cclabsnz/sf-audit && tar xzf cclabsnz-sf-audit-*.tgz
-grep -rhoE 'https?://[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}[^"'"'"'`,;) ]*' package/lib | sort -u
+npm test test/unit/invariants
+npm audit signatures
 ```
 
-As of v1.6.1 that prints seven results, every one a standards-body or documentation link:
-
-```
-https://docs.securitybenchmark.org/controls-at-a-glance.html
-https://genai.owasp.org/llm-top-10/
-https://nzism.gcsb.govt.nz/ism-document
-https://owasp.org/Top10/2021/
-https://privacy.org.nz/privacy-act-2020/privacy-principles/
-https://www.legislation.govt.nz/act/public/2020/0031/latest/LMS23342.html
-https://www.tewhatuora.govt.nz/health-services-and-programmes/cyber-hub/cyber-standards
-```
-
-No CDN, telemetry, or analytics endpoints — and the network-egress invariant above fails the build if one is ever added.
+Full detail, including why Socket raises two behavioural alerts against this package and how to
+confirm each: **[docs/TRUST.md](docs/TRUST.md)**. Least-privilege access is in
+[PERMISSIONS.md](PERMISSIONS.md); vulnerability reporting in [SECURITY.md](SECURITY.md).
 
 ## Scoring
 
-Each finding is assigned a risk level with a corresponding weight:
-
-| Risk Level | Default Weight |
-|------------|---------------|
-| CRITICAL | 10 |
-| HIGH | 7 |
-| MEDIUM | 4 |
-| LOW | 1 |
-| INFO | 0 |
-
-The health score is calculated as `100 - (total weight / max possible weight) * 100`, capped at 0.
-
-The audit produces a **Health Score** (0–100) and a **Grade** (A–F):
-
-| Grade | Criteria |
-|-------|---------|
-| A | Score ≥ 85, no HIGH findings |
-| B | Score ≥ 70, ≤ 1 HIGH finding |
-| C | Score ≥ 55, ≤ 3 HIGH findings |
-| D | Score ≥ 40, no CRITICAL findings |
-| F | Score < 40 or any CRITICAL finding |
-
-### Custom Scoring Config
-
-All weights and grade thresholds are configurable: no recompile needed. This is useful when your org has a different risk appetite (e.g. you want to penalise hardcoded credentials more heavily, or set stricter grade thresholds).
-
-**Step 1:** Copy the sample config as your starting point:
-
-```bash
-cp config/scoring.sample.json my-scoring.json
-```
-
-**Step 2:** Edit the values. All three sections (`riskScores`, `checkWeights`, `gradeThresholds`) are optional: omit any section to keep the defaults.
-
-```json
-{
-  "riskScores": {
-    "CRITICAL": 10,
-    "HIGH": 7,
-    "MEDIUM": 4,
-    "LOW": 1,
-    "INFO": 0
-  },
-  "checkWeights": {
-    "hardcoded-credentials": 10,
-    "guest-user-access": 10,
-    "users-and-admins": 10,
-    "apex-sharing": 7
-  },
-  "gradeThresholds": {
-    "A": { "minScore": 90, "maxHigh": 0 },
-    "B": { "minScore": 75, "maxHigh": 1 },
-    "C": { "minScore": 60, "maxHigh": 3 },
-    "D": { "minScore": 40, "maxCritical": 0 },
-    "F": {}
-  }
-}
-```
-
-The full list of valid `checkWeights` keys (one per check) is in [`config/scoring.sample.json`](config/scoring.sample.json).
-
-**Step 3:** Pass it when running the audit:
-
-```bash
-sf audit security --target-org myOrg --scoring-config ./my-scoring.json
-```
-
-Your config is deep-merged with the defaults, so you only need to include the values you want to change.
-
-## History & Diff
-
-Every `sf audit security` run automatically archives a JSON copy of the report to:
-
-```
-~/.sf/audit-history/{orgId}/sf-audit-{orgId}-{timestamp}.json
-```
-
-No configuration needed: archiving happens silently after each run.
-
-### View Audit History
-
-Show how your org's security posture has changed across multiple runs:
-
-```bash
-sf audit history --target-org myOrg
-```
-
-Prints a terminal table with score trends and writes an HTML timeline to the current directory.
-
-**Flags:**
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--target-org` | Org alias or username | required |
-| `--reports-dir` | Custom directory containing archived reports | `~/.sf/audit-history/{orgId}` |
-| `--output` | Directory to write the HTML timeline | `.` (cwd) |
-| `--limit` | Maximum number of most-recent runs to show | all |
-
-**Example output:**
-
-```
-Audit History: My Org (00D000000000001)
-────────────────────────────────────────────────────────────────────────────────
-  #   Date                  Score   Grade   CRIT   HIGH    MED    LOW   Δ Score
-────────────────────────────────────────────────────────────────────────────────
-   1  2026-03-23 15:10       64      D          1      5      8      3        —
-   2  2026-04-09 11:22       81      B          0      2      5      3      +17
-────────────────────────────────────────────────────────────────────────────────
-  Trend: ▲ +17 over 2 audits   Best: 81 (2026-04-09 11:22)   Worst: 64 (2026-03-23 15:10)
-```
-
-### Diff Two Reports
-
-Compare any two audit JSON files to see exactly what changed:
-
-```bash
-sf audit diff baseline.json current.json
-```
-
-Writes an HTML and JSON diff report to the current directory.
-
-**Flags:**
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--output` | Directory to write diff reports | `.` (cwd) |
-| `--format` | Comma-separated formats: `html`, `json` | `html,json` |
-
-**Example output:**
-
-```
-Diff report written: ./sf-audit-diff-00D000000000001-...-vs-....html
-Diff report written: ./sf-audit-diff-00D000000000001-...-vs-....json
-
-─────────────────────────────
-  Diff Summary
-─────────────────────────────
-  Score delta     +17
-  Grade        D → B
-  New               0
-  Resolved          1
-─────────────────────────────
-```
-
-## Free event baseline
-
-Salesforce's free tier exposes **Daily-interval `EventLogFile` logs** (login, API, and error
-activity) on Enterprise/Unlimited/Performance editions and Developer Edition — *without* the paid
-Event Monitoring / Shield add-on. The catch: on the free tier those logs are retained for only
-**~1 day**. Miss a day and that day's activity is gone.
-
-`sf audit events pull` captures them to local disk before they expire, so a daily run builds a
-rolling local baseline you own:
-
-```bash
-sf audit events pull --target-org myOrg
-```
-
-It queries whatever daily event types the org actually exposes, downloads each log's CSV body, and
-saves it to `~/.sf/event-baseline/{orgId}/{EventType}/{LogDate}-{Id}.csv`, plus a per-run manifest.
-It is **read-only** (GET only) and **idempotent**: any log already on disk is skipped, so it is safe
-to run repeatedly. Run it once a day from cron or a scheduled GitHub Action and you beat the 1-day
-retention window with a growing archive — no add-on required.
-
-```bash
-# Daily cron entry (07:15) — capture yesterday's logs
-15 7 * * *  sf audit events pull --target-org myOrg >> ~/.sf/event-baseline/pull.log 2>&1
-```
-
-**Flags:**
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--target-org` | Org alias or username | required |
-| `--since` | Days of `LogDate` to request (`LAST_N_DAYS` window) | `1` |
-| `--types` | Restrict to specific EventTypes, comma-separated (e.g. `Login,ApiTotalUsage`) | *(all available)* |
-| `--output` / `-o` | Base directory to store logs under | `~/.sf/event-baseline` |
-
-```bash
-# Backfill the last 3 days (each still subject to the org's retention)
-sf audit events pull --target-org myOrg --since 3
-
-# Only pull login and API-usage logs
-sf audit events pull --target-org myOrg --types Login,ApiTotalUsage
-
-# Store under a project-local directory instead of ~/.sf
-sf audit events pull --target-org myOrg --output ./event-baseline
-```
-
-> Reading `EventLogFile` requires the **View Event Log Files** permission on the running user (this
-> is in addition to the minimum read-only audit permission set). If it is missing, or the edition
-> does not expose free daily logs, the command exits cleanly with an explanation rather than failing.
-
-**Example output:**
-
-```
-Pulling free EventLogFile logs for org: My Org (00D000000000001)
-
-─────────────────────────────
-  Event Baseline Pull
-─────────────────────────────
-  Found           7
-  Downloaded      7
-  Skipped         0  (already saved)
-  Total bytes  48213
-─────────────────────────────
-  Saved to: ~/.sf/event-baseline/00D000000000001
-  Manifest: ~/.sf/event-baseline/00D000000000001/_manifests/manifest-...-....json
-```
-
-### Analyzing the captured logs
-
-`events pull` is the collection half. To triage those `EventLogFile` CSVs for exploit and
-abuse patterns, use the companion CLI **[sfelf-triage](https://github.com/cclabsnz/sfelf-triage)**.
-It reads downloaded EventLogFile CSVs and emits a per-IP verdict
-(`BENIGN_SCANNER | SUSPICIOUS | LIKELY_ABUSE`), answering *"is this guest/community IP a
-vulnerability scanner or a real threat?"* — with **zero network egress** and no org connection.
-
-sfelf-triage reads this plugin's `~/.sf/event-baseline/<orgId>` layout directly, so the two
-tools chain with no glue:
-
-```bash
-sf audit events pull --target-org myOrg          # capture (this plugin)
-sfelf-triage analyze ~/.sf/event-baseline/<orgId>  # triage (companion)
-```
-
-See the [sfelf-triage README](https://github.com/cclabsnz/sfelf-triage#readme) for install and usage.
-
-## Forensic timeline
-
-Salesforce splits one actor's activity across many event types, and each carries a different
-subset of identifying fields — so no single log answers *"what did this actor do"*. Filtering by
-IP finds the requests but misses every SOQL execution, because the query log has no `CLIENT_IP`
-column at all. Filtering by user finds everything the *guest* user did, which on a community is
-everyone.
-
-`sf audit timeline` correlates a seed across every captured event type and writes a defensible
-timeline:
-
-```bash
-sf audit timeline --window 2026-08-02T04:00Z/PT1H --seed ip:203.0.113.50
-```
-
-It runs **entirely offline** against captures written by `sf audit events pull` — no org
-connection is opened, so it still works long after the org's retention window has expired or its
-credentials have been revoked. The org id is inferred from the capture directory when only one
-org has been captured.
-
-### What it will not do
-
-Cross-event correlation is easy to get confidently wrong, and a wrong answer here reads as
-evidence. Two rules are enforced and both are visible in the output:
-
-- **A blank field is never a join key.** A blank `REQUEST_ID` used as a key stops identifying
-  anything and starts matching every other row whose value is also blank — quietly attributing
-  strangers' sessions to your actor.
-- **A shared identity is not expanded.** A community guest user can stand for hundreds of
-  distinct visitors. Expanding through it would present the whole crowd's activity as one
-  actor's, so it is refused by default and the refusal is reported with its evidence:
-
-  ```
-  Expansion refused: userId 005xx0000000000 is shared by 1371 distinct addresses
-    (threshold 8). Override with --allow-shared-identity.
-  ```
-
-Every output also leads with what was actually captured, because *"no rows matched"* means two
-entirely different things — the actor did nothing, or nobody captured the hour they did it in:
-
-```
-Window — coverage INCOMPLETE
-  captured   AuraRequest, ListViewEvent
-  MISSING    LightningInteraction (not-in-core-set)
-  MISSING    GuestUserAnomalyEventStore (storage-disabled)
-
-No activity in captured sources. Coverage incomplete — 2 sources missing.
-```
-
-**Flags:**
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--window` | When to look — see below | required |
-| `--seed` | Typed and repeatable: `ip:` `user:` `session:` `request:` `login:` `transaction:` `event:` | *(whole window)* |
-| `--org-id` | Which captured org to read | *(inferred when unambiguous)* |
-| `--input` | Capture base directory | `~/.sf/event-baseline` |
-| `--allow-shared-identity` | Expand through identities shared by many actors | `false` |
-| `--max-cardinality` | Distinct-actor ceiling above which a key is not expanded | `8` |
-| `--format` | Comma-separated: `csv,json,md` | all three |
-| `--output` | Directory to write into | `.` |
-
-**Finding your way in.** Two things you do not have to know up front. Omit `--seed` and you get
-the whole window, uncorrelated — which is where you look to find something worth seeding on.
-Ask for a window that was never captured and the error lists the days that *were*:
-
-```
-No captures for 2026-07-01 under ~/.sf/event-baseline/00Dxx0000000000EAA.
-
-Captured days for this org:
-  2026-08-01   11 event type(s), whole day
-  2026-08-02   14 event type(s), whole day
-
-Try:  --window 2026-08-02
-```
-
-**Saying when.** `--window` takes whichever form is nearest to hand — you should not have to
-compose an ISO 8601 interval while an incident is running:
-
-| You type | You get |
-|---|---|
-| `yesterday` | the whole of yesterday, UTC |
-| `today` | midnight UTC until now |
-| `2h` · `90m` | the last two hours; the last ninety minutes |
-| `2026-08-02` | that whole day — the shape the free tier captures in |
-| `2026-08-02T04:17Z` | the hour containing that instant, for a timestamp pasted from an alert |
-| `2026-08-02T04:00Z/PT1H` | an exact interval, start and duration |
-| `2026-08-02T04:00Z/2026-08-02T06:00Z` | an exact interval, start and end |
-
-Times are UTC, because every capture is stored in UTC — a bare timestamp with no zone is read
-that way rather than as local time. A window has to fall inside one UTC day; one that crosses
-midnight is refused, and the error names the two runs that would cover it.
-
-```bash
-# Follow one address across every captured event type
-sf audit timeline --window yesterday --seed ip:203.0.113.50
-
-# Start from a request and walk outward, including its Apex cascade
-sf audit timeline --window 2026-08-02T04:00Z/PT1H --seed request:abc123
-
-# Several orgs captured — name the one to read
-sf audit timeline --org-id 00Dxx0000000000EAA --window 2026-08-02T04:00Z/PT2H --seed user:005xx000000000
-
-# Machine-readable only, into an evidence directory
-sf audit timeline --window 2026-08-02T04:00Z/PT1H --seed ip:203.0.113.50 \
-  --format json --output ./evidence/incident-2026-08-02
-```
-
-**Outputs:**
-
-| File | Contents |
-|------|----------|
-| `timeline.csv` | The correlated rows, one schema across all sources, chronological |
-| `timeline.json` | The same rows plus the provenance — seeds, every key expanded through, and every refusal |
-| `summary.md` | Narrative: coverage, per-type counts, what tied each row in, refusals, and whether records left |
-
-Each row records **which join key tied it in**, so attribution is checkable rather than asserted.
-The `rows_processed` and `records_returned` columns are populated only from Real-Time Event
-objects — no `EventLogFile` type records them — and when none were captured the summary says the
-question is unanswerable rather than going quiet, since silence there reads as *"nothing left"*.
-
-### Checking a claim against its control group
-
-When a seed's rows share an identity with many other people — a community guest user, a shared
-integration account — *"this actor did X"* needs something to be checked against. Otherwise the
-claim is unfalsifiable: nobody can tell your 15 rows from the other 600 behind the same user.
-
-The refusal message already gives you the denominator:
-
-```
-Expansion refused: userId 005xx000000000 is shared by 1371 distinct addresses (threshold 8).
-```
-
-To see the peer set itself, run the command a second time seeded on that identity, with expansion
-allowed:
-
-```bash
-# 1. The claim — narrow, seeded on something that identifies one actor
-sf audit timeline --window 2026-08-02T04:00Z/PT1H --seed request:REQ000000 \
-  --output ./evidence/actor
-
-# 2. The control — everyone behind the identity those rows share
-sf audit timeline --window 2026-08-02T04:00Z/PT1H --seed user:005xx000000000 \
-  --allow-shared-identity --output ./evidence/peers
-```
-
-Both use the same schema, so they concatenate and diff directly:
-
-```bash
-# How much of the identity's activity is actually your actor?
-# (tail -n +2 skips the header row, so these are data rows)
-echo "actor:   $(tail -n +2 ./evidence/actor/timeline.csv | wc -l)"
-echo "control: $(tail -n +2 ./evidence/peers/timeline.csv | wc -l)"
-```
-
-An actor accounting for 15 of 603 rows — 2.5%, and separable by request id — is a different
-finding from one accounting for 580 of 603. The second command is what lets a reviewer tell
-which they are looking at, rather than taking the first on trust.
-
-> `sf audit timeline` adds **no checks** and does not affect the security grade. It is an
-> investigation command, not a `SecurityCheck`.
-
-## Connected-app least-privilege
-
-Connected-app over-privilege was at the centre of the 2025-2026 wave of Salesforce data-theft
-via OAuth: apps authorized with more scope than they use, and integration users with far more
-object access than the app ever touches. The static checks (`connected-apps`, `connected-app-scope`,
-`connected-app-inactivity`) tell you what was *granted*. `sf audit apps` tells you what is actually
-*used*, so it can point at the specific access to remove.
-
-```bash
-sf audit apps --target-org myOrg --since 7
-```
-
-It reads the `RestApi` `EventLogFile` to see which objects each connected app touched, compares that
-against the objects its run-as user can reach, and reports the over-grant per object and read/write
-bit — plus a generated least-privilege permission set granting exactly what was observed. App IDs are
-resolved to human-readable names (`AppMenuItem` / `ConnectedApplication` / a bundled standard-app
-catalog / `LoginHistory` correlation), and anything unresolved is flagged loudly rather than hidden.
-
-It is **read-only**: the suggested permission set is emitted as data, never deployed.
-
-**Honest bounds.** `RestApi` attributes roughly half of API traffic to a connected app (the rest is
-UI-API / session traffic), so *used* is a lower bound. Findings carry the observation window and
-attribution rate, and revoke recommendations are suppressed below a soak window and for apps used by
-many interactive users. Reading `EventLogFile` needs the **View Event Log Files** permission (the same
-one `events pull` uses).
-
-**Flags:**
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--target-org` | Org alias or username | required |
-| `--since` | Days of `RestApi` log to analyze | `7` |
-| `--from` | Read `RestApi` CSVs from a local `events pull` baseline dir instead of downloading | *(download)* |
-| `--soak` | Minimum window (days) before asserting revoke recommendations | `7` |
-| `--format` | `table` / `json` / `md` | `table` |
-
-```bash
-# Reuse an events-pull baseline instead of downloading again
-sf audit apps --target-org myOrg --from ~/.sf/event-baseline/00Dxxx
-
-# Machine-readable output
-sf audit apps --target-org myOrg --format json
-```
+Each finding carries a risk weight (CRITICAL 10, HIGH 7, MEDIUM 4, LOW 1, INFO 0). The health score is
+`100 - (total weight / max possible weight) * 100`, capped at 0, and maps to an A–F grade — A needs
+≥ 85 with no HIGH findings; any CRITICAL is an F.
+
+All weights and grade thresholds are configurable without recompiling, via
+`--scoring-config ./my-scoring.json`. Start from [`config/scoring.sample.json`](config/scoring.sample.json),
+which lists every valid `checkWeights` key; your config is deep-merged with the defaults, so include
+only what you want to change.
+
+Grade bands, the full config shape and worked examples: **[docs/SCORING.md](docs/SCORING.md)**.
+
+## Other commands
+
+Beyond the audit itself, the plugin ships four commands. Each is documented in
+**[docs/COMMANDS.md](docs/COMMANDS.md)**.
+
+| Command | What it does |
+|---------|--------------|
+| `sf audit history` / `sf audit diff` | Every run auto-archives to `~/.sf/audit-history/{orgId}`. Show posture drift across runs as a table plus an HTML timeline, or diff any two report JSONs |
+| `sf audit events pull` | Capture the org's **free** daily `EventLogFile` logs to local disk before the ~1-day retention window drops them — no Event Monitoring / Shield add-on needed. Idempotent, safe to cron |
+| `sf audit timeline` | Reconstruct one actor's activity across every captured event type, entirely offline. Refuses to expand a shared identity or join on a blank field, and always reports capture coverage first |
+| `sf audit apps` | Read the `RestApi` event log to compare what each connected app actually *uses* against what its run-as user is *granted*, and emit a suggested least-privilege permission set |
+
+To triage captured logs for abuse patterns, pair `events pull` with the companion CLI
+**[sfelf-triage](https://github.com/cclabsnz/sfelf-triage)**, which reads this plugin's
+`~/.sf/event-baseline/<orgId>` layout directly.
 
 ## Requirements
 
@@ -835,44 +447,12 @@ Maintainers: see **[docs/RELEASE.md](docs/RELEASE.md)** for the release checklis
 
 ## Further reading
 
-Deep dives on this tool and the topics it checks, from our engineering blog **[softwareinsights.dev](https://www.softwareinsights.dev)**.
+Deep dives on this tool and the topics it checks, from our engineering blog
+**[softwareinsights.dev](https://www.softwareinsights.dev)** — including how sf-audit works, the free
+Event Monitoring baseline, guest-user exposure grading, the delivery-team access model, Agentforce
+hardening after ForcedLeak, and the NZ compliance context.
 
-**How the commands work:**
-
-- [How sf-audit works — checks, attack chains, and compliance mapping](https://www.softwareinsights.dev/posts/sf-audit-61-checks-attack-chains-compliance-mapping/) — the design walkthrough behind `sf audit security`
-- [Free Salesforce Event Monitoring: a baseline from EventLogFile without Shield](https://www.softwareinsights.dev/posts/salesforce-free-event-monitoring-eventlogfile-baseline/) — why [`sf audit events pull`](#free-event-baseline) exists and how to cron it
-- [Which connected apps use less than they're granted? Ask your own logs](https://www.softwareinsights.dev/posts/salesforce-connected-app-least-privilege-granted-vs-used/) — the granted-vs-used method behind [`sf audit apps`](#connected-app-least-privilege)
-- [Scanner or breach? Triage EventLogFile in one command](https://www.softwareinsights.dev/posts/salesforce-eventlogfile-guest-traffic-triage-scanner-or-breach/) — pairing an `events pull` baseline with the [sfelf-triage](https://github.com/cclabsnz/sfelf-triage) companion
-- [Salesforce guest user exposure, graded by real reachability](https://www.softwareinsights.dev/posts/sf-audit-guest-user-exposure-reachability/) — the UI-API reachability tiering behind the [guest checks](#guest--external-facing-access)
-- [sf-audit vs sf-cli-security-audit](https://www.softwareinsights.dev/posts/sf-audit-vs-sf-cli-security-audit/) — how this plugin differs from a configurable policy engine, and when to reach for each
-
-**The access model the privilege checks encode** — the reasoning behind [Users, Permissions & Privilege](#users-permissions--privilege):
-
-- [Why your developers don't need Modify All Data](https://www.softwareinsights.dev/posts/salesforce-developers-modify-all-data-what-they-need-instead/) — part 1 of a four-part series on delivery-team access; feeds Users & Admins and Privileged Access & Shadow Admins
-- [The access model: tiers and roles](https://www.softwareinsights.dev/posts/salesforce-delivery-team-access-model-tiers-and-roles/) — the tiering that Separation of Duties and Privilege Escalation Permissions test against
-- [Sizing the model to your team](https://www.softwareinsights.dev/posts/salesforce-access-model-sizing-internal-vs-external-admin-teams/) — internal vs external admins, and what the model costs to run
-- [Deployable permission sets](https://www.softwareinsights.dev/posts/salesforce-delivery-team-deployable-permission-sets/) — the metadata and the CI identity, which the Integration / Service Accounts check inventories
-
-**Platform changes the checks track:**
-
-- [Hardening Agentforce against prompt injection (post-ForcedLeak)](https://www.softwareinsights.dev/posts/salesforce-agentforce-forcedleak-prompt-injection-hardening/) — feeds the Agentforce / GenAI checks
-- [Audit your Agentforce footprint: every agent, agent user, and permission](https://www.softwareinsights.dev/posts/salesforce-agentforce-footprint-audit/) — the manual SOQL behind Agent Inventory
-- [Agentforce agent user least privilege](https://www.softwareinsights.dev/posts/salesforce-agentforce-agent-user-least-privilege/) — feeds the Agent User Privilege check
-- [Salesforce MFA enforcement: the revised 2026 dates](https://www.softwareinsights.dev/posts/salesforce-mfa-enforcement-paused-revised-dates-2026/) — feeds the MFA checks
-- [The MFA enforcement admin guide](https://www.softwareinsights.dev/posts/salesforce-mfa-enforcement-2026-admin-guide/) — what the MFA Enforcement / Registration / Method Strength checks are measuring against
-- [MFA lockout recovery and break-glass accounts](https://www.softwareinsights.dev/posts/salesforce-mfa-lockout-recovery-break-glass-accounts/) — the operational side of the MFA and High Assurance Session checks
-- [OAuth username-password (ROPC) flow retirement in Winter '27](https://www.softwareinsights.dev/posts/salesforce-oauth-username-password-flow-retirement-winter-27/) — feeds the SSO Enforcement and Connected App OAuth Scopes checks
-- [Email change verification retirement and Authorized Email Domains](https://www.softwareinsights.dev/posts/salesforce-email-change-verification-retirement-authorized-email-domains/) — feeds the Email Security check
-- [Summer '26: SAML retirement & Apex secure-by-default](https://www.softwareinsights.dev/posts/salesforce-summer-26-saml-retirement-apex-secure-by-default/) — feeds the SSO / Apex checks
-- [Salesforce security enforcement in 2026 — every change and date](https://www.softwareinsights.dev/posts/salesforce-security-enforcement-2026-complete-guide/) — the overall posture this tool measures
-- [Report-export step-up enforcement: known issues](https://www.softwareinsights.dev/posts/salesforce-transaction-security-policy-report-export-known-issues/) — feeds the data-export / transaction-security checks
-
-**Compliance and NZ context** — background for the [framework mappings](#compliance-frameworks):
-
-- [Mapping Salesforce security to NZISM, the NZ Privacy Act and ISO 27001](https://www.softwareinsights.dev/posts/salesforce-security-nzism-nz-privacy-act/)
-- [Data sovereignty for New Zealand Salesforce orgs](https://www.softwareinsights.dev/posts/salesforce-data-sovereignty-new-zealand/) — residency vs sovereignty, and why the `nz` framework pack exists
-- [IPP 3A indirect collection notices](https://www.softwareinsights.dev/posts/salesforce-nz-privacy-ipp3a-indirect-collection-notice/) — feeds the NZ Privacy Act control mappings
-- [Why Salesforce Health Cloud needs its own security review](https://www.softwareinsights.dev/posts/salesforce-health-cloud-security-review/) — the HISO 10029 context
+Full annotated list: **[docs/FURTHER-READING.md](docs/FURTHER-READING.md)**.
 
 ## Commercial support
 
