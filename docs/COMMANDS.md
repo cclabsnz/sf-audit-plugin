@@ -1,12 +1,87 @@
 # Command reference
 
-Deep dives for the commands beyond `sf audit security`. The [README](../README.md) covers the audit
-itself, what it checks, the compliance mapping and the attack chains.
+Full flag reference for every command. The [README](../README.md) covers the common path, what the
+audit covers, the compliance mapping and the attack chains.
 
+- [`sf audit security`](#sf-audit-security) — every flag, examples, and the executive report
 - [Free event baseline](#free-event-baseline) — `sf audit events pull`
 - [Forensic timeline](#forensic-timeline) — `sf audit timeline`
 - [History and diff](#history--diff) — `sf audit history`, `sf audit diff`
 - [Connected-app least-privilege](#connected-app-least-privilege) — `sf audit apps`
+
+---
+
+## `sf audit security`
+
+The audit itself. The [README](../README.md#usage) covers the common path; this is the full flag set.
+
+### Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--target-org` | *(required)* | Org alias or username to audit |
+| `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json`, `executive` |
+| `--output` / `-o` | `.` | Directory to write the report file |
+| `--fail-on` | (none) | Exit with code 1 if any finding is at or above this severity: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
+| `--checks` | *(all)* | Comma-separated check IDs to run instead of all 88 (e.g. `hardcoded-credentials,apex-sharing`) |
+| `--scoring-config` | (none) | Path to a custom scoring config JSON file to override weights and grade thresholds |
+| `--prepared-for` | (none) | Client name for the executive report cover line |
+| `--branding` | (none) | Path to a `report-branding.json` to override CloudCounsel defaults (executive format) |
+| `--top` | `5` | Number of executive priorities to highlight (executive format) |
+| `--frameworks` | `universal` | Compliance matrix scope (executive format): `universal` (OWASP/OWASP LLM/SOC 2/ISO 27001), `nz` (ISO/HISO/Privacy Act/NZISM), `all`, or a comma list (e.g. `owasp,owasp-llm,iso,nzism`, or `hipaa` / `gdpr` for a US healthcare or EU/UK engagement) |
+| `--resolve-domains` | `false` | Makes **outbound DNS queries from this machine** to verify CSP trusted domains still resolve (flags unresolvable / parked domains as exfiltration channels). Off by default; a default run contacts **only the target org** and never reaches out to any other host. |
+
+### Examples
+
+```bash
+# HTML report (default)
+sf audit security --target-org myOrg
+
+# Multiple formats at once
+sf audit security --target-org myOrg --format html,md,json
+
+# Write report to a specific directory
+sf audit security --target-org myOrg --output ./reports
+
+# Fail CI pipeline on HIGH or CRITICAL findings
+sf audit security --target-org myOrg --fail-on HIGH
+
+# Run only specific checks
+sf audit security --target-org myOrg --checks hardcoded-credentials,apex-sharing,guest-user-access
+
+# Guest / Experience Cloud exposure sweep — the unauthenticated data-leak surface
+# (bulk-read via UI API, guest-owned records defeating Private OWD, file access, self-reg, threat detection)
+sf audit security --target-org myOrg --checks guest-user-access,guest-object-exposure,guest-site-options,guest-executable-apex,experience-cloud-site,threat-detection
+
+# Use a custom scoring config (e.g. stricter weights for your org)
+sf audit security --target-org myOrg --scoring-config ./my-scoring.json
+```
+
+### Executive report
+
+`--format executive` produces a CloudCounsel-branded, print-to-PDF HTML report for clients:
+grade and executive summary, top priorities with abuse/impact narratives, attack scenarios, a
+risk×effort remediation roadmap, and a **compliance coverage matrix** mapping findings to framework
+controls. It is fully self-contained (fonts embedded); open it and **Save as PDF**.
+
+```bash
+# Branded executive report for a client (universal compliance matrix)
+sf audit security --target-org myOrg --format executive --prepared-for "Acme Health" --top 5
+
+# NZ health/government engagement: NZ framework matrix
+sf audit security --target-org myOrg --format executive --frameworks nz
+
+# White-label / co-brand via overrides
+sf audit security --target-org myOrg --format executive --branding ./report-branding.json
+```
+
+Compliance controls are mapped from authoritative, version-pinned sources (OWASP Top 10:2021,
+OWASP Top 10 for LLM Applications 2025, AICPA TSC, ISO/IEC 27001:2022, the Security Benchmark for
+Salesforce, NZ Privacy Act, HISO 10029, NZISM, 45 CFR Part 164 Subpart C, Regulation (EU)
+2016/679). Only source-verified controls render. "No findings detected" is **not** an attestation of
+compliance (see the report's Scope & Liability section).
+
+The report file is written as `sf-audit-<orgId>-<timestamp>.<ext>` in the output directory (e.g. `sf-audit-00D000000000001-1711234567890.html`).
 
 ---
 
