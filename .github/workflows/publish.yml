@@ -56,11 +56,25 @@ jobs:
       # Pinned, not `@latest`. This step runs in the job that holds the OIDC token, so an
       # unpinned global install hands whatever npm published in the last hour a credential
       # that can publish this package. 12.0.2 is the version the 1.7.0 release used.
+      #
+      # `--ignore-scripts` closes the remaining window: a global install runs lifecycle
+      # scripts, and here they would execute alongside a credential that can publish this
+      # package. npm needs no install scripts to work, so nothing is lost. (Scorecard's
+      # Pinned-Dependencies alert wants a hash instead, which npm cannot do for a global
+      # install — this is the security fix, not a way to clear that alert.)
+      #
+      # The version is then asserted rather than merely echoed. This workflow runs only on a
+      # published release, so a silently failed upgrade would otherwise surface as a broken
+      # publish at the worst moment; failing here is cheap and loud.
       - name: Upgrade npm (>= 11.5.1 required for OIDC trusted publishing)
         run: |
-          npm install -g npm@12.0.2
+          npm install -g npm@12.0.2 --ignore-scripts
           echo "node: $(node -v)"
           echo "npm:  $(npm -v)  (path: $(which npm))"
+          if [ "$(npm -v)" != "12.0.2" ]; then
+            echo "::error::npm upgrade did not take: expected 12.0.2, got $(npm -v)"
+            exit 1
+          fi
 
       - name: Publish to npm with provenance (OIDC trusted publishing)
         run: |
