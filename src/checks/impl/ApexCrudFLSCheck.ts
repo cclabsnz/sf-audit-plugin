@@ -12,7 +12,6 @@ const HAS_FLS = /(?:\.isAccessible\(\)|\.isCreateable\(\)|\.isUpdateable\(\)|\.i
 // Classes that are exempt from CRUD/FLS enforcement by design:
 // batch, scheduled, and trigger handlers run in a system context
 const IS_BATCH_OR_SCHEDULED = /implements\s+(?:Database\.Batchable|Schedulable|Database\.StatefulBatch|Database\.AllowsCallouts)/i;
-const IS_TEST = /@IsTest\b/i;
 const WITHOUT_SHARING = /\bwithout\s+sharing\b/i;
 
 export class ApexCrudFLSCheck implements SecurityCheck {
@@ -44,8 +43,9 @@ export class ApexCrudFLSCheck implements SecurityCheck {
     const withoutSharingNoFls: string[] = [];
     const withDmlNoFls: string[] = [];
 
-    // apexBodies is pre-filtered by HardcodedCredentialsCheck to exclude test classes;
-    // IS_TEST guard here is redundant but kept for cache-miss safety
+    // apexBodies is pre-filtered by HardcodedCredentialsCheck, which excludes @IsTest classes
+    // before populating the cache. There is deliberately no second guard here: a cache miss
+    // yields an empty array, not unfiltered bodies, so there is nothing for one to catch.
     for (const { name, body } of apexBodies) {
       if (!body || IS_BATCH_OR_SCHEDULED.test(body)) continue;
 

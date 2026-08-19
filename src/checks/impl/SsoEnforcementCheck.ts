@@ -19,7 +19,6 @@ export class SsoEnforcementCheck implements SecurityCheck {
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
-    const setupUrl = `${baseUrl}/lightning/setup/SingleSignOn/home`;
 
     try {
       // Single query: recent credential logins over the past 30 days.

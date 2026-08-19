@@ -5,7 +5,6 @@ import { ApexRepository } from '@cclabsnz/sf-core';
 
 interface GuestUser { Id: string; ProfileId: string; Username: string; }
 interface SetupAccess { SetupEntityId: string; ParentId: string; }
-interface ApexName { Id: string; Name: string; }
 
 const WITHOUT_SHARING = /\bwithout\s+sharing\b/i;
 const WITH_SHARING = /\bwith\s+sharing\b/i;
