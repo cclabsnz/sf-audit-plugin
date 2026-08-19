@@ -63,6 +63,7 @@ export class FailedLoginCheck implements SecurityCheck {
 
     // Query 2: per-user aggregation to detect targeted brute force
     let perUserCounts: FailedLoginAgg[] = [];
+    let perUserUnavailable = false;
     try {
       const aggResult = await ctx.soql.query<FailedLoginAgg>(
         `SELECT Username, COUNT(Id)
@@ -74,7 +75,9 @@ export class FailedLoginCheck implements SecurityCheck {
       );
       perUserCounts = aggResult.records;
     } catch {
-      // Per-user breakdown unavailable — still emit org-level finding
+      // Recorded: without the per-user breakdown, "no brute-force pattern" is not a
+      // conclusion this check can reach, only a question it could not answer.
+      perUserUnavailable = true;
     }
 
     const bruteForceTargets = perUserCounts.filter((r) => r.expr0 >= BRUTE_FORCE_PER_USER);
@@ -134,6 +137,19 @@ export class FailedLoginCheck implements SecurityCheck {
             note: `${totalFailures} failures in 7 days: review for patterns`,
           },
         ],
+      });
+    } else if (totalFailures > 0 && bruteForceTargets.length === 0 && perUserUnavailable) {
+      findings.push({
+        id: 'failed-login-per-user-unavailable',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `${totalFailures} failed login(s) in 7 days, but the per-account breakdown could not be read`,
+        detail:
+          `${totalFailures} failed login attempts were recorded org-wide in the last 7 days. The per-username aggregation was not available, so whether any single account is under a brute-force attack could not be determined. The total alone does not distinguish widespread user error from a concentrated attack on one account.`,
+        remediation:
+          'Grant the audit user access to aggregate LoginHistory queries and re-run, or review Login History grouped by username manually in Setup.',
+        affectedItems: [{ label: 'Org-wide login activity', url: setupUrl, note: `${totalFailures} failures in 7 days` }],
       });
     } else if (totalFailures > 0 && bruteForceTargets.length === 0) {
       findings.push({

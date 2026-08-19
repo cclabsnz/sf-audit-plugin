@@ -53,6 +53,7 @@ export class DataClassificationCheck implements SecurityCheck {
     // EncryptionKey records indicate Shield is licensed and active.
     let encryptionEnabled = false;
     let encryptionKeyCount = 0;
+    let encryptionQueryFailed = false;
     try {
       const encResult = await ctx.soql.query<EncryptionKeyRecord>(
         'SELECT Id, DeveloperName FROM EncryptionKey LIMIT 10'
@@ -60,7 +61,9 @@ export class DataClassificationCheck implements SecurityCheck {
       encryptionKeyCount = encResult.records.length;
       encryptionEnabled = encryptionKeyCount > 0;
     } catch {
-      // EncryptionKey inaccessible — Shield not licensed or no permission to read keys
+      // Unreadable is not the same as absent: an org may hold Shield keys the audit user
+      // cannot see, and "not detected" would assert something this query never established.
+      encryptionQueryFailed = true;
     }
 
     // SBS-DATA-001/002: data classification coverage
@@ -122,6 +125,18 @@ export class DataClassificationCheck implements SecurityCheck {
           `SBS-DATA-003 requires sensitive data to be encrypted at rest commensurate with its classification. ${encryptionKeyCount} Shield Platform Encryption key(s) are configured, indicating encryption-at-rest is in use.`,
         remediation:
           'Verify encryption is applied to all fields classified as sensitive or PII. Review the Encryption Statistics page in Setup → Security → Platform Encryption to confirm field-level coverage.',
+      });
+    } else if (encryptionQueryFailed) {
+      findings.push({
+        id: 'data-encryption-inconclusive',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'Shield Platform Encryption status could not be determined: SBS-DATA-003',
+        detail:
+          'The EncryptionKey object was not readable, so whether Shield Platform Encryption is configured is unknown. This is distinct from Shield being absent: an org may hold encryption keys that the audit user cannot see.',
+        remediation:
+          'Grant the audit user read access to EncryptionKey and re-run, or confirm encryption coverage manually in Setup → Security → Platform Encryption.',
       });
     } else {
       findings.push({
