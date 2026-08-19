@@ -199,7 +199,7 @@ export class HtmlRenderer implements AuditRenderer {
       .map((c) => {
         const conf = c.confidence === 'named' ? '' : ' (potential)';
         const steps = c.steps
-          .map((s, i) => `<li><strong>${escStr(s.title ?? s.findingId)}</strong> (${escStr(s.severity ?? '—')}): grants <code>${escStr(s.capability)}</code></li>`)
+          .map((s) => `<li><strong>${escStr(s.title ?? s.findingId)}</strong> (${escStr(s.severity ?? '—')}): grants <code>${escStr(s.capability)}</code></li>`)
           .join('');
         return `<div class="attack-chain severity-${c.severity.toLowerCase()}">
   <h3>[${escStr(c.severity)}] ${escStr(c.title)}${conf}</h3>

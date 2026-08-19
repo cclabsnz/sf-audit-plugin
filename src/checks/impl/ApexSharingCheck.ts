@@ -3,13 +3,6 @@ import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 import { ApexRepository } from '@cclabsnz/sf-core';
 
-interface ApexClassRecord {
-  Id: string;
-  Name: string;
-  Body: string;
-  NamespacePrefix: string | null;
-}
-
 const INHERITED_SHARING = /\binherited\s+sharing\b/i;
 const WITHOUT_SHARING = /\bwithout\s+sharing\b/i;
 const WITH_SHARING = /\bwith\s+sharing\b/i;

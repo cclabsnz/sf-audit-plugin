@@ -7,10 +7,6 @@ const WITHOUT_SHARING_RE = /\bwithout\s+sharing\b/i;
 const NO_SHARING_DECLARED_RE = /\b(with|without|inherited)\s+sharing\b/i;
 const IS_TEST_RE = /@IsTest\b/i;
 
-// Indicators that the endpoint performs some form of caller verification
-const AUTH_CHECK_RE = /(?:RestContext\.request\.headers\.get|UserInfo\.getUserId\(\)|UserInfo\.getOrganizationId\(\)|Auth\.AuthConfiguration|isPortalEnabled\(\)|getSessionId\(\))/i;
-const GUEST_VISIBLE_RE = /(@HttpGet|@HttpPost|@HttpPut|@HttpDelete|@HttpPatch)/i;
-
 export class ApexRestEndpointCheck implements SecurityCheck {
   readonly id = 'apex-rest-endpoint';
   readonly name = 'Apex REST Endpoint Security';

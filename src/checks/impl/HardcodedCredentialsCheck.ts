@@ -3,14 +3,6 @@ import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 import { ApexRepository } from '@cclabsnz/sf-core';
 
-interface ApexClassRecord {
-  Id: string;
-  Name: string;
-  Body: string;
-  LengthWithoutComments: number;
-  NamespacePrefix: string | null;
-}
-
 const HIGH_RISK_PATTERNS = [
   /Bearer\s+[A-Za-z0-9\-_.~+/]{20,}=*/gi,        // Bearer tokens (min length to avoid test stubs)
   /Basic\s+[A-Za-z0-9+/]{20,}=*/gi,               // Basic auth (min length)
@@ -64,7 +56,6 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
 
     const namedCredentialEndpoints = (ctx.cache.namedCredentialEndpoints ?? []).filter(Boolean);
     const remoteSiteUrls = (ctx.cache.remoteSiteUrls ?? []).filter(Boolean);
-    const allCoveredEndpoints = [...namedCredentialEndpoints, ...remoteSiteUrls];
 
     const classesWithCredentials: string[] = [];
     const classesWithRawEndpointsUncovered: string[] = [];
