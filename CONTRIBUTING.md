@@ -48,17 +48,30 @@ A new check is five touch points:
 2. Registration in `src/checks/registry.ts` (order matters: a check's
    `dependsOnCache` must be satisfied by an earlier check's `populatesCache`;
    `CheckEngine.validateCacheOrdering()` enforces this at startup).
-3. A compliance mapping entry in `src/compliance/mapping.ts`.
+3. A compliance mapping entry in `src/compliance/mapping.ts` — add the check id to
+   `BASE_CHECK_CONTROL_MAP` **and** to the right `DOMAIN` group, which is what earns it
+   the NZ-pack and HIPAA/GDPR controls in one step.
 4. A `CHECK_META` entry (effort + impact) in `src/findings/CheckMeta.ts`.
 5. A unit test in `test/unit/checks/impl/` with mocked clients.
 
-Then update the check count and the "What It Checks" table in `README.md`. It is
-the source-of-truth listing.
+Then update the inventory in `docs/CHECKS.md` (the source-of-truth listing) and the
+per-domain summary in `README.md`. Both are enforced: `readme-check-count.test.ts`
+fails the build if either drifts from `src/checks/registry.ts`.
+
+## Testing policy
+
+**Every change that adds or alters behaviour ships with automated tests in the same pull
+request.** New checks require a unit test with mocked SOQL/Tooling/REST clients; bug fixes
+require a test that fails without the fix. Documentation-only changes are exempt, though
+the counts and tables in `README.md` and `docs/` are themselves test-enforced.
+
+This is not advisory: `build-test` is a required status check on `main`, so a pull request
+whose tests do not pass cannot merge.
 
 ## Before you open a pull request
 
 - `npm run build` is clean.
-- `npm test` is green (typecheck + Jest, ESM). New/changed checks ship with unit tests.
+- `npm test` is green (typecheck + Jest, ESM). New/changed behaviour ships with unit tests.
 - Registry ordering still validates and every new check id has a compliance
   mapping and `CHECK_META` entry.
 - README counts/flags are updated if user-facing behaviour changed.
