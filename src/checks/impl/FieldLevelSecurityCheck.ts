@@ -75,6 +75,7 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
     const sfIdPattern = /^[A-Za-z0-9]{15,18}$/;
     const objectApiNameById = new Map<string, string>();
 
+    let entityLookupFailed = false;
     const customObjectIds: string[] = [];
     for (const field of sensitiveFields) {
       const teo = field.TableEnumOrId;
@@ -95,7 +96,9 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
           objectApiNameById.set(e.Id, e.QualifiedApiName);
         }
       } catch {
-        // If entity lookup fails, custom object field names will be unresolvable
+        // Recorded, not swallowed: without these names the fields cannot be analysed, and a
+        // silent failure here previously surfaced as a clean pass.
+        entityLookupFailed = true;
       }
     }
 
@@ -109,16 +112,21 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
       }
     }
 
+    const unresolvedCount = sensitiveFields.length - fieldApiNames.length;
+
     if (fieldApiNames.length === 0) {
       findings.push({
-        id: 'field-level-security-ok',
+        id: 'field-level-security-unresolved',
         category: this.category,
-        riskLevel: 'LOW',
-        passed: true,
-        title: 'Sensitive custom fields appear appropriately restricted',
-        detail: 'No sensitive custom fields with excessive permission set access were found.',
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `Field-level security could not be evaluated for ${sensitiveFields.length} sensitive field(s)`,
+        detail:
+          `${sensitiveFields.length} sensitive custom field(s) were found, but their object API names could not be resolved` +
+          `${entityLookupFailed ? ' because the EntityDefinition lookup was not accessible' : ''}. ` +
+          'Field-level security was therefore not evaluated for any of them. This is an incomplete result, not a clean one.',
         remediation:
-          'Continue to apply restrictive field-level security to any new sensitive fields.',
+          'Grant the audit user access to the Tooling API EntityDefinition object and re-run, then review field-level security on the reported fields.',
       });
       return { findings };
     }
@@ -134,14 +142,17 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
       permRecords = result.records.map((r) => ({ Field: r.Field, cnt: r.cnt ?? 0 }));
     } catch {
       findings.push({
-        id: 'field-level-security-ok',
+        id: 'field-level-security-inaccessible',
         category: this.category,
-        riskLevel: 'LOW',
-        passed: true,
-        title: 'Sensitive custom fields appear appropriately restricted',
-        detail: 'No sensitive custom fields with excessive permission set access were found.',
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `Field-level security could not be evaluated for ${fieldApiNames.length} sensitive field(s)`,
+        detail:
+          'The FieldPermissions query was not accessible, so how widely these sensitive fields are readable could not be determined. ' +
+          'The fields themselves were found; only their exposure is unknown.',
         remediation:
-          'Continue to apply restrictive field-level security to any new sensitive fields.',
+          'Grant the audit user access to FieldPermissions and re-run. Until then, review field-level security manually for the fields listed.',
+        affectedItems: fieldApiNames.map((f) => ({ label: f })),
       });
       return { findings };
     }
@@ -196,9 +207,14 @@ export class FieldLevelSecurityCheck implements SecurityCheck {
         id: 'field-level-security-ok',
         category: this.category,
         riskLevel: 'LOW',
-        passed: true,
-        title: 'Sensitive custom fields appear appropriately restricted',
-        detail: 'No sensitive custom fields with excessive permission set access were found.',
+        // A pass only where the analysis actually covered everything found.
+        ...(unresolvedCount > 0 ? { inconclusive: true } : { passed: true }),
+        title: unresolvedCount > 0
+          ? `Sensitive custom fields appear restricted, but ${unresolvedCount} could not be evaluated`
+          : 'Sensitive custom fields appear appropriately restricted',
+        detail: unresolvedCount > 0
+          ? `No excessive permission-set access was found among the ${fieldApiNames.length} field(s) that could be evaluated, but ${unresolvedCount} sensitive field(s) could not be resolved to an object and were not checked.`
+          : 'No sensitive custom fields with excessive permission set access were found.',
         remediation:
           'Continue to apply restrictive field-level security to any new sensitive fields.',
       });

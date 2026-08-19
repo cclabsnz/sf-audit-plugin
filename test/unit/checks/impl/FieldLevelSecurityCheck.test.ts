@@ -131,43 +131,64 @@ describe('FieldLevelSecurityCheck', () => {
   });
 
   /**
-   * The three cases below pin CURRENT behaviour, which is wrong and should be changed.
-   *
-   * When this check cannot complete its analysis — FieldPermissions unreadable, or a custom
-   * object that EntityDefinition would not resolve — it emits `field-level-security-ok` with
-   * `passed: true` and the text "Sensitive custom fields appear appropriately restricted".
-   * That reports a clean result for an analysis that never ran, which is the one outcome a
-   * security tool must not produce. CLAUDE.md's own rule is that permission errors surface as
-   * `inconclusive: true`, and SharingModelCheck does exactly that.
-   *
-   * These tests are deliberately named for the defect so it cannot be mistaken for intent.
-   * When it is fixed, they should be inverted to assert `inconclusive: true`.
+   * These three states are all "we could not complete the analysis". They must never render as
+   * a pass: a report that says "Sensitive custom fields appear appropriately restricted" when
+   * FieldPermissions was unreadable is a false assurance about SSNs and medical records.
    */
-  describe('known defect: unanalysable states are reported as a pass', () => {
-    it('DEFECT: an unreadable FieldPermissions query yields passed:true', async () => {
+  describe('unanalysable states report what is unknown, never a pass', () => {
+    it('is inconclusive when FieldPermissions cannot be read', async () => {
       const r = await check.run(makeCtx({
         tooling: tooling({ fields: [field('SSN', 'Account')] }),
         query: () => Promise.reject(new Error('INSUFFICIENT_ACCESS')),
       }));
-      expect(r.findings[0].id).toBe('field-level-security-ok');
-      expect(r.findings[0].passed).toBe(true);
-      expect(r.findings[0].inconclusive).toBeUndefined();
+      expect(r.findings[0].id).toBe('field-level-security-inaccessible');
+      expect(r.findings[0].inconclusive).toBe(true);
+      expect(r.findings[0].passed).toBeUndefined();
+      // The fields it did find are still named, so the reader can check them by hand.
+      expect(r.findings[0].affectedItems?.[0].label).toBe('Account.SSN__c');
     });
 
-    it('DEFECT: a failed EntityDefinition lookup yields passed:true', async () => {
+    it('is inconclusive when the EntityDefinition lookup fails, and says so', async () => {
       const r = await check.run(makeCtx({
         tooling: tooling({ fields: [field('SSN', '01I5000000AbCdEfGh')], entityError: true }),
       }));
-      expect(r.findings[0].id).toBe('field-level-security-ok');
-      expect(r.findings[0].passed).toBe(true);
+      expect(r.findings[0].id).toBe('field-level-security-unresolved');
+      expect(r.findings[0].inconclusive).toBe(true);
+      expect(r.findings[0].detail).toContain('EntityDefinition');
     });
 
-    it('DEFECT: unresolvable object ids yield passed:true rather than inconclusive', async () => {
+    it('is inconclusive when object ids resolve to nothing', async () => {
       const r = await check.run(makeCtx({
         tooling: tooling({ fields: [field('SSN', '01I5000000AbCdEfGh')], entities: [] }),
       }));
-      expect(r.findings[0].id).toBe('field-level-security-ok');
-      expect(r.findings[0].passed).toBe(true);
+      expect(r.findings[0].id).toBe('field-level-security-unresolved');
+      expect(r.findings[0].inconclusive).toBe(true);
+      expect(r.findings[0].passed).toBeUndefined();
+    });
+
+    it('downgrades a clean result to inconclusive when some fields were skipped', async () => {
+      // One resolvable field with acceptable exposure, one that cannot be resolved.
+      const r = await check.run(makeCtx({
+        tooling: tooling({
+          fields: [field('SSN', 'Account'), field('DOB', '01I5000000AbCdEfGh')],
+          entities: [],
+        }),
+        query: perms([{ Field: 'Account.SSN__c', cnt: 2 }]),
+      }));
+      const f = r.findings.find((x) => x.id === 'field-level-security-ok')!;
+      expect(f.inconclusive).toBe(true);
+      expect(f.passed).toBeUndefined();
+      expect(f.title).toContain('1 could not be evaluated');
+    });
+
+    it('still passes cleanly when everything was evaluated', async () => {
+      const r = await check.run(makeCtx({
+        tooling: tooling({ fields: [field('SSN', 'Account')] }),
+        query: perms([{ Field: 'Account.SSN__c', cnt: 2 }]),
+      }));
+      const f = r.findings.find((x) => x.id === 'field-level-security-ok')!;
+      expect(f.passed).toBe(true);
+      expect(f.inconclusive).toBeUndefined();
     });
   });
 });

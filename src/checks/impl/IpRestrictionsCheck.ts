@@ -62,7 +62,11 @@ export class IpRestrictionsCheck implements SecurityCheck {
     );
 
     // 2. Profile IP ranges — try SOQL first, fallback to Tooling
+    // "Unreadable" and "none configured" are different facts and must not be conflated: an
+    // empty result would make every admin look unrestricted, asserting a finding the data
+    // cannot support.
     let ipRanges: IpRangeRecord[] = [];
+    let rangesUnavailable = false;
     try {
       ipRanges = await ctx.soql.queryAll<IpRangeRecord>(
         'SELECT ProfileId, StartAddress, EndAddress FROM ProfileLoginIpRange'
@@ -73,8 +77,7 @@ export class IpRestrictionsCheck implements SecurityCheck {
           'SELECT ProfileId, StartAddress, EndAddress FROM ProfileLoginIpRange'
         );
       } catch {
-        // No IP ranges configured or not accessible — treat as empty
-        ipRanges = [];
+        rangesUnavailable = true;
       }
     }
 
@@ -86,6 +89,7 @@ export class IpRestrictionsCheck implements SecurityCheck {
     //   'WhiteList'→ enforce the org-level IP whitelist (secure)
     const ipBypassingApps: Array<{ name: string; id: string }> = [];
     const ipRelaxingApps: Array<{ name: string; id: string }> = [];
+    let appsUnavailable = false;
     try {
       const connectedApps = await ctx.tooling.query<ConnectedAppRecord>(
         'SELECT Id, Name, Metadata FROM ConnectedApplication'
@@ -99,7 +103,8 @@ export class IpRestrictionsCheck implements SecurityCheck {
         }
       }
     } catch {
-      // Metadata field not accessible — skip connected app IP check
+      // Recorded so the result cannot be read as "no relaxed apps".
+      appsUnavailable = true;
     }
 
     // Determine which profile IDs have at least one IP range
@@ -110,7 +115,26 @@ export class IpRestrictionsCheck implements SecurityCheck {
       (u) => !profilesWithRanges.has(u.ProfileId)
     );
 
-    if (unrestrictedAdmins.length > 0) {
+    if (rangesUnavailable && adminUsers.length > 0) {
+      findings.push({
+        id: 'ip-restrictions-ranges-unavailable',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `Login IP ranges could not be read; ${adminUsers.length} admin profile(s) were not evaluated`,
+        detail:
+          'ProfileLoginIpRange was not queryable via SOQL or the Tooling API, so whether these admin profiles restrict login by IP is unknown. It is not reported as unrestricted, because the data does not support that conclusion.',
+        remediation:
+          'Grant the audit user access to ProfileLoginIpRange and re-run, or review Login IP Ranges manually in Setup → Profiles.',
+        affectedItems: adminUsers.map((u) => ({
+          label: u.Username,
+          url: `${baseUrl}/${u.Id}`,
+          note: `Profile: ${u.Profile.Name}: IP range configuration unknown`,
+        })),
+      });
+    }
+
+    if (!rangesUnavailable && unrestrictedAdmins.length > 0) {
       findings.push({
         id: 'admin-no-ip-restrictions',
         category: this.category,
@@ -125,6 +149,20 @@ export class IpRestrictionsCheck implements SecurityCheck {
           'Administrator accounts without IP login restrictions can be accessed from any network, increasing exposure to credential-stuffing attacks.',
         remediation:
           'Add IP login ranges to all admin profiles in Setup → Profiles → Login IP Ranges, or enable MFA as a compensating control.',
+      });
+    }
+
+    if (appsUnavailable) {
+      findings.push({
+        id: 'ip-restrictions-apps-unavailable',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'Connected app IP relaxation settings could not be read',
+        detail:
+          'The ConnectedApplication Metadata field was not accessible, so whether any connected app bypasses or relaxes login IP enforcement is unknown.',
+        remediation:
+          'Grant the audit user access to the Tooling API ConnectedApplication Metadata field and re-run, or review IP Relaxation per app in Setup → Connected Apps.',
       });
     }
 
@@ -211,6 +249,8 @@ export class IpRestrictionsCheck implements SecurityCheck {
     }
 
     if (
+      !rangesUnavailable &&
+      !appsUnavailable &&
       unrestrictedAdmins.length === 0 &&
       ipBypassingApps.length === 0 &&
       ipRelaxingApps.length === 0 &&

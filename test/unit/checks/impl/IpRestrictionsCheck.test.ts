@@ -149,21 +149,53 @@ describe('IpRestrictionsCheck', () => {
       soql: soqlRouter({ admins: [admin('a1', '00eADMIN')], rangeError: true }),
       tooling: toolingRouter({ ranges: [range('00eADMIN', '10.0.0.1', '10.0.0.9')] }),
     }));
-    // The fallback supplied the range, so the admin is not reported as unrestricted.
+    // The fallback supplied the range, so the admin is not reported as unrestricted...
     expect(r.findings.some((x) => x.id === 'admin-no-ip-restrictions')).toBe(false);
-  });
-
-  it('still reports admins when both range sources fail', async () => {
-    const r = await check.run(makeCtx({
-      soql: soqlRouter({ admins: [admin('a1')], rangeError: true }),
-      tooling: () => Promise.reject(new Error('nope')),
-    }));
-    expect(r.findings.some((x) => x.id === 'admin-no-ip-restrictions')).toBe(true);
-  });
-
-  it('survives connected-app metadata being inaccessible', async () => {
-    const r = await check.run(makeCtx({ tooling: toolingRouter({ appError: true }) }));
+    // ...and the run is not degraded, which is what distinguishes this from a failed lookup.
+    expect(r.findings.some((x) => x.id === 'ip-restrictions-ranges-unavailable')).toBe(false);
     expect(r.findings[0].id).toBe('ip-restrictions-ok');
+  });
+
+  /**
+   * Unreadable and absent are different facts. Treating an unreadable ProfileLoginIpRange as
+   * "no ranges configured" would report every admin as unrestricted — a HIGH finding the data
+   * cannot support — and an unreadable ConnectedApplication would let the check certify apps it
+   * never saw.
+   */
+  describe('unreadable sources are reported as unknown, not as fact', () => {
+    it('does not claim admins are unrestricted when ranges cannot be read', async () => {
+      const r = await check.run(makeCtx({
+        soql: soqlRouter({ admins: [admin('a1')], rangeError: true }),
+        tooling: () => Promise.reject(new Error('nope')),
+      }));
+      expect(r.findings.some((x) => x.id === 'admin-no-ip-restrictions')).toBe(false);
+      const f = r.findings.find((x) => x.id === 'ip-restrictions-ranges-unavailable')!;
+      expect(f.inconclusive).toBe(true);
+      // The admins are still named, so the gap is actionable rather than invisible.
+      expect(f.affectedItems?.[0].label).toBe('a1@x.com');
+    });
+
+    it('stays silent about ranges when there are no admins to evaluate', async () => {
+      const r = await check.run(makeCtx({
+        soql: soqlRouter({ admins: [], rangeError: true }),
+        tooling: () => Promise.reject(new Error('nope')),
+      }));
+      expect(r.findings.some((x) => x.id === 'ip-restrictions-ranges-unavailable')).toBe(false);
+    });
+
+    it('reports unreadable connected-app metadata as inconclusive', async () => {
+      const r = await check.run(makeCtx({ tooling: toolingRouter({ appError: true }) }));
+      const f = r.findings.find((x) => x.id === 'ip-restrictions-apps-unavailable')!;
+      expect(f.inconclusive).toBe(true);
+      // And crucially, no pass alongside it.
+      expect(r.findings.some((x) => x.id === 'ip-restrictions-ok')).toBe(false);
+    });
+
+    it('only passes when both sources were actually readable', async () => {
+      const readable = await check.run(makeCtx({}));
+      expect(readable.findings[0].id).toBe('ip-restrictions-ok');
+      expect(readable.findings[0].passed).toBe(true);
+    });
   });
 
   it('reports every category together when all are present', async () => {
