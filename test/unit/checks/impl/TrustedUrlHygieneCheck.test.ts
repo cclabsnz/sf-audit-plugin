@@ -107,7 +107,7 @@ describe('TrustedUrlHygieneCheck', () => {
 
   it('resolve mode: a timeout degrades to an INFO could-not-verify finding, never throws', async () => {
     resolveMock.mockImplementation(
-      () => new Promise((_, reject) => setTimeout(() => reject(dnsError('ETIMEDOUT')), 1)),
+      () => new Promise((_, reject) => { setTimeout(() => reject(dnsError('ETIMEDOUT')), 1); }),
     );
     const result = await check.run(
       makeCtx([site('https://slow.acme.com')], { resolveDomains: true }),

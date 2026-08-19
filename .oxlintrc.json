@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": [
+    "lib/**",
+    "lib-test/**",
+    "coverage/**",
+    "node_modules/**"
+  ],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "eqeqeq": [
+      "error",
+      "smart"
+    ],
+    "no-throw-literal": "error",
+    "no-self-compare": "error",
+    "no-template-curly-in-string": "error",
+    "no-unmodified-loop-condition": "error",
+    "no-promise-executor-return": "error",
+    "typescript/no-explicit-any": "off",
+    "typescript/no-unused-vars": "off",
+    "unicorn/no-new-array": "off"
+  }
+}

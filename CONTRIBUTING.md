@@ -58,6 +58,44 @@ Then update the inventory in `docs/CHECKS.md` (the source-of-truth listing) and 
 per-domain summary in `README.md`. Both are enforced: `readme-check-count.test.ts`
 fails the build if either drifts from `src/checks/registry.ts`.
 
+## Certificate of origin (DCO)
+
+Every commit must carry a `Signed-off-by:` trailer matching its author:
+
+```bash
+git commit -s -m "your message"
+```
+
+This is the [Developer Certificate of Origin](https://developercertificate.org/) — your assertion
+that you wrote the change, or otherwise have the right to submit it under Apache-2.0. It is not a
+copyright assignment; you keep your copyright.
+
+A CI job checks every commit in a pull request, because a missing sign-off is invisible at review
+time. If you forget:
+
+```bash
+git commit --amend --signoff      # the last commit
+git rebase --signoff main         # a range of commits
+```
+
+## Coding standards
+
+The compiler carries most of the load. `strict`, `noUnusedLocals`, `noUnusedParameters` and
+`noFallthroughCasesInSwitch` are **errors**, so dead code and unused parameters cannot merge.
+
+On top of that, `pnpm run lint` runs [oxlint](https://oxc.rs/docs/guide/usage/linter) over `src`
+and `test`, configured in `.oxlintrc.json` and enforced in CI. The rule set is deliberately narrow:
+correctness classes the compiler does not model, not formatting. A rule that only reshuffles code
+costs review attention without buying safety, and that attention is better spent on findings.
+
+(oxlint rather than ESLint because this project is on TypeScript 7, whose native compiler no longer
+exposes the JavaScript API `typescript-eslint` is built on — the same constraint that moved test
+transforms to swc.)
+
+Beyond the linter, follow the surrounding code: explicit sharing declarations in examples, `.js`
+extensions on relative imports (NodeNext), and comments that explain *why* rather than restate the
+code.
+
 ## Testing policy
 
 **Every change that adds or alters behaviour ships with automated tests in the same pull

@@ -104,7 +104,7 @@ describe('CertificateExpiryCheck', () => {
 
   it('includes the expiry date in the note so it can be acted on without the org', async () => {
     const r = await check.run(makeCtx([cert('Prod', 10)]));
-    const note = r.findings[0].affectedItems?.[0].note!;
+    const note = r.findings[0].affectedItems![0].note!;
     expect(note).toMatch(/expires \d{4}-\d{2}-\d{2}/);
   });
 

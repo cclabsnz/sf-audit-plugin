@@ -208,9 +208,9 @@ async function resolveDomain(domain: string): Promise<ResolveOutcome> {
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     p,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(Object.assign(new Error('DNS timeout'), { code: 'ETIMEDOUT' })), ms).unref?.(),
-    ),
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(Object.assign(new Error('DNS timeout'), { code: 'ETIMEDOUT' })), ms).unref?.();
+    }),
   ]);
 }
 
