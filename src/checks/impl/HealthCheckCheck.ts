@@ -47,9 +47,9 @@ export class HealthCheckCheck implements SecurityCheck {
     const highRisks = await ctx.tooling.query<HealthCheckRiskRecord>(
       "SELECT RiskType, Setting, SettingGroup, OrgValue, StandardValue FROM SecurityHealthCheckRisks WHERE RiskType='HIGH_RISK'"
     );
-    ctx.cache.healthCheckRisks = [
-      ...highRisks.map((r) => ({ setting: r.Setting, riskType: r.RiskType, value: r.OrgValue, score: 10 })),
-    ];
+    ctx.cache.healthCheckRisks = highRisks.map(
+      (r) => ({ setting: r.Setting, riskType: r.RiskType, value: r.OrgValue, score: 10 }),
+    );
 
     if (highRisks.length > 0) {
       findings.push({

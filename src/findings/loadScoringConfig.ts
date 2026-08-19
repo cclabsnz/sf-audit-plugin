@@ -40,11 +40,11 @@ export function loadScoringConfig(
     riskScores: validated.riskScores ?? DEFAULT_SCORING_CONFIG.riskScores,
     checkWeights: safeCheckWeights,
     gradeThresholds: {
-      A: { ...DEFAULT_SCORING_CONFIG.gradeThresholds.A, ...(validated.gradeThresholds?.A ?? {}) },
-      B: { ...DEFAULT_SCORING_CONFIG.gradeThresholds.B, ...(validated.gradeThresholds?.B ?? {}) },
-      C: { ...DEFAULT_SCORING_CONFIG.gradeThresholds.C, ...(validated.gradeThresholds?.C ?? {}) },
-      D: { ...DEFAULT_SCORING_CONFIG.gradeThresholds.D, ...(validated.gradeThresholds?.D ?? {}) },
-      F: { ...DEFAULT_SCORING_CONFIG.gradeThresholds.F, ...(validated.gradeThresholds?.F ?? {}) },
+      A: { ...DEFAULT_SCORING_CONFIG.gradeThresholds.A, ...validated.gradeThresholds?.A },
+      B: { ...DEFAULT_SCORING_CONFIG.gradeThresholds.B, ...validated.gradeThresholds?.B },
+      C: { ...DEFAULT_SCORING_CONFIG.gradeThresholds.C, ...validated.gradeThresholds?.C },
+      D: { ...DEFAULT_SCORING_CONFIG.gradeThresholds.D, ...validated.gradeThresholds?.D },
+      F: { ...DEFAULT_SCORING_CONFIG.gradeThresholds.F, ...validated.gradeThresholds?.F },
     },
   };
 }

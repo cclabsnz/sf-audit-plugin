@@ -33,6 +33,7 @@
     "clean": "rm -rf lib",
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true",
     "typecheck": "tsc -p tsconfig.test.json",
+    "lint": "oxlint src test",
     "test:jest": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests"
   },
   "dependencies": {
@@ -50,6 +51,7 @@
     "@types/jest": "^30",
     "@types/node": "^26",
     "jest": "^30",
+    "oxlint": "^1.79.0",
     "typescript": "^7.0.2"
   },
   "repository": {

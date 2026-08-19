@@ -1,0 +1,51 @@
+name: DCO
+
+# Developer Certificate of Origin: every commit in a pull request must carry a
+# `Signed-off-by:` trailer matching its author. This is the legal assertion that the
+# contributor has the right to submit the work under the project's licence.
+#
+# Checked here rather than trusted, because a missing sign-off is invisible at review time.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  dco:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history for the PR range, not just the tip.
+          fetch-depth: 0
+
+      - name: Every commit carries a matching Signed-off-by
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          failed=0
+          # Skip merge commits: they have no authored content to certify.
+          for sha in $(git rev-list --no-merges "$BASE".."$HEAD"); do
+            author="$(git log -1 --pretty='%an <%ae>' "$sha")"
+            subject="$(git log -1 --pretty='%s' "$sha")"
+            if git log -1 --pretty='%B' "$sha" | grep -qiF "Signed-off-by: $author"; then
+              echo "ok    ${sha:0:8}  $subject"
+            else
+              echo "::error::${sha:0:8} is missing 'Signed-off-by: $author' — $subject"
+              failed=1
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo ""
+            echo "Fix with:  git commit --amend --signoff        (last commit)"
+            echo "       or: git rebase --signoff <base>          (a range)"
+            echo "Commit with -s / --signoff in future."
+            exit 1
+          fi
+          echo "All commits signed off."

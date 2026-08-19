@@ -215,6 +215,8 @@ Release history is in **[CHANGELOG.md](CHANGELOG.md)**; each entry mirrors its
 [GitHub Release](https://github.com/cclabsnz/sf-audit-plugin/releases), which carries the signed
 provenance attestation and the CycloneDX SBOM for that build.
 
+Project documents: **[GOVERNANCE.md](docs/GOVERNANCE.md)** (roles, decisions, continuity), **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**, **[ROADMAP.md](docs/ROADMAP.md)**, and the **[assurance case](docs/ASSURANCE-CASE.md)** — the argument, with evidence, that this tool is safe to point at a production org.
+
 Maintainers: see **[docs/RELEASE.md](docs/RELEASE.md)** for the release checklist and the one-time repository-hardening steps (npm provenance token, branch protection, and the CodeQL / Scorecard setup behind the badges above).
 
 ## Further reading
