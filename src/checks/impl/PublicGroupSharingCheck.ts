@@ -57,6 +57,10 @@ export class PublicGroupSharingCheck implements SecurityCheck {
     const groupNameMap = new Map(groups.map((g) => [g.Id, g.Name]));
 
     const exposures: Exposure[] = [];
+    // Which share tables could not be read. An object may be absent from the org edition or
+    // simply not permitted; either way the check did not see it, and the conclusion has to say
+    // so rather than count silence as evidence of no sharing.
+    const unreadable: string[] = [];
     for (const shareTable of SHARE_TABLES) {
       try {
         const result = await ctx.soql.query<SharingCountRecord>(
@@ -76,7 +80,7 @@ export class PublicGroupSharingCheck implements SecurityCheck {
           }
         }
       } catch {
-        // Object may not exist or not be accessible — skip silently
+        unreadable.push(shareTable);
       }
     }
 
@@ -99,14 +103,30 @@ export class PublicGroupSharingCheck implements SecurityCheck {
         remediation:
           'Replace "All Internal Users" sharing rules with more targeted public groups or role-based sharing.',
       });
+    } else if (unreadable.length === SHARE_TABLES.length) {
+      // Nothing was readable, so "no exposure found" would be an assertion about data never seen.
+      findings.push({
+        id: 'public-group-sharing-inconclusive',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'Sharing to All Internal Users could not be evaluated',
+        detail:
+          `None of the share tables (${SHARE_TABLES.join(', ')}) could be queried, so whether sharing rules target the "All Internal Users" group is unknown. ${groups.length} such group(s) exist in this org.`,
+        remediation:
+          'Grant the audit user read access to the share tables and re-run, or review sharing rules manually in Setup → Sharing Settings.',
+      });
     } else {
+      const checked = SHARE_TABLES.filter((s) => !unreadable.includes(s));
       findings.push({
         id: 'public-group-sharing-none',
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
         title: 'No records shared to All Internal Users groups via sharing rules',
-        detail: 'No sharing rules were found targeting the "All Internal Users" group on key objects.',
+        detail: unreadable.length > 0
+          ? `No sharing rules targeting the "All Internal Users" group were found on ${checked.join(', ')}. ${unreadable.join(', ')} could not be queried and were not checked.`
+          : 'No sharing rules were found targeting the "All Internal Users" group on key objects.',
         remediation:
           'Continue to avoid broad sharing rules. Periodically review sharing configuration as the org grows.',
       });
