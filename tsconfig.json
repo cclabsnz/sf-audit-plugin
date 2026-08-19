@@ -9,6 +9,11 @@
     "outDir": "lib",
     "rootDir": "src",
     "strict": true,
+    // Dead code is a review burden and hides abandoned intent, so unused locals,
+    // parameters and switch fallthrough are compile errors, not warnings.
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,

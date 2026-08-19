@@ -22,7 +22,6 @@ export class InternalUserMfaCheck implements SecurityCheck {
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
-    const setupUrl = `${baseUrl}/lightning/setup/EnhancedProfiles/home`;
 
     // queryAll to avoid LIMIT 500 truncation — PSA query below fetches all records,
     // so a truncated user list would produce false-pass results for the missing users.

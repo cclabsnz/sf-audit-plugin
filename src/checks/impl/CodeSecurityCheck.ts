@@ -7,10 +7,6 @@ interface ApexCoverageRecord {
   PercentCovered: number;
 }
 
-interface CountResult {
-  expr0?: number;
-}
-
 // SBS-CODE-002: dynamic SOQL with string concatenation is the primary SOQL injection vector.
 // Pattern: Database.query( or Database.countQuery( followed by a + operator before the closing paren/semicolon.
 const DYNAMIC_SOQL_INJECTION = /Database\.(query|countQuery)\s*\([^;)]*\+[^;)]*[);]/gi;

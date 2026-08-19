@@ -15,11 +15,6 @@ interface NamedCredentialRecord {
   PrincipalType: string | null;
 }
 
-interface ApexClassRecord {
-  Name: string;
-  Body: string;
-}
-
 export class NamedCredentialsCheck implements SecurityCheck {
   readonly id = 'named-credentials';
   readonly name = 'Named Credentials';
