@@ -86,6 +86,7 @@
   },
   "files": [
     "/lib",
+    "/CHANGELOG.md",
     "/messages",
     "/config",
     "!/lib/**/*.map"

@@ -8,6 +8,7 @@
 [![CodeQL](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/codeql.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/codeql.yml)
 [![Semgrep](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/semgrep.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/semgrep.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cclabsnz/sf-audit-plugin/badge)](https://securityscorecards.dev/viewer/?uri=github.com/cclabsnz/sf-audit-plugin)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14149/badge)](https://www.bestpractices.dev/projects/14149)
 [![npm version](https://img.shields.io/npm/v/@cclabsnz/sf-audit)](https://www.npmjs.com/package/@cclabsnz/sf-audit)
 [![npm provenance](https://img.shields.io/badge/npm-signed%20provenance-brightgreen)](https://www.npmjs.com/package/@cclabsnz/sf-audit#provenance)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
@@ -209,6 +210,10 @@ npm run clean          # remove compiled output
 Jest transforms with [swc](https://swc.rs), which strips types without checking them, so
 `npm run typecheck` is what catches type errors in tests — it runs ahead of Jest in
 `npm test`. Use `npm run test:jest` while iterating, but don't treat it as a green run.
+
+Release history is in **[CHANGELOG.md](CHANGELOG.md)**; each entry mirrors its
+[GitHub Release](https://github.com/cclabsnz/sf-audit-plugin/releases), which carries the signed
+provenance attestation and the CycloneDX SBOM for that build.
 
 Maintainers: see **[docs/RELEASE.md](docs/RELEASE.md)** for the release checklist and the one-time repository-hardening steps (npm provenance token, branch protection, and the CodeQL / Scorecard setup behind the badges above).
 

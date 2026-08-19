@@ -63,9 +63,15 @@ resolves after the first successful run:
 
 > Local policy: work stops at a local commit; **you** trigger the push and the release.
 
-1. **Version bump.** Update `version` in `package.json` (semver). Update the README check
-   count / flags if user-facing behaviour changed.
-2. **Green locally.**
+1. **Version bump.** Update `version` in `package.json` (semver). Update the inventory in
+   `docs/CHECKS.md` and the per-domain summary in `README.md` if the check set changed —
+   `readme-check-count.test.ts` fails the build if either drifts from the registry.
+2. **Changelog.** Move the `## [Unreleased]` entries in `CHANGELOG.md` under a new heading
+   for this version, linked to its release tag, and open a fresh empty `Unreleased`. The
+   changelog and the GitHub Release note must say the same thing: the release note is the
+   canonical published record, and `CHANGELOG.md` is what a reader finds in the repo and
+   in the npm tarball. Letting them diverge is worse than having neither.
+3. **Green locally.**
    ```bash
    pnpm install --frozen-lockfile
    pnpm run build      # clean tsc (src only)
@@ -75,13 +81,13 @@ resolves after the first successful run:
    `pnpm test` runs `typecheck` first because Jest transforms with swc, which strips
    types without checking them. Don't substitute `pnpm run test:jest` here — it skips
    the type-check and will go green on code that does not compile.
-3. **Commit & push** the version bump; open a PR; let CI + CodeQL go green; merge.
-4. **Tag & GitHub Release.** Create a release whose tag matches the version (e.g.
+4. **Commit & push** the version bump; open a PR; let CI + CodeQL go green; merge.
+5. **Tag & GitHub Release.** Create a release whose tag matches the version (e.g.
    `v1.7.0`). Publishing the release triggers `publish.yml`, which:
    - re-runs build + tests,
    - `npm publish --provenance --access public`,
    - generates `sbom.cyclonedx.json` and attaches it to the release.
-5. **Verify the published artifact.**
+6. **Verify the published artifact.**
    ```bash
    npm view @cclabsnz/sf-audit version
    npm view @cclabsnz/sf-audit --json | jq '.dist.attestations'   # provenance present
