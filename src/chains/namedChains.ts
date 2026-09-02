@@ -50,6 +50,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
         'guest-executable-apex-unprotected', 'guest-executable-apex-exposed',
         'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
         'guest-api-access-enabled', 'guest-api-hard-delete', 'classic-sites-active',
+        'guest-user-visibility-view-all-users', 'guest-user-visibility-owd', 'guest-user-visibility-object-read',
         'portal-exposed-apex-without-sharing', 'sharing-model-external-read', 'sharing-model-external-write',
         'field-level-security-high', 'field-level-security-medium',
         // The guardrail whose absence lets guest-owned records defeat a Private OWD, and the Flow
@@ -78,7 +79,13 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       'and preserve/forward the event logs before the short EventLogFile retention window closes.',
     match(_present, active) {
       const traffic = byIds(active, ['guest-traffic-anomaly-recon', 'guest-traffic-anomaly-anonymizer']);
-      const exposure = byIds(active, ['guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned']);
+      // A readable User roster counts as an exposed surface in its own right — recon against an org
+      // that leaks its staff list is the same incident. The object-level Read grant is excluded: on
+      // its own it is not a confirmed exposure, and this chain asserts one already in progress.
+      const exposure = byIds(active, [
+        'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
+        'guest-user-visibility-view-all-users', 'guest-user-visibility-owd',
+      ]);
       if (traffic.length === 0 || exposure.length === 0) return null;
       return [...traffic, ...exposure];
     },

@@ -68,6 +68,7 @@ The audit runs **88 read-only checks**. The [README](../README.md#what-it-checks
 | Experience Cloud Guest Site Options | Guest file access and guest member visibility on Experience Cloud sites |
 | Secure Guest User Record Access | Verifies the "Secure guest user record access" enforcement is activated — the guardrail that stops guest-owned records defeating a Private OWD (complements Guest Object Exposure) |
 | Guest API & Bulk Access | Guest users granted API Enabled or Bulk API Hard Delete — programmatic bulk read/delete for unauthenticated visitors |
+| Guest Visibility of Other Users | Whether unauthenticated guests can enumerate other User records — "View All Users" on a guest permission grant, a public external org-wide default on `User`, or a guest Read grant on the User object. The internal OWD is reported but not graded (Public Read Only is the platform default), and the Sharing Settings user-visibility checkboxes are not API-readable, so a clean result carries a manual-verification note |
 | Classic Force.com Sites | Active classic (Visualforce) Sites and their guest users — an unauthenticated surface separate from Experience Cloud |
 | Experience Cloud CSP & Lightning Web Security | Advises verifying Strict CSP and Lightning Web Security on live sites (not reliably API-readable) |
 | CORS Allowlist | Wildcard or overly broad CORS allowlist origins |

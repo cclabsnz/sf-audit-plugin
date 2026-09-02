@@ -71,6 +71,41 @@ describe('NAMED_CHAINS', () => {
     expect(chain.match(present(findings), findings)).not.toBeNull();
   });
 
+  it('unauth-bulk-exfil fires for a guest with View All Users and a public external OWD on User', () => {
+    const findings = [f('guest-user-visibility-view-all-users'), f('guest-user-visibility-owd')];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'unauth-bulk-exfil')!;
+    const steps = chain.match(present(findings), findings);
+    expect(steps).not.toBeNull();
+    expect(steps!.map((s) => s.id)).toEqual(
+      expect.arrayContaining(['guest-user-visibility-view-all-users', 'guest-user-visibility-owd']),
+    );
+  });
+
+  it('unauth-bulk-exfil counts a guest Read grant on User as a step alongside a bulk path', () => {
+    const findings = [f('guest-user-visibility-owd'), f('guest-user-visibility-object-read')];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'unauth-bulk-exfil')!;
+    const steps = chain.match(present(findings), findings);
+    expect(steps!.map((s) => s.id)).toContain('guest-user-visibility-object-read');
+  });
+
+  it('active-guest-exfil fires when observed guest recon meets an enumerable user roster', () => {
+    const findings = [f('guest-traffic-anomaly-recon'), f('guest-user-visibility-view-all-users')];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'active-guest-exfil')!;
+    const steps = chain.match(present(findings), findings);
+    expect(steps).not.toBeNull();
+    expect(steps!.map((s) => s.id)).toEqual(
+      expect.arrayContaining(['guest-traffic-anomaly-recon', 'guest-user-visibility-view-all-users']),
+    );
+  });
+
+  // The object-level Read grant needs a sharing path to return anyone else's record, so it is not a
+  // confirmed exposure on its own and must not carry an "incident in progress" claim by itself.
+  it('active-guest-exfil does NOT fire on recon plus an object-read grant alone', () => {
+    const findings = [f('guest-traffic-anomaly-recon'), f('guest-user-visibility-object-read')];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'active-guest-exfil')!;
+    expect(chain.match(present(findings), findings)).toBeNull();
+  });
+
   // Named chains carry a floor of MEDIUM: they are correlations someone hand-modelled, so they must
   // outrank the emergent "potential path" output. MEDIUM is reserved for a chain that adds no new
   // exposure of its own — `undetected-compromise` reports that exposure already present would go

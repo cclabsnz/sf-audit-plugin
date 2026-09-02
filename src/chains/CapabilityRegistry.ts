@@ -60,6 +60,13 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // Guest API/Bulk access — programmatic unauthenticated bulk read / destruction
   'guest-api-access-enabled':          { grants: ['unauth-foothold', 'data-read-bulk'] },
   'guest-api-hard-delete':             { grants: ['unauth-foothold', 'data-write'] },
+  // Guest enumeration of other USERS. The staff roster is the targeting asset behind credential
+  // stuffing and phishing at named admins, and both of the first two paths expose every User record
+  // on their own, so both are bulk reads. The object-level Read grant is not: it makes User
+  // queryable but still needs a sharing path before it returns anyone else's record.
+  'guest-user-visibility-view-all-users': { grants: ['unauth-foothold', 'data-read-bulk'] },
+  'guest-user-visibility-owd':            { grants: ['unauth-foothold', 'data-read-bulk'] },
+  'guest-user-visibility-object-read':    { grants: ['unauth-foothold', 'data-read'] },
   // Classic Visualforce sites — a second unauthenticated foothold surface
   'classic-sites-active':              { grants: ['unauth-foothold'] },
   // Mass data-export capability — a bulk-read sink for an authenticated actor

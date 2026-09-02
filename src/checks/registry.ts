@@ -78,6 +78,7 @@ import { DataExportAccessCheck } from './impl/DataExportAccessCheck.js';
 import { ClassicSitesCheck } from './impl/ClassicSitesCheck.js';
 import { AuthProvidersCheck } from './impl/AuthProvidersCheck.js';
 import { GuestApiAccessCheck } from './impl/GuestApiAccessCheck.js';
+import { GuestUserVisibilityCheck } from './impl/GuestUserVisibilityCheck.js';
 import { ExternalCredentialsCheck } from './impl/ExternalCredentialsCheck.js';
 import { LoginAnomalyCheck } from './impl/LoginAnomalyCheck.js';
 import { SessionHardeningCheck } from './impl/SessionHardeningCheck.js';
@@ -163,6 +164,7 @@ export const CHECKS: SecurityCheck[] = [
   new ClassicSitesCheck(),                // classic Visualforce Force.com Sites (unauth surface)
   new AuthProvidersCheck(),               // external Auth Providers / SAML IdP federation review
   new GuestApiAccessCheck(),              // guest users with API Enabled / Bulk API Hard Delete
+  new GuestUserVisibilityCheck(),         // guests seeing other User records — View All Users / User external OWD / Read on User
   new ExternalCredentialsCheck(),         // External Credential weak/no authentication
   new LoginAnomalyCheck(),                // successful logins from many distinct IPs
   new SessionHardeningCheck(),            // reads healthCheckRisks — clickjack/CSRF/session-lock/XSS
