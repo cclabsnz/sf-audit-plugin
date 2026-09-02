@@ -75,6 +75,8 @@ interface Grant {
 const READ_BLIND_SPOT =
   'This check sees permission grants, not read traffic: a Read grant an integration never exercises is not observable from SOQL. Run "sf audit apps" for read-side evidence.';
 
+const DORMANT_DAYS = 90;
+
 export class IntegrationLeastPrivilegeCheck implements SecurityCheck {
   readonly id = 'integration-least-privilege';
   readonly name = 'Integration Account Least Privilege';
@@ -165,6 +167,39 @@ export class IntegrationLeastPrivilegeCheck implements SecurityCheck {
         'Rotate the credential and move the integration to a certificate-based or OAuth JWT flow, where expiry is managed rather than disabled.',
     });
 
+    // Dormancy is sourced from User.LastLoginDate, gathered by the candidate query above (which
+    // has already succeeded by this point — resolveIntegrationAccounts returns early with
+    // unavailable: true otherwise). It does not depend on the separate LoginHistory query that
+    // feeds the api-only-login signal, so a degraded api-only-login signal does not affect this.
+    const cutoff = Date.now() - DORMANT_DAYS * 86_400_000;
+    const grantedIds = new Set(grants.map((g) => g.account.id));
+    // Guard on lastLoginDate !== null: an account that has never logged in is not evidence of
+    // dormancy — there is no "stopped being used" to observe. integration-users already reports
+    // never-logged-in accounts as undocumented identities.
+    const dormant = resolved.accounts.filter(
+      (a) => grantedIds.has(a.id) && a.lastLoginDate !== null && new Date(a.lastLoginDate).getTime() < cutoff,
+    );
+
+    if (dormant.length > 0) {
+      const dormantIds = new Set(dormant.map((a) => a.id));
+      const withEscalation = grants.some((g) => g.permission in ESCALATION_PERMS && dormantIds.has(g.account.id));
+      findings.push({
+        id: 'integration-least-privilege-dormant',
+        category: this.category,
+        riskLevel: withEscalation ? 'HIGH' : 'MEDIUM',
+        title: `${dormant.length} integration account(s) hold permissions but have not logged in for ${DORMANT_DAYS} days`,
+        detail:
+          `An account that has not authenticated in ${DORMANT_DAYS} days is not exercising any permission it holds, so every grant on it is surplus by definition. The credential remains valid, which is what makes a dormant privileged service account attractive: it is unlikely to be missed while it is used. ${READ_BLIND_SPOT}`,
+        remediation:
+          'Confirm with the owning team whether the integration is retired. If it is, deactivate the account rather than merely stripping permissions. If it is seasonal, record that on the account so the next reviewer does not have to rediscover it.',
+        affectedItems: dormant.slice(0, 30).map((a) => ({
+          label: a.username,
+          url: `${ctx.orgInfo.instanceUrl}/${a.id}`,
+          note: `last login ${a.lastLoginDate!.split('T')[0]} | classified by: ${a.signals.join(', ')}`,
+        })),
+      });
+    }
+
     return { findings };
   }
 
@@ -179,12 +214,17 @@ export class IntegrationLeastPrivilegeCheck implements SecurityCheck {
     const matched = grants.filter((g) => g.permission in perms);
     if (matched.length === 0) return;
 
+    const apiOnly = matched.some((g) => g.account.signals.includes('api-only-login'));
+    const apiNote = apiOnly
+      ? ' At least one of these accounts authenticates only over the API, so a Setup or UI permission it holds cannot be being exercised at all.'
+      : '';
+
     findings.push({
       id: shape.id,
       category: this.category,
       riskLevel: shape.riskLevel,
       title: `${matched.length} ${shape.title} held by integration accounts`,
-      detail: `${shape.detail} ${READ_BLIND_SPOT}`,
+      detail: `${shape.detail}${apiNote} ${READ_BLIND_SPOT}`,
       remediation: shape.remediation,
       affectedItems: matched.slice(0, 30).map((g) => ({
         label: `${g.account.username} — ${g.label}`,
