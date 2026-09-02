@@ -230,6 +230,25 @@ describe('IntegrationLeastPrivilegeCheck — write evidence', () => {
     expect(r.findings.map((f) => f.id)).not.toContain('integration-least-privilege-unused-write-objects');
     expect(r.findings.some((f) => f.passed)).toBe(false);
   });
+
+  it('discloses the ObjectPermissions failure as an inconclusive finding, even with no structural finding alongside it', async () => {
+    const r = await check.run(makeCtx({ users: SVC, psa: [psa()], objPermsThrow: true }));
+    const f = r.findings.find((x) => x.id === 'integration-least-privilege-object-permissions-inaccessible');
+    expect(f).toBeDefined();
+    expect(f!.inconclusive).toBe(true);
+    expect(r.findings.some((x) => x.passed)).toBe(false);
+  });
+
+  it('discloses the ObjectPermissions failure alongside a structural finding, not in place of it', async () => {
+    const r = await check.run(makeCtx({
+      users: SVC, psa: [psa({ PermissionsAuthorApex: true })], objPermsThrow: true,
+    }));
+    expect(r.findings.map((f) => f.id)).toContain('integration-least-privilege-object-permissions-inaccessible');
+    expect(r.findings.map((f) => f.id)).toContain('integration-least-privilege-escalation-permissions');
+    const f = r.findings.find((x) => x.id === 'integration-least-privilege-object-permissions-inaccessible')!;
+    expect(f.inconclusive).toBe(true);
+    expect(r.findings.some((x) => x.passed)).toBe(false);
+  });
 });
 
 describe('IntegrationLeastPrivilegeCheck — the passing path', () => {
