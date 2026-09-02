@@ -213,6 +213,10 @@ export class IntegrationLeastPrivilegeCheck implements SecurityCheck {
     }
 
     let objPerms: ObjPermRow[] | null = null;
+    // Tracks the ObjectPermissions query specifically failing (as opposed to succeeding with zero
+    // rows), so that a failure here can also gate `-ok` below — write-evidence gathering that never
+    // ran must not read as a clean bill any more than an unprobed object does.
+    let objPermsUnavailable = false;
     try {
       const psIds = [...new Set(psa.map((p) => p.PermissionSetId))].map((i) => `'${i}'`).join(',');
       if (psIds.length > 0) {
@@ -225,6 +229,7 @@ export class IntegrationLeastPrivilegeCheck implements SecurityCheck {
       }
     } catch {
       objPerms = null; // Suppressed, not passed: ObjectPermissions failing must not read as a clean bill.
+      objPermsUnavailable = true;
     }
 
     if (objPerms && objPerms.length > 0) {
@@ -282,6 +287,23 @@ export class IntegrationLeastPrivilegeCheck implements SecurityCheck {
           ],
         });
       }
+    }
+
+    if (findings.length === 0 && !objPermsUnavailable) {
+      const degradedNote = resolved.degraded.length > 0
+        ? ` Two qualifications: the following classification signals could not be gathered on this run — ${resolved.degraded.join(', ')} — so an account reachable only by one of them was not examined.`
+        : '';
+      findings.push({
+        id: 'integration-least-privilege-ok',
+        category: this.category,
+        riskLevel: 'LOW',
+        passed: true,
+        title: `${resolved.accounts.length} integration account(s); no surplus permission found`,
+        detail:
+          `No integration account holds an escalation-grade permission, a bulk-data permission or a standing-credential setting, none is dormant, and every probed object write grant has been exercised.${degradedNote} This result covers write grants and system permissions only. A Read grant an integration never exercises is not observable from SOQL, so this is not a statement that these accounts are at least privilege — run "sf audit apps" for read-side evidence from the RestApi event log.`,
+        remediation:
+          'Keep integration accounts on a dedicated permission set rather than a shared profile, and re-run after any integration is added or repurposed.',
+      });
     }
 
     return { findings };
