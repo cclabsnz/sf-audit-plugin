@@ -1,13 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-
-interface IntegrationUserRecord {
-  Id: string;
-  Username: string;
-  Profile: { Name: string };
-  LastLoginDate: string | null;
-}
+import { resolveIntegrationAccounts } from '../support/integrationAccounts.js';
 
 interface BroadPermRecord {
   Assignee: { Id: string; Username: string };
@@ -17,28 +11,6 @@ interface BroadPermRecord {
     PermissionsViewAllData: boolean;
   };
 }
-
-// Username segments that strongly indicate a service/integration account
-const SERVICE_LIKE_CLAUSES = [
-  "Username LIKE '%service%'",
-  "Username LIKE '%integration%'",
-  "Username LIKE '%.api@%'",
-  "Username LIKE '%_api_%'",
-  "Username LIKE '%.svc@%'",
-  "Username LIKE '%_svc_%'",
-  "Username LIKE '%batch%'",
-  "Username LIKE '%automation%'",
-  "Username LIKE '%system@%'",
-  "Username LIKE '%scheduler%'",
-];
-
-const ASSIGNEE_LIKE_CLAUSES = [
-  "Assignee.Username LIKE '%service%'",
-  "Assignee.Username LIKE '%integration%'",
-  "Assignee.Username LIKE '%.api@%'",
-  "Assignee.Username LIKE '%_api_%'",
-  "Assignee.Username LIKE '%.svc@%'",
-];
 
 export class IntegrationUsersCheck implements SecurityCheck {
   readonly id = 'integration-users';
@@ -50,24 +22,24 @@ export class IntegrationUsersCheck implements SecurityCheck {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
 
-    // Q1: Find candidate service accounts — users who have never logged in (and were created
-    // more than 30 days ago, to exclude freshly provisioned human users) or whose username
-    // matches common integration account naming patterns. These are likely non-human identities
-    // requiring SBS-ACS-007 documentation.
-    const serviceUsernameClause = SERVICE_LIKE_CLAUSES.join(' OR ');
-    const candidates = await ctx.soql.queryAll<IntegrationUserRecord>(
-      `SELECT Id, Username, Profile.Name, LastLoginDate
-       FROM User
-       WHERE IsActive = true
-         AND UserType = 'Standard'
-         AND (
-           (LastLoginDate = null AND CreatedDate < LAST_N_DAYS:30)
-           OR ${serviceUsernameClause}
-         )
-         AND Id NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)
-       ORDER BY LastLoginDate ASC NULLS FIRST
-       LIMIT 200`
-    );
+    // Q1: Resolve candidate integration/service accounts via the shared resolver (Task 2-4),
+    // which tags each account with the signal(s) that classified it — integration-license,
+    // never-logged-in, username-pattern, scheduled-job-owner, api-only-login — rather than this
+    // check keeping its own drifting copy of the username heuristic.
+    const resolved = await resolveIntegrationAccounts(ctx);
+    if (resolved.unavailable) {
+      findings.push({
+        id: 'integration-users-inaccessible',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'Integration accounts could not be enumerated (insufficient access)',
+        detail: 'The audit user could not query User records, so no statement can be made about non-human identities.',
+        remediation: 'Grant the audit user View Setup and Configuration and re-run.',
+      });
+      return { findings };
+    }
+    const candidates = resolved.accounts;
 
     if (candidates.length === 0) {
       findings.push({
@@ -94,27 +66,26 @@ export class IntegrationUsersCheck implements SecurityCheck {
       remediation:
         'Verify that each listed user is a known, documented non-human identity. Any undocumented account should be reviewed and either documented or deactivated. Maintain a register of all integration identities with their owner and purpose.',
       affectedItems: candidates.map((u) => ({
-        label: u.Username,
-        url: `${baseUrl}/${u.Id}`,
-        note: u.LastLoginDate
-          ? `last login: ${new Date(u.LastLoginDate).toISOString().split('T')[0]} | profile: ${u.Profile.Name}`
-          : `never logged in | profile: ${u.Profile.Name}`,
+        label: u.username,
+        url: `${baseUrl}/${u.id}`,
+        note: u.lastLoginDate
+          ? `last login: ${new Date(u.lastLoginDate).toISOString().split('T')[0]} | profile: ${u.profileName}`
+          : `never logged in | profile: ${u.profileName}`,
       })),
     });
 
-    // Q2: Among service-account-looking users, find those with Modify All / View All Data.
-    // SBS-ACS-008 requires non-human identities to hold only the minimum required permissions.
-    const assigneeServiceClause = ASSIGNEE_LIKE_CLAUSES.join(' OR ');
+    // Q2: Among the resolved integration/service accounts, find those with Modify All / View All
+    // Data. SBS-ACS-008 requires non-human identities to hold only the minimum required
+    // permissions. Filters on the resolver's account ids rather than a username heuristic, so
+    // this can never be structurally unable to see an account the inventory above just listed.
+    const idList = candidates.map((c) => `'${c.id}'`).join(',');
     const broadResult = await ctx.soql.query<BroadPermRecord>(
       `SELECT Assignee.Id, Assignee.Username,
               PermissionSet.Name, PermissionSet.PermissionsModifyAllData, PermissionSet.PermissionsViewAllData
        FROM PermissionSetAssignment
        WHERE Assignee.IsActive = true
          AND Assignee.UserType = 'Standard'
-         AND (
-           Assignee.LastLoginDate = null
-           OR ${assigneeServiceClause}
-         )
+         AND Assignee.Id IN (${idList})
          AND (PermissionSet.PermissionsModifyAllData = true OR PermissionSet.PermissionsViewAllData = true)
        LIMIT 200`
     );
