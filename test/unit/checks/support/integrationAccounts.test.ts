@@ -219,6 +219,17 @@ describe('resolveIntegrationAccounts — api-only-login', () => {
     const r = await resolveIntegrationAccounts(ctx);
     expect(r.accounts[0].signals).toContain('api-only-login');
   });
+
+  // The word-boundary regex missed the plural: "Salesforce APIs" fails the trailing \b on the
+  // "s". A missed match only suppresses the note (safe direction), but it costs nothing to fix.
+  it('recognises the plural "APIs" in a connected app name', async () => {
+    const ctx = makeCtx({
+      users: [svc],
+      logins: [{ UserId: '005a', Application: 'Salesforce APIs', ApiType: null, logins: 3 }],
+    });
+    const r = await resolveIntegrationAccounts(ctx);
+    expect(r.accounts[0].signals).toContain('api-only-login');
+  });
 });
 
 describe('resolveIntegrationAccounts — truncation and memoisation', () => {
