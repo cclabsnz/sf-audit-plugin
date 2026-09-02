@@ -230,6 +230,16 @@ export class IntegrationLeastPrivilegeCheck implements SecurityCheck {
     } catch {
       objPerms = null; // Suppressed, not passed: ObjectPermissions failing must not read as a clean bill.
       objPermsUnavailable = true;
+      findings.push({
+        id: 'integration-least-privilege-object-permissions-inaccessible',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'Object-level permissions could not be queried (insufficient access)',
+        detail:
+          'The ObjectPermissions query failed, so the Create, Edit and Delete grants held by these integration accounts could not be read. No statement can be made about write grants they hold and do not use. This does not affect the escalation-grade, bulk-data, hygiene or dormancy findings above, which are drawn from separate queries and still stand.',
+        remediation: 'Grant the audit user View Setup and Configuration and re-run.',
+      });
     }
 
     if (objPerms && objPerms.length > 0) {
