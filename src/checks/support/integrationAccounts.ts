@@ -32,9 +32,9 @@ export const SERVICE_LIKE_CLAUSES = [
   "Username LIKE '%service%'",
   "Username LIKE '%integration%'",
   "Username LIKE '%.api@%'",
-  "Username LIKE '%_api_%'",
+  "Username LIKE '%\\_api\\_%'",
   "Username LIKE '%.svc@%'",
-  "Username LIKE '%_svc_%'",
+  "Username LIKE '%\\_svc\\_%'",
   "Username LIKE '%batch%'",
   "Username LIKE '%automation%'",
   "Username LIKE '%system@%'",
@@ -78,13 +78,17 @@ export async function resolveIntegrationAccounts(ctx: AuditContext): Promise<Res
     return { accounts: [], degraded, unavailable: true };
   }
 
-  const accounts = rows.map((r) => ({
+  const mapped = rows.map((r) => ({
     id: r.Id,
     username: r.Username,
     profileName: r.Profile?.Name ?? 'unknown',
     lastLoginDate: r.LastLoginDate,
     signals: intrinsicSignals(r),
   }));
+
+  // A returned account with no signal is one the resolver cannot explain;
+  // downstream findings name the signals as their justification.
+  const accounts = mapped.filter((a) => a.signals.length > 0);
 
   return { accounts, degraded, unavailable: false };
 }
