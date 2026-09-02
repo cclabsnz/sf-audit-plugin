@@ -77,6 +77,18 @@ const READ_BLIND_SPOT =
 
 const DORMANT_DAYS = 90;
 
+/** Two aggregates per object, so 30 objects. Anything dropped is named in the finding. */
+const PROBE_QUERY_BUDGET = 60;
+const OBJECT_CAP = PROBE_QUERY_BUDGET / 2;
+
+interface ObjPermRow {
+  ParentId: string;
+  SobjectType: string;
+  PermissionsCreate: boolean;
+  PermissionsEdit: boolean;
+  PermissionsDelete: boolean;
+}
+
 export class IntegrationLeastPrivilegeCheck implements SecurityCheck {
   readonly id = 'integration-least-privilege';
   readonly name = 'Integration Account Least Privilege';
@@ -200,7 +212,97 @@ export class IntegrationLeastPrivilegeCheck implements SecurityCheck {
       });
     }
 
+    let objPerms: ObjPermRow[] | null = null;
+    try {
+      const psIds = [...new Set(psa.map((p) => p.PermissionSetId))].map((i) => `'${i}'`).join(',');
+      if (psIds.length > 0) {
+        objPerms = await ctx.soql.queryAll<ObjPermRow>(
+          `SELECT ParentId, SobjectType, PermissionsCreate, PermissionsEdit, PermissionsDelete
+           FROM ObjectPermissions
+           WHERE ParentId IN (${psIds})
+             AND (PermissionsCreate = true OR PermissionsEdit = true OR PermissionsDelete = true)`,
+        );
+      }
+    } catch {
+      objPerms = null; // Suppressed, not passed: ObjectPermissions failing must not read as a clean bill.
+    }
+
+    if (objPerms && objPerms.length > 0) {
+      // Widest over-grants first: rank by how many integration accounts hold write on the object.
+      const accountsPerObject = new Map<string, Set<string>>();
+      const psToAccounts = new Map<string, string[]>();
+      for (const p of psa) {
+        const list = psToAccounts.get(p.PermissionSetId) ?? [];
+        list.push(p.AssigneeId);
+        psToAccounts.set(p.PermissionSetId, list);
+      }
+      for (const op of objPerms) {
+        const set = accountsPerObject.get(op.SobjectType) ?? new Set<string>();
+        for (const a of psToAccounts.get(op.ParentId) ?? []) set.add(a);
+        accountsPerObject.set(op.SobjectType, set);
+      }
+
+      const ordered = [...accountsPerObject.keys()].sort((a, b) => {
+        const d = (accountsPerObject.get(b)?.size ?? 0) - (accountsPerObject.get(a)?.size ?? 0);
+        return d !== 0 ? d : a.localeCompare(b);
+      });
+      const probed = ordered.slice(0, OBJECT_CAP);
+      const skipped = ordered.slice(OBJECT_CAP);
+
+      const unused: string[] = [];
+      const unprobed: string[] = [...skipped];
+      for (const object of probed) {
+        const wrote = await this.hasEverWritten(ctx, object, idList);
+        if (wrote === null) unprobed.push(object);
+        else if (!wrote) unused.push(object);
+      }
+
+      if (unused.length > 0 || unprobed.length > 0) {
+        const capNote = skipped.length > 0
+          ? ` ${skipped.length} further object(s) were not probed: the check probes at most ${OBJECT_CAP} objects per run, ordered by how many integration accounts hold write on them.`
+          : '';
+        // Controller ruling R5: an unused count of zero with only unprobed objects is not a
+        // conclusion — it must not read as a graded finding about objects the check never queried.
+        const inconclusiveOnly = unused.length === 0 && unprobed.length > 0;
+        findings.push({
+          id: 'integration-least-privilege-unused-write-objects',
+          category: this.category,
+          riskLevel: inconclusiveOnly ? 'INFO' : 'MEDIUM',
+          inconclusive: inconclusiveOnly || undefined,
+          title: inconclusiveOnly
+            ? `${unprobed.length} object(s) with an integration write grant could not be checked for write evidence`
+            : `${unused.length} object(s) carry an integration write grant with no record ever written`,
+          detail:
+            `For each object an integration account is granted Create, Edit or Delete on, the check looks for any record in the org attributed to that account by CreatedById or LastModifiedById. An object with no such record has a write grant the account has never exercised. Attribution is not perfect — a record the account wrote and someone else later edited no longer attributes to it — so treat this as strong evidence rather than proof.${capNote} ${READ_BLIND_SPOT}`,
+          remediation:
+            'Remove Create, Edit and Delete on the listed objects from the integration\'s permission set. Where an object is genuinely written rarely, record that on the permission set so the next review does not re-raise it.',
+          affectedItems: [
+            ...unused.slice(0, 30).map((o) => ({ label: o, url: permSetUrl, note: 'write granted, never written' })),
+            ...unprobed.slice(0, 10).map((o) => ({ label: o, url: permSetUrl, note: 'not probed — no conclusion drawn' })),
+          ],
+        });
+      }
+    }
+
     return { findings };
+  }
+
+  /**
+   * True if the account wrote any record of this object, false if none, null if unprobeable.
+   * Null must never be read as false — an object we could not query is not an unused grant.
+   */
+  private async hasEverWritten(ctx: AuditContext, object: string, idList: string): Promise<boolean | null> {
+    for (const field of ['CreatedById', 'LastModifiedById']) {
+      try {
+        const rows = await ctx.soql.queryAll<Record<string, unknown>>(
+          `SELECT ${field}, COUNT(Id) c FROM ${object} WHERE ${field} IN (${idList}) GROUP BY ${field}`,
+        );
+        if (rows.length > 0) return true;
+      } catch {
+        return null;
+      }
+    }
+    return false;
   }
 
   /** Emits one finding for a permission class, or nothing when the class has no grants. */

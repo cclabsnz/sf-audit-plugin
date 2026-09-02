@@ -9,6 +9,9 @@ interface Opts {
   psaThrow?: boolean;
   logins?: unknown[];
   loginsThrow?: boolean;
+  objPerms?: unknown[];
+  objPermsThrow?: boolean;
+  writes?: Record<string, 'THROW' | { CreatedById?: unknown[]; LastModifiedById?: unknown[] }>;
 }
 
 function makeCtx(opts: Opts): AuditContext {
@@ -21,6 +24,17 @@ function makeCtx(opts: Opts): AuditContext {
     if (soql.includes('FROM LoginHistory')) {
       if (opts.loginsThrow) throw new Error('no access');
       return opts.logins ?? [];
+    }
+    if (soql.includes('FROM ObjectPermissions')) {
+      if (opts.objPermsThrow) throw new Error('no access');
+      return opts.objPerms ?? [];
+    }
+    const probe = /FROM (\w+) WHERE (CreatedById|LastModifiedById)/.exec(soql);
+    if (probe) {
+      const [, object, field] = probe;
+      const forObject = (opts.writes ?? {})[object];
+      if (forObject === 'THROW') throw new Error('not queryable');
+      return (forObject as Record<string, unknown[]> | undefined)?.[field] ?? [];
     }
     if (soql.includes('FROM User')) {
       if (opts.usersThrow) throw new Error('no access');
@@ -155,5 +169,65 @@ describe('IntegrationLeastPrivilegeCheck — dormancy and protocol', () => {
     const r = await check.run(ctx);
     const f = r.findings.find((x) => x.id === 'integration-least-privilege-escalation-permissions')!;
     expect(f.detail).toContain('only over the API');
+  });
+});
+
+const objPerm = (obj: string) => ({
+  ParentId: '0PS1', SobjectType: obj,
+  PermissionsCreate: true, PermissionsEdit: true, PermissionsDelete: false,
+});
+
+describe('IntegrationLeastPrivilegeCheck — write evidence', () => {
+  const check = new IntegrationLeastPrivilegeCheck();
+
+  it('reports an object the account is granted write on and has never written to', async () => {
+    const r = await check.run(makeCtx({ users: SVC, psa: [psa()], objPerms: [objPerm('Opportunity')] }));
+    const f = r.findings.find((x) => x.id === 'integration-least-privilege-unused-write-objects')!;
+    expect(f.affectedItems!.some((i) => i.label.includes('Opportunity'))).toBe(true);
+  });
+
+  // The guard against the worse error. An ETL that only upserts never appears in CreatedById, so a
+  // check probing creation alone would accuse it of holding a write grant it exercises nightly.
+  it('does NOT report an object the account only ever modified, never created', async () => {
+    const r = await check.run(makeCtx({
+      users: SVC, psa: [psa()], objPerms: [objPerm('Account')],
+      writes: { Account: { CreatedById: [], LastModifiedById: [{ LastModifiedById: '005a', c: 4200 }] } },
+    }));
+    expect(r.findings.map((f) => f.id)).not.toContain('integration-least-privilege-unused-write-objects');
+  });
+
+  it('does NOT report an object the account created records in', async () => {
+    const r = await check.run(makeCtx({
+      users: SVC, psa: [psa()], objPerms: [objPerm('Account')],
+      writes: { Account: { CreatedById: [{ CreatedById: '005a', c: 12 }] } },
+    }));
+    expect(r.findings.map((f) => f.id)).not.toContain('integration-least-privilege-unused-write-objects');
+  });
+
+  // Controller ruling R5: unprobed-only (no unused objects, at least one unprobed) must be
+  // inconclusive, not a graded MEDIUM finding titled "0 object(s)...".
+  it('lists an object whose probe throws as unprobed, never as unused, and is inconclusive when nothing else is unused', async () => {
+    const r = await check.run(makeCtx({
+      users: SVC, psa: [psa()], objPerms: [objPerm('Account')],
+      writes: { Account: 'THROW' },
+    }));
+    const f = r.findings.find((x) => x.id === 'integration-least-privilege-unused-write-objects');
+    expect(f?.affectedItems?.some((i) => i.label.includes('Account') && i.note?.includes('not probed'))).toBe(true);
+    expect(f?.affectedItems?.some((i) => i.label.includes('Account') && i.note?.includes('never written'))).toBeFalsy();
+    expect(f?.inconclusive).toBe(true);
+    expect(f?.title).not.toContain('0 object(s)');
+  });
+
+  it('names objects dropped by the query budget rather than truncating silently', async () => {
+    const many = Array.from({ length: 40 }, (_, i) => objPerm(`Obj${i}__c`));
+    const r = await check.run(makeCtx({ users: SVC, psa: [psa()], objPerms: many }));
+    const f = r.findings.find((x) => x.id === 'integration-least-privilege-unused-write-objects')!;
+    expect(f.detail).toContain('not probed');
+  });
+
+  it('suppresses the finding when ObjectPermissions is unreadable, rather than passing', async () => {
+    const r = await check.run(makeCtx({ users: SVC, psa: [psa()], objPermsThrow: true }));
+    expect(r.findings.map((f) => f.id)).not.toContain('integration-least-privilege-unused-write-objects');
+    expect(r.findings.some((f) => f.passed)).toBe(false);
   });
 });
