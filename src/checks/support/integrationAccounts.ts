@@ -243,7 +243,7 @@ const LOGIN_LOOKBACK_DAYS = 90;
  */
 function isApiLogin(row: LoginRow): boolean {
   return /soap|rest|bulk|api/i.test(row.ApiType ?? '') ||
-         /\b(api|soap|bulk|data ?loader)\b/i.test(row.Application ?? '');
+         /\b(apis?|soap|bulk|data ?loader)\b/i.test(row.Application ?? '');
 }
 
 /**
