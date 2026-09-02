@@ -36,6 +36,7 @@ CLAUDE.md
 DESIGN_BRIEF.md
 /docs/superpowers/
 /.superpowers/
+/.claude/
 # Generated audit/intel output — always contains real org data
 orgintel-*.html
 orgintel-*.json
