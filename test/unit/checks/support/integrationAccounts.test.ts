@@ -65,4 +65,18 @@ describe('resolveIntegrationAccounts', () => {
     expect(r.unavailable).toBe(true);
     expect(r.accounts).toEqual([]);
   });
+
+  it('includes escaped underscores in the SOQL query to match literal delimiters', async () => {
+    const ctx = makeCtx({ users: [] });
+    await resolveIntegrationAccounts(ctx);
+    const soql = (ctx.soql.queryAll as jest.Mock).mock.calls[0][0];
+    expect(soql).toContain("%\\_api\\_%");
+    expect(soql).toContain("%\\_svc\\_%");
+  });
+
+  it('excludes accounts that match no intrinsic signals', async () => {
+    const u = user({ Username: 'kapil@acme.com' });
+    const r = await resolveIntegrationAccounts(makeCtx({ users: [u] }));
+    expect(r.accounts).toEqual([]);
+  });
 });
