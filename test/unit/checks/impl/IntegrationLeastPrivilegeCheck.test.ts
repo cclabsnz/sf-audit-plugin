@@ -7,6 +7,8 @@ interface Opts {
   usersThrow?: boolean;
   psa?: unknown[];
   psaThrow?: boolean;
+  logins?: unknown[];
+  loginsThrow?: boolean;
 }
 
 function makeCtx(opts: Opts): AuditContext {
@@ -15,6 +17,10 @@ function makeCtx(opts: Opts): AuditContext {
     if (soql.includes('FROM PermissionSetAssignment')) {
       if (opts.psaThrow) throw new Error('no access');
       return opts.psa ?? [];
+    }
+    if (soql.includes('FROM LoginHistory')) {
+      if (opts.loginsThrow) throw new Error('no access');
+      return opts.logins ?? [];
     }
     if (soql.includes('FROM User')) {
       if (opts.usersThrow) throw new Error('no access');
@@ -111,5 +117,43 @@ describe('IntegrationLeastPrivilegeCheck — structural findings', () => {
     expect(r.findings[0].id).toBe('integration-least-privilege-permissions-inaccessible');
     expect(r.findings[0].inconclusive).toBe(true);
     expect(r.findings.some((f) => f.passed)).toBe(false);
+  });
+});
+
+describe('IntegrationLeastPrivilegeCheck — dormancy and protocol', () => {
+  const check = new IntegrationLeastPrivilegeCheck();
+  const old = new Date(Date.now() - 200 * 86_400_000).toISOString();
+
+  const dormantUser = [{
+    Id: '005a', Username: 'svc.api@acme.com',
+    Profile: { Name: 'Integration', UserLicense: { Name: 'Salesforce' } },
+    LastLoginDate: old, CreatedDate: '2020-01-01T00:00:00.000Z',
+  }];
+
+  it('rates a dormant account holding an escalation permission HIGH', async () => {
+    const r = await check.run(makeCtx({ users: dormantUser, psa: [psa({ PermissionsAuthorApex: true })] }));
+    const f = r.findings.find((x) => x.id === 'integration-least-privilege-dormant')!;
+    expect(f.riskLevel).toBe('HIGH');
+  });
+
+  it('rates a dormant account with only ordinary grants MEDIUM', async () => {
+    const r = await check.run(makeCtx({ users: dormantUser, psa: [psa({ PermissionsViewAllUsers: true })] }));
+    expect(r.findings.find((x) => x.id === 'integration-least-privilege-dormant')!.riskLevel).toBe('MEDIUM');
+  });
+
+  it('does not report a recently used account as dormant', async () => {
+    const r = await check.run(makeCtx({ users: SVC, psa: [psa({ PermissionsAuthorApex: true })] }));
+    expect(r.findings.map((f) => f.id)).not.toContain('integration-least-privilege-dormant');
+  });
+
+  it('notes that an API-only account cannot be exercising a Setup permission', async () => {
+    const ctx = makeCtx({
+      users: SVC,
+      psa: [psa({ PermissionsCustomizeApplication: true })],
+      logins: [{ UserId: '005a', Application: 'Data Loader Bulk', ApiType: 'SOAP Partner', logins: 9 }],
+    });
+    const r = await check.run(ctx);
+    const f = r.findings.find((x) => x.id === 'integration-least-privilege-escalation-permissions')!;
+    expect(f.detail).toContain('only over the API');
   });
 });
