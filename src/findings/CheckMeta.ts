@@ -34,6 +34,7 @@ export const CHECK_META: Record<string, CheckMeta> = {
   'mfa-enforcement':         { effort: 'quick',    impact: 'Portal/external users without MFA let a stolen password reach customer or partner data directly.' },
   'api-client-permission':   { effort: 'quick',    impact: '“Use Any API Client” bypasses API Access Control, letting a user reach the org from any tool.' },
   'integration-users':       { effort: 'moderate', impact: 'Over-privileged service accounts are prime targets: one stolen key grants broad, unattended access.' },
+  'integration-least-privilege': { effort: 'moderate', impact: 'An integration account keeps whatever it was granted at go-live: long-lived credentials, no interactive user to notice misuse, and frequently outside MFA and IP restrictions. Every permission it is not using is standing privilege waiting on a leaked key.' },
   'content-links':           { effort: 'quick',    impact: 'Public file links without expiry or password leak documents to anyone who finds the URL.' },
   'field-history-tracking':  { effort: 'quick',    impact: 'Without field history, tampering with sensitive records can’t be reconstructed after an incident.' },
   'data-classification':     { effort: 'moderate', impact: 'Unclassified sensitive data can’t be protected or encrypted consistently, increasing exposure.' },

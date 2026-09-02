@@ -1,6 +1,6 @@
 # What it checks
 
-The audit runs **88 read-only checks**. The [README](../README.md#what-it-checks) summarises them by domain; this is the full inventory. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into ten domains below.
+The audit runs **90 read-only checks**. The [README](../README.md#what-it-checks) summarises them by domain; this is the full inventory. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into ten domains below.
 
 ## Org Health & Configuration
 | Check | What it looks for |
@@ -39,6 +39,7 @@ The audit runs **88 read-only checks**. The [README](../README.md#what-it-checks
 | Privileged Access & Shadow Admins | Effective high-risk permissions per user (profile + permission sets + groups); admin-equivalent users not on the System Administrator profile |
 | Separation of Duties | Toxic permission combinations a single user holds (e.g. Manage Users + Assign Permission Sets, Author Apex + Modify All Data) |
 | Integration / Service Accounts | Non-human identity inventory and excess privilege |
+| Integration Account Least Privilege | Permissions an integration or service account holds and is not using — escalation-grade permissions (Author Apex, Customize Application, Manage Users), bulk-data permissions, dormant accounts, and object write grants with no record ever written. Read grants are not observable from SOQL and the finding says so |
 | Inactive Users | Active licensed users with no login in 90+ days |
 | Login-As & Delegated Administration | Delegated-admin groups (SOQL) and the "log in as any user" policy read from SecuritySettings — user-impersonation and scoped-escalation paths |
 | Mass Data Export Access | Profiles/permission sets with Weekly Data Export, or API access combined with View/Modify All Data (bulk-exfil capability) |

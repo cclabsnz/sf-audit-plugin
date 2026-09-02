@@ -28,6 +28,7 @@ import { SsoEnforcementCheck } from './impl/SsoEnforcementCheck.js';
 import { MfaEnforcementCheck } from './impl/MfaEnforcementCheck.js';
 import { ApiClientPermissionCheck } from './impl/ApiClientPermissionCheck.js';
 import { IntegrationUsersCheck } from './impl/IntegrationUsersCheck.js';
+import { IntegrationLeastPrivilegeCheck } from './impl/IntegrationLeastPrivilegeCheck.js';
 import { ContentLinksCheck } from './impl/ContentLinksCheck.js';
 import { FieldHistoryTrackingCheck } from './impl/FieldHistoryTrackingCheck.js';
 import { DataClassificationCheck } from './impl/DataClassificationCheck.js';
@@ -129,6 +130,7 @@ export const CHECKS: SecurityCheck[] = [
   new MfaEnforcementCheck(),       // SBS-AUTH-004 (portal users)
   new ApiClientPermissionCheck(),  // SBS-ACS-006
   new IntegrationUsersCheck(),     // SBS-ACS-007/008/009
+  new IntegrationLeastPrivilegeCheck(),   // permissions integration accounts hold and do not use
   new ContentLinksCheck(),         // SBS-FILE-001/002/003
   new FieldHistoryTrackingCheck(), // SBS-DATA-004
   new DataClassificationCheck(),   // SBS-DATA-001/002/003
