@@ -32,6 +32,7 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'mfa-enforcement':         ['OWASP-A07', 'SOC2-CC6.1', 'ISO-A.8.3', 'SBS-AUTH-004'],
   'api-client-permission':   ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.8.3', 'SBS-ACS-006'],
   'integration-users':       ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.5.18', 'SBS-ACS-007', 'SBS-ACS-008', 'SBS-ACS-009'],
+  'integration-least-privilege': ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.5.18', 'SBS-ACS-008', 'SBS-ACS-009'],
   'content-links':           ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.5.14', 'SBS-FILE-001', 'SBS-FILE-002', 'SBS-FILE-003'],
   'field-history-tracking':  ['OWASP-A09', 'SOC2-CC7.2', 'ISO-A.8.15', 'SBS-DATA-004'],
   'data-classification':     ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.5.12', 'SBS-DATA-001', 'SBS-DATA-002'],
@@ -114,6 +115,7 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
 const DOMAIN = {
   accessControl: ['users-and-admins', 'permissions', 'sharing-model', 'public-group-sharing', 'guest-user-access',
                   'field-level-security', 'standard-profiles', 'api-client-permission', 'integration-users',
+                  'integration-least-privilege',
                   'escalation-perms', 'report-folder-access', 'apex-crud-fls', 'apex-rest-endpoint',
                   'guest-executable-apex', 'experience-cloud-site', 'content-links', 'apex-sharing', 'flows-without-sharing',
                   'public-content-exposure', 'privileged-access', 'separation-of-duties',
