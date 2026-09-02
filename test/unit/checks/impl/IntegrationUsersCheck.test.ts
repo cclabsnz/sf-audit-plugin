@@ -135,4 +135,18 @@ describe('IntegrationUsersCheck (post-refactor)', () => {
     expect(q2Sql).toContain('Assignee.Id IN');
     expect(q2Sql).not.toMatch(/LIKE/);
   });
+
+  it('discloses the connected-app-run-as gap on the inventory finding', async () => {
+    // connected-app-run-as is unconditionally degraded by the resolver (Task 2-4) — this is
+    // reachable on every run, not a contrived edge case.
+    const r = await check.run(makeCtx({ candidates: [svcUser] }));
+    const inv = r.findings.find((f) => f.id === 'integration-users-inventory')!;
+    expect(inv.detail).toContain('connected-app-run-as');
+  });
+
+  it('discloses the connected-app-run-as gap on the none finding', async () => {
+    const r = await check.run(makeCtx({ candidates: [] }));
+    const none = r.findings.find((f) => f.id === 'integration-users-none')!;
+    expect(none.detail).toContain('connected-app-run-as');
+  });
 });
