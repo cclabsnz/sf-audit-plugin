@@ -125,5 +125,14 @@ describe('IntegrationUsersCheck (post-refactor)', () => {
     expect(broad).toBeDefined();
     expect(broad!.riskLevel).toBe('HIGH');
     expect(broad!.affectedItems!.map((i) => i.label)).toEqual(['jane.doe@acme.com']);
+
+    // Mechanical proof that Q2 filters on resolved ids, not the old username heuristic: this
+    // fails against the pre-refactor query (no `Assignee.Id IN`, and a `LIKE`-based clause) and
+    // passes against the refactored one. Without this, the behavioural assertions above would
+    // pass unchanged even if Q2 had never been touched, since the mock answers by option, not by
+    // parsing the SOQL text.
+    const q2Sql = ((ctx.soql.query as unknown) as jest.Mock).mock.calls[0][0] as string;
+    expect(q2Sql).toContain('Assignee.Id IN');
+    expect(q2Sql).not.toMatch(/LIKE/);
   });
 });
