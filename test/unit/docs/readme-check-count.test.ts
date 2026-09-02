@@ -68,6 +68,14 @@ describe('check counts stay in sync with the registry', () => {
     expect(total).toBe(N);
   });
 
+  // The inventory's own headline sentence is a third place the number is written down, and it is
+  // how docs/CHECKS.md drifted to a stale "88" while its table was correct.
+  it('the docs/CHECKS.md headline matches the registry', () => {
+    const nums = [...CHECKS_DOC.matchAll(/\*\*(\d+) read-only checks\*\*/g)].map((m) => Number(m[1]));
+    expect(nums.length).toBeGreaterThan(0);
+    for (const n of nums) expect(n).toBe(N);
+  });
+
   it('the README headline matches the registry', () => {
     const nums = [...README.matchAll(/\*\*(\d+) read-only checks\*\*/g)].map((m) => Number(m[1]));
     expect(nums.length).toBeGreaterThan(0);

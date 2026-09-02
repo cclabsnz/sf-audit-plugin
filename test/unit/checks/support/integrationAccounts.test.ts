@@ -199,4 +199,60 @@ describe('resolveIntegrationAccounts — api-only-login', () => {
     expect(r.accounts).toHaveLength(1);
     expect(r.accounts[0].signals).not.toContain('api-only-login');
   });
+
+  // M3: `Application` is a free-text client name. An unanchored /api/ matches the "api" inside
+  // "Rapid7 Insight", which would stamp api-only-login on a plainly interactive login.
+  it('does not treat a connected app whose name merely contains "api" as an API login', async () => {
+    const ctx = makeCtx({
+      users: [svc],
+      logins: [{ UserId: '005a', Application: 'Rapid7 Insight', ApiType: null, logins: 3 }],
+    });
+    const r = await resolveIntegrationAccounts(ctx);
+    expect(r.accounts[0].signals).not.toContain('api-only-login');
+  });
+
+  it('still recognises a genuine API client name', async () => {
+    const ctx = makeCtx({
+      users: [svc],
+      logins: [{ UserId: '005a', Application: 'Data Loader Bulk', ApiType: null, logins: 3 }],
+    });
+    const r = await resolveIntegrationAccounts(ctx);
+    expect(r.accounts[0].signals).toContain('api-only-login');
+  });
+});
+
+describe('resolveIntegrationAccounts — truncation and memoisation', () => {
+  const many = (n: number) => Array.from({ length: n }, (_, i) => user({
+    Id: `005x${String(i).padStart(11, '0')}`, Username: `integration${i}@acme.com`,
+  }));
+
+  it('is not truncated when the candidate query returns fewer rows than its limit', async () => {
+    const r = await resolveIntegrationAccounts(makeCtx({ users: many(3) }));
+    expect(r.truncated).toBe(false);
+  });
+
+  // SBS-ACS-007 asks for ALL non-human identities. A list capped at the query limit that reads as
+  // complete is the wrong answer to that control, so the cap has to surface.
+  it('reports truncation when the candidate query returns its full row limit', async () => {
+    const r = await resolveIntegrationAccounts(makeCtx({ users: many(200) }));
+    expect(r.truncated).toBe(true);
+  });
+
+  it('resolves once per context, so two checks do not each pay for the LoginHistory aggregate', async () => {
+    const ctx = makeCtx({ users: [user()] });
+    const first = await resolveIntegrationAccounts(ctx);
+    const second = await resolveIntegrationAccounts(ctx);
+    expect(second).toBe(first);
+    const loginQueries = ((ctx.soql.queryAll as unknown) as jest.Mock).mock.calls
+      .map((c) => c[0] as string)
+      .filter((s) => s.includes('FROM LoginHistory'));
+    expect(loginQueries).toHaveLength(1);
+  });
+
+  it('resolves independently for a different context', async () => {
+    const a = await resolveIntegrationAccounts(makeCtx({ users: [user()] }));
+    const b = await resolveIntegrationAccounts(makeCtx({ users: [] }));
+    expect(a.accounts).toHaveLength(1);
+    expect(b.accounts).toHaveLength(0);
+  });
 });

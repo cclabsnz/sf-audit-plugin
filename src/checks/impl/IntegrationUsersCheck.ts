@@ -1,7 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { resolveIntegrationAccounts } from '../support/integrationAccounts.js';
+import { resolveIntegrationAccounts, truncationDisclosure } from '../support/integrationAccounts.js';
 
 interface BroadPermRecord {
   Assignee: { Id: string; Username: string };
@@ -62,7 +62,8 @@ export class IntegrationUsersCheck implements SecurityCheck {
         title: 'No candidate non-human identities found: SBS-ACS-007',
         detail:
           'SBS-ACS-007 requires all non-human identities to be inventoried and documented. No standard users matching common service account patterns (by username) or never-logged-in users were found.' +
-          degradedDisclosure(resolved.degraded),
+          degradedDisclosure(resolved.degraded) +
+          truncationDisclosure(resolved.truncated),
         remediation: 'As integration accounts are created, ensure they are documented with a named owner, stated purpose, and review date.',
       });
       return { findings };
@@ -76,7 +77,8 @@ export class IntegrationUsersCheck implements SecurityCheck {
       title: `${candidates.length} candidate non-human identity/identities found: SBS-ACS-007`,
       detail:
         'SBS-ACS-007 requires all non-human identities (integration accounts, service users, automation users) to be inventoried and documented with a named owner, stated purpose, and review date. These users were identified by never having a UI login (and being more than 30 days old) or matching common service-account username patterns.' +
-        degradedDisclosure(resolved.degraded),
+        degradedDisclosure(resolved.degraded) +
+        truncationDisclosure(resolved.truncated),
       remediation:
         'Verify that each listed user is a known, documented non-human identity. Any undocumented account should be reviewed and either documented or deactivated. Maintain a register of all integration identities with their owner and purpose.',
       affectedItems: candidates.map((u) => ({
