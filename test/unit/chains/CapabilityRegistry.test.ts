@@ -43,4 +43,25 @@ describe('CapabilityRegistry', () => {
   it('grants priv-esc to login-as-any-user', () => {
     expect(capabilitiesFor(f('login-access-policy-login-as-enabled')).grants).toContain('priv-esc');
   });
+
+  // guest-user-visibility: three paths to the same outcome, graded differently. The two that expose
+  // every User record on their own are bulk reads; the object-level Read grant is not, because it
+  // still needs a sharing path to return anyone else's record.
+  it('grants unauth-foothold + bulk read to a guest holding View All Users', () => {
+    expect(capabilitiesFor(f('guest-user-visibility-view-all-users')).grants).toEqual(
+      expect.arrayContaining(['unauth-foothold', 'data-read-bulk']),
+    );
+  });
+
+  it('grants unauth-foothold + bulk read to a public external OWD on User', () => {
+    expect(capabilitiesFor(f('guest-user-visibility-owd')).grants).toEqual(
+      expect.arrayContaining(['unauth-foothold', 'data-read-bulk']),
+    );
+  });
+
+  it('grants read but NOT bulk read to a guest Read grant on the User object', () => {
+    const grants = capabilitiesFor(f('guest-user-visibility-object-read')).grants;
+    expect(grants).toEqual(expect.arrayContaining(['unauth-foothold', 'data-read']));
+    expect(grants).not.toContain('data-read-bulk');
+  });
 });

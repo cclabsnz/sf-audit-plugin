@@ -15,7 +15,7 @@
 
 A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audit against any Salesforce org, risk-scores it with an A–F grade, and turns the result into a report your security team (or your client's) can act on.
 
-- **88 read-only checks** across identity, access, data, code, integrations, monitoring, and Agentforce / GenAI
+- **89 read-only checks** across identity, access, data, code, integrations, monitoring, and Agentforce / GenAI
 - **Attack-chain correlation:** links individual findings into named, multi-step attack scenarios — eleven modelled chains, plus an emergent pass for combinations nobody has named yet (see [Attack chains](#attack-chains))
 - **Compliance mapping:** every finding mapped to **source-verified** controls across 10 frameworks (OWASP, OWASP LLM Top 10, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029, NZISM, HIPAA Security Rule, GDPR)
 - **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
@@ -44,7 +44,7 @@ guarantees here are checkable rather than asserted — see [Trust & verification
 sf audit security --target-org <orgAlias>
 ```
 
-Runs all 88 checks and writes an HTML report to the current directory. `sf audit list` prints every
+Runs all 89 checks and writes an HTML report to the current directory. `sf audit list` prints every
 check id.
 
 | Flag | Default | |
@@ -67,7 +67,7 @@ All twelve flags, more examples, and what the executive report contains:
 
 ## What It Checks
 
-**88 read-only checks** across ten domains. Every finding is risk-rated CRITICAL → INFO, mapped to
+**89 read-only checks** across ten domains. Every finding is risk-rated CRITICAL → INFO, mapped to
 compliance controls, and correlated into [attack chains](#attack-chains).
 
 | Domain | Checks |
@@ -75,7 +75,7 @@ compliance controls, and correlated into [attack chains](#attack-chains).
 | Identity & Authentication | 13 |
 | Users, Permissions & Privilege | 11 |
 | Data Access & Sharing | 11 |
-| Guest & External-Facing Access | 11 |
+| Guest & External-Facing Access | 12 |
 | Integrations, Connected Apps & Deployments | 10 |
 | Monitoring & Threat Detection | 10 |
 | Apex & Code Security | 9 |
