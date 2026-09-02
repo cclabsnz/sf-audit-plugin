@@ -149,4 +149,24 @@ describe('IntegrationUsersCheck (post-refactor)', () => {
     const none = r.findings.find((f) => f.id === 'integration-users-none')!;
     expect(none.detail).toContain('connected-app-run-as');
   });
+
+  // SBS-ACS-007 requires ALL non-human identities to be inventoried. The candidate query is capped,
+  // and this branch widened its predicate, so a count that reads as complete has to say when it is
+  // only a floor.
+  it('discloses a truncated candidate set on the inventory finding', async () => {
+    const many = Array.from({ length: 200 }, (_, i) => ({
+      Id: `005x${String(i).padStart(11, '0')}`, Username: `integration${i}@acme.com`,
+      Profile: { Name: 'Integration' }, LastLoginDate: null, CreatedDate: '2020-01-01T00:00:00.000Z',
+    }));
+    const r = await check.run(makeCtx({ candidates: many }));
+    const inv = r.findings.find((f) => f.id === 'integration-users-inventory')!;
+    expect(inv.detail).toContain('truncated');
+    expect(inv.detail).toContain('floor');
+  });
+
+  it('does not claim truncation when the candidate set is under the limit', async () => {
+    const r = await check.run(makeCtx({ candidates: [svcUser] }));
+    const inv = r.findings.find((f) => f.id === 'integration-users-inventory')!;
+    expect(inv.detail).not.toContain('truncated');
+  });
 });

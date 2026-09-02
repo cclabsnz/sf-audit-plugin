@@ -22,6 +22,13 @@ export interface ResolveResult {
   degraded: IntegrationSignal[];
   /** True when the candidate query itself failed: callers go inconclusive. */
   unavailable: boolean;
+  /**
+   * True when the candidate query returned exactly its row limit, so the org may hold further
+   * integration accounts this run never saw. Any finding that counts or lists accounts must
+   * disclose it: SBS-ACS-007 asks for *all* non-human identities, and a truncated list that
+   * reads as complete is the wrong answer to that control.
+   */
+  truncated: boolean;
 }
 
 /**
@@ -50,6 +57,9 @@ const INTEGRATION_LICENSE = 'Salesforce Integration';
 
 const NEVER_LOGGED_IN_MIN_AGE_DAYS = 30;
 
+/** Row cap on the candidate query. Hitting it sets `truncated`, which callers must disclose. */
+const CANDIDATE_LIMIT = 200;
+
 interface UserRow {
   Id: string;
   Username: string;
@@ -58,7 +68,41 @@ interface UserRow {
   CreatedDate: string;
 }
 
-export async function resolveIntegrationAccounts(ctx: AuditContext): Promise<ResolveResult> {
+/**
+ * The sentence findings use to disclose a truncated account set. Defined here, next to the limit
+ * it describes, so the two checks cannot state different numbers.
+ */
+export function truncationDisclosure(truncated: boolean): string {
+  if (!truncated) return '';
+  return ` The candidate query returned its maximum of ${CANDIDATE_LIMIT} rows, so the account set is truncated: further integration or service accounts may exist in this org that this run never examined. Treat any count or list here as a floor rather than a complete inventory.`;
+}
+
+/**
+ * One resolve per audit run, per context.
+ *
+ * Both `integration-users` and `integration-least-privilege` need the same account set, and the
+ * resolver's slowest query is a 90-day `LoginHistory` aggregate — running it twice per audit buys
+ * nothing. Memoising on the context object rather than `AuditCache` keeps this free of the
+ * registry-ordering constraint that cache dependencies impose (see CheckEngine.validateCacheOrdering),
+ * which the design deliberately avoided, and the WeakMap lets the whole result go when the context does.
+ */
+const inFlight = new WeakMap<AuditContext, Promise<ResolveResult>>();
+
+export function resolveIntegrationAccounts(ctx: AuditContext): Promise<ResolveResult> {
+  const cached = inFlight.get(ctx);
+  if (cached) return cached;
+  // A rejection must not be cached: the second caller would inherit a failure it never provoked
+  // and could never retry. resolve() catches its own query failures (returning `unavailable`),
+  // so this path is defensive rather than expected.
+  const pending = resolve(ctx).catch((err: unknown) => {
+    inFlight.delete(ctx);
+    throw err;
+  });
+  inFlight.set(ctx, pending);
+  return pending;
+}
+
+async function resolve(ctx: AuditContext): Promise<ResolveResult> {
   const degraded: IntegrationSignal[] = [];
 
   // connected-app-run-as is not implemented: confirming which object exposes a connected app's
@@ -78,22 +122,16 @@ export async function resolveIntegrationAccounts(ctx: AuditContext): Promise<Res
                OR ${SERVICE_LIKE_CLAUSES.join(' OR ')} )
          AND Id NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)
        ORDER BY LastLoginDate ASC NULLS FIRST
-       LIMIT 200`,
+       LIMIT ${CANDIDATE_LIMIT}`,
     );
   } catch {
-    return { accounts: [], degraded, unavailable: true };
+    return { accounts: [], degraded, unavailable: true, truncated: false };
   }
 
+  const truncated = rows.length >= CANDIDATE_LIMIT;
+
   const byId = new Map<string, IntegrationAccount>();
-  for (const r of rows) {
-    byId.set(r.Id, {
-      id: r.Id,
-      username: r.Username,
-      profileName: r.Profile?.Name ?? 'unknown',
-      lastLoginDate: r.LastLoginDate,
-      signals: intrinsicSignals(r),
-    });
-  }
+  for (const r of rows) byId.set(r.Id, toAccount(r));
 
   const jobOwnerIds = await resolveJobOwnerIds(ctx, degraded);
   await mergePlatformSignal(ctx, byId, jobOwnerIds, 'scheduled-job-owner');
@@ -107,7 +145,22 @@ export async function resolveIntegrationAccounts(ctx: AuditContext): Promise<Res
   // having the signal at all.
   const accounts = [...byId.values()].filter((a) => a.signals.length > 0);
 
-  return { accounts, degraded, unavailable: false };
+  return { accounts, degraded, unavailable: false, truncated };
+}
+
+/**
+ * One row → account mapping, used by both the candidate loop and the platform-signal enrichment
+ * loop. Two copies of this is how the two paths would drift: an account pulled in by a platform
+ * signal must be described exactly as one the candidate query returned.
+ */
+function toAccount(r: UserRow): IntegrationAccount {
+  return {
+    id: r.Id,
+    username: r.Username,
+    profileName: r.Profile?.Name ?? 'unknown',
+    lastLoginDate: r.LastLoginDate,
+    signals: intrinsicSignals(r),
+  };
 }
 
 function intrinsicSignals(r: UserRow): IntegrationSignal[] {
@@ -154,15 +207,7 @@ async function mergePlatformSignal(
         `SELECT Id, Username, Profile.Name, Profile.UserLicense.Name, LastLoginDate, CreatedDate
          FROM User WHERE IsActive = true AND Id IN (${inList})`,
       );
-      for (const r of extra) {
-        byId.set(r.Id, {
-          id: r.Id,
-          username: r.Username,
-          profileName: r.Profile?.Name ?? 'unknown',
-          lastLoginDate: r.LastLoginDate,
-          signals: intrinsicSignals(r),
-        });
-      }
+      for (const r of extra) byId.set(r.Id, toAccount(r));
     } catch {
       // The signal's ids are known but the users are unreadable: the accounts we do have stand.
     }
@@ -183,10 +228,22 @@ interface LoginRow {
 
 const LOGIN_LOOKBACK_DAYS = 90;
 
-/** A login that arrived over an API rather than an interactive session. */
+/**
+ * A login that arrived over an API rather than an interactive session.
+ *
+ * `Application` is a free-text client name, so the alternatives are word-bounded: an unanchored
+ * `api` matches the "api" inside a connected app called "Rapid7 Insight", which would stamp
+ * `api-only-login` on an interactive login and, through it, an aggravating note on a CRITICAL
+ * finding. `ApiType` is a controlled vocabulary ("SOAP Partner", "REST", "Bulk"), so substring
+ * matching there is safe and is what actually carries most API logins.
+ *
+ * The same LoginHistory Application/ApiType classification is used by `SoapLoginApiAuthCheck`'s
+ * `isSoapLogin`, which stays deliberately broad — it grades readiness for a release update, where
+ * over-matching costs a needless review, whereas over-matching here mislabels an account.
+ */
 function isApiLogin(row: LoginRow): boolean {
   return /soap|rest|bulk|api/i.test(row.ApiType ?? '') ||
-         /api|soap|bulk|data ?loader/i.test(row.Application ?? '');
+         /\b(api|soap|bulk|data ?loader)\b/i.test(row.Application ?? '');
 }
 
 /**
