@@ -83,9 +83,7 @@ export class IntegrationUsersCheck implements SecurityCheck {
       `SELECT Assignee.Id, Assignee.Username,
               PermissionSet.Name, PermissionSet.PermissionsModifyAllData, PermissionSet.PermissionsViewAllData
        FROM PermissionSetAssignment
-       WHERE Assignee.IsActive = true
-         AND Assignee.UserType = 'Standard'
-         AND Assignee.Id IN (${idList})
+       WHERE Assignee.Id IN (${idList})
          AND (PermissionSet.PermissionsModifyAllData = true OR PermissionSet.PermissionsViewAllData = true)
        LIMIT 200`
     );
