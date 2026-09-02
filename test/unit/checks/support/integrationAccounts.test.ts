@@ -8,6 +8,8 @@ interface Opts {
   jobs?: unknown[];
   jobsThrow?: boolean;
   extraUsers?: unknown[];
+  logins?: unknown[];
+  loginsThrow?: boolean;
 }
 
 export function makeCtx(opts: Opts): AuditContext {
@@ -16,6 +18,10 @@ export function makeCtx(opts: Opts): AuditContext {
     if (soql.includes('FROM AsyncApexJob')) {
       if (opts.jobsThrow) throw new Error('no access');
       return opts.jobs ?? [];
+    }
+    if (soql.includes('FROM LoginHistory')) {
+      if (opts.loginsThrow) throw new Error('no access');
+      return opts.logins ?? [];
     }
     if (soql.includes('FROM User') && soql.includes('Id IN')) {
       return opts.extraUsers ?? [];
@@ -156,5 +162,41 @@ describe('resolveIntegrationAccounts — platform signals', () => {
   it('always discloses connected-app-run-as as degraded (unimplemented pending live-org gate)', async () => {
     const r = await resolveIntegrationAccounts(makeCtx({ users: [] }));
     expect(r.degraded).toContain('connected-app-run-as');
+  });
+});
+
+describe('resolveIntegrationAccounts — api-only-login', () => {
+  const svc = {
+    Id: '005a', Username: 'svc.api@acme.com',
+    Profile: { Name: 'Integration', UserLicense: { Name: 'Salesforce' } },
+    LastLoginDate: '2026-08-01T00:00:00.000Z', CreatedDate: '2020-01-01T00:00:00.000Z',
+  };
+
+  it('flags an account whose only logins are API logins', async () => {
+    const ctx = makeCtx({
+      users: [svc],
+      logins: [{ UserId: '005a', Application: 'Data Loader Bulk', ApiType: 'SOAP Partner', logins: 12 }],
+    });
+    const r = await resolveIntegrationAccounts(ctx);
+    expect(r.accounts[0].signals).toContain('api-only-login');
+  });
+
+  it('does not flag an account with any browser login', async () => {
+    const ctx = makeCtx({
+      users: [svc],
+      logins: [
+        { UserId: '005a', Application: 'Data Loader Bulk', ApiType: 'SOAP Partner', logins: 12 },
+        { UserId: '005a', Application: 'Browser', ApiType: null, logins: 1 },
+      ],
+    });
+    const r = await resolveIntegrationAccounts(ctx);
+    expect(r.accounts[0].signals).not.toContain('api-only-login');
+  });
+
+  it('degrades the signal when LoginHistory is unreadable, keeping the account', async () => {
+    const r = await resolveIntegrationAccounts(makeCtx({ users: [svc], loginsThrow: true }));
+    expect(r.degraded).toContain('api-only-login');
+    expect(r.accounts).toHaveLength(1);
+    expect(r.accounts[0].signals).not.toContain('api-only-login');
   });
 });

@@ -98,6 +98,8 @@ export async function resolveIntegrationAccounts(ctx: AuditContext): Promise<Res
   const jobOwnerIds = await resolveJobOwnerIds(ctx, degraded);
   await mergePlatformSignal(ctx, byId, jobOwnerIds, 'scheduled-job-owner');
 
+  await mergeApiOnlySignal(ctx, byId, degraded);
+
   // A returned account with no signal is one the resolver cannot explain; downstream findings
   // name the signals as their justification. This filter must run after every signal merge above
   // — an account reachable only through a platform signal (e.g. scheduled-job-owner) has no
@@ -169,5 +171,58 @@ async function mergePlatformSignal(
   for (const id of ids) {
     const acct = byId.get(id);
     if (acct && !acct.signals.includes(signal)) acct.signals.push(signal);
+  }
+}
+
+interface LoginRow {
+  UserId: string | null;
+  Application: string | null;
+  ApiType: string | null;
+  logins: number;
+}
+
+const LOGIN_LOOKBACK_DAYS = 90;
+
+/** A login that arrived over an API rather than an interactive session. */
+function isApiLogin(row: LoginRow): boolean {
+  return /soap|rest|bulk|api/i.test(row.ApiType ?? '') ||
+         /api|soap|bulk|data ?loader/i.test(row.Application ?? '');
+}
+
+/**
+ * Flags an account whose logins over the window are all API/SOAP/Bulk and never interactive.
+ * Application and ApiType are groupable but not filterable on LoginHistory — a WHERE clause
+ * naming either returns a parse error — so the query groups by them and this filters in memory.
+ */
+async function mergeApiOnlySignal(
+  ctx: AuditContext,
+  byId: Map<string, IntegrationAccount>,
+  degraded: IntegrationSignal[],
+): Promise<void> {
+  let rows: LoginRow[];
+  try {
+    rows = await ctx.soql.queryAll<LoginRow>(
+      `SELECT UserId, Application, ApiType, COUNT(Id) logins
+       FROM LoginHistory
+       WHERE LoginTime = LAST_N_DAYS:${LOGIN_LOOKBACK_DAYS}
+       GROUP BY UserId, Application, ApiType`,
+    );
+  } catch {
+    degraded.push('api-only-login');
+    return;
+  }
+
+  const apiOnly = new Map<string, boolean>();
+  for (const row of rows) {
+    if (!row.UserId || !byId.has(row.UserId)) continue;
+    const soFar = apiOnly.get(row.UserId);
+    const thisRowIsApi = isApiLogin(row);
+    apiOnly.set(row.UserId, soFar === false ? false : thisRowIsApi);
+  }
+
+  for (const [id, only] of apiOnly) {
+    if (!only) continue;
+    const acct = byId.get(id);
+    if (acct && !acct.signals.includes('api-only-login')) acct.signals.push('api-only-login');
   }
 }
