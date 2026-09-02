@@ -231,3 +231,24 @@ describe('IntegrationLeastPrivilegeCheck — write evidence', () => {
     expect(r.findings.some((f) => f.passed)).toBe(false);
   });
 });
+
+describe('IntegrationLeastPrivilegeCheck — the passing path', () => {
+  const check = new IntegrationLeastPrivilegeCheck();
+
+  it('passes with -ok when accounts exist and hold nothing surplus', async () => {
+    const r = await check.run(makeCtx({ users: SVC, psa: [psa()] }));
+    expect(r.findings.map((f) => f.id)).toEqual(['integration-least-privilege-ok']);
+    expect(r.findings[0].passed).toBe(true);
+  });
+
+  it('names the read blind spot in the passing finding', async () => {
+    const r = await check.run(makeCtx({ users: SVC, psa: [psa()] }));
+    expect(r.findings[0].detail).toContain('Read grant');
+    expect(r.findings[0].detail).toContain('sf audit apps');
+  });
+
+  it('discloses a degraded signal in the passing finding', async () => {
+    const r = await check.run(makeCtx({ users: SVC, psa: [psa()], loginsThrow: true }));
+    expect(r.findings[0].detail).toContain('api-only-login');
+  });
+});
