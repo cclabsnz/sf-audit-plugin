@@ -194,7 +194,7 @@ To triage captured logs for abuse patterns, pair `events pull` with the companio
 
 - Node.js 18+
 - Salesforce CLI (`sf`) v2+
-- A least-privilege, **read-only** org user. The audit performs no writes and does **not** require `View All Data`. See **[PERMISSIONS.md](PERMISSIONS.md)** for the exact minimum permission set, what each is for, what the tool does *not* need, and a ready-to-deploy `SF Audit (Read-Only)` permission set ([`docs/permissionset/`](docs/permissionset/SF_Audit_ReadOnly.permissionset-meta.xml)).
+- A least-privilege, **read-only** org user. The audit performs no writes and does **not** require `View All Data` — without it one probe (integration write evidence) reports *inconclusive* rather than drawing a conclusion. See **[PERMISSIONS.md](PERMISSIONS.md)** for the exact minimum permission set, what each is for, what the tool does *not* need, and a ready-to-deploy `SF Audit (Read-Only)` permission set ([`docs/permissionset/`](docs/permissionset/SF_Audit_ReadOnly.permissionset-meta.xml)).
 
 ## Development
 
