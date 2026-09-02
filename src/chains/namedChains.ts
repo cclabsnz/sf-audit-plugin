@@ -111,6 +111,9 @@ export const NAMED_CHAINS: NamedChainDef[] = [
         'privileged-access-shadow-admins',
         'separation-of-duties-self-escalation', 'separation-of-duties-identity-takeover',
         'separation-of-duties-grant-self-data',
+        // An integration account holding Author Apex, Customize Application or user-management
+        // permissions it does not use has the same escalation reach as users-author-apex above.
+        'integration-least-privilege-escalation-permissions',
       ]);
       return steps.length >= 2 ? steps : null;
     },
@@ -252,6 +255,9 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       const broadRead = byIds(active, [
         'public-group-sharing-exposure', 'report-folder-access-public',
         'users-view-all-data', 'users-modify-all-data',
+        // An unused Data Export or View All Users grant on an integration account is the same
+        // bulk-read reach as the other members of this set.
+        'integration-least-privilege-data-permissions',
       ]);
       const bulkEgress = byIds(active, [
         'data-export-weekly-export', 'data-export-bulk-api-viewall',

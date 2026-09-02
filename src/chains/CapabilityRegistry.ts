@@ -106,6 +106,13 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // Sensitive data present and readable — what every other capability is ultimately reaching for.
   'encryption-coverage-unencrypted-sensitive':  { grants: ['data-read'] },
   'sandbox-data-masking-pii-present':           { grants: ['data-read'] },
+  // Integration accounts holding permissions they do not use. Author Apex and Customize Application
+  // deploy code that runs in system context, and the user-management permissions let the holder
+  // grant itself the rest — the same reach as 'users-author-apex', on an account with long-lived
+  // credentials and nobody watching. The unused-grant and dormancy findings grant nothing: an
+  // unexercised permission is not a capability an attacker holds today.
+  'integration-least-privilege-escalation-permissions': { grants: ['code-exec', 'priv-esc'] },
+  'integration-least-privilege-data-permissions':       { grants: ['data-read-bulk'] },
 };
 
 /** Resolve the effective capabilities for a finding (inline overrides registry; passed/inconclusive yield nothing). */
