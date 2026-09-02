@@ -2,6 +2,9 @@ import { jest } from '@jest/globals';
 import { IntegrationLeastPrivilegeCheck } from '../../../../src/checks/impl/IntegrationLeastPrivilegeCheck.js';
 import type { AuditContext } from '@cclabsnz/sf-core';
 
+/** 15-char User id, the shape `recordVisibility` validates before interpolating it. */
+const AUDIT_USER_ID = '005AUDIT00000AA';
+
 interface Opts {
   users?: unknown[];
   usersThrow?: boolean;
@@ -12,12 +15,28 @@ interface Opts {
   objPerms?: unknown[];
   objPermsThrow?: boolean;
   writes?: Record<string, 'THROW' | { CreatedById?: unknown[]; LastModifiedById?: unknown[] }>;
+  /** Identity of the running audit user, as `/chatter/users/me` answers it. */
+  auditUser?: 'THROW' | 'NO_ID' | string;
+  /** What the running audit user's own permission-set assignments say about record visibility. */
+  auditUserSeesAllRecords?: boolean | 'THROW';
+  /** Assignments of the granting permission sets held by users outside the integration set. */
+  sharedAssignments?: unknown[] | 'THROW';
 }
 
 function makeCtx(opts: Opts): AuditContext {
   const queryAll = jest.fn() as any;
   queryAll.mockImplementation(async (soql: string) => {
     if (soql.includes('FROM PermissionSetAssignment')) {
+      // The running audit user's own visibility, not the integration accounts' grants.
+      if (/AssigneeId = '/.test(soql)) {
+        if (opts.auditUserSeesAllRecords === 'THROW') throw new Error('no access');
+        const sees = opts.auditUserSeesAllRecords ?? true;
+        return [{ PermissionSet: { PermissionsViewAllData: sees, PermissionsModifyAllData: false } }];
+      }
+      if (soql.includes('GROUP BY PermissionSetId')) {
+        if (opts.sharedAssignments === 'THROW') throw new Error('no access');
+        return opts.sharedAssignments ?? [];
+      }
       if (opts.psaThrow) throw new Error('no access');
       return opts.psa ?? [];
     }
@@ -42,10 +61,16 @@ function makeCtx(opts: Opts): AuditContext {
     }
     return [];
   });
+  const get = jest.fn() as any;
+  get.mockImplementation(async () => {
+    if (opts.auditUser === 'THROW') throw new Error('Chatter is disabled in this organization');
+    if (opts.auditUser === 'NO_ID') return {};
+    return { id: opts.auditUser ?? AUDIT_USER_ID };
+  });
   return {
     soql: { query: jest.fn(), queryAll } as any,
     tooling: { query: jest.fn(), getRecord: jest.fn() } as any,
-    rest: {} as any,
+    rest: { get } as any,
     orgInfo: { id: 'o', name: 'n', type: 'DE', isSandbox: false, instance: 'NA1', instanceUrl: 'https://x' },
     cache: {},
   } as any;
@@ -160,15 +185,42 @@ describe('IntegrationLeastPrivilegeCheck — dormancy and protocol', () => {
     expect(r.findings.map((f) => f.id)).not.toContain('integration-least-privilege-dormant');
   });
 
-  it('notes that an API-only account cannot be exercising a Setup permission', async () => {
-    const ctx = makeCtx({
-      users: SVC,
-      psa: [psa({ PermissionsCustomizeApplication: true })],
-      logins: [{ UserId: '005a', Application: 'Data Loader Bulk', ApiType: 'SOAP Partner', logins: 9 }],
-    });
-    const r = await check.run(ctx);
+  // Rewritten from "notes that an API-only account cannot be exercising a Setup permission".
+  // That claim was false: every escalation permission in this finding is exercisable over the API
+  // (Author Apex via Metadata API deploys and anonymous Apex, Manage Users via User DML, and so
+  // on). The note now says what api-only actually establishes — no human is driving these through
+  // the UI — and must not claim the permission cannot be exercised.
+  const apiOnlyCtx = () => makeCtx({
+    users: SVC,
+    psa: [psa({
+      PermissionsCustomizeApplication: true,
+      PermissionsDataExport: true,
+      PermissionsPasswordNeverExpires: true,
+    })],
+    logins: [{ UserId: '005a', Application: 'Data Loader Bulk', ApiType: 'SOAP Partner', logins: 9 }],
+  });
+
+  it('notes on an API-only account that no human is exercising the escalation permissions through the UI', async () => {
+    const r = await check.run(apiOnlyCtx());
     const f = r.findings.find((x) => x.id === 'integration-least-privilege-escalation-permissions')!;
-    expect(f.detail).toContain('only over the API');
+    expect(f.detail).toContain('no interactive login');
+    expect(f.detail).toContain('not evidence they are unused');
+    expect(f.detail).not.toContain('cannot be being exercised');
+  });
+
+  it('scopes the api-only note to the escalation finding, never to data or hygiene', async () => {
+    const r = await check.run(apiOnlyCtx());
+    const data = r.findings.find((x) => x.id === 'integration-least-privilege-data-permissions')!;
+    const hygiene = r.findings.find((x) => x.id === 'integration-least-privilege-hygiene')!;
+    expect(data.detail).not.toContain('no interactive login');
+    expect(hygiene.detail).not.toContain('no interactive login');
+  });
+
+  it('describes a dormant account\'s risk as unlikely to be noticed, not "missed while it is used"', async () => {
+    const r = await check.run(makeCtx({ users: dormantUser, psa: [psa({ PermissionsAuthorApex: true })] }));
+    const f = r.findings.find((x) => x.id === 'integration-least-privilege-dormant')!;
+    expect(f.detail).toContain('unlikely to be noticed');
+    expect(f.detail).not.toContain('missed while it is used');
   });
 });
 
@@ -218,11 +270,128 @@ describe('IntegrationLeastPrivilegeCheck — write evidence', () => {
     expect(f?.title).not.toContain('0 object(s)');
   });
 
+  // C1: the probe runs with sharing enforced as the audit user. Without View All Data an object
+  // whose records are simply invisible returns zero rows, which is indistinguishable from "never
+  // written" — so no object may be reported as unused on such a run.
+  it('reports every object as unprobed, never as unused, when the audit user lacks View All Data', async () => {
+    const r = await check.run(makeCtx({
+      users: SVC, psa: [psa()], objPerms: [objPerm('Opportunity')],
+      auditUserSeesAllRecords: false,
+    }));
+    const f = r.findings.find((x) => x.id === 'integration-least-privilege-unused-write-objects')!;
+    expect(f.inconclusive).toBe(true);
+    expect(f.affectedItems!.some((i) => i.note?.includes('never written'))).toBe(false);
+    expect(f.affectedItems![0].note).toContain('View All Data');
+    expect(f.detail).toContain('does not hold View All Data');
+  });
+
+  it('does not run the record probes at all when the audit user lacks View All Data', async () => {
+    const ctx = makeCtx({
+      users: SVC, psa: [psa()], objPerms: [objPerm('Opportunity')],
+      auditUserSeesAllRecords: false,
+    });
+    await check.run(ctx);
+    const probes = ((ctx.soql.queryAll as unknown) as jest.Mock).mock.calls
+      .map((c) => c[0] as string)
+      .filter((s) => /FROM Opportunity WHERE CreatedById/.test(s));
+    expect(probes).toEqual([]);
+  });
+
+  it('draws no conclusion when the running audit user cannot be identified', async () => {
+    const r = await check.run(makeCtx({
+      users: SVC, psa: [psa()], objPerms: [objPerm('Opportunity')],
+      auditUser: 'THROW',
+    }));
+    const f = r.findings.find((x) => x.id === 'integration-least-privilege-unused-write-objects')!;
+    expect(f.inconclusive).toBe(true);
+    expect(f.affectedItems![0].note).toContain('could not be established');
+  });
+
+  it('draws no conclusion when the identity response carries no usable user id', async () => {
+    const r = await check.run(makeCtx({
+      users: SVC, psa: [psa()], objPerms: [objPerm('Opportunity')],
+      auditUser: 'NO_ID',
+    }));
+    expect(r.findings.find((x) => x.id === 'integration-least-privilege-unused-write-objects')!.inconclusive).toBe(true);
+  });
+
+  it('does not interpolate an unexpected identity value into a query', async () => {
+    const ctx = makeCtx({
+      users: SVC, psa: [psa()], objPerms: [objPerm('Opportunity')],
+      auditUser: "005' OR Id != null--",
+    });
+    await check.run(ctx);
+    const sqls = ((ctx.soql.queryAll as unknown) as jest.Mock).mock.calls.map((c) => c[0] as string);
+    expect(sqls.some((s) => s.includes('OR Id != null'))).toBe(false);
+  });
+
+  it('names the View All Data dependency in the write-evidence finding', async () => {
+    const r = await check.run(makeCtx({ users: SVC, psa: [psa()], objPerms: [objPerm('Opportunity')] }));
+    const f = r.findings.find((x) => x.id === 'integration-least-privilege-unused-write-objects')!;
+    expect(f.detail).toContain('View All Data');
+    expect(f.detail).toContain('sharing enforced');
+  });
+
+  // I1: "remove the grant" is destructive advice when the grant is a shared profile or an org-wide
+  // permission set, so each unused object has to name where the grant comes from and how widely
+  // that grant is held.
+  it('names the granting permission set on each unused object', async () => {
+    const r = await check.run(makeCtx({ users: SVC, psa: [psa()], objPerms: [objPerm('Opportunity')] }));
+    const item = r.findings.find((x) => x.id === 'integration-least-privilege-unused-write-objects')!.affectedItems![0];
+    expect(item.note).toContain('via permission set Integration PS');
+  });
+
+  it('names the granting profile when the grant is profile-owned', async () => {
+    const r = await check.run(makeCtx({
+      users: SVC,
+      psa: [psa({ IsOwnedByProfile: true, Name: 'Integration Profile' })],
+      objPerms: [objPerm('Opportunity')],
+    }));
+    const item = r.findings.find((x) => x.id === 'integration-least-privilege-unused-write-objects')!.affectedItems![0];
+    expect(item.note).toContain('via profile Integration Profile');
+  });
+
+  it('warns on the item when the granting set is assigned outside the integration set', async () => {
+    const r = await check.run(makeCtx({
+      users: SVC, psa: [psa()], objPerms: [objPerm('Opportunity')],
+      sharedAssignments: [{ PermissionSetId: '0PS1', c: 1204 }],
+    }));
+    const f = r.findings.find((x) => x.id === 'integration-least-privilege-unused-write-objects')!;
+    expect(f.affectedItems![0].note).toContain('1204 account(s) outside this integration set');
+    expect(f.remediation).toContain('assigned outside this integration set');
+    expect(f.remediation).not.toMatch(/^Remove /);
+  });
+
+  it('says the assignment breadth is unknown rather than implying the grant is exclusive', async () => {
+    const r = await check.run(makeCtx({
+      users: SVC, psa: [psa()], objPerms: [objPerm('Opportunity')],
+      sharedAssignments: 'THROW',
+    }));
+    const item = r.findings.find((x) => x.id === 'integration-least-privilege-unused-write-objects')!.affectedItems![0];
+    expect(item.note).toContain('could not be established');
+  });
+
   it('names objects dropped by the query budget rather than truncating silently', async () => {
     const many = Array.from({ length: 40 }, (_, i) => objPerm(`Obj${i}__c`));
     const r = await check.run(makeCtx({ users: SVC, psa: [psa()], objPerms: many }));
     const f = r.findings.find((x) => x.id === 'integration-least-privilege-unused-write-objects')!;
     expect(f.detail).toContain('not probed');
+  });
+
+  // M1: with more objects than the display cap, a genuine probe failure used to be ordered behind
+  // budget-skipped objects and pushed out of the visible list while still counted in the title.
+  it('shows probe failures ahead of budget-skipped objects and counts both separately', async () => {
+    const many = Array.from({ length: 40 }, (_, i) => objPerm(`Obj${i}__c`));
+    const r = await check.run(makeCtx({
+      users: SVC, psa: [psa()], objPerms: many,
+      writes: { Obj0__c: 'THROW' },
+    }));
+    const f = r.findings.find((x) => x.id === 'integration-least-privilege-unused-write-objects')!;
+    const unprobedItems = f.affectedItems!.filter((i) => i.note?.startsWith('not probed'));
+    expect(unprobedItems[0].label).toBe('Obj0__c');
+    expect(unprobedItems[0].note).toContain('record-count query failed');
+    expect(f.detail).toContain('1 object(s) were not probed because the record-count query failed');
+    expect(f.detail).toContain('10 object(s) were not probed for budget');
   });
 
   it('suppresses the finding when ObjectPermissions is unreadable, rather than passing', async () => {
@@ -269,5 +438,50 @@ describe('IntegrationLeastPrivilegeCheck — the passing path', () => {
   it('discloses a degraded signal in the passing finding', async () => {
     const r = await check.run(makeCtx({ users: SVC, psa: [psa()], loginsThrow: true }));
     expect(r.findings[0].detail).toContain('api-only-login');
+  });
+
+  // M4: the qualification count was hard-coded to "Two" regardless of how many signals degraded.
+  it('agrees in number with how many signals actually degraded', async () => {
+    const one = await check.run(makeCtx({ users: SVC, psa: [psa()] }));
+    expect(one.findings[0].detail).toContain('One qualification:');
+
+    const two = await check.run(makeCtx({ users: SVC, psa: [psa()], loginsThrow: true }));
+    expect(two.findings[0].detail).toContain('2 qualifications:');
+  });
+
+  it('names the record-visibility limit of the write probe in the passing finding', async () => {
+    const r = await check.run(makeCtx({ users: SVC, psa: [psa()] }));
+    expect(r.findings[0].detail).toContain('View All Data');
+  });
+
+  it('discloses a truncated candidate set in the passing finding', async () => {
+    const many = Array.from({ length: 200 }, (_, i) => ({
+      Id: `005x${String(i).padStart(11, '0')}`, Username: `integration${i}@acme.com`,
+      Profile: { Name: 'Integration', UserLicense: { Name: 'Salesforce' } },
+      LastLoginDate: '2026-08-25T00:00:00.000Z', CreatedDate: '2020-01-01T00:00:00.000Z',
+    }));
+    const r = await check.run(makeCtx({ users: many, psa: [] }));
+    expect(r.findings[0].id).toBe('integration-least-privilege-ok');
+    expect(r.findings[0].detail).toContain('truncated');
+  });
+});
+
+describe('IntegrationLeastPrivilegeCheck — the -none finding', () => {
+  const check = new IntegrationLeastPrivilegeCheck();
+
+  // C3: connected-app-run-as is never gathered (the resolver reports it degraded on every run), so
+  // listing it among the signals that were matched claimed an evaluation that never happened — on
+  // the finding most likely to be read as "you have no integration accounts".
+  it('does not claim the unimplemented connected-app run-as signal was evaluated', async () => {
+    const r = await check.run(makeCtx({ users: [] }));
+    const none = r.findings.find((f) => f.id === 'integration-least-privilege-none')!;
+    expect(none.detail).not.toContain('connected-app run-as user');
+  });
+
+  it('discloses the connected-app-run-as gap on the none finding', async () => {
+    const r = await check.run(makeCtx({ users: [] }));
+    const none = r.findings.find((f) => f.id === 'integration-least-privilege-none')!;
+    expect(none.detail).toContain('connected-app-run-as');
+    expect(none.detail).toContain('could not be gathered');
   });
 });

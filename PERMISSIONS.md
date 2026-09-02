@@ -10,9 +10,19 @@ audit, what each permission is for, and (importantly for a client security
 team) what the tool explicitly does **not** need.
 
 > **Key reassurance for the org owner:** the tool reads *configuration and
-> metadata*, not your business records. It checks Org-Wide Defaults via
+> metadata*, not your business record content. It checks Org-Wide Defaults via
 > `EntityDefinition` (describe), not by reading Account/Contact/Opportunity
-> data. It does **not** require `View All Data`.
+> data. It does **not** require `View All Data` to run.
+>
+> One check is a partial exception, and it is stated plainly rather than buried:
+> **Integration Account Least Privilege** (`integration-least-privilege`) asks
+> whether an integration account has ever written to an object it holds
+> Create/Edit/Delete on. It does that with grouped **ownership aggregates** —
+> `SELECT CreatedById, COUNT(Id) … GROUP BY CreatedById` — which return only
+> owner ids and row counts. **No field value of any record is ever selected,
+> read, or stored.** See ["Record visibility and the write-evidence
+> probe"](#record-visibility-and-the-write-evidence-probe) below for what that
+> probe can and cannot conclude without `View All Data`.
 
 ## Recommended setup
 
@@ -43,7 +53,11 @@ permissions below, and nothing else. A starter permission-set definition is in
 Grant **none** of these. They are unnecessary for a read-only audit and a client
 security team is right to refuse them:
 
-- **`View All Data`:** not required; the tool reads metadata/config, not records
+- **`View All Data`:** not required to run. Every check works without it, and no
+  check reads record content. The one thing it changes is completeness of a
+  single probe: without it, `integration-least-privilege` reports each object it
+  cannot conclude about as **unprobed** instead of reporting an unused write
+  grant (see below). Grant it only if you want that probe to be conclusive
 - **`Modify All Data`** (`ModifyAllData`)
 - **`Customize Application`** (`CustomizeApplication`)
 - **`Manage Users`** / **`Manage Internal Users`**
@@ -76,6 +90,37 @@ security team is right to refuse them:
   narrowest standard permission that allows SOQL against setup objects. Some
   strict org configurations may still require object-level Read FLS on the
   setup/audit objects above; grant those rather than reaching for `View All Data`.
+
+### Record visibility and the write-evidence probe
+
+`integration-least-privilege` is the only check that queries record data, and it
+queries ownership rather than content: for each object an integration account
+holds a write grant on, it runs a grouped count of records whose `CreatedById`
+or `LastModifiedById` is that account. The result is a row count per owner id.
+No field of any record is selected.
+
+Like all SOQL, that aggregate runs **as the audit user with sharing enforced**.
+An audit user that cannot see the records gets a successful query and zero rows
+back, which is indistinguishable from "the integration has never written here" —
+and reporting that as an unused grant would be a false accusation against a
+working integration. So:
+
+- The check first determines whether the audit user holds `View All Data` (or
+  `Modify All Data`). It identifies the running user through the Connect API
+  (`/chatter/users/me`, a read-only GET) and reads that user's own permission-set
+  assignments.
+- **With** `View All Data`: the probe runs, and objects with no attributed
+  record are reported as write grants the integration has never exercised.
+- **Without** it — or if the running user cannot be identified, e.g. Chatter is
+  disabled — **no object is probed at all.** Every object is listed as
+  *unprobed*, and the finding is marked **inconclusive**. The check never
+  reports an unused grant it could not establish.
+- Every other part of that check (escalation-grade permissions, bulk-data
+  permissions, standing credentials, dormancy) is drawn from setup objects and
+  is unaffected.
+
+This is a completeness trade, not a correctness one: refusing `View All Data`
+costs you one probe's conclusions and is visible in the report as such.
 
 ## Connected App (CI / automation)
 
