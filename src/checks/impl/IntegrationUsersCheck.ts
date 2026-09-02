@@ -12,6 +12,18 @@ interface BroadPermRecord {
   };
 }
 
+/**
+ * SBS-ACS-007 requires ALL non-human identities to be inventoried. A signal the resolver could
+ * not gather (e.g. connected-app-run-as, which is unconditionally degraded — see
+ * support/integrationAccounts.ts) means a whole class of accounts was never looked for, so a
+ * finding that lists or counts what was found must say so plainly rather than imply completeness.
+ */
+function degradedDisclosure(degraded: readonly string[]): string {
+  if (degraded.length === 0) return '';
+  const names = degraded.join(', ');
+  return ` This run could not gather the following signal(s): ${names}. Accounts identifiable only by ${names} are not represented here.`;
+}
+
 export class IntegrationUsersCheck implements SecurityCheck {
   readonly id = 'integration-users';
   readonly name = 'Integration / Service Account Inventory';
@@ -49,7 +61,8 @@ export class IntegrationUsersCheck implements SecurityCheck {
         passed: true,
         title: 'No candidate non-human identities found: SBS-ACS-007',
         detail:
-          'SBS-ACS-007 requires all non-human identities to be inventoried and documented. No standard users matching common service account patterns (by username) or never-logged-in users were found.',
+          'SBS-ACS-007 requires all non-human identities to be inventoried and documented. No standard users matching common service account patterns (by username) or never-logged-in users were found.' +
+          degradedDisclosure(resolved.degraded),
         remediation: 'As integration accounts are created, ensure they are documented with a named owner, stated purpose, and review date.',
       });
       return { findings };
@@ -62,7 +75,8 @@ export class IntegrationUsersCheck implements SecurityCheck {
       riskLevel: 'INFO',
       title: `${candidates.length} candidate non-human identity/identities found: SBS-ACS-007`,
       detail:
-        'SBS-ACS-007 requires all non-human identities (integration accounts, service users, automation users) to be inventoried and documented with a named owner, stated purpose, and review date. These users were identified by never having a UI login (and being more than 30 days old) or matching common service-account username patterns.',
+        'SBS-ACS-007 requires all non-human identities (integration accounts, service users, automation users) to be inventoried and documented with a named owner, stated purpose, and review date. These users were identified by never having a UI login (and being more than 30 days old) or matching common service-account username patterns.' +
+        degradedDisclosure(resolved.degraded),
       remediation:
         'Verify that each listed user is a known, documented non-human identity. Any undocumented account should be reviewed and either documented or deactivated. Maintain a register of all integration identities with their owner and purpose.',
       affectedItems: candidates.map((u) => ({
