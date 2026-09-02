@@ -61,6 +61,12 @@ interface UserRow {
 export async function resolveIntegrationAccounts(ctx: AuditContext): Promise<ResolveResult> {
   const degraded: IntegrationSignal[] = [];
 
+  // connected-app-run-as is not implemented: confirming which object exposes a connected app's
+  // run-as user requires a live-org describe, and this project forbids running against a real
+  // org. Disclosing it unconditionally means every finding shows the gap instead of implying the
+  // signal was gathered and found nothing.
+  degraded.push('connected-app-run-as');
+
   let rows: UserRow[];
   try {
     rows = await ctx.soql.queryAll<UserRow>(
@@ -78,17 +84,26 @@ export async function resolveIntegrationAccounts(ctx: AuditContext): Promise<Res
     return { accounts: [], degraded, unavailable: true };
   }
 
-  const mapped = rows.map((r) => ({
-    id: r.Id,
-    username: r.Username,
-    profileName: r.Profile?.Name ?? 'unknown',
-    lastLoginDate: r.LastLoginDate,
-    signals: intrinsicSignals(r),
-  }));
+  const byId = new Map<string, IntegrationAccount>();
+  for (const r of rows) {
+    byId.set(r.Id, {
+      id: r.Id,
+      username: r.Username,
+      profileName: r.Profile?.Name ?? 'unknown',
+      lastLoginDate: r.LastLoginDate,
+      signals: intrinsicSignals(r),
+    });
+  }
 
-  // A returned account with no signal is one the resolver cannot explain;
-  // downstream findings name the signals as their justification.
-  const accounts = mapped.filter((a) => a.signals.length > 0);
+  const jobOwnerIds = await resolveJobOwnerIds(ctx, degraded);
+  await mergePlatformSignal(ctx, byId, jobOwnerIds, 'scheduled-job-owner');
+
+  // A returned account with no signal is one the resolver cannot explain; downstream findings
+  // name the signals as their justification. This filter must run after every signal merge above
+  // — an account reachable only through a platform signal (e.g. scheduled-job-owner) has no
+  // intrinsic signals and would be dropped if this ran before the merge, defeating the point of
+  // having the signal at all.
+  const accounts = [...byId.values()].filter((a) => a.signals.length > 0);
 
   return { accounts, degraded, unavailable: false };
 }
@@ -99,4 +114,60 @@ function intrinsicSignals(r: UserRow): IntegrationSignal[] {
   if (r.LastLoginDate === null) signals.push('never-logged-in');
   if (SERVICE_LIKE_PATTERN.test(r.Username)) signals.push('username-pattern');
   return signals;
+}
+
+/** Owners of scheduled Apex. An account that only runs jobs matches no username pattern. */
+async function resolveJobOwnerIds(ctx: AuditContext, degraded: IntegrationSignal[]): Promise<string[]> {
+  try {
+    const jobs = await ctx.soql.queryAll<{ CreatedById: string }>(
+      `SELECT CreatedById FROM AsyncApexJob
+       WHERE JobType = 'ScheduledApex' AND CreatedDate = LAST_N_DAYS:90
+       LIMIT 500`,
+    );
+    return [...new Set(jobs.map((j) => j.CreatedById).filter(Boolean))];
+  } catch {
+    degraded.push('scheduled-job-owner');
+    return [];
+  }
+}
+
+/**
+ * Adds `signal` to accounts already resolved, and pulls in any id the candidate query missed.
+ * An account reachable only by a platform signal is exactly the one the heuristics cannot see,
+ * so dropping it here would defeat the point of having the signal.
+ */
+async function mergePlatformSignal(
+  ctx: AuditContext,
+  byId: Map<string, IntegrationAccount>,
+  ids: string[],
+  signal: IntegrationSignal,
+): Promise<void> {
+  if (ids.length === 0) return;
+
+  const missing = ids.filter((id) => !byId.has(id));
+  if (missing.length > 0) {
+    try {
+      const inList = missing.map((i) => `'${i}'`).join(',');
+      const extra = await ctx.soql.queryAll<UserRow>(
+        `SELECT Id, Username, Profile.Name, Profile.UserLicense.Name, LastLoginDate, CreatedDate
+         FROM User WHERE IsActive = true AND Id IN (${inList})`,
+      );
+      for (const r of extra) {
+        byId.set(r.Id, {
+          id: r.Id,
+          username: r.Username,
+          profileName: r.Profile?.Name ?? 'unknown',
+          lastLoginDate: r.LastLoginDate,
+          signals: intrinsicSignals(r),
+        });
+      }
+    } catch {
+      // The signal's ids are known but the users are unreadable: the accounts we do have stand.
+    }
+  }
+
+  for (const id of ids) {
+    const acct = byId.get(id);
+    if (acct && !acct.signals.includes(signal)) acct.signals.push(signal);
+  }
 }

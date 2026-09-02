@@ -5,11 +5,21 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 interface Opts {
   users?: unknown[];
   usersThrow?: boolean;
+  jobs?: unknown[];
+  jobsThrow?: boolean;
+  extraUsers?: unknown[];
 }
 
 export function makeCtx(opts: Opts): AuditContext {
   const queryAll = jest.fn() as any;
   queryAll.mockImplementation(async (soql: string) => {
+    if (soql.includes('FROM AsyncApexJob')) {
+      if (opts.jobsThrow) throw new Error('no access');
+      return opts.jobs ?? [];
+    }
+    if (soql.includes('FROM User') && soql.includes('Id IN')) {
+      return opts.extraUsers ?? [];
+    }
     if (soql.includes('FROM User')) {
       if (opts.usersThrow) throw new Error('no access');
       return opts.users ?? [];
@@ -78,5 +88,73 @@ describe('resolveIntegrationAccounts', () => {
     const u = user({ Username: 'kapil@acme.com' });
     const r = await resolveIntegrationAccounts(makeCtx({ users: [u] }));
     expect(r.accounts).toEqual([]);
+  });
+});
+
+describe('resolveIntegrationAccounts — platform signals', () => {
+  it('classifies a scheduled-job owner the username heuristic would miss', async () => {
+    const ctx = makeCtx({
+      users: [],
+      jobs: [{ CreatedById: '005z' }],
+      extraUsers: [
+        {
+          Id: '005z',
+          Username: 'nightly@acme.com',
+          Profile: { Name: 'Min Access', UserLicense: { Name: 'Salesforce' } },
+          LastLoginDate: '2026-08-01T00:00:00.000Z',
+          CreatedDate: '2020-01-01T00:00:00.000Z',
+        },
+      ],
+    });
+    const r = await resolveIntegrationAccounts(ctx);
+    expect(r.accounts.map((a) => a.id)).toEqual(['005z']);
+    expect(r.accounts[0].signals).toEqual(['scheduled-job-owner']);
+  });
+
+  it('merges a platform signal onto an account the candidate query already returned', async () => {
+    const ctx = makeCtx({
+      users: [
+        {
+          Id: '005a',
+          Username: 'svc.api@acme.com',
+          Profile: { Name: 'Integration', UserLicense: { Name: 'Salesforce' } },
+          LastLoginDate: null,
+          CreatedDate: '2020-01-01T00:00:00.000Z',
+        },
+      ],
+      jobs: [{ CreatedById: '005a' }],
+    });
+    const r = await resolveIntegrationAccounts(ctx);
+    expect(r.accounts).toHaveLength(1);
+    expect(r.accounts[0].signals).toEqual(
+      expect.arrayContaining(['username-pattern', 'never-logged-in', 'scheduled-job-owner']),
+    );
+  });
+
+  it('degrades the job-owner signal without losing the other accounts', async () => {
+    const ctx = makeCtx({
+      users: [
+        {
+          Id: '005a',
+          Username: 'svc.api@acme.com',
+          Profile: { Name: 'Integration', UserLicense: { Name: 'Salesforce' } },
+          LastLoginDate: null,
+          CreatedDate: '2020-01-01T00:00:00.000Z',
+        },
+      ],
+      jobsThrow: true,
+    });
+    const r = await resolveIntegrationAccounts(ctx);
+    expect(r.degraded).toContain('scheduled-job-owner');
+    expect(r.accounts).toHaveLength(1);
+    expect(r.unavailable).toBe(false);
+  });
+
+  // connected-app-run-as: the live-org gate confirming which object exposes a connected app's
+  // run-as user is not closed (this project forbids running against a real org), so the signal
+  // is not implemented. It must always be disclosed as degraded rather than silently absent.
+  it('always discloses connected-app-run-as as degraded (unimplemented pending live-org gate)', async () => {
+    const r = await resolveIntegrationAccounts(makeCtx({ users: [] }));
+    expect(r.degraded).toContain('connected-app-run-as');
   });
 });
