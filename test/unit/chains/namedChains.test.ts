@@ -43,6 +43,26 @@ describe('NAMED_CHAINS', () => {
     expect(steps!.map((s) => s.id)).toEqual(expect.arrayContaining(['login-access-policy-delegated-admins', 'login-access-policy-login-as-enabled']));
   });
 
+  it('standard-to-takeover fires for an integration account with escalation permissions', () => {
+    const findings = [f('guest-user-baseline'), f('integration-least-privilege-escalation-permissions'), f('escalation-perms-found')];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'standard-to-takeover')!;
+    const steps = chain.match(present(findings), findings);
+    expect(steps).not.toBeNull();
+    expect(steps!.map((s) => s.id)).toContain('integration-least-privilege-escalation-permissions');
+  });
+
+  it('insider-bulk-exfil fires with integration bulk-data permissions as the broad-read step', () => {
+    const findings = [
+      f('integration-least-privilege-data-permissions'),
+      f('data-export-weekly-export'),
+      f('event-monitoring-disabled'),
+    ];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'insider-bulk-exfil')!;
+    const steps = chain.match(present(findings), findings);
+    expect(steps).not.toBeNull();
+    expect(steps!.map((s) => s.id)).toContain('integration-least-privilege-data-permissions');
+  });
+
   it('unauth-bulk-exfil does NOT fire without a foothold', () => {
     const findings = [f('guest-executable-apex-unprotected')];
     const chain = NAMED_CHAINS.find((c) => c.id === 'unauth-bulk-exfil')!;

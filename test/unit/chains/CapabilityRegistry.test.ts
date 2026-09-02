@@ -64,4 +64,22 @@ describe('CapabilityRegistry', () => {
     expect(grants).toEqual(expect.arrayContaining(['unauth-foothold', 'data-read']));
     expect(grants).not.toContain('data-read-bulk');
   });
+
+  it('grants code-exec and priv-esc to escalation permissions on an integration account', () => {
+    const grants = capabilitiesFor(f('integration-least-privilege-escalation-permissions')).grants;
+    expect(grants).toEqual(expect.arrayContaining(['code-exec', 'priv-esc']));
+  });
+
+  it('grants bulk read to integration bulk-data permissions', () => {
+    expect(capabilitiesFor(f('integration-least-privilege-data-permissions')).grants).toContain('data-read-bulk');
+  });
+
+  // An unused grant is by definition not being exercised, and a dormant account is a theft target
+  // rather than an attacker capability. Granting for either would inflate chains with paths nobody
+  // is on.
+  it('grants nothing for unused write objects, dormancy, or the hygiene finding', () => {
+    expect(capabilitiesFor(f('integration-least-privilege-unused-write-objects')).grants).toEqual([]);
+    expect(capabilitiesFor(f('integration-least-privilege-dormant')).grants).toEqual([]);
+    expect(capabilitiesFor(f('integration-least-privilege-hygiene')).grants).toEqual([]);
+  });
 });
