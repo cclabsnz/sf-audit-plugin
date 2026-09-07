@@ -25,7 +25,7 @@ Because this tool authenticates against production orgs, "is it safe to run?" de
 | Alert | What triggers it | Why it is expected |
 | --- | --- | --- |
 | **Filesystem access** | `node:fs` reads and writes | It is a CLI that writes your audit reports (HTML/MD/JSON) to disk and reads local inputs: report-branding overrides, event-log baselines under `~/.sf/audit-history`, and its own history archive. Every path is one you pass on the command line or the tool's own dot-directory. |
-| **URL strings** | `https://` literals in the shipped code | These are inert citation links rendered as `<a href>` in reports — OWASP, NZISM, the NZ Privacy Act, Te Whatu Ora and CIS-style benchmark references cited by compliance findings. They are never fetched. |
+| **URL strings** | `https://` literals in the shipped code | These are inert citation links rendered as `<a href>` in reports — OWASP, NZISM, the NZ Privacy Act, GDPR, HIPAA, Te Whatu Ora and CIS-style benchmark references cited by compliance findings. They are never fetched. |
 
 Check the second one yourself — this lists every URL in the published build:
 
@@ -34,14 +34,16 @@ npm pack @cclabsnz/sf-audit && tar xzf cclabsnz-sf-audit-*.tgz
 grep -rhoE 'https?://[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}[^"'"'"'`,;) ]*' package/lib | sort -u
 ```
 
-As of v1.8.2 that prints ten results. Seven are the standards-body citations rendered as `<a href>` in compliance findings:
+As of v1.11.0 that prints twelve results. Nine are the standards-body citations rendered as `<a href>` in compliance findings:
 
 ```
 https://docs.securitybenchmark.org/controls-at-a-glance.html
+https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng
 https://genai.owasp.org/llm-top-10/
 https://nzism.gcsb.govt.nz/ism-document
 https://owasp.org/Top10/2021/
 https://privacy.org.nz/privacy-act-2020/privacy-principles/
+https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C
 https://www.legislation.govt.nz/act/public/2020/0031/latest/LMS23342.html
 https://www.tewhatuora.govt.nz/health-services-and-programmes/cyber-hub/cyber-standards
 ```

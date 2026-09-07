@@ -115,9 +115,16 @@ data exists the claim is scoped rather than dropped — `public-group-sharing` s
 tables it checked and which it could not, because an object may be absent by org edition rather
 than by permission.
 
-**Coverage of the argument.** 88 checks, 110 test suites, 1008 tests, 80.1% statement coverage.
-Coverage is not itself an assurance argument, but an untested check is an unexamined claim, and
-every defect listed above was found by writing a test rather than by reading the code.
+**Coverage of the argument.** 91 checks, 121 test suites, 1171 tests. Coverage is not itself an
+assurance argument, but an untested check is an unexamined claim, and every defect listed above was
+found by writing a test rather than by reading the code.
+
+On the statement-coverage figure: `npx jest --coverage` reports 96.9%, and that number should not be
+read as coverage of the codebase. `jest.config.ts` sets no `collectCoverageFrom`, so only files a
+test actually imports are instrumented, and files no test reaches are absent from the denominator
+rather than counted as zero. It is coverage of the tested code. 36 of the 91 checks still have no
+unit test file, which is the figure that matters here and is tracked in
+[ROADMAP.md](ROADMAP.md).
 
 ---
 
