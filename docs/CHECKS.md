@@ -1,6 +1,6 @@
 # What it checks
 
-The audit runs **91 read-only checks**. The [README](../README.md#what-it-checks) summarises them by domain; this is the full inventory. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into ten domains below.
+The audit runs **92 read-only checks**. The [README](../README.md#what-it-checks) summarises them by domain; this is the full inventory. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into ten domains below.
 
 ## Org Health & Configuration
 | Check | What it looks for |
@@ -35,6 +35,7 @@ The audit runs **91 read-only checks**. The [README](../README.md#what-it-checks
 | Permissions | Unassigned permission sets and high profile counts that widen the attack surface |
 | Standard Profile Usage | Active users assigned to out-of-the-box standard profiles |
 | Use Any API Client | Users with the permission that bypasses API Access Control |
+| SOAP login() Use Any API Auth | Accounts authenticating via SOAP `login()` without the permission Winter '27 requires, and holders that no longer need it (a different permission from Use Any API Client) |
 | Privilege Escalation Permissions | Users holding lateral-movement / persistence permission clusters |
 | Privileged Access & Shadow Admins | Effective high-risk permissions per user (profile + permission sets + groups); admin-equivalent users not on the System Administrator profile |
 | Separation of Duties | Toxic permission combinations a single user holds (e.g. Manage Users + Assign Permission Sets, Author Apex + Modify All Data) |

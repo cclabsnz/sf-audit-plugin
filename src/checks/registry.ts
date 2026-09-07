@@ -27,6 +27,7 @@ import { StandardProfilesCheck } from './impl/StandardProfilesCheck.js';
 import { SsoEnforcementCheck } from './impl/SsoEnforcementCheck.js';
 import { MfaEnforcementCheck } from './impl/MfaEnforcementCheck.js';
 import { ApiClientPermissionCheck } from './impl/ApiClientPermissionCheck.js';
+import { SoapLoginApiAuthCheck } from './impl/SoapLoginApiAuthCheck.js';
 import { IntegrationUsersCheck } from './impl/IntegrationUsersCheck.js';
 import { IntegrationLeastPrivilegeCheck } from './impl/IntegrationLeastPrivilegeCheck.js';
 import { ContentLinksCheck } from './impl/ContentLinksCheck.js';
@@ -130,6 +131,7 @@ export const CHECKS: SecurityCheck[] = [
   new SsoEnforcementCheck(),       // SBS-AUTH-001/002
   new MfaEnforcementCheck(),       // SBS-AUTH-004 (portal users)
   new ApiClientPermissionCheck(),  // SBS-ACS-006
+  new SoapLoginApiAuthCheck(),   // Winter '27 SOAP login() readiness; distinct from Use Any API Client above
   new IntegrationUsersCheck(),     // SBS-ACS-007/008/009
   new IntegrationLeastPrivilegeCheck(),   // permissions integration accounts hold and do not use
   new ContentLinksCheck(),         // SBS-FILE-001/002/003
