@@ -16,6 +16,7 @@ import { buildAuditContext, resolveOrgInfo } from '../../lib/wire.js';
 import { loadScoringConfig } from '../../findings/loadScoringConfig.js';
 import { HistoryStore } from '../../history/HistoryStore.js';
 import { EXIT_FINDINGS, EXIT_INCONCLUSIVE, resolveExitCode, violationsFor } from '../../findings/exitCode.js';
+import { buildDigest, type AuditDigest } from '../../findings/digest.js';
 
 const RENDERERS: Record<string, AuditRenderer> = {
   html: new HtmlRenderer(),
@@ -23,7 +24,7 @@ const RENDERERS: Record<string, AuditRenderer> = {
   json: new JsonRenderer(),
 };
 
-export default class SecurityAuditCommand extends SfCommand<AuditResult> {
+export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditDigest> {
   public static summary = 'Run a comprehensive security audit against a Salesforce org';
   public static description =
     'Runs all security checks against the target org and writes a report file.';
@@ -48,6 +49,10 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     'fail-on': Flags.string({
       summary: 'Exit with code 1 if any finding is at or above this severity.',
       options: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
+    }),
+    digest: Flags.boolean({
+      summary: 'Return a compact, token-cheap result: no passing checks, no detail prose, capped affected lists.',
+      default: false,
     }),
     'fail-on-inconclusive': Flags.boolean({
       summary: 'Exit with code 3 if any check could not gather evidence. Off by default.',
@@ -83,7 +88,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     }),
   };
 
-  public async run(): Promise<AuditResult> {
+  public async run(): Promise<AuditResult | AuditDigest> {
     const { flags } = await this.parse(SecurityAuditCommand);
 
     // Validate the selection and output formats up front, so a typo fails fast with
@@ -135,9 +140,11 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     this.log('');
     this.log('  Deep dives: https://softwareinsights.dev   ·   Remediation help: https://cloudcounsel.co.nz');
 
+    // Exit code is resolved from the full result: the digest drops passing checks,
+    // which the threshold logic must still be able to see and discount.
     this.applyExitCode(result, flags['fail-on'] as RiskLevel | undefined, flags['fail-on-inconclusive']);
 
-    return result;
+    return flags.digest ? buildDigest(result) : result;
   }
 
   /** Resolve --checks to the checks to run, erroring on any unknown ID. */

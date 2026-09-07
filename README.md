@@ -52,6 +52,7 @@ check id.
 | `--format` / `-f` | `html` | `html`, `md`, `json`, `executive` — comma-separated |
 | `--fail-on` | (none) | Exit 1 if any finding is at or above `CRITICAL`/`HIGH`/`MEDIUM`/`LOW`. For CI |
 | `--fail-on-inconclusive` | `false` | Exit 3 if any check could not gather evidence. For CI |
+| `--digest` | `false` | Compact result for programmatic callers — no passing checks, no prose, capped lists |
 | `--checks` | *(all)* | Run only these check ids |
 | `--frameworks` | `universal` | Compliance matrix scope for the executive report |
 
@@ -65,8 +66,14 @@ sf audit security --target-org myOrg --fail-on HIGH --fail-on-inconclusive
 # Branded, client-ready PDF-able report
 sf audit security --target-org myOrg --format executive --prepared-for "Acme Health"
 
+# What can this audit user actually establish? Ask before spending a run
+sf audit preflight --target-org myOrg
+
 # Machine-readable: result on stdout, progress logging suppressed
 sf audit security --target-org myOrg --json
+
+# Compact result for an agent or script
+sf audit security --target-org myOrg --json --digest
 ```
 
 ### Exit codes
@@ -196,7 +203,7 @@ Grade bands, the full config shape and worked examples: **[docs/SCORING.md](docs
 
 ## Other commands
 
-Beyond the audit itself, the plugin ships four commands. Each is documented in
+Beyond the audit itself, the plugin ships five commands. Each is documented in
 **[docs/COMMANDS.md](docs/COMMANDS.md)**.
 
 | Command | What it does |
@@ -204,6 +211,7 @@ Beyond the audit itself, the plugin ships four commands. Each is documented in
 | `sf audit history` / `sf audit diff` | Every run auto-archives to `~/.sf/audit-history/{orgId}`. Show posture drift across runs as a table plus an HTML timeline, or diff any two report JSONs |
 | `sf audit events pull` | Capture the org's **free** daily `EventLogFile` logs to local disk before the ~1-day retention window drops them — no Event Monitoring / Shield add-on needed. Idempotent, safe to cron |
 | `sf audit timeline` | Reconstruct one actor's activity across every captured event type, entirely offline. Refuses to expand a shared identity or join on a blank field, and always reports capture coverage first |
+| `sf audit preflight` | Read the running user's effective permissions in one query and report which checks will produce a verdict and which will return inconclusive — **before** an audit is run |
 | `sf audit apps` | Read the `RestApi` event log to compare what each connected app actually *uses* against what its run-as user is *granted*, and emit a suggested least-privilege permission set |
 
 To triage captured logs for abuse patterns, pair `events pull` with the companion CLI
