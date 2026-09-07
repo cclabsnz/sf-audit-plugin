@@ -76,3 +76,11 @@ jobs:
           # redistribute in a permissively-licensed (Apache-2.0) CLI. Applies to
           # PR-added deps only; tune the list as needed.
           deny-licenses: AGPL-1.0-only, AGPL-1.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later, GPL-2.0-only, GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later
+          # Recorded exception, so the policy above stays true to what actually ships.
+          # jszip declares "(MIT OR GPL-3.0-or-later)" and reaches us transitively through
+          # @salesforce/core -> @jsforce/jsforce-node. A disjunction is the publisher offering
+          # a choice: this project takes the MIT branch, which is why a GPL-denying policy and
+          # a shipped jszip are not in conflict. Scanners that surface only the copyleft half
+          # (Socket's "Copyleft License" alert does) are reading the same manifest, not
+          # reporting a second licence. See docs/TRUST.md.
+          allow-dependencies-licenses: pkg:npm/jszip
