@@ -51,6 +51,7 @@ check id.
 |------|---------|---|
 | `--format` / `-f` | `html` | `html`, `md`, `json`, `executive` — comma-separated |
 | `--fail-on` | (none) | Exit 1 if any finding is at or above `CRITICAL`/`HIGH`/`MEDIUM`/`LOW`. For CI |
+| `--fail-on-inconclusive` | `false` | Exit 3 if any check could not gather evidence. For CI |
 | `--checks` | *(all)* | Run only these check ids |
 | `--frameworks` | `universal` | Compliance matrix scope for the executive report |
 
@@ -58,9 +59,28 @@ check id.
 # Fail a pipeline on HIGH or worse
 sf audit security --target-org myOrg --fail-on HIGH
 
+# Also fail if the audit user could not see enough to judge
+sf audit security --target-org myOrg --fail-on HIGH --fail-on-inconclusive
+
 # Branded, client-ready PDF-able report
 sf audit security --target-org myOrg --format executive --prepared-for "Acme Health"
+
+# Machine-readable: result on stdout, progress logging suppressed
+sf audit security --target-org myOrg --json
 ```
+
+### Exit codes
+
+| Code | Meaning |
+|-----:|---------|
+| `0` | Audit completed; nothing the caller asked to fail on |
+| `1` | Findings at or above `--fail-on` |
+| `2` | The audit could not run — authentication, connection, or bad flags |
+| `3` | Audit ran, but checks could not gather evidence (`--fail-on-inconclusive` only) |
+
+A definite finding outranks unknown coverage: when both apply you get `1`, and the
+inconclusive count is still in the report body. `3` exists so a pipeline can tell
+"this org is fine" apart from "the audit user could not see enough to judge".
 
 All twelve flags, more examples, and what the executive report contains:
 **[docs/COMMANDS.md](docs/COMMANDS.md)**.

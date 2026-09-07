@@ -15,6 +15,7 @@ import { resolveFrameworks } from '../../compliance/resolve.js';
 import { buildAuditContext, resolveOrgInfo } from '../../lib/wire.js';
 import { loadScoringConfig } from '../../findings/loadScoringConfig.js';
 import { HistoryStore } from '../../history/HistoryStore.js';
+import { EXIT_FINDINGS, EXIT_INCONCLUSIVE, resolveExitCode, violationsFor } from '../../findings/exitCode.js';
 
 const RENDERERS: Record<string, AuditRenderer> = {
   html: new HtmlRenderer(),
@@ -47,6 +48,10 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     'fail-on': Flags.string({
       summary: 'Exit with code 1 if any finding is at or above this severity.',
       options: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
+    }),
+    'fail-on-inconclusive': Flags.boolean({
+      summary: 'Exit with code 3 if any check could not gather evidence. Off by default.',
+      default: false,
     }),
     checks: Flags.string({
       summary: 'Comma-separated check IDs to run. Omit to run all checks.',
@@ -130,9 +135,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     this.log('');
     this.log('  Deep dives: https://softwareinsights.dev   ·   Remediation help: https://cloudcounsel.co.nz');
 
-    if (flags['fail-on']) {
-      this.handleFailOn(result, flags['fail-on'] as RiskLevel);
-    }
+    this.applyExitCode(result, flags['fail-on'] as RiskLevel | undefined, flags['fail-on-inconclusive']);
 
     return result;
   }
@@ -200,16 +203,38 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult> {
     this.log('─────────────────────────────');
   }
 
-  private handleFailOn(result: AuditResult, failOn: RiskLevel): void {
-    const ORDER: RiskLevel[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
-    const threshold = ORDER.indexOf(failOn);
-    const violations = result.findings.filter((f) => ORDER.indexOf(f.riskLevel) <= threshold);
-    if (violations.length > 0) {
+  /**
+   * Set the process exit code from the audit outcome.
+   *
+   * 0 clean · 1 findings at or above --fail-on · 3 inconclusive checks when the
+   * caller passed --fail-on-inconclusive. Anything that stops the audit running
+   * at all surfaces as oclif's own error exit instead.
+   *
+   * The result is always returned, so `--json` still yields the full report
+   * alongside a non-zero exit.
+   */
+  private applyExitCode(result: AuditResult, failOn: RiskLevel | undefined, failOnInconclusive: boolean): void {
+    const code = resolveExitCode(result.findings, { failOn, failOnInconclusive });
+
+    if (code === EXIT_FINDINGS && failOn !== undefined) {
+      const violations = violationsFor(result.findings, failOn);
       this.log(`\nFail-on threshold: ${failOn}, ${violations.length} finding${violations.length !== 1 ? 's' : ''} at or above threshold:`);
       for (const f of violations) {
         this.log(`  [${f.riskLevel}] ${f.title}`);
       }
-      this.exit(1);
     }
+
+    if (code === EXIT_INCONCLUSIVE) {
+      const blind = result.findings.filter((f) => f.inconclusive === true);
+      this.log(`\n${blind.length} check${blind.length !== 1 ? 's' : ''} could not gather evidence:`);
+      for (const f of blind) {
+        this.log(`  [inconclusive] ${f.title}`);
+      }
+    }
+
+    // Deliberately not this.exit(): that throws an ExitError, which SfCommand.catch()
+    // renders as the JSON error envelope, discarding the audit result under --json.
+    // Setting the code lets run() return the report and still exit non-zero.
+    if (code !== 0) process.exitCode = code;
   }
 }

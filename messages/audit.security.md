@@ -22,6 +22,12 @@ Directory to write the report file. Defaults to the current directory.
 Exit with code 1 if any finding is at or above this severity level.
 Options: CRITICAL, HIGH, MEDIUM, LOW
 
+## fail-on-inconclusive
+
+Exit with code 3 if any check could not gather evidence because the audit user lacked
+the required permission. Off by default, so existing pipelines are unaffected. A finding
+at or above `--fail-on` takes precedence and still exits 1.
+
 ## checks
 
 Comma-separated check IDs to run instead of all checks (e.g. `hardcoded-credentials,apex-sharing`).

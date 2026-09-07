@@ -11,7 +11,27 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+## [v1.9.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.9.0) — 2026-09-07
+
+Two compliance catalogs, three attack chains, and a restructured documentation set — but
+the reason to upgrade is the `--fail-on` fix. That flag never worked: any pipeline using it
+exited 1 on every run, whatever the org looked like. If you gate CI on this plugin, this is
+the release that makes the gate mean something.
+
+### Fixed
+
+- **`--fail-on` fired on every audit.** The threshold comparison ranked findings with
+  `ORDER.indexOf(level) <= threshold`, and `INFO` is absent from that order, so it
+  scored `-1` — more severe than `CRITICAL` at every threshold. Because passing and
+  inconclusive checks both carry `INFO`, and every audit produces passes, any pipeline
+  using `--fail-on` exited 1 regardless of what was actually found. Gateable severities
+  are now matched explicitly, and passed/inconclusive findings can never be violations.
+
 ### Added
+
+- **`--fail-on-inconclusive`** — exit 3 when a check could not gather evidence, so CI can
+  tell a clean org apart from an audit user that could not see enough to judge. Off by
+  default. A finding at or above `--fail-on` still takes precedence and exits 1.
 
 - **HIPAA Security Rule and GDPR compliance catalogs** — 26 source-verified controls, taking the
   catalog from 93 to 119. HIPAA pins the operative 2013 Omnibus rule (the 2025 NPRM remains
