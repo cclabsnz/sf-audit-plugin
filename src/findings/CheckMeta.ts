@@ -51,6 +51,7 @@ export const CHECK_META: Record<string, CheckMeta> = {
   'anonymous-apex-audit':    { effort: 'quick',    impact: 'Anonymous Apex execution in production can run arbitrary privileged code leaving little trace.' },
   'debug-log-access':        { effort: 'quick',    impact: 'Active high-detail debug traces capture sensitive field values readable by anyone with log access.' },
   'connected-app-inactivity':{ effort: 'quick',    impact: 'Stale connected apps remain authorized attack surface long after they’re abandoned.' },
+  'oauth-token-inventory':   { effort: 'quick',    impact: 'A standing refresh token is replayed for API access without any login, so a breached vendor keeps working access.' },
   'my-domain-login-policy':  { effort: 'quick',    impact: 'Allowing login.salesforce.com login bypasses My Domain SSO enforcement.' },
   'high-assurance-session':  { effort: 'moderate', impact: 'Admin-capable apps without short or high-assurance sessions let a hijacked session retain elevated rights.' },
   'enhanced-domains':        { effort: 'moderate', impact: 'Without Enhanced Domains, cross-org cookie leakage and URL spoofing become possible.' },

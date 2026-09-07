@@ -46,6 +46,7 @@ import { TrustedIPRangesCheck } from './impl/TrustedIPRangesCheck.js';
 import { AnonymousApexAuditCheck } from './impl/AnonymousApexAuditCheck.js';
 import { DebugLogAccessCheck } from './impl/DebugLogAccessCheck.js';
 import { ConnectedAppInactivityCheck } from './impl/ConnectedAppInactivityCheck.js';
+import { OauthTokenInventoryCheck } from './impl/OauthTokenInventoryCheck.js';
 import { MyDomainLoginPolicyCheck } from './impl/MyDomainLoginPolicyCheck.js';
 import { InternalUserMfaCheck } from './impl/InternalUserMfaCheck.js';
 import { MfaRegistrationCheck } from './impl/MfaRegistrationCheck.js';
@@ -181,6 +182,7 @@ export const CHECKS: SecurityCheck[] = [
   new DeploymentIdentityCheck(),   // reads connectedAppNames
   new ApexLoggingCheck(),          // reads apexBodies + scheduledApexClassNames
   new ConnectedAppInactivityCheck(), // reads connectedAppNames
+  new OauthTokenInventoryCheck(),    // reads connectedAppNames; standing tokens LoginHistory cannot see
   new ApexCrudFLSCheck(),          // reads apexBodies
   new GuestExecutableApexCheck(),  // reads apexBodies — guest-reachable Apex sharing
   new ApexRestEndpointCheck(),     // reads apexBodies
