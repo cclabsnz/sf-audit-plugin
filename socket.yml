@@ -3,6 +3,16 @@
 # Triage for the supply-chain alerts Socket raises against these packages. Both remaining
 # alerts are inherent to what a local-first CLI security auditor does; neither is a
 # vulnerability. They are acknowledged here rather than silently ignored.
+#
+# Socket's Dependencies tab is a separate, longer list, and nothing here suppresses any of
+# it — deliberately. Those alerts sit on the tree that arrives with the Salesforce CLI SDK
+# (@salesforce/core, @jsforce/jsforce-node, @oclif/core, @salesforce/sf-plugins-core), which
+# this package cannot choose, and a blanket rule here would also hide the next genuine one.
+# The five that warrant an answer — jszip's (MIT OR GPL-3.0-or-later) dual licence, the
+# OFL-1.1 font attribution in @cclabsnz/sf-core, @jsonjoy.com/codegen, the AI-heuristic hits,
+# and shell access in the SDK — are answered in docs/TRUST.md under "Alerts on the
+# dependency tree". The jszip MIT election is also recorded in the dependency-review policy
+# in .github/workflows/ci.yml, so the licence gate and the shipped tree agree.
 version: 2
 
 projectIgnorePaths:
