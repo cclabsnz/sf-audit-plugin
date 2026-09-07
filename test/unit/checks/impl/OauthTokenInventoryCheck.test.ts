@@ -10,11 +10,13 @@ jest.unstable_mockModule('@cclabsnz/sf-core', () => ({
   describeFields: describeFieldsMock,
 }));
 
-const { OauthTokenInventoryCheck } = await import(
+const { OauthTokenInventoryCheck, NEVER_SELECT } = await import(
   '../../../../src/checks/impl/OauthTokenInventoryCheck.js'
 );
 
 const ALL_FIELDS = ['AppName', 'UserId', 'LastUsedDate', 'UseCount', 'CreatedDate'];
+
+let lastSoql = '';
 
 function makeCtx(
   rows: unknown[] | Error,
@@ -22,9 +24,10 @@ function makeCtx(
 ): AuditContext {
   return {
     soql: {
-      query: (jest.fn() as any).mockImplementation(() =>
-        rows instanceof Error ? Promise.reject(rows) : Promise.resolve({ records: rows }),
-      ),
+      query: (jest.fn() as any).mockImplementation((q: string) => {
+        lastSoql = q;
+        return rows instanceof Error ? Promise.reject(rows) : Promise.resolve({ records: rows });
+      }),
     } as any,
     tooling: {} as any,
     rest: {} as any,
@@ -76,6 +79,39 @@ describe('OauthTokenInventoryCheck', () => {
     expect(r.findings[0].passed).toBe(true);
   });
 
+  it('never selects token material, whatever describe offers', async () => {
+    describeFieldsMock.mockResolvedValue([...ALL_FIELDS, ...NEVER_SELECT]);
+    await check.run(makeCtx([{ AppName: 'App', UserId: '005a' }], ['App']));
+    for (const forbidden of NEVER_SELECT) {
+      expect(lastSoql).not.toContain(forbidden);
+    }
+  });
+
+  it('skips the cross-reference when the connected app inventory is empty', async () => {
+    const r = await check.run(
+      makeCtx([{ AppName: 'Anything', UserId: '005a', LastUsedDate: daysAgo(1) }], []),
+    );
+    expect(find(r, 'oauth-token-unmatched-app')).toBeUndefined();
+    const note = find(r, 'oauth-token-no-app-inventory');
+    expect(note).toBeDefined();
+    expect(note!.inconclusive).toBe(true);
+    expect(note!.riskLevel).toBe('INFO');
+  });
+
+  it('does not flag first-party Salesforce clients as unmatched', async () => {
+    const r = await check.run(
+      makeCtx(
+        [
+          { AppName: 'Salesforce CLI', UserId: '005a', LastUsedDate: daysAgo(1) },
+          { AppName: 'orgfarm_app_1', UserId: '005b', LastUsedDate: daysAgo(1) },
+        ],
+        ['Some Declared App'],
+      ),
+    );
+    expect(find(r, 'oauth-token-unmatched-app')).toBeUndefined();
+    expect(find(r, 'oauth-token-inventory')!.affectedItems).toHaveLength(2);
+  });
+
   it('flags an app holding tokens that is absent from the connected app inventory', async () => {
     const r = await check.run(
       makeCtx(
@@ -88,7 +124,7 @@ describe('OauthTokenInventoryCheck', () => {
     );
     const f = find(r, 'oauth-token-unmatched-app');
     expect(f).toBeDefined();
-    expect(f!.riskLevel).toBe('HIGH');
+    expect(f!.riskLevel).toBe('MEDIUM');
     expect(f!.affectedItems).toHaveLength(1);
     expect(f!.affectedItems![0].label).toBe('Acme Vendor Sync');
     expect(f!.affectedItems![0].note).toContain('2 token(s), 2 user(s)');

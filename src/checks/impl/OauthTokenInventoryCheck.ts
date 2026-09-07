@@ -33,7 +33,14 @@ interface OauthTokenRecord {
   CreatedDate?: string | null;
 }
 
-/** Priority order. `AppName` is the only one the check cannot work without. */
+/**
+ * Priority order. `AppName` is the only one the check cannot work without.
+ *
+ * `OauthToken` also defines `AccessToken`, `RequestToken` and `DeleteToken`, all queryable
+ * strings. None of them appear here and none may ever be added: findings are written to an HTML
+ * or JSON report on disk, so selecting token material would turn an audit artefact into a
+ * credential file. `NEVER_SELECT` is asserted in the unit tests.
+ */
 const PREFERRED_FIELDS = [
   'AppName',
   'UserId',
@@ -42,11 +49,35 @@ const PREFERRED_FIELDS = [
   'CreatedDate',
 ] as const;
 
+/** Queryable on OauthToken and permanently excluded: an audit report must not carry credentials. */
+export const NEVER_SELECT = ['AccessToken', 'RequestToken', 'DeleteToken'] as const;
+
 /** Ceiling on rows pulled. Large orgs hold a token per user per app, which multiplies fast. */
 const MAX_TOKEN_ROWS = 5000;
 
 /** A token unused for this long is a standing grant nobody is exercising. */
 const STALE_DAYS = 90;
+
+/**
+ * Salesforce-owned clients that hold tokens in every org and are absent from
+ * `ConnectedApplication` by design, so matching them against it always "fails". Confirmed
+ * against a Developer Edition org on 2026-09-07, where `Salesforce CLI` and `orgfarm_app_1`
+ * both held live tokens with an empty connected app inventory. Lower-cased for comparison.
+ * A floor, not a complete list: an unrecognised first-party client is reported, which is the
+ * safe direction to be wrong in.
+ */
+const FIRST_PARTY_APPS = new Set([
+  'salesforce cli',
+  'salesforce mobile dashboards',
+  'salesforce for outlook',
+  'salesforce dataloader',
+  'dataloader partner',
+  'dataloader bulk',
+  'workbench',
+  'sfdx cli',
+  'salesforce inspector',
+  'orgfarm_app_1',
+]);
 
 interface AppTokenSummary {
   app: string;
@@ -70,7 +101,13 @@ export class OauthTokenInventoryCheck implements SecurityCheck {
 
     let fields: string[] = [];
     try {
-      fields = await describeFields(ctx.rest, 'OauthToken', PREFERRED_FIELDS);
+      const described = await describeFields(ctx.rest, 'OauthToken', PREFERRED_FIELDS);
+      // Enforce the exclusion here rather than trusting the preferred list to stay clean.
+      // describeFields returns what the org defines, and this check builds a SELECT that ends
+      // up in a report file on disk, so the filter belongs at the point the query is built.
+      fields = described.filter(
+        (f) => !NEVER_SELECT.some((n) => n.toLowerCase() === f.toLowerCase())
+      );
     } catch {
       findings.push(this.inconclusive('OauthToken could not be described'));
       return { findings };
@@ -143,7 +180,17 @@ export class OauthTokenInventoryCheck implements SecurityCheck {
     const knownApps = new Set(
       (ctx.cache.connectedAppNames ?? []).map((n) => n.toLowerCase())
     );
-    const unmatched = summaries.filter((s) => !knownApps.has(s.app.toLowerCase()));
+    // With an empty inventory every token is trivially "unmatched", which on a real Developer
+    // Edition org produced three HIGH findings for apps that were all benign. An org whose
+    // ConnectedApplication read returned nothing has not been shown to have a problem, it has
+    // failed to provide the evidence, so the comparison is skipped rather than assumed.
+    const canCrossReference = knownApps.size > 0;
+    const unmatched = canCrossReference
+      ? summaries.filter(
+          (s) =>
+            !knownApps.has(s.app.toLowerCase()) && !FIRST_PARTY_APPS.has(s.app.toLowerCase())
+        )
+      : [];
 
     const cutoff = new Date(Date.now() - STALE_DAYS * 86_400_000).toISOString();
     const stale = summaries.filter((s) => s.lastUsed !== null && s.lastUsed < cutoff);
@@ -153,7 +200,7 @@ export class OauthTokenInventoryCheck implements SecurityCheck {
       findings.push({
         id: 'oauth-token-unmatched-app',
         category: this.category,
-        riskLevel: 'HIGH',
+        riskLevel: 'MEDIUM',
         title: `${unmatched.length} app(s) hold live OAuth tokens but do not appear in the connected app inventory`,
         detail:
           `${unmatched.length} app name(s) on live OauthToken rows were not among the ${knownApps.size} connected apps read from ConnectedApplication. ` +
@@ -166,6 +213,20 @@ export class OauthTokenInventoryCheck implements SecurityCheck {
           url: setupUrl,
           note: `${s.tokens} token(s), ${s.users.size} user(s), last used ${s.lastUsed ?? 'never recorded'}`,
         })),
+      });
+    }
+
+    if (!canCrossReference) {
+      findings.push({
+        id: 'oauth-token-no-app-inventory',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'Standing tokens could not be cross-referenced against the connected app inventory',
+        detail:
+          'ConnectedApplication returned no rows, so tokens cannot be matched to a reviewable app definition. The inventory below is still accurate; only the comparison is missing.',
+        remediation:
+          'Grant the audit user read access to ConnectedApplication, then re-run so standing tokens can be matched against declared apps.',
       });
     }
 
