@@ -1,6 +1,6 @@
 # What it checks
 
-The audit runs **90 read-only checks**. The [README](../README.md#what-it-checks) summarises them by domain; this is the full inventory. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into ten domains below.
+The audit runs **91 read-only checks**. The [README](../README.md#what-it-checks) summarises them by domain; this is the full inventory. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into ten domains below.
 
 ## Org Health & Configuration
 | Check | What it looks for |
@@ -94,6 +94,7 @@ The audit runs **90 read-only checks**. The [README](../README.md#what-it-checks
 | Connected Apps | Apps not restricted to admin-approved users |
 | Connected App OAuth Scopes | Full OAuth-scope grants and infinite refresh-token policies |
 | Inactive Connected Apps | Apps with no OAuth logins in the past 90 days |
+| Standing OAuth Token Inventory | Live OAuth tokens per app, including grants LoginHistory cannot see |
 | Named Credentials | Named credential inventory; credentials not referenced in Apex |
 | External Credential Authentication | External Credentials using no authentication or a custom (non-standard) scheme |
 | Remote Site Settings | Remote sites with protocol security disabled |
