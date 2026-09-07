@@ -11,6 +11,42 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+## [v1.11.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.11.0) — 2026-09-07
+
+One new check, closing a blind spot that the SaaS token-theft campaigns of the last year
+turn on: a connected app can hold a working key to your org while every existing check
+reports it as dormant.
+
+### Added
+
+- **`oauth-token-inventory`** — inventories standing OAuth authorisations from
+  `OauthToken`, so you can answer "which apps can act in this org right now, and for how
+  many users" without waiting for a login that will never come.
+
+  `connected-app-inactivity` reads `LoginHistory` and calls an app inactive after 90 days
+  with no OAuth login. That is the wrong signal for a refresh token: the app presents the
+  token, gets an access token back, and no `LoginType 'OAuth%'` row is written for the
+  exchange. So an app can be reported as dormant and low risk while still holding a
+  working credential. When a vendor is breached, the remediation is to revoke access and
+  refresh tokens rather than disable a login, and that requires an inventory nothing in
+  this plugin previously produced.
+
+  Emits three findings: an app holding live tokens that is absent from the connected app
+  inventory (MEDIUM), tokens unused for 90+ days or with no recorded last use
+  (MEDIUM/LOW), and the full per-app inventory (INFO), which is always emitted so the
+  report carries the revocation worklist even when nothing is wrong.
+
+  Token material is never selected. `OauthToken` exposes `AccessToken`, `RequestToken` and
+  `DeleteToken` as queryable strings, and findings are written to disk, so the exclusion is
+  enforced where the query is built rather than by convention, and asserted in the tests.
+
+  Degrades honestly rather than quietly: if `OauthToken` cannot be read the check goes
+  inconclusive instead of reporting an org with no standing tokens, and if
+  `ConnectedApplication` returns nothing the cross-reference is skipped rather than
+  flagging every app as unmatched.
+
+Check count is now **91**.
+
 ## [v1.10.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.10.0) — 2026-09-07
 
 Two additions for callers that drive this plugin programmatically: find out what the audit
