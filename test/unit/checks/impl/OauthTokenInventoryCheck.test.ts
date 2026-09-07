@@ -103,7 +103,7 @@ describe('OauthTokenInventoryCheck', () => {
       makeCtx(
         [
           { AppName: 'Salesforce CLI', UserId: '005a', LastUsedDate: daysAgo(1) },
-          { AppName: 'orgfarm_app_1', UserId: '005b', LastUsedDate: daysAgo(1) },
+          { AppName: 'Workbench', UserId: '005b', LastUsedDate: daysAgo(1) },
         ],
         ['Some Declared App'],
       ),
