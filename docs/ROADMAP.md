@@ -9,7 +9,7 @@ Anything already shipped lives in [CHANGELOG.md](../CHANGELOG.md).
 
 ## Near term
 
-**Finish the test coverage sweep.** 36 of the 88 checks still have no unit test file. The
+**Finish the test coverage sweep.** 36 of the 91 checks still have no unit test file. The
 statement-coverage figure (80%) is now adequate, but that is a side effect rather than the point:
 every check corrected for reporting a conclusion it had not established was found by writing a test,
 never by reading the code. The remaining 36 are unexamined claims.
