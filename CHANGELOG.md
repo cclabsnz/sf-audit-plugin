@@ -11,6 +11,28 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+## [v1.10.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.10.0) — 2026-09-07
+
+Two additions for callers that drive this plugin programmatically: find out what the audit
+user can actually see *before* spending a run, and get the result back without paying for
+the half of it that is passing checks and prose.
+
+### Added
+
+- **`sf audit preflight`** — reports what this audit user will and will not be able to
+  establish, before a run is spent. Reads the caller's effective permissions from
+  `UserPermissionAccess` in a single query and names the checks that will return
+  inconclusive, with the grants that would fix them. The audit itself can only report a
+  permission gap *after* it has come back blind; this asks the same question up front.
+  The affected-check lists are derived from the registry's declared cache wiring rather
+  than hand-maintained, so a check added later is covered without editing the map.
+
+- **`--digest`** on `sf audit security` — a compact result for programmatic callers.
+  Passing checks are counted but not listed, `detail` prose gives way to `remediation`,
+  and affected-item lists — unbounded, and the bulk of a large org's report — collapse to
+  a count plus a three-item sample. Attack chains survive intact. Composes with `--json`,
+  so an agent gets one command and compact stdout.
+
 ## [v1.9.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.9.0) — 2026-09-07
 
 Two compliance catalogs, three attack chains, and a restructured documentation set — but

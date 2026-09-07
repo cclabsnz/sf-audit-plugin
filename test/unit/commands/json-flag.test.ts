@@ -4,6 +4,7 @@ import AuditHistoryCommand from '../../../src/commands/audit/history.js';
 import AuditListCommand from '../../../src/commands/audit/list.js';
 import SecurityAuditCommand from '../../../src/commands/audit/security.js';
 import AuditTimelineCommand from '../../../src/commands/audit/timeline.js';
+import AuditPreflightCommand from '../../../src/commands/audit/preflight.js';
 import AuditEventsPullCommand from '../../../src/commands/audit/events/pull.js';
 
 /**
@@ -26,13 +27,14 @@ const COMMANDS = [
   ['audit diff', AuditDiffCommand],
   ['audit apps', AuditAppsCommand],
   ['audit timeline', AuditTimelineCommand],
+  ['audit preflight', AuditPreflightCommand],
   ['audit events pull', AuditEventsPullCommand],
 ] as const;
 
 describe('--json is available on every command', () => {
   it('covers every command the plugin ships', () => {
     // Guards against the suite passing vacuously if the list above is gutted.
-    expect(COMMANDS).toHaveLength(7);
+    expect(COMMANDS).toHaveLength(8);
   });
 
   it.each(COMMANDS)('%s enables the json flag', (_name, Command) => {
