@@ -19,10 +19,20 @@ import type { Finding } from '../../findings/Finding.js';
  * and refresh tokens rather than to disable a login. An org cannot execute that remediation
  * without first knowing which apps hold live tokens and for how many users.
  *
- * Field discovery rather than a fixed SELECT list: `OauthToken` field availability varies by
- * API version and edition, and this repo does not query real orgs, so the field set is
- * intersected with `describe()` at runtime the same way `RTE_CATALOG` does it. A guessed
- * field name in a SELECT fails the whole query and reports an org as clean.
+ * Fields are intersected with `describe()` at runtime rather than fixed in a SELECT list, the
+ * same way `RTE_CATALOG` does it. Probed on 2026-09-07 against a Developer Edition org and an
+ * Enterprise sandbox: both expose the identical 10 fields with identical filterable/groupable/
+ * sortable attributes, so edition variance is NOT the justification and should not be claimed
+ * as one. Two orgs is a thin sample, and the discovery earns its place for a different reason
+ * anyway: it doubles as the accessibility probe. An org where the audit user cannot see
+ * `OauthToken` throws here and takes the inconclusive path, instead of a fixed SELECT failing
+ * and being read as an org with no standing tokens.
+ *
+ * Two describe results are load-bearing and both are relied on below. `LastUsedDate` and
+ * `CreatedDate` are filterable and sortable but NOT groupable, which is why aggregation is
+ * client-side: a GROUP BY on either is rejected, and a rejected query here would surface as
+ * "no tokens found". And `AccessToken`, `RequestToken` and `DeleteToken` are queryable strings
+ * in both orgs, which is why `NEVER_SELECT` is enforced at query construction.
  */
 
 interface OauthTokenRecord {
