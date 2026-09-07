@@ -20,19 +20,16 @@ import type { Finding } from '../../findings/Finding.js';
  * without first knowing which apps hold live tokens and for how many users.
  *
  * Fields are intersected with `describe()` at runtime rather than fixed in a SELECT list, the
- * same way `RTE_CATALOG` does it. Probed on 2026-09-07 against a Developer Edition org and an
- * Enterprise sandbox: both expose the identical 10 fields with identical filterable/groupable/
- * sortable attributes, so edition variance is NOT the justification and should not be claimed
- * as one. Two orgs is a thin sample, and the discovery earns its place for a different reason
- * anyway: it doubles as the accessibility probe. An org where the audit user cannot see
- * `OauthToken` throws here and takes the inconclusive path, instead of a fixed SELECT failing
- * and being read as an org with no standing tokens.
+ * same way `RTE_CATALOG` does it. Not for edition variance, which was an assumption that did
+ * not survive checking. It earns its place as the accessibility probe: an org where the audit
+ * user cannot see `OauthToken` throws here and takes the inconclusive path, instead of a fixed
+ * SELECT failing and being read as an org with no standing tokens.
  *
- * Two describe results are load-bearing and both are relied on below. `LastUsedDate` and
+ * Two `OauthToken` traits are load-bearing and both are relied on below. `LastUsedDate` and
  * `CreatedDate` are filterable and sortable but NOT groupable, which is why aggregation is
  * client-side: a GROUP BY on either is rejected, and a rejected query here would surface as
- * "no tokens found". And `AccessToken`, `RequestToken` and `DeleteToken` are queryable strings
- * in both orgs, which is why `NEVER_SELECT` is enforced at query construction.
+ * "no tokens found". And `AccessToken`, `RequestToken` and `DeleteToken` are queryable
+ * strings, which is why `NEVER_SELECT` is enforced at query construction.
  */
 
 interface OauthTokenRecord {
@@ -69,12 +66,11 @@ const MAX_TOKEN_ROWS = 5000;
 const STALE_DAYS = 90;
 
 /**
- * Salesforce-owned clients that hold tokens in every org and are absent from
- * `ConnectedApplication` by design, so matching them against it always "fails". Confirmed
- * against a Developer Edition org on 2026-09-07, where `Salesforce CLI` and `orgfarm_app_1`
- * both held live tokens with an empty connected app inventory. Lower-cased for comparison.
- * A floor, not a complete list: an unrecognised first-party client is reported, which is the
- * safe direction to be wrong in.
+ * Salesforce-owned clients that hold tokens in ordinary orgs and are absent from
+ * `ConnectedApplication` by design, so matching them against it always "fails". Lower-cased
+ * for comparison. A floor, not a complete list: an unrecognised first-party client is
+ * reported rather than hidden, which is the safe direction to be wrong in. Add names here as
+ * they are confirmed to be Salesforce-owned.
  */
 const FIRST_PARTY_APPS = new Set([
   'salesforce cli',
@@ -86,7 +82,6 @@ const FIRST_PARTY_APPS = new Set([
   'workbench',
   'sfdx cli',
   'salesforce inspector',
-  'orgfarm_app_1',
 ]);
 
 interface AppTokenSummary {
@@ -190,10 +185,11 @@ export class OauthTokenInventoryCheck implements SecurityCheck {
     const knownApps = new Set(
       (ctx.cache.connectedAppNames ?? []).map((n) => n.toLowerCase())
     );
-    // With an empty inventory every token is trivially "unmatched", which on a real Developer
-    // Edition org produced three HIGH findings for apps that were all benign. An org whose
-    // ConnectedApplication read returned nothing has not been shown to have a problem, it has
-    // failed to provide the evidence, so the comparison is skipped rather than assumed.
+    // With an empty inventory every token is trivially "unmatched", which would emit a wall of
+    // findings for apps that may all be benign, and would break --fail-on for anyone whose
+    // audit user cannot read ConnectedApplication. An org whose read returned nothing has not
+    // been shown to have a problem, it has failed to provide the evidence, so the comparison
+    // is skipped rather than assumed.
     const canCrossReference = knownApps.size > 0;
     const unmatched = canCrossReference
       ? summaries.filter(
