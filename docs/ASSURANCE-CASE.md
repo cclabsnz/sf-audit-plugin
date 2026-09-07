@@ -122,7 +122,9 @@ found by writing a test rather than by reading the code.
 On the statement-coverage figure: `npx jest --coverage` reports 96.9%, and that number should not be
 read as coverage of the codebase. `jest.config.ts` sets no `collectCoverageFrom`, so only files a
 test actually imports are instrumented, and files no test reaches are absent from the denominator
-rather than counted as zero. It is coverage of the tested code. 36 of the 91 checks still have no
+rather than counted as zero. It instruments 88 of the 171 files under `src/`, so the figure
+describes a little over half the codebase and says nothing about the rest. It is coverage of the
+tested code. 36 of the 91 checks still have no
 unit test file, which is the figure that matters here and is tracked in
 [ROADMAP.md](ROADMAP.md).
 
