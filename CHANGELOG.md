@@ -11,6 +11,44 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+## [v1.12.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.12.0) — 2026-09-07
+
+A check that shipped in the source but never ran, now registered, plus tests for three more.
+
+### Added
+
+- **`soap-login-api-auth`** — flags accounts that authenticate with SOAP API `login()` but do not
+  hold the "Use Any API Auth" permission that Winter '27 requires, and separately flags holders
+  that no longer need it.
+
+  The check class has been present and compiling since Winter '27 planning and **had never run**:
+  its registry, compliance, `CheckMeta` and test wiring were deferred behind another unfinished
+  check and then forgotten. An unregistered check is invisible to the whole suite, so nothing
+  failed. It runs now.
+
+  Worth stating because published coverage of this change routinely gets it wrong: "Use Any API
+  Auth" is **not** the same permission as "Use Any API Client", which the separate
+  `api-client-permission` check covers. Granting the wrong one leaves the breakage in place while
+  feeling remediated. The compliance mapping deliberately does not reuse the Use Any API Client
+  control, for the same reason.
+
+  Both halves matter. The missing-permission half is an availability finding: the failure lands at
+  authentication, server to server, with no error anywhere in the Salesforce UI. The
+  already-granted half is a security finding, because granting broadly at profile level is the
+  common response to this change and converts a breakage problem into a standing-privilege one.
+
+### Changed
+
+- Check count is now **92**.
+
+### Internal
+
+- Unit tests added for `connected-apps`, `connected-app-inactivity` and `api-client-permission`.
+  Untested checks drop from 36 to 33 of 92. The `connected-apps` tests pin the
+  `connectedAppNames` cache write that two other checks read, and the `api-client-permission`
+  tests assert on the query text so a copy-paste between the two easily-confused API permissions
+  fails a test.
+
 ## [v1.11.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.11.0) — 2026-09-07
 
 One new check, closing a blind spot that the SaaS token-theft campaigns of the last year
