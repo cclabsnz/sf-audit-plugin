@@ -62,6 +62,27 @@ jobs:
       - name: pnpm audit (production, high+)
         run: pnpm audit --prod --audit-level high
 
+      # The step above audits THIS repo's lockfile, which has the pnpm.overrides block in
+      # package.json applied to it. Nobody who installs the plugin gets those overrides:
+      # npm and pnpm both honour overrides only in the root project, and this package is
+      # always a dependency (`sf plugins install` puts it under the CLI's own root). So the
+      # step above can pass on a tree no user has, while a high-severity advisory sits in
+      # the tree they do have — exactly the false assurance this project exists to catch.
+      #
+      # This step audits what actually ships: pack the tarball, install it the way a user
+      # installs it, and audit the tree that produces. It is a superset of the check above
+      # for anything the overrides currently mask, and it is the one to look at first when
+      # the two disagree.
+      - name: npm audit (consumer tree, high+)
+        run: |
+          set -euo pipefail
+          npm pack --pack-destination "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP"
+          npm init -y > /dev/null
+          npm install ./cclabsnz-sf-audit-*.tgz \
+            --omit=dev --ignore-scripts --no-fund --no-audit
+          npm audit --omit=dev --audit-level=high
+
   dependency-review:
     # PR-only: blocks a PR that introduces a dependency with a known vulnerability.
     if: github.event_name == 'pull_request'
