@@ -64,13 +64,15 @@ Socket's **Dependencies** tab is a separate list from the two alerts above, and 
 
 This package declares **six** direct dependencies — `@cclabsnz/sf-core`, `@oclif/core`, `@salesforce/core`, `@salesforce/sf-plugins-core`, `chart.js` and `zod`. Every flagged package is something one of those brings with it, and all but one of them sit in the tree that any `sf` CLI plugin inherits: `@salesforce/core` (and through it `@jsforce/jsforce-node`, `faye`, `jszip`, `xml2js`, `memfs`, `pino`), `@oclif/core`, and `@salesforce/sf-plugins-core`. `chart.js` and `zod` are effectively clean. **There is no dependency this project could drop to move these numbers**, which is worth saying plainly rather than implying the tree was chosen carelessly.
 
-What that tree is audited against is worth being precise about, because the obvious way to do it is wrong. This repository pins a few transitive packages through a `pnpm.overrides` block, and auditing the resulting lockfile would measure a tree **no user has**: npm and pnpm both apply overrides only in the root project, and this package is always installed as a dependency. A gate reading that lockfile could report green while a high-severity advisory sat in what you actually install. CI therefore runs two audits — one over the lockfile, and one that packs the tarball, installs it the way you install it, and audits the tree that produces. Both must pass at high severity or the build fails. As of v1.12.0 the shipped tree reports **no known vulnerabilities at any severity**, and you can check that claim without trusting this page:
+What that tree is audited against is worth being precise about, because the obvious way to do it is wrong. This repository pins a few transitive packages through a `pnpm.overrides` block, and auditing the resulting lockfile would measure a tree **no user has**: npm and pnpm both apply overrides only in the root project, and this package is always installed as a dependency. A gate reading that lockfile could report green while a high-severity advisory sat in what you actually install. CI therefore runs two audits — one over the lockfile, and one that packs the tarball, installs it the way you install it, and audits the tree that produces. Both must pass at high severity or the build fails. Advisory data moves daily, so rather than print a count here that will be wrong within the week, read the shipped tree yourself:
 
 ```bash
 mkdir sf-audit-tree && cd sf-audit-tree && npm init -y
 npm install @cclabsnz/sf-audit --omit=dev --ignore-scripts
 npm audit --omit=dev
 ```
+
+Two things to expect from that output. Findings below **high** are reported and do not fail the build, so a moderate advisory in the Salesforce SDK tree can be present and visible while both gates stay green; that is the threshold working as configured, not an oversight. And `npm audit` counts every package in the chain to an advisory, while `pnpm audit` counts the advisory once, so the same single finding shows as six entries in one tool and one in the other. Neither is wrong. Read the advisory identifiers, not the totals.
 
 Five alerts are worth an actual answer rather than a count:
 
