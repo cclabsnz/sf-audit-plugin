@@ -110,22 +110,17 @@ describe('CapabilityRegistry', () => {
     );
   });
 
-  // Public Documents and static resources are fetched from a URL that never reaches a login, so
-  // they are an unauthenticated surface with no guest user, site or Aura endpoint in the path.
-  it('grants an unauthenticated foothold to public documents and static resources', () => {
-    expect(capabilitiesFor(f('public-content-public-documents')).grants).toEqual(
-      expect.arrayContaining(['unauth-foothold', 'data-read']),
-    );
-    expect(capabilitiesFor(f('public-content-public-static-resources')).grants).toEqual(
-      expect.arrayContaining(['unauth-foothold', 'data-read']),
-    );
-  });
-
-  // Content links are anonymous too, but each is scoped to one deliberately shared file. Granting
-  // unauth-foothold would pair them with every bulk-read sink in the emergent pass and assert a
-  // path between unrelated data, so the foothold is withheld on purpose.
-  it('grants read but NOT a foothold to content links with no expiry or password', () => {
-    for (const id of ['content-links-no-expiry', 'content-links-no-password']) {
+  // Anonymous file access grants read and, on purpose, no foothold. unauth-foothold is a SOURCE
+  // capability, so the emergent pass would pair a public Document with every high-impact sink in
+  // the org and report "unauthenticated foothold -> bulk read" on adjacency alone. A file is not a
+  // session: the guest findings grant a foothold because a guest user context can be pivoted from,
+  // whereas these return the file and stop. Pinned because it reads like an omission.
+  it('grants read but NOT a foothold to anonymously fetchable files', () => {
+    const ids = [
+      'public-content-public-documents', 'public-content-public-static-resources',
+      'content-links-no-expiry', 'content-links-no-password',
+    ];
+    for (const id of ids) {
       const grants = capabilitiesFor(f(id)).grants;
       expect(grants).toContain('data-read');
       expect(grants).not.toContain('unauth-foothold');

@@ -133,15 +133,21 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // receiving endpoint can act as the running user until the session expires.
   'outbound-messages-session-id':               { grants: ['credential-theft', 'external-egress'] },
 
-  // Anonymously fetchable files. Documents and static resources marked public are served from a
-  // URL that never reaches a login, so they are an unauthenticated surface in their own right —
-  // no guest user, Experience Cloud site or Aura endpoint involved.
-  'public-content-public-documents':            { grants: ['unauth-foothold', 'data-read'] },
-  'public-content-public-static-resources':     { grants: ['unauth-foothold', 'data-read'] },
-  // Content distribution links are also anonymous, but each is scoped to one file somebody chose
-  // to share. Without expiry or a password the exposure simply never ends. Deliberately no
-  // 'unauth-foothold': that would pair these with every bulk-read sink in the emergent pass and
-  // assert a path between unrelated data.
+  // Anonymously fetchable files: public Documents and static resources, served from a URL that
+  // never reaches a login, and content distribution links that never expire or ask for a password.
+  //
+  // All four grant read and, deliberately, no 'unauth-foothold'. The temptation is real, because
+  // these genuinely are unauthenticated access to org content. But 'unauth-foothold' is a SOURCE
+  // capability, so the emergent pass pairs whatever holds it with every high-impact sink present:
+  // granting it here produces "unauthenticated foothold → bulk read" from nothing more than a
+  // public Document sitting next to an admin holding View All Data, which asserts a pivot that
+  // does not exist. A file is not a session. The guest findings grant a foothold because a guest
+  // *user context* can be pivoted from — it has a profile, permissions, and can invoke Apex —
+  // whereas anonymous file access returns the file and stops there. The unauthenticated angle is
+  // better asserted by a named chain that can state the mechanism than by a combinatorial pass
+  // that can only assert adjacency.
+  'public-content-public-documents':            { grants: ['data-read'] },
+  'public-content-public-static-resources':     { grants: ['data-read'] },
   'content-links-no-expiry':                    { grants: ['data-read'] },
   'content-links-no-password':                  { grants: ['data-read'] },
 
@@ -156,6 +162,11 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // persistence and disuse are evidence about a token, not reach an attacker holds, and they earn
   // their place as chain steps rather than as gate-opening grants.
   'connected-app-full-scope':                   { grants: ['data-read-bulk', 'data-write'] },
+  // The same reach, permanently. ConnectedAppScopeCheck emits this alongside the full-scope finding
+  // rather than instead of it, so the grant is currently redundant for opening a gate. It is here
+  // so the model stays correct if that ever becomes an either/or, and because a CRITICAL finding
+  // silently granting nothing is precisely the failure this registry exists to prevent.
+  'connected-app-full-scope-infinite-token':    { grants: ['data-read-bulk', 'data-write'] },
 };
 
 /** Resolve the effective capabilities for a finding (inline overrides registry; passed/inconclusive yield nothing). */

@@ -143,7 +143,7 @@ A list of findings is not a risk assessment. Three MEDIUM findings that combine 
 unauthenticated path to bulk data matter more than a lone HIGH that leads nowhere, and reading a
 report severity-by-severity hides exactly that.
 
-So every audit correlates its findings into attack chains. **Eleven named chains** are hand-modelled
+So every audit correlates its findings into attack chains. **Twelve named chains** are hand-modelled
 scenarios — each with its own narrative and remediation, several naming the concrete request path an
 attacker would use. Where no named chain explains a combination, an emergent pass reports the
 remaining entry-point → outcome pairs as lower-confidence "potential attack paths", so a novel

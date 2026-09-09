@@ -321,4 +321,59 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       return weakness.length > 0 && targets.length > 0 ? [...weakness, ...targets] : null;
     },
   },
+  {
+    id: 'oauth-standing-access',
+    title: 'Standing OAuth access outside every login control',
+    severity: 'HIGH',
+    narrative:
+      'A connected app holds broad standing API access, and something in the org means nobody would ' +
+      'notice it being used. The distinction that matters here is that a refresh token is not a ' +
+      'session. Login controls — MFA, login IP ranges, SSO, session timeout — engage once, at the ' +
+      'moment the app is authorised, and never again: every later API call exchanges the refresh ' +
+      'token for an access token without a login, so an org can enforce MFA on every human and still ' +
+      'hand a token holder the same reach. Full scope makes that reach equal to the authorising ' +
+      'user, including Modify All Data where that user is an admin, and a refresh token with no ' +
+      'expiry makes it permanent until somebody revokes it. ' +
+      'The token exchange produces no OAuth login row, so this access is absent from LoginHistory ' +
+      'and invisible to the connected-app inactivity check — which is why a token that has gone ' +
+      'unused for months, or that belongs to an app no longer in the connected app list, is the ' +
+      'shape a forgotten or third-party integration leaves behind. That is the path the 2025 and ' +
+      '2026 campaigns against Salesforce customers took: the tokens were not stolen from the org, ' +
+      'they were taken from the integration vendor and replayed against it, with no login and no ' +
+      'user interaction anywhere in the victim org.',
+    remediation:
+      'Revoke first and tidy later. Any standing token whose app is not in the current connected app ' +
+      'list, or that has not been used in months, should be revoked now rather than investigated ' +
+      'first — re-authorising a live integration is a minor inconvenience, and a token is a working ' +
+      'credential for as long as it exists. Then replace the Full scope with the specific scopes an ' +
+      'integration actually uses, set a refresh token policy that expires on inactivity instead of ' +
+      'never, and stop relaxing IP enforcement for connected apps, since that removes the one ' +
+      'control still applying after authorisation. Treat a vendor breach notice as a trigger to ' +
+      'revoke every token for that publisher rather than waiting to confirm your own org was ' +
+      'touched: with no login row to search, absence of evidence is not evidence of absence here.',
+    match(_present, active) {
+      // Standing reach: a token that can act broadly, and keeps being able to.
+      const standing = byIds(active, [
+        'connected-app-full-scope-infinite-token',
+        'connected-app-full-scope',
+        'connected-app-infinite-refresh-token',
+      ]);
+      if (standing.length === 0) return null;
+      // What removes the containment or the observation. Any one of these turns standing access
+      // into access nobody is watching or limiting.
+      const uncontained = byIds(active, [
+        // Nobody is reviewing it: tokens with no matching app, or long unused.
+        'oauth-token-unmatched-app', 'oauth-token-stale', 'oauth-token-no-app-inventory',
+        // Nothing is limiting it: the network control that survives authorisation, removed.
+        'connected-apps-bypass-ip', 'connected-apps-relax-ip', 'unrestricted-connected-apps',
+        'connected-apps-long-session-timeout', 'admin-no-ip-restrictions',
+        // The authorising identity is worth more than it needs to be, so the token inherits more.
+        'integration-least-privilege-escalation-permissions',
+        'integration-least-privilege-data-permissions',
+        'api-client-permission-assigned',
+      ]);
+      if (uncontained.length === 0) return null;
+      return [...standing, ...uncontained];
+    },
+  },
 ];
