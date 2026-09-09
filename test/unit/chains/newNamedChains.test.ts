@@ -124,3 +124,51 @@ describe('newly modelled capabilities', () => {
     expect(chains.map((c) => c.id)).toContain('standard-to-takeover');
   });
 });
+
+describe('oauth-standing-access', () => {
+  const fullScope = f('connected-app-full-scope');
+  const infinite = f('connected-app-infinite-refresh-token');
+  const combined = f('connected-app-full-scope-infinite-token', { riskLevel: 'CRITICAL' });
+  const unmatched = f('oauth-token-unmatched-app');
+  const stale = f('oauth-token-stale');
+  const ipBypass = f('connected-apps-bypass-ip');
+
+  it('fires when standing reach meets a token nobody is reviewing', () => {
+    const steps = match('oauth-standing-access', [fullScope, unmatched]);
+    expect(steps?.map((s) => s.id)).toEqual(['connected-app-full-scope', 'oauth-token-unmatched-app']);
+  });
+
+  it('fires when standing reach meets removed IP containment', () => {
+    const steps = match('oauth-standing-access', [combined, ipBypass]);
+    expect(steps?.map((s) => s.id)).toEqual([
+      'connected-app-full-scope-infinite-token', 'connected-apps-bypass-ip',
+    ]);
+  });
+
+  // The whole point of the chain is the conjunction. Broad standing access that somebody is
+  // watching and limiting is a posture finding, not a path, and the individual checks already
+  // report it on its own terms.
+  it('does not fire on standing reach alone, however severe', () => {
+    expect(match('oauth-standing-access', [combined, fullScope, infinite])).toBeNull();
+  });
+
+  it('does not fire on unreviewed or uncontained tokens without standing reach', () => {
+    expect(match('oauth-standing-access', [unmatched, stale, ipBypass])).toBeNull();
+  });
+
+  // A token exchange produces no OAuth login row, so a chain that fired only on observed activity
+  // would never fire at all. Nothing in the gate depends on evidence of use.
+  it('fires without any evidence the access has been exercised', () => {
+    expect(match('oauth-standing-access', [fullScope, stale])).not.toBeNull();
+  });
+
+  it('names why login controls do not apply, since that is the counter-intuitive part', () => {
+    const chain = NAMED_CHAINS.find((c) => c.id === 'oauth-standing-access')!;
+    const text = `${chain.narrative} ${chain.remediation}`;
+    expect(text).toContain('refresh token is not a session');
+    expect(text).toContain('LoginHistory');
+    // Revocation is the only control that ends a standing token, so the remediation has to lead
+    // with it rather than with scope tidying.
+    expect(chain.remediation).toContain('Revoke');
+  });
+});
