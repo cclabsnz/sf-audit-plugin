@@ -82,4 +82,68 @@ describe('CapabilityRegistry', () => {
     expect(capabilitiesFor(f('integration-least-privilege-dormant')).grants).toEqual([]);
     expect(capabilitiesFor(f('integration-least-privilege-hygiene')).grants).toEqual([]);
   });
+
+  // Credentials in custom settings sit alongside the hardcoded-literal and custom-label paths that
+  // already grant, so cred-theft-pivot sees all three places a secret hides rather than two.
+  it('grants credential-theft to credentials held in custom settings', () => {
+    expect(capabilitiesFor(f('custom-settings-credentials')).grants).toContain('credential-theft');
+  });
+
+  // The @RestResource analogue of portal-exposed-apex-without-sharing. Sharing and CRUD/FLS are
+  // independent controls: skipping sharing gives unattended write, skipping CRUD/FLS does not.
+  it('grants code-exec and write to Apex REST declared without sharing', () => {
+    expect(capabilitiesFor(f('apex-rest-without-sharing')).grants).toEqual(
+      expect.arrayContaining(['code-exec', 'data-read', 'data-write']),
+    );
+  });
+
+  it('grants read but NOT write or code-exec to Apex merely missing CRUD/FLS checks', () => {
+    const grants = capabilitiesFor(f('apex-crud-fls-missing')).grants;
+    expect(grants).toContain('data-read');
+    expect(grants).not.toContain('data-write');
+    expect(grants).not.toContain('code-exec');
+  });
+
+  it('grants credential-theft and egress to an outbound message carrying a session ID', () => {
+    expect(capabilitiesFor(f('outbound-messages-session-id')).grants).toEqual(
+      expect.arrayContaining(['credential-theft', 'external-egress']),
+    );
+  });
+
+  // Public Documents and static resources are fetched from a URL that never reaches a login, so
+  // they are an unauthenticated surface with no guest user, site or Aura endpoint in the path.
+  it('grants an unauthenticated foothold to public documents and static resources', () => {
+    expect(capabilitiesFor(f('public-content-public-documents')).grants).toEqual(
+      expect.arrayContaining(['unauth-foothold', 'data-read']),
+    );
+    expect(capabilitiesFor(f('public-content-public-static-resources')).grants).toEqual(
+      expect.arrayContaining(['unauth-foothold', 'data-read']),
+    );
+  });
+
+  // Content links are anonymous too, but each is scoped to one deliberately shared file. Granting
+  // unauth-foothold would pair them with every bulk-read sink in the emergent pass and assert a
+  // path between unrelated data, so the foothold is withheld on purpose.
+  it('grants read but NOT a foothold to content links with no expiry or password', () => {
+    for (const id of ['content-links-no-expiry', 'content-links-no-password']) {
+      const grants = capabilitiesFor(f(id)).grants;
+      expect(grants).toContain('data-read');
+      expect(grants).not.toContain('unauth-foothold');
+    }
+  });
+
+  // Self-registration is how an attacker obtains the account the external-sharing grants assume.
+  it('grants a low-trust authenticated entry point to self-registration', () => {
+    expect(capabilitiesFor(f('experience-cloud-site-self-registration')).grants).toContain(
+      'low-trust-authenticated',
+    );
+  });
+
+  // Full scope is reach. Never-expiring and stale tokens are evidence about a token rather than
+  // reach an attacker holds, so they stay chain steps and grant nothing here.
+  it('grants bulk read to the Full OAuth scope, and nothing to token persistence or disuse', () => {
+    expect(capabilitiesFor(f('connected-app-full-scope')).grants).toContain('data-read-bulk');
+    expect(capabilitiesFor(f('connected-app-infinite-refresh-token')).grants).toEqual([]);
+    expect(capabilitiesFor(f('oauth-token-stale')).grants).toEqual([]);
+  });
 });
