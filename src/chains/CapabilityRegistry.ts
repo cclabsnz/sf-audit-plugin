@@ -9,7 +9,7 @@ export interface CapabilityEntry {
 
 /**
  * The full attack model lives here: finding id → attacker capabilities it grants.
- * Keep this the single source of truth so the 88 checks stay untouched.
+ * Keep this the single source of truth so the 92 checks stay untouched.
  *
  * Every key MUST correspond to a finding id some check can actually emit, and every id referenced
  * by a named chain must be emittable too — a typo in either place fails silently (a key that
@@ -113,6 +113,60 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // unexercised permission is not a capability an attacker holds today.
   'integration-least-privilege-escalation-permissions': { grants: ['code-exec', 'priv-esc'] },
   'integration-least-privilege-data-permissions':       { grants: ['data-read-bulk'] },
+
+  // Credentials in custom settings — the third place secrets hide, after hardcoded literals and
+  // custom labels, both of which already grant here. A protected custom setting is readable by any
+  // Apex running in system context, so the reach is the same.
+  'custom-settings-credentials':                { grants: ['credential-theft'] },
+
+  // Apex reachable over REST, and Apex that skips CRUD/FLS. The registry already models the portal
+  // (`portal-exposed-apex-without-sharing`) and Flow (`flows-*-without-sharing`) variants of the
+  // same defect; the `@RestResource` door was the one left out. Sharing declarations and permission
+  // checks are independent controls, so a class can fail either: without-sharing skips record
+  // access, missing CRUD/FLS skips object and field access. Only the first is unattended write.
+  'apex-rest-without-sharing':                  { grants: ['code-exec', 'data-read', 'data-write'] },
+  'apex-crud-fls-without-sharing':              { grants: ['data-read', 'data-write'] },
+  'apex-crud-fls-missing':                      { grants: ['data-read'] },
+
+  // A live session ID posted to an external endpoint. This is a credential leaving the org through
+  // a supported feature rather than a flaw, which is exactly why it is easy to leave in place: the
+  // receiving endpoint can act as the running user until the session expires.
+  'outbound-messages-session-id':               { grants: ['credential-theft', 'external-egress'] },
+
+  // Anonymously fetchable files: public Documents and static resources, served from a URL that
+  // never reaches a login, and content distribution links that never expire or ask for a password.
+  //
+  // All four grant read and, deliberately, no 'unauth-foothold'. The temptation is real, because
+  // these genuinely are unauthenticated access to org content. But 'unauth-foothold' is a SOURCE
+  // capability, so the emergent pass pairs whatever holds it with every high-impact sink present:
+  // granting it here produces "unauthenticated foothold → bulk read" from nothing more than a
+  // public Document sitting next to an admin holding View All Data, which asserts a pivot that
+  // does not exist. A file is not a session. The guest findings grant a foothold because a guest
+  // *user context* can be pivoted from — it has a profile, permissions, and can invoke Apex —
+  // whereas anonymous file access returns the file and stops there. The unauthenticated angle is
+  // better asserted by a named chain that can state the mechanism than by a combinatorial pass
+  // that can only assert adjacency.
+  'public-content-public-documents':            { grants: ['data-read'] },
+  'public-content-public-static-resources':     { grants: ['data-read'] },
+  'content-links-no-expiry':                    { grants: ['data-read'] },
+  'content-links-no-password':                  { grants: ['data-read'] },
+
+  // Self-registration is how an attacker obtains the account that every external-sharing finding
+  // already assumes they have. On its own it is a supported feature and harmless; it earns a
+  // capability because 'sharing-model-external-*' grants reach to whoever holds an account, and
+  // this is the finding that says anyone may hold one.
+  'experience-cloud-site-self-registration':    { grants: ['low-trust-authenticated'] },
+
+  // The "Full" OAuth scope gives a token the same API reach as the user who authorised it. The
+  // never-expiring refresh token and the stale/unmatched token findings are deliberately absent:
+  // persistence and disuse are evidence about a token, not reach an attacker holds, and they earn
+  // their place as chain steps rather than as gate-opening grants.
+  'connected-app-full-scope':                   { grants: ['data-read-bulk', 'data-write'] },
+  // The same reach, permanently. ConnectedAppScopeCheck emits this alongside the full-scope finding
+  // rather than instead of it, so the grant is currently redundant for opening a gate. It is here
+  // so the model stays correct if that ever becomes an either/or, and because a CRITICAL finding
+  // silently granting nothing is precisely the failure this registry exists to prevent.
+  'connected-app-full-scope-infinite-token':    { grants: ['data-read-bulk', 'data-write'] },
 };
 
 /** Resolve the effective capabilities for a finding (inline overrides registry; passed/inconclusive yield nothing). */

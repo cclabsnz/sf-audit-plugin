@@ -82,4 +82,63 @@ describe('CapabilityRegistry', () => {
     expect(capabilitiesFor(f('integration-least-privilege-dormant')).grants).toEqual([]);
     expect(capabilitiesFor(f('integration-least-privilege-hygiene')).grants).toEqual([]);
   });
+
+  // Credentials in custom settings sit alongside the hardcoded-literal and custom-label paths that
+  // already grant, so cred-theft-pivot sees all three places a secret hides rather than two.
+  it('grants credential-theft to credentials held in custom settings', () => {
+    expect(capabilitiesFor(f('custom-settings-credentials')).grants).toContain('credential-theft');
+  });
+
+  // The @RestResource analogue of portal-exposed-apex-without-sharing. Sharing and CRUD/FLS are
+  // independent controls: skipping sharing gives unattended write, skipping CRUD/FLS does not.
+  it('grants code-exec and write to Apex REST declared without sharing', () => {
+    expect(capabilitiesFor(f('apex-rest-without-sharing')).grants).toEqual(
+      expect.arrayContaining(['code-exec', 'data-read', 'data-write']),
+    );
+  });
+
+  it('grants read but NOT write or code-exec to Apex merely missing CRUD/FLS checks', () => {
+    const grants = capabilitiesFor(f('apex-crud-fls-missing')).grants;
+    expect(grants).toContain('data-read');
+    expect(grants).not.toContain('data-write');
+    expect(grants).not.toContain('code-exec');
+  });
+
+  it('grants credential-theft and egress to an outbound message carrying a session ID', () => {
+    expect(capabilitiesFor(f('outbound-messages-session-id')).grants).toEqual(
+      expect.arrayContaining(['credential-theft', 'external-egress']),
+    );
+  });
+
+  // Anonymous file access grants read and, on purpose, no foothold. unauth-foothold is a SOURCE
+  // capability, so the emergent pass would pair a public Document with every high-impact sink in
+  // the org and report "unauthenticated foothold -> bulk read" on adjacency alone. A file is not a
+  // session: the guest findings grant a foothold because a guest user context can be pivoted from,
+  // whereas these return the file and stop. Pinned because it reads like an omission.
+  it('grants read but NOT a foothold to anonymously fetchable files', () => {
+    const ids = [
+      'public-content-public-documents', 'public-content-public-static-resources',
+      'content-links-no-expiry', 'content-links-no-password',
+    ];
+    for (const id of ids) {
+      const grants = capabilitiesFor(f(id)).grants;
+      expect(grants).toContain('data-read');
+      expect(grants).not.toContain('unauth-foothold');
+    }
+  });
+
+  // Self-registration is how an attacker obtains the account the external-sharing grants assume.
+  it('grants a low-trust authenticated entry point to self-registration', () => {
+    expect(capabilitiesFor(f('experience-cloud-site-self-registration')).grants).toContain(
+      'low-trust-authenticated',
+    );
+  });
+
+  // Full scope is reach. Never-expiring and stale tokens are evidence about a token rather than
+  // reach an attacker holds, so they stay chain steps and grant nothing here.
+  it('grants bulk read to the Full OAuth scope, and nothing to token persistence or disuse', () => {
+    expect(capabilitiesFor(f('connected-app-full-scope')).grants).toContain('data-read-bulk');
+    expect(capabilitiesFor(f('connected-app-infinite-refresh-token')).grants).toEqual([]);
+    expect(capabilitiesFor(f('oauth-token-stale')).grants).toEqual([]);
+  });
 });
