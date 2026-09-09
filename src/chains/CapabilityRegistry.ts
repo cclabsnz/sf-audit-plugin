@@ -9,7 +9,7 @@ export interface CapabilityEntry {
 
 /**
  * The full attack model lives here: finding id → attacker capabilities it grants.
- * Keep this the single source of truth so the 88 checks stay untouched.
+ * Keep this the single source of truth so the 92 checks stay untouched.
  *
  * Every key MUST correspond to a finding id some check can actually emit, and every id referenced
  * by a named chain must be emittable too — a typo in either place fails silently (a key that
@@ -113,6 +113,49 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // unexercised permission is not a capability an attacker holds today.
   'integration-least-privilege-escalation-permissions': { grants: ['code-exec', 'priv-esc'] },
   'integration-least-privilege-data-permissions':       { grants: ['data-read-bulk'] },
+
+  // Credentials in custom settings — the third place secrets hide, after hardcoded literals and
+  // custom labels, both of which already grant here. A protected custom setting is readable by any
+  // Apex running in system context, so the reach is the same.
+  'custom-settings-credentials':                { grants: ['credential-theft'] },
+
+  // Apex reachable over REST, and Apex that skips CRUD/FLS. The registry already models the portal
+  // (`portal-exposed-apex-without-sharing`) and Flow (`flows-*-without-sharing`) variants of the
+  // same defect; the `@RestResource` door was the one left out. Sharing declarations and permission
+  // checks are independent controls, so a class can fail either: without-sharing skips record
+  // access, missing CRUD/FLS skips object and field access. Only the first is unattended write.
+  'apex-rest-without-sharing':                  { grants: ['code-exec', 'data-read', 'data-write'] },
+  'apex-crud-fls-without-sharing':              { grants: ['data-read', 'data-write'] },
+  'apex-crud-fls-missing':                      { grants: ['data-read'] },
+
+  // A live session ID posted to an external endpoint. This is a credential leaving the org through
+  // a supported feature rather than a flaw, which is exactly why it is easy to leave in place: the
+  // receiving endpoint can act as the running user until the session expires.
+  'outbound-messages-session-id':               { grants: ['credential-theft', 'external-egress'] },
+
+  // Anonymously fetchable files. Documents and static resources marked public are served from a
+  // URL that never reaches a login, so they are an unauthenticated surface in their own right —
+  // no guest user, Experience Cloud site or Aura endpoint involved.
+  'public-content-public-documents':            { grants: ['unauth-foothold', 'data-read'] },
+  'public-content-public-static-resources':     { grants: ['unauth-foothold', 'data-read'] },
+  // Content distribution links are also anonymous, but each is scoped to one file somebody chose
+  // to share. Without expiry or a password the exposure simply never ends. Deliberately no
+  // 'unauth-foothold': that would pair these with every bulk-read sink in the emergent pass and
+  // assert a path between unrelated data.
+  'content-links-no-expiry':                    { grants: ['data-read'] },
+  'content-links-no-password':                  { grants: ['data-read'] },
+
+  // Self-registration is how an attacker obtains the account that every external-sharing finding
+  // already assumes they have. On its own it is a supported feature and harmless; it earns a
+  // capability because 'sharing-model-external-*' grants reach to whoever holds an account, and
+  // this is the finding that says anyone may hold one.
+  'experience-cloud-site-self-registration':    { grants: ['low-trust-authenticated'] },
+
+  // The "Full" OAuth scope gives a token the same API reach as the user who authorised it. The
+  // never-expiring refresh token and the stale/unmatched token findings are deliberately absent:
+  // persistence and disuse are evidence about a token, not reach an attacker holds, and they earn
+  // their place as chain steps rather than as gate-opening grants.
+  'connected-app-full-scope':                   { grants: ['data-read-bulk', 'data-write'] },
 };
 
 /** Resolve the effective capabilities for a finding (inline overrides registry; passed/inconclusive yield nothing). */
