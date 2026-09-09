@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@cclabsnz/sf-core": "^0.3.0",
-    "@oclif/core": "^4",
+    "@oclif/core": "^5",
     "@salesforce/core": "^9",
     "@salesforce/sf-plugins-core": "^13",
     "chart.js": "^4.5.1",
