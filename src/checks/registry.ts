@@ -41,6 +41,7 @@ import { SiemIntegrationCheck } from './impl/SiemIntegrationCheck.js';
 import { ApexCrudFLSCheck } from './impl/ApexCrudFLSCheck.js';
 import { ApexRestEndpointCheck } from './impl/ApexRestEndpointCheck.js';
 import { VisualforceXssCheck } from './impl/VisualforceXssCheck.js';
+import { LightningMessageChannelCheck } from './impl/LightningMessageChannelCheck.js';
 import { CertificateExpiryCheck } from './impl/CertificateExpiryCheck.js';
 import { InstalledPackagesCheck } from './impl/InstalledPackagesCheck.js';
 import { TrustedIPRangesCheck } from './impl/TrustedIPRangesCheck.js';
@@ -189,6 +190,7 @@ export const CHECKS: SecurityCheck[] = [
   new GuestExecutableApexCheck(),  // reads apexBodies — guest-reachable Apex sharing
   new ApexRestEndpointCheck(),     // reads apexBodies
   new VisualforceXssCheck(),       // writes vfPageBodies
+  new LightningMessageChannelCheck(), // no deps
   new EventMonitoringCheck(),      // writes eventLogSummary
   new GuestTrafficAnomalyCheck(),  // reads eventLogSummary — anonymizer IPs, bursts, GraphQL recon in guest logs
   new MfaRegistrationCheck(),      // writes mfaRegistrations

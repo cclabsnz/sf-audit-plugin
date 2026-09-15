@@ -46,6 +46,7 @@ export const CHECK_META: Record<string, CheckMeta> = {
   'apex-crud-fls':           { effort: 'project',  impact: 'Apex skipping CRUD/FLS checks lets callers read or write records and fields they have no rights to.' },
   'apex-rest-endpoint':      { effort: 'project',  impact: 'without-sharing @RestResource endpoints expose records to REST callers without record-level access control.' },
   'visualforce-xss':         { effort: 'moderate', impact: 'Unescaped Visualforce merge fields let attackers inject scripts that run in victims’ sessions.' },
+  'lightning-message-channel': { effort: 'project',  impact: 'An exposed message channel is readable and writable by any component in any namespace, and the exposure cannot be reversed.' },
   'certificate-expiry':      { effort: 'quick',    impact: 'An expired certificate breaks integrations or, if ignored, invites insecure fallback.' },
   'installed-packages':      { effort: 'moderate', impact: 'Unmanaged or beta packages in production can carry unvetted code with broad org access.' },
   'trusted-ip-ranges':       { effort: 'quick',    impact: 'Overly broad trusted IP ranges silently exempt large networks from MFA.' },
