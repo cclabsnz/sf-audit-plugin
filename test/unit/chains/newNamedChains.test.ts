@@ -172,3 +172,76 @@ describe('oauth-standing-access', () => {
     expect(chain.remediation).toContain('Revoke');
   });
 });
+
+describe('self-registration-foothold', () => {
+  const selfReg = f('experience-cloud-site-self-registration');
+  const externalRead = f('sharing-model-external-read');
+  const portalApex = f('portal-exposed-apex-without-sharing');
+  const social = f('auth-providers-social');
+
+  it('fires when self-registration meets an over-shared external model', () => {
+    const steps = match('self-registration-foothold', [selfReg, externalRead]);
+    expect(steps?.map((s) => s.id)).toEqual([
+      'experience-cloud-site-self-registration', 'sharing-model-external-read',
+    ]);
+  });
+
+  // Each half is unremarkable alone: self-registration is a supported feature, and an external OWD
+  // assumes an account the attacker may never get. The conjunction is the whole finding.
+  it('does not fire on self-registration alone', () => {
+    expect(match('self-registration-foothold', [selfReg])).toBeNull();
+  });
+
+  it('does not fire on external sharing alone', () => {
+    expect(match('self-registration-foothold', [externalRead, portalApex])).toBeNull();
+  });
+
+  // Social sign-on is a second door, not a substitute for the first.
+  it('does not fire on social auth providers without self-registration', () => {
+    expect(match('self-registration-foothold', [social, externalRead])).toBeNull();
+  });
+
+  it('includes social auth providers as evidence when self-registration is also present', () => {
+    const ids = match('self-registration-foothold', [selfReg, externalRead, social])?.map((s) => s.id);
+    expect(ids).toContain('auth-providers-social');
+  });
+
+  // A self-registered account is a Customer Community licence, which generally has no report
+  // access, so report folders must not count as reach here however tempting the wording is.
+  it('does not treat public report folders as portal-reachable', () => {
+    expect(match('self-registration-foothold', [selfReg, f('report-folder-access-public')])).toBeNull();
+  });
+});
+
+describe('session-id-egress', () => {
+  const leak = f('outbound-messages-session-id');
+  const cleartext = f('outbound-messages-cleartext');
+  const noMonitoring = f('event-monitoring-disabled');
+
+  it('fires when the session ID leaves over a cleartext endpoint', () => {
+    const steps = match('session-id-egress', [leak, cleartext]);
+    expect(steps?.map((s) => s.id)).toEqual([
+      'outbound-messages-session-id', 'outbound-messages-cleartext',
+    ]);
+  });
+
+  it('fires when nothing would record the replay', () => {
+    expect(match('session-id-egress', [leak, noMonitoring])).not.toBeNull();
+  });
+
+  it('does not fire without the session ID actually leaving', () => {
+    expect(match('session-id-egress', [cleartext, noMonitoring])).toBeNull();
+  });
+
+  // The credential leaving is the finding; the chain reports it as a path only when something also
+  // means a replay would go unstopped or unseen. OutboundMessagesCheck reports the leak alone.
+  it('does not fire on the leak alone', () => {
+    expect(match('session-id-egress', [leak])).toBeNull();
+  });
+
+  it('names the mechanism and leads remediation with clearing the option', () => {
+    const chain = NAMED_CHAINS.find((c) => c.id === 'session-id-egress')!;
+    expect(chain.narrative).toContain('outbound message');
+    expect(chain.remediation).toContain('Send Session ID');
+  });
+});

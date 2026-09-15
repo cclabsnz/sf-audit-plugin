@@ -376,4 +376,86 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       return [...standing, ...uncontained];
     },
   },
+  {
+    id: 'self-registration-foothold',
+    title: 'Self-service registration into an over-shared portal',
+    severity: 'HIGH',
+    narrative:
+      'A live Experience Cloud site accepts self-registration, and the external sharing model or ' +
+      'portal-reachable code gives whoever holds an account more than their own records. Every other ' +
+      'chain that starts from "an authenticated external user" assumes the attacker already has an ' +
+      'account; this is the one that says anyone may have one, for the cost of an email address. ' +
+      'The account is legitimate, so it arrives through the front door with a real session: MFA, ' +
+      'login IP ranges and SSO all behave exactly as configured and none of them object, because ' +
+      'nothing here is a bypass. What the attacker gets is decided entirely by the external OWD, ' +
+      'the portal profile and whether the Apex or Flow reachable from the site enforces sharing. ' +
+      'Self-registration alone is a supported feature and not a finding; the sharing model alone ' +
+      'assumes an account the attacker may never obtain. The pair is the path.',
+    remediation:
+      'Decide which half to close, because either breaks the chain. Turning self-registration off, ' +
+      'or putting an approval step in front of it, restores the assumption every other control ' +
+      'depends on. Leaving it on means treating the self-registration profile as hostile input: ' +
+      'set external OWD to Private and grant through sharing sets rather than org-wide defaults, ' +
+      'and make sure Apex and Flows reachable from the site run with sharing. Check what the ' +
+      'self-registration handler assigns as the default profile and licence — the exposure is ' +
+      'whatever that profile can reach, and it is rarely reviewed after the site goes live.',
+    match(_present, active) {
+      const acquisition = byIds(active, ['experience-cloud-site-self-registration']);
+      if (acquisition.length === 0) return null;
+      // What an account is worth once obtained. Deliberately excludes report-folder-access-public:
+      // it is real for internal users, but a self-registered portal account is a Customer Community
+      // licence, which generally has no report access at all, so including it would overstate reach.
+      const reach = byIds(active, [
+        'sharing-model-external-read', 'sharing-model-external-write',
+        'portal-exposed-apex-without-sharing',
+        'flows-autolaunched-without-sharing', 'flows-screen-without-sharing',
+        'apex-rest-without-sharing',
+      ]);
+      if (reach.length === 0) return null;
+      // Social sign-on is a second way in rather than a requirement, so it joins as evidence when
+      // present but never gates the chain on its own.
+      const alsoOpen = byIds(active, ['auth-providers-social']);
+      return [...acquisition, ...reach, ...alsoOpen];
+    },
+  },
+  {
+    id: 'session-id-egress',
+    title: 'Live session ID handed to an external endpoint',
+    severity: 'HIGH',
+    narrative:
+      'A workflow outbound message is configured to include the Salesforce session ID, so every time ' +
+      'it fires the org sends a working credential to a third-party endpoint. This is a supported ' +
+      'option rather than a flaw, which is exactly why it survives: it was switched on to let the ' +
+      'receiving system call back into Salesforce, and it never came off. The session it hands over ' +
+      'acts as the outbound message\'s running user for as long as it is valid, and nothing about ' +
+      'that request looks anomalous, because it is the org doing the sending. ' +
+      'Whoever holds the endpoint holds the credential, which makes the org\'s exposure equal to the ' +
+      'weakest party that has ever operated it — a vendor, a subcontractor, or whoever registered ' +
+      'the domain after the integration was retired. The other findings in this chain are the ' +
+      'reasons a replayed session would neither be blocked nor noticed.',
+    remediation:
+      'Clear the "Send Session ID" option on the outbound message and give the receiving system its ' +
+      'own authenticated path instead: a connected app with a specific OAuth scope, or a named ' +
+      'credential, both of which can be scoped and revoked without touching a user session. If an ' +
+      'endpoint is cleartext http://, treat the session as already disclosed and change it first, ' +
+      'since anything on the path has seen it. Confirm the outbound message\'s running user is the ' +
+      'least-privileged account that can do the job, because that is the reach being handed out.',
+    match(_present, active) {
+      const leak = byIds(active, ['outbound-messages-session-id']);
+      if (leak.length === 0) return null;
+      // Why a replayed session would not be stopped or seen. Any one is enough; the point of the
+      // chain is the credential leaving, and these say what happens next.
+      const unchecked = byIds(active, [
+        // Disclosed in transit, so compromising the endpoint is not even required.
+        'outbound-messages-cleartext',
+        // Nothing binds or shortens the session that was handed over.
+        'session-hardening-risks', 'session-security-deviations',
+        'admin-no-ip-restrictions', 'broad-ip-ranges',
+        // Nothing would record the replay.
+        'event-monitoring-disabled', 'siem-integration-not-detected', 'threat-detection-inactive',
+      ]);
+      if (unchecked.length === 0) return null;
+      return [...leak, ...unchecked];
+    },
+  },
 ];
