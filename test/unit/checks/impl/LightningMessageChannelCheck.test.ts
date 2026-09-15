@@ -88,6 +88,24 @@ describe('LightningMessageChannelCheck', () => {
     expect(finding.detail).toContain('Visualforce');
   });
 
+  // The reach is real but narrower than "anyone on the page": subscribing needs a compile-time
+  // import into a deployed component, so the actor is an installed package, not injected script.
+  // Saying otherwise would claim an exploit path the metadata does not support.
+  it('scopes the actor to deployed components rather than arbitrary page script', async () => {
+    const result = await check.run(makeCtx([channel({ IsExposed: true })]));
+    const finding = result.findings.find((f) => f.id === 'lightning-message-channel-exposed')!;
+    expect(finding.detail).toContain('not arbitrary script running on the page');
+  });
+
+  // Metadata says the door is open, never that anything sensitive goes through it. A client-facing
+  // finding that blurred the two would be asserting a leak the check cannot see.
+  it('states that it has not established what any channel carries', async () => {
+    const result = await check.run(makeCtx([channel({ IsExposed: true })]));
+    const finding = result.findings.find((f) => f.id === 'lightning-message-channel-exposed')!;
+    expect(finding.detail).toContain('not that anything sensitive passes');
+    expect(finding.remediation).toContain('reading the publishing component');
+  });
+
   it('treats a missing ManageableState as locally defined', async () => {
     const result = await check.run(makeCtx([channel({ ManageableState: null, IsExposed: true })]));
     expect(result.findings.map((f) => f.id)).toEqual(['lightning-message-channel-exposed']);

@@ -77,22 +77,32 @@ export class LightningMessageChannelCheck implements SecurityCheck {
         riskLevel: 'MEDIUM',
         title: `${local.length} Lightning Message Channel(s) are exposed to every namespace`,
         detail:
-          `${local.length} of ${channels.length} channel(s) set isExposed=true, which publishes them to components in any namespace, ` +
-          'including every installed managed package. Lightning Message Service is a browser-side bus with no server mediation: ' +
-          'any component sharing a page with a publisher or subscriber can subscribe to read every payload, or publish a payload ' +
-          'of its own. Sharing rules, org-wide defaults and field-level security govern records and do not apply here, so whatever ' +
-          'the channel carries is readable regardless of what the reader is entitled to see. The matching risk is that a subscriber ' +
-          'treats the payload as trusted input — taking a record id from a message and passing it to Apex, or rendering it into the ' +
-          'page — because the bus looks like a trust boundary and is not one. ' +
+          `${local.length} of ${channels.length} channel(s) set isExposed=true. Lightning Message Service is secure by default: ` +
+          'per Salesforce, components in other namespaces cannot read a channel unless isExposed is true, and exposing it lets ' +
+          'outside packages publish to and subscribe on it. This single boolean is therefore the whole of what separates the ' +
+          'channel from code the org did not write. ' +
+          'Who can take advantage is narrower than it first appears, and worth being precise about: subscribing requires importing ' +
+          'the channel into a deployed component, so the actor is an installed managed package or anything else deployed into this ' +
+          'org — not arbitrary script running on the page. That makes this a design exposure rather than a demonstrated leak. ' +
+          'What it costs, where a channel carries record data, is that a message is a plain JavaScript object the publisher ' +
+          'assembled. There is no record-level enforcement on a message, so a subscriber reads whatever was placed on the channel ' +
+          'irrespective of what its own user is entitled to see, and a publisher can equally put a payload on the channel that a ' +
+          'subscriber then treats as trusted input. ' +
           'Note that Visualforce supports only channels where isExposed is true, so a channel used from a Visualforce page is ' +
-          'exposed because the platform requires it, not because anyone chose it.',
+          'exposed because the platform requires it, not because anyone chose it. ' +
+          'This check reads channel metadata only. It establishes that the door is open, not that anything sensitive passes ' +
+          'through it: what each channel actually carries is visible only in the publishing component.',
         remediation:
-          'Treat this as a design change rather than a setting change: isExposed cannot be set back to false once true, so closing ' +
-          'a channel means defining a replacement with isExposed=false and migrating every publisher and subscriber to it. ' +
-          'Before doing that, check what each channel actually carries — a channel passing a record id is a smaller problem than ' +
-          'one passing field values — and make every subscriber validate the payload rather than trusting it, since the publisher ' +
-          'cannot be authenticated. Where the channel exists only to support a Visualforce page, moving that page to a Lightning ' +
-          'Web Component removes the constraint that forced the exposure.',
+          'Start by reading the publishing component to see what each channel carries, because that decides whether this is urgent ' +
+          'or merely untidy: a channel passing a record id is a much smaller problem than one passing field values, and nothing in ' +
+          'the metadata distinguishes them. Then check whether any installed package would be positioned to subscribe, since a ' +
+          'channel exposed in an org with no third-party components on those pages has no audience today, though it will if one is ' +
+          'installed later. ' +
+          'If it needs closing, treat it as a design change rather than a setting change: isExposed cannot be set back to false ' +
+          'once true, so closing a channel means defining a replacement with isExposed=false and migrating every publisher and ' +
+          'subscriber to it. Make every subscriber validate the payload rather than trusting it, since the publisher cannot be ' +
+          'authenticated. Where the channel exists only to support a Visualforce page, moving that page to a Lightning Web ' +
+          'Component removes the constraint that forced the exposure.',
         affectedItems: local.map((c) => ({
           label: label(c),
           note: c.MasterLabel && c.MasterLabel !== c.DeveloperName ? c.MasterLabel : undefined,
