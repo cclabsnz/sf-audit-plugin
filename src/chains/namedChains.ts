@@ -458,4 +458,96 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       return [...leak, ...unchecked];
     },
   },
+  {
+    id: 'anonymous-file-exposure',
+    title: 'Org files served to anonymous callers, with no record of what left',
+    severity: 'HIGH',
+    narrative:
+      'Files hosted by the org are fetchable without authentication — public Documents or static ' +
+      'resources, content distribution links that never expire or ask for a password, or a site ' +
+      'that grants guests file access — and nothing in the org would establish what those files ' +
+      'contained or who collected them. ' +
+      'Files are the blind spot in a sharing model. Org-wide defaults, sharing rules and ' +
+      'field-level security all govern records, and none of them apply to a static resource served ' +
+      'from a URL. Static resources in particular tend to accumulate the things front-end code ' +
+      'needs and nobody re-reads: configuration, endpoint lists, and occasionally an API key that ' +
+      'was only ever meant to reach the browser. ' +
+      'This chain deliberately claims less than the guest chains do. It does not assert a pivot ' +
+      'into org data, because there is none — anonymous file access returns the file and stops. ' +
+      'What it asserts is that content left the org outside every record control, and that the ' +
+      'absence of classification or monitoring means the question "what was in it" has no answer ' +
+      'available after the fact.',
+    remediation:
+      'Retrieve and read the exposed files before deciding how urgent this is: the exposure is ' +
+      'whatever they actually contain, and that is knowable now in a way it will not be later. ' +
+      'Then remove external availability from Documents and static resources that do not need it, ' +
+      'set expiry and passwords on content distribution links, and turn off guest file access on ' +
+      'sites that do not depend on it. Treat any credential found in a static resource as ' +
+      'disclosed and rotate it rather than removing the file, since the file has already been ' +
+      'served and may be cached anywhere.',
+    match(_present, active) {
+      const surface = byIds(active, [
+        'public-content-public-documents', 'public-content-public-static-resources',
+        'content-links-no-expiry', 'content-links-no-password', 'content-links-stale',
+        'guest-site-options-file-access',
+      ]);
+      if (surface.length === 0) return null;
+      // No way to answer "what was in it" or "who took it". Classification and monitoring only:
+      // content-links-stale is a subset of content-links-no-expiry, so counting it on both sides
+      // would let one check satisfy the conjunction by itself.
+      const unaccounted = byIds(active, [
+        'data-classification-missing', 'data-encryption-not-detected',
+        'event-monitoring-disabled', 'siem-integration-not-detected', 'threat-detection-inactive',
+      ]);
+      if (unaccounted.length === 0) return null;
+      return [...surface, ...unaccounted];
+    },
+  },
+  {
+    id: 'xss-to-privileged-session',
+    title: 'Visualforce XSS pattern reaching a privileged session',
+    severity: 'HIGH',
+    narrative:
+      'Custom Visualforce markup contains a pattern that renders data without encoding it — ' +
+      'escape="false", a merge field inside a <script> block without JSENCODE, or one in an href, ' +
+      'src or action attribute — while the browser-side protections that would blunt an injected ' +
+      'script are weakened, and the org contains accounts whose session is worth stealing. Script ' +
+      'running in an administrator\'s session acts as that administrator: it inherits Modify All ' +
+      'Data if they hold it, and the requests it makes are indistinguishable from theirs. ' +
+      'What this chain does not claim is that the XSS is exploitable. The scan reads page markup, ' +
+      'so it can show that a page renders something unencoded but not whether an attacker can ' +
+      'influence what is rendered. A page interpolating a hard-coded label is a false positive and ' +
+      'a page interpolating a record field an external user can set is not — and only reading the ' +
+      'page tells you which. The chain is a prioritisation of which pages to read first, ordered ' +
+      'by the fact that a privileged population exists to be targeted.',
+    remediation:
+      'Read the flagged pages before anything else, and ask one question of each: can a user who is ' +
+      'not you influence the value being rendered? Where the answer is yes, encode at the output — ' +
+      'HTMLENCODE, JSENCODE or URLENCODE according to where the value lands, since the correct ' +
+      'function depends on the context, not the value. Separately, restore the session hardening ' +
+      'settings that deviate from the Salesforce baseline and replace insecure http:// CSP trusted ' +
+      'sites with https:// equivalents, both of which widen what an injected script can do once it ' +
+      'runs.',
+    match(_present, active) {
+      const vector = byIds(active, [
+        'visualforce-xss-escape-false',
+        'visualforce-xss-js-merge-field',
+        'visualforce-xss-attr-merge-field',
+      ]);
+      if (vector.length === 0) return null;
+      // The browser-side controls that would otherwise contain an injected script. Excludes
+      // 'experience-csp-verify', which asks the operator to confirm a setting rather than reporting
+      // a weakness — treating an advisory as a confirmed gap would inflate the chain.
+      const weakened = byIds(active, ['session-hardening-risks', 'csp-trusted-sites-insecure']);
+      if (weakened.length === 0) return null;
+      // Somebody whose session is worth the trouble.
+      const targets = byIds(active, [
+        'users-super-admin-combo', 'privileged-access-shadow-admins',
+        'users-modify-all-data', 'users-view-all-data',
+        'separation-of-duties-self-escalation',
+      ]);
+      if (targets.length === 0) return null;
+      return [...vector, ...weakened, ...targets];
+    },
+  },
 ];
