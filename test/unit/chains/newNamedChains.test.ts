@@ -245,3 +245,82 @@ describe('session-id-egress', () => {
     expect(chain.remediation).toContain('Send Session ID');
   });
 });
+
+describe('anonymous-file-exposure', () => {
+  const publicDocs = f('public-content-public-documents');
+  const staleLink = f('content-links-stale');
+  const noClassification = f('data-classification-missing');
+  const noMonitoring = f('event-monitoring-disabled');
+
+  it('fires when an anonymous file surface meets an inability to say what left', () => {
+    const steps = match('anonymous-file-exposure', [publicDocs, noClassification]);
+    expect(steps?.map((s) => s.id)).toEqual([
+      'public-content-public-documents', 'data-classification-missing',
+    ]);
+  });
+
+  it('does not fire on an anonymous file surface alone', () => {
+    expect(match('anonymous-file-exposure', [publicDocs, staleLink])).toBeNull();
+  });
+
+  it('does not fire on missing classification or monitoring without an exposed surface', () => {
+    expect(match('anonymous-file-exposure', [noClassification, noMonitoring])).toBeNull();
+  });
+
+  // content-links-stale is a subset of content-links-no-expiry, so it counts as surface only.
+  // Listing it on both sides would let one check satisfy the whole conjunction by itself.
+  it('does not let stale links satisfy both halves of the conjunction', () => {
+    expect(match('anonymous-file-exposure', [staleLink])).toBeNull();
+  });
+
+  // The chain claims less than the guest chains on purpose: a file is not a pivot.
+  it('does not claim a pivot into org data', () => {
+    const chain = NAMED_CHAINS.find((c) => c.id === 'anonymous-file-exposure')!;
+    expect(chain.narrative).toContain('does not assert a pivot');
+  });
+});
+
+describe('xss-to-privileged-session', () => {
+  const vector = f('visualforce-xss-escape-false');
+  const jsVector = f('visualforce-xss-js-merge-field');
+  const weakened = f('session-hardening-risks');
+  const insecureCsp = f('csp-trusted-sites-insecure');
+  const target = f('users-super-admin-combo');
+
+  it('fires only with a vector, weakened browser protection and a privileged target', () => {
+    const steps = match('xss-to-privileged-session', [vector, weakened, target]);
+    expect(steps?.map((s) => s.id)).toEqual([
+      'visualforce-xss-escape-false', 'session-hardening-risks', 'users-super-admin-combo',
+    ]);
+  });
+
+  it('does not fire without a privileged session worth stealing', () => {
+    expect(match('xss-to-privileged-session', [vector, weakened])).toBeNull();
+  });
+
+  it('does not fire when the browser-side protections are intact', () => {
+    expect(match('xss-to-privileged-session', [vector, target])).toBeNull();
+  });
+
+  it('does not fire without an XSS pattern in the markup', () => {
+    expect(match('xss-to-privileged-session', [weakened, insecureCsp, target])).toBeNull();
+  });
+
+  it('accepts the unencoded-merge-field vectors, not only escape="false"', () => {
+    expect(match('xss-to-privileged-session', [jsVector, insecureCsp, target])).not.toBeNull();
+  });
+
+  // experience-csp-verify asks the operator to confirm a setting rather than reporting a weakness.
+  // Counting an advisory as a confirmed gap would inflate the chain.
+  it('does not treat the Experience Cloud CSP advisory as a confirmed weakness', () => {
+    expect(match('xss-to-privileged-session', [vector, f('experience-csp-verify'), target])).toBeNull();
+  });
+
+  // A markup scan cannot show whether an attacker controls the rendered value, and a client-facing
+  // narrative that implied otherwise would be asserting an exploit it has not demonstrated.
+  it('states plainly that exploitability is not established', () => {
+    const chain = NAMED_CHAINS.find((c) => c.id === 'xss-to-privileged-session')!;
+    expect(chain.narrative).toContain('does not claim');
+    expect(chain.narrative).toContain('false positive');
+  });
+});
