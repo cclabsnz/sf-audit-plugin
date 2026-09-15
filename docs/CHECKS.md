@@ -1,6 +1,6 @@
 # What it checks
 
-The audit runs **92 read-only checks**. The [README](../README.md#what-it-checks) summarises them by domain; this is the full inventory. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into ten domains below.
+The audit runs **93 read-only checks**. The [README](../README.md#what-it-checks) summarises them by domain; this is the full inventory. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into ten domains below.
 
 ## Org Health & Configuration
 | Check | What it looks for |
@@ -83,6 +83,7 @@ The audit runs **92 read-only checks**. The [README](../README.md#what-it-checks
 | Apex CRUD/FLS Enforcement | DML or SOQL performed without CRUD/FLS permission checks |
 | Apex REST Endpoints | `@RestResource` classes running `without sharing` |
 | Visualforce XSS | `escape="false"` and unencoded merge fields in Visualforce markup |
+| Lightning Message Channels | Channels with `isExposed=true`, readable and writable by components in any namespace |
 | Hardcoded Credentials | Bearer tokens, Basic auth, API keys, and raw callout URLs in Apex |
 | Code Security & Coverage | Org-wide Apex test coverage, class/trigger counts, and SOQL injection patterns |
 | Scheduled & Batch Apex | Active scheduled and batch Apex jobs |
