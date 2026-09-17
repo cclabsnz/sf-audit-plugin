@@ -321,4 +321,233 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       return weakness.length > 0 && targets.length > 0 ? [...weakness, ...targets] : null;
     },
   },
+  {
+    id: 'oauth-standing-access',
+    title: 'Standing OAuth access outside every login control',
+    severity: 'HIGH',
+    narrative:
+      'A connected app holds broad standing API access, and something in the org means nobody would ' +
+      'notice it being used. The distinction that matters here is that a refresh token is not a ' +
+      'session. Login controls — MFA, login IP ranges, SSO, session timeout — engage once, at the ' +
+      'moment the app is authorised, and never again: every later API call exchanges the refresh ' +
+      'token for an access token without a login, so an org can enforce MFA on every human and still ' +
+      'hand a token holder the same reach. Full scope makes that reach equal to the authorising ' +
+      'user, including Modify All Data where that user is an admin, and a refresh token with no ' +
+      'expiry makes it permanent until somebody revokes it. ' +
+      'The token exchange produces no OAuth login row, so this access is absent from LoginHistory ' +
+      'and invisible to the connected-app inactivity check — which is why a token that has gone ' +
+      'unused for months, or that belongs to an app no longer in the connected app list, is the ' +
+      'shape a forgotten or third-party integration leaves behind. That is the path the 2025 and ' +
+      '2026 campaigns against Salesforce customers took: the tokens were not stolen from the org, ' +
+      'they were taken from the integration vendor and replayed against it, with no login and no ' +
+      'user interaction anywhere in the victim org.',
+    remediation:
+      'Revoke first and tidy later. Any standing token whose app is not in the current connected app ' +
+      'list, or that has not been used in months, should be revoked now rather than investigated ' +
+      'first — re-authorising a live integration is a minor inconvenience, and a token is a working ' +
+      'credential for as long as it exists. Then replace the Full scope with the specific scopes an ' +
+      'integration actually uses, set a refresh token policy that expires on inactivity instead of ' +
+      'never, and stop relaxing IP enforcement for connected apps, since that removes the one ' +
+      'control still applying after authorisation. Treat a vendor breach notice as a trigger to ' +
+      'revoke every token for that publisher rather than waiting to confirm your own org was ' +
+      'touched: with no login row to search, absence of evidence is not evidence of absence here.',
+    match(_present, active) {
+      // Standing reach: a token that can act broadly, and keeps being able to.
+      const standing = byIds(active, [
+        'connected-app-full-scope-infinite-token',
+        'connected-app-full-scope',
+        'connected-app-infinite-refresh-token',
+      ]);
+      if (standing.length === 0) return null;
+      // What removes the containment or the observation. Any one of these turns standing access
+      // into access nobody is watching or limiting.
+      const uncontained = byIds(active, [
+        // Nobody is reviewing it: tokens with no matching app, or long unused.
+        'oauth-token-unmatched-app', 'oauth-token-stale', 'oauth-token-no-app-inventory',
+        // Nothing is limiting it: the network control that survives authorisation, removed.
+        'connected-apps-bypass-ip', 'connected-apps-relax-ip', 'unrestricted-connected-apps',
+        'connected-apps-long-session-timeout', 'admin-no-ip-restrictions',
+        // The authorising identity is worth more than it needs to be, so the token inherits more.
+        'integration-least-privilege-escalation-permissions',
+        'integration-least-privilege-data-permissions',
+        'api-client-permission-assigned',
+      ]);
+      if (uncontained.length === 0) return null;
+      return [...standing, ...uncontained];
+    },
+  },
+  {
+    id: 'self-registration-foothold',
+    title: 'Self-service registration into an over-shared portal',
+    severity: 'HIGH',
+    narrative:
+      'A live Experience Cloud site accepts self-registration, and the external sharing model or ' +
+      'portal-reachable code gives whoever holds an account more than their own records. Every other ' +
+      'chain that starts from "an authenticated external user" assumes the attacker already has an ' +
+      'account; this is the one that says anyone may have one, for the cost of an email address. ' +
+      'The account is legitimate, so it arrives through the front door with a real session: MFA, ' +
+      'login IP ranges and SSO all behave exactly as configured and none of them object, because ' +
+      'nothing here is a bypass. What the attacker gets is decided entirely by the external OWD, ' +
+      'the portal profile and whether the Apex or Flow reachable from the site enforces sharing. ' +
+      'Self-registration alone is a supported feature and not a finding; the sharing model alone ' +
+      'assumes an account the attacker may never obtain. The pair is the path.',
+    remediation:
+      'Decide which half to close, because either breaks the chain. Turning self-registration off, ' +
+      'or putting an approval step in front of it, restores the assumption every other control ' +
+      'depends on. Leaving it on means treating the self-registration profile as hostile input: ' +
+      'set external OWD to Private and grant through sharing sets rather than org-wide defaults, ' +
+      'and make sure Apex and Flows reachable from the site run with sharing. Check what the ' +
+      'self-registration handler assigns as the default profile and licence — the exposure is ' +
+      'whatever that profile can reach, and it is rarely reviewed after the site goes live.',
+    match(_present, active) {
+      const acquisition = byIds(active, ['experience-cloud-site-self-registration']);
+      if (acquisition.length === 0) return null;
+      // What an account is worth once obtained. Deliberately excludes report-folder-access-public:
+      // it is real for internal users, but a self-registered portal account is a Customer Community
+      // licence, which generally has no report access at all, so including it would overstate reach.
+      const reach = byIds(active, [
+        'sharing-model-external-read', 'sharing-model-external-write',
+        'portal-exposed-apex-without-sharing',
+        'flows-autolaunched-without-sharing', 'flows-screen-without-sharing',
+        'apex-rest-without-sharing',
+      ]);
+      if (reach.length === 0) return null;
+      // Social sign-on is a second way in rather than a requirement, so it joins as evidence when
+      // present but never gates the chain on its own.
+      const alsoOpen = byIds(active, ['auth-providers-social']);
+      return [...acquisition, ...reach, ...alsoOpen];
+    },
+  },
+  {
+    id: 'session-id-egress',
+    title: 'Live session ID handed to an external endpoint',
+    severity: 'HIGH',
+    narrative:
+      'A workflow outbound message is configured to include the Salesforce session ID, so every time ' +
+      'it fires the org sends a working credential to a third-party endpoint. This is a supported ' +
+      'option rather than a flaw, which is exactly why it survives: it was switched on to let the ' +
+      'receiving system call back into Salesforce, and it never came off. The session it hands over ' +
+      'acts as the outbound message\'s running user for as long as it is valid, and nothing about ' +
+      'that request looks anomalous, because it is the org doing the sending. ' +
+      'Whoever holds the endpoint holds the credential, which makes the org\'s exposure equal to the ' +
+      'weakest party that has ever operated it — a vendor, a subcontractor, or whoever registered ' +
+      'the domain after the integration was retired. The other findings in this chain are the ' +
+      'reasons a replayed session would neither be blocked nor noticed.',
+    remediation:
+      'Clear the "Send Session ID" option on the outbound message and give the receiving system its ' +
+      'own authenticated path instead: a connected app with a specific OAuth scope, or a named ' +
+      'credential, both of which can be scoped and revoked without touching a user session. If an ' +
+      'endpoint is cleartext http://, treat the session as already disclosed and change it first, ' +
+      'since anything on the path has seen it. Confirm the outbound message\'s running user is the ' +
+      'least-privileged account that can do the job, because that is the reach being handed out.',
+    match(_present, active) {
+      const leak = byIds(active, ['outbound-messages-session-id']);
+      if (leak.length === 0) return null;
+      // Why a replayed session would not be stopped or seen. Any one is enough; the point of the
+      // chain is the credential leaving, and these say what happens next.
+      const unchecked = byIds(active, [
+        // Disclosed in transit, so compromising the endpoint is not even required.
+        'outbound-messages-cleartext',
+        // Nothing binds or shortens the session that was handed over.
+        'session-hardening-risks', 'session-security-deviations',
+        'admin-no-ip-restrictions', 'broad-ip-ranges',
+        // Nothing would record the replay.
+        'event-monitoring-disabled', 'siem-integration-not-detected', 'threat-detection-inactive',
+      ]);
+      if (unchecked.length === 0) return null;
+      return [...leak, ...unchecked];
+    },
+  },
+  {
+    id: 'anonymous-file-exposure',
+    title: 'Org files served to anonymous callers, with no record of what left',
+    severity: 'HIGH',
+    narrative:
+      'Files hosted by the org are fetchable without authentication — public Documents or static ' +
+      'resources, content distribution links that never expire or ask for a password, or a site ' +
+      'that grants guests file access — and nothing in the org would establish what those files ' +
+      'contained or who collected them. ' +
+      'Files are the blind spot in a sharing model. Org-wide defaults, sharing rules and ' +
+      'field-level security all govern records, and none of them apply to a static resource served ' +
+      'from a URL. Static resources in particular tend to accumulate the things front-end code ' +
+      'needs and nobody re-reads: configuration, endpoint lists, and occasionally an API key that ' +
+      'was only ever meant to reach the browser. ' +
+      'This chain deliberately claims less than the guest chains do. It does not assert a pivot ' +
+      'into org data, because there is none — anonymous file access returns the file and stops. ' +
+      'What it asserts is that content left the org outside every record control, and that the ' +
+      'absence of classification or monitoring means the question "what was in it" has no answer ' +
+      'available after the fact.',
+    remediation:
+      'Retrieve and read the exposed files before deciding how urgent this is: the exposure is ' +
+      'whatever they actually contain, and that is knowable now in a way it will not be later. ' +
+      'Then remove external availability from Documents and static resources that do not need it, ' +
+      'set expiry and passwords on content distribution links, and turn off guest file access on ' +
+      'sites that do not depend on it. Treat any credential found in a static resource as ' +
+      'disclosed and rotate it rather than removing the file, since the file has already been ' +
+      'served and may be cached anywhere.',
+    match(_present, active) {
+      const surface = byIds(active, [
+        'public-content-public-documents', 'public-content-public-static-resources',
+        'content-links-no-expiry', 'content-links-no-password', 'content-links-stale',
+        'guest-site-options-file-access',
+      ]);
+      if (surface.length === 0) return null;
+      // No way to answer "what was in it" or "who took it". Classification and monitoring only:
+      // content-links-stale is a subset of content-links-no-expiry, so counting it on both sides
+      // would let one check satisfy the conjunction by itself.
+      const unaccounted = byIds(active, [
+        'data-classification-missing', 'data-encryption-not-detected',
+        'event-monitoring-disabled', 'siem-integration-not-detected', 'threat-detection-inactive',
+      ]);
+      if (unaccounted.length === 0) return null;
+      return [...surface, ...unaccounted];
+    },
+  },
+  {
+    id: 'xss-to-privileged-session',
+    title: 'Visualforce XSS pattern reaching a privileged session',
+    severity: 'HIGH',
+    narrative:
+      'Custom Visualforce markup contains a pattern that renders data without encoding it — ' +
+      'escape="false", a merge field inside a <script> block without JSENCODE, or one in an href, ' +
+      'src or action attribute — while the browser-side protections that would blunt an injected ' +
+      'script are weakened, and the org contains accounts whose session is worth stealing. Script ' +
+      'running in an administrator\'s session acts as that administrator: it inherits Modify All ' +
+      'Data if they hold it, and the requests it makes are indistinguishable from theirs. ' +
+      'What this chain does not claim is that the XSS is exploitable. The scan reads page markup, ' +
+      'so it can show that a page renders something unencoded but not whether an attacker can ' +
+      'influence what is rendered. A page interpolating a hard-coded label is a false positive and ' +
+      'a page interpolating a record field an external user can set is not — and only reading the ' +
+      'page tells you which. The chain is a prioritisation of which pages to read first, ordered ' +
+      'by the fact that a privileged population exists to be targeted.',
+    remediation:
+      'Read the flagged pages before anything else, and ask one question of each: can a user who is ' +
+      'not you influence the value being rendered? Where the answer is yes, encode at the output — ' +
+      'HTMLENCODE, JSENCODE or URLENCODE according to where the value lands, since the correct ' +
+      'function depends on the context, not the value. Separately, restore the session hardening ' +
+      'settings that deviate from the Salesforce baseline and replace insecure http:// CSP trusted ' +
+      'sites with https:// equivalents, both of which widen what an injected script can do once it ' +
+      'runs.',
+    match(_present, active) {
+      const vector = byIds(active, [
+        'visualforce-xss-escape-false',
+        'visualforce-xss-js-merge-field',
+        'visualforce-xss-attr-merge-field',
+      ]);
+      if (vector.length === 0) return null;
+      // The browser-side controls that would otherwise contain an injected script. Excludes
+      // 'experience-csp-verify', which asks the operator to confirm a setting rather than reporting
+      // a weakness — treating an advisory as a confirmed gap would inflate the chain.
+      const weakened = byIds(active, ['session-hardening-risks', 'csp-trusted-sites-insecure']);
+      if (weakened.length === 0) return null;
+      // Somebody whose session is worth the trouble.
+      const targets = byIds(active, [
+        'users-super-admin-combo', 'privileged-access-shadow-admins',
+        'users-modify-all-data', 'users-view-all-data',
+        'separation-of-duties-self-escalation',
+      ]);
+      if (targets.length === 0) return null;
+      return [...vector, ...weakened, ...targets];
+    },
+  },
 ];

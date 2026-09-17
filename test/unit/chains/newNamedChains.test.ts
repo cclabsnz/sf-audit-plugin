@@ -124,3 +124,203 @@ describe('newly modelled capabilities', () => {
     expect(chains.map((c) => c.id)).toContain('standard-to-takeover');
   });
 });
+
+describe('oauth-standing-access', () => {
+  const fullScope = f('connected-app-full-scope');
+  const infinite = f('connected-app-infinite-refresh-token');
+  const combined = f('connected-app-full-scope-infinite-token', { riskLevel: 'CRITICAL' });
+  const unmatched = f('oauth-token-unmatched-app');
+  const stale = f('oauth-token-stale');
+  const ipBypass = f('connected-apps-bypass-ip');
+
+  it('fires when standing reach meets a token nobody is reviewing', () => {
+    const steps = match('oauth-standing-access', [fullScope, unmatched]);
+    expect(steps?.map((s) => s.id)).toEqual(['connected-app-full-scope', 'oauth-token-unmatched-app']);
+  });
+
+  it('fires when standing reach meets removed IP containment', () => {
+    const steps = match('oauth-standing-access', [combined, ipBypass]);
+    expect(steps?.map((s) => s.id)).toEqual([
+      'connected-app-full-scope-infinite-token', 'connected-apps-bypass-ip',
+    ]);
+  });
+
+  // The whole point of the chain is the conjunction. Broad standing access that somebody is
+  // watching and limiting is a posture finding, not a path, and the individual checks already
+  // report it on its own terms.
+  it('does not fire on standing reach alone, however severe', () => {
+    expect(match('oauth-standing-access', [combined, fullScope, infinite])).toBeNull();
+  });
+
+  it('does not fire on unreviewed or uncontained tokens without standing reach', () => {
+    expect(match('oauth-standing-access', [unmatched, stale, ipBypass])).toBeNull();
+  });
+
+  // A token exchange produces no OAuth login row, so a chain that fired only on observed activity
+  // would never fire at all. Nothing in the gate depends on evidence of use.
+  it('fires without any evidence the access has been exercised', () => {
+    expect(match('oauth-standing-access', [fullScope, stale])).not.toBeNull();
+  });
+
+  it('names why login controls do not apply, since that is the counter-intuitive part', () => {
+    const chain = NAMED_CHAINS.find((c) => c.id === 'oauth-standing-access')!;
+    const text = `${chain.narrative} ${chain.remediation}`;
+    expect(text).toContain('refresh token is not a session');
+    expect(text).toContain('LoginHistory');
+    // Revocation is the only control that ends a standing token, so the remediation has to lead
+    // with it rather than with scope tidying.
+    expect(chain.remediation).toContain('Revoke');
+  });
+});
+
+describe('self-registration-foothold', () => {
+  const selfReg = f('experience-cloud-site-self-registration');
+  const externalRead = f('sharing-model-external-read');
+  const portalApex = f('portal-exposed-apex-without-sharing');
+  const social = f('auth-providers-social');
+
+  it('fires when self-registration meets an over-shared external model', () => {
+    const steps = match('self-registration-foothold', [selfReg, externalRead]);
+    expect(steps?.map((s) => s.id)).toEqual([
+      'experience-cloud-site-self-registration', 'sharing-model-external-read',
+    ]);
+  });
+
+  // Each half is unremarkable alone: self-registration is a supported feature, and an external OWD
+  // assumes an account the attacker may never get. The conjunction is the whole finding.
+  it('does not fire on self-registration alone', () => {
+    expect(match('self-registration-foothold', [selfReg])).toBeNull();
+  });
+
+  it('does not fire on external sharing alone', () => {
+    expect(match('self-registration-foothold', [externalRead, portalApex])).toBeNull();
+  });
+
+  // Social sign-on is a second door, not a substitute for the first.
+  it('does not fire on social auth providers without self-registration', () => {
+    expect(match('self-registration-foothold', [social, externalRead])).toBeNull();
+  });
+
+  it('includes social auth providers as evidence when self-registration is also present', () => {
+    const ids = match('self-registration-foothold', [selfReg, externalRead, social])?.map((s) => s.id);
+    expect(ids).toContain('auth-providers-social');
+  });
+
+  // A self-registered account is a Customer Community licence, which generally has no report
+  // access, so report folders must not count as reach here however tempting the wording is.
+  it('does not treat public report folders as portal-reachable', () => {
+    expect(match('self-registration-foothold', [selfReg, f('report-folder-access-public')])).toBeNull();
+  });
+});
+
+describe('session-id-egress', () => {
+  const leak = f('outbound-messages-session-id');
+  const cleartext = f('outbound-messages-cleartext');
+  const noMonitoring = f('event-monitoring-disabled');
+
+  it('fires when the session ID leaves over a cleartext endpoint', () => {
+    const steps = match('session-id-egress', [leak, cleartext]);
+    expect(steps?.map((s) => s.id)).toEqual([
+      'outbound-messages-session-id', 'outbound-messages-cleartext',
+    ]);
+  });
+
+  it('fires when nothing would record the replay', () => {
+    expect(match('session-id-egress', [leak, noMonitoring])).not.toBeNull();
+  });
+
+  it('does not fire without the session ID actually leaving', () => {
+    expect(match('session-id-egress', [cleartext, noMonitoring])).toBeNull();
+  });
+
+  // The credential leaving is the finding; the chain reports it as a path only when something also
+  // means a replay would go unstopped or unseen. OutboundMessagesCheck reports the leak alone.
+  it('does not fire on the leak alone', () => {
+    expect(match('session-id-egress', [leak])).toBeNull();
+  });
+
+  it('names the mechanism and leads remediation with clearing the option', () => {
+    const chain = NAMED_CHAINS.find((c) => c.id === 'session-id-egress')!;
+    expect(chain.narrative).toContain('outbound message');
+    expect(chain.remediation).toContain('Send Session ID');
+  });
+});
+
+describe('anonymous-file-exposure', () => {
+  const publicDocs = f('public-content-public-documents');
+  const staleLink = f('content-links-stale');
+  const noClassification = f('data-classification-missing');
+  const noMonitoring = f('event-monitoring-disabled');
+
+  it('fires when an anonymous file surface meets an inability to say what left', () => {
+    const steps = match('anonymous-file-exposure', [publicDocs, noClassification]);
+    expect(steps?.map((s) => s.id)).toEqual([
+      'public-content-public-documents', 'data-classification-missing',
+    ]);
+  });
+
+  it('does not fire on an anonymous file surface alone', () => {
+    expect(match('anonymous-file-exposure', [publicDocs, staleLink])).toBeNull();
+  });
+
+  it('does not fire on missing classification or monitoring without an exposed surface', () => {
+    expect(match('anonymous-file-exposure', [noClassification, noMonitoring])).toBeNull();
+  });
+
+  // content-links-stale is a subset of content-links-no-expiry, so it counts as surface only.
+  // Listing it on both sides would let one check satisfy the whole conjunction by itself.
+  it('does not let stale links satisfy both halves of the conjunction', () => {
+    expect(match('anonymous-file-exposure', [staleLink])).toBeNull();
+  });
+
+  // The chain claims less than the guest chains on purpose: a file is not a pivot.
+  it('does not claim a pivot into org data', () => {
+    const chain = NAMED_CHAINS.find((c) => c.id === 'anonymous-file-exposure')!;
+    expect(chain.narrative).toContain('does not assert a pivot');
+  });
+});
+
+describe('xss-to-privileged-session', () => {
+  const vector = f('visualforce-xss-escape-false');
+  const jsVector = f('visualforce-xss-js-merge-field');
+  const weakened = f('session-hardening-risks');
+  const insecureCsp = f('csp-trusted-sites-insecure');
+  const target = f('users-super-admin-combo');
+
+  it('fires only with a vector, weakened browser protection and a privileged target', () => {
+    const steps = match('xss-to-privileged-session', [vector, weakened, target]);
+    expect(steps?.map((s) => s.id)).toEqual([
+      'visualforce-xss-escape-false', 'session-hardening-risks', 'users-super-admin-combo',
+    ]);
+  });
+
+  it('does not fire without a privileged session worth stealing', () => {
+    expect(match('xss-to-privileged-session', [vector, weakened])).toBeNull();
+  });
+
+  it('does not fire when the browser-side protections are intact', () => {
+    expect(match('xss-to-privileged-session', [vector, target])).toBeNull();
+  });
+
+  it('does not fire without an XSS pattern in the markup', () => {
+    expect(match('xss-to-privileged-session', [weakened, insecureCsp, target])).toBeNull();
+  });
+
+  it('accepts the unencoded-merge-field vectors, not only escape="false"', () => {
+    expect(match('xss-to-privileged-session', [jsVector, insecureCsp, target])).not.toBeNull();
+  });
+
+  // experience-csp-verify asks the operator to confirm a setting rather than reporting a weakness.
+  // Counting an advisory as a confirmed gap would inflate the chain.
+  it('does not treat the Experience Cloud CSP advisory as a confirmed weakness', () => {
+    expect(match('xss-to-privileged-session', [vector, f('experience-csp-verify'), target])).toBeNull();
+  });
+
+  // A markup scan cannot show whether an attacker controls the rendered value, and a client-facing
+  // narrative that implied otherwise would be asserting an exploit it has not demonstrated.
+  it('states plainly that exploitability is not established', () => {
+    const chain = NAMED_CHAINS.find((c) => c.id === 'xss-to-privileged-session')!;
+    expect(chain.narrative).toContain('does not claim');
+    expect(chain.narrative).toContain('false positive');
+  });
+});
