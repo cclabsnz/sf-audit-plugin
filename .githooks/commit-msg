@@ -1,19 +1,53 @@
 #!/bin/sh
-# Blocks a commit message that names a real Salesforce org, or that looks like pasted output
-# from one. Object names describe a client's data model and identify them as surely as an org
-# id, so they are checked structurally — a denylist of client prefixes would publish in this
-# file the very names it exists to protect.
+# Blocks a commit message that names a real Salesforce org or customer, or that looks like
+# pasted output from one. Object names describe a client's data model and identify them as
+# surely as an org id, so they are checked structurally - a denylist of client prefixes would
+# publish in this file the very names it exists to protect.
 set -u
 MSG="$1"
-FIXTURE='00D[A-Za-z0-9]*([xX]{2}|0{6,})'
 
-if grep -InE '00D[A-Za-z0-9]{12,15}|[A-Za-z0-9-]+\.sandbox\.my\.salesforce\.com' "$MSG" \
-  | grep -vE "$FIXTURE" | grep -q .; then
-  echo "commit-msg: the message references a real Salesforce org." >&2
+# Kept in step with .githooks/pre-commit; see there for the reasoning behind each.
+#
+# Nine, not six: a real org id routinely contains a six-zero run, so the old threshold let
+# genuine ids through as fixtures.
+#
+# The prefix set was org ids alone. Real customer User ids, connected-app ids, addresses and
+# service account names reached tracked files elsewhere in this estate while a guard of that
+# shape was active and silent, because it looked at neither.
+#
+# Ids are matched DELIMITED and at exactly 15 or 18 characters. An undelimited prefix +
+# {12,15} collides with git SHAs, and commit messages are full of those - a message quoting a
+# hash that happens to carry a key prefix would be rejected on every amend.
+PREFIX='(00D|005|0H4|888|00e)'
+ID="(^|[^A-Za-z0-9])${PREFIX}[A-Za-z0-9]{12}([A-Za-z0-9]{3})?([^A-Za-z0-9]|\$)"
+FIXTURE_ID='(00D|005|0H4|888|00e)[A-Za-z0-9]*([xX]{2}|0{9,})'
+
+# The whole dotted host, so an org name is not lost by matching only the suffix. The fixture
+# pattern is anchored at both ends: unanchored, any real host merely beginning with an allowed
+# word would be waved through.
+HOST='[A-Za-z0-9][A-Za-z0-9.-]*\.my\.salesforce\.com'
+FIXTURE_HOST='^(acme|example|test|myorg|sample|demo|localhost|develop|sandbox|scratch|x)(--[A-Za-z0-9-]+)?(\.sandbox|\.develop)?\.my\.salesforce\.com$'
+
+GOVT_EMAIL='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]*(govt\.nz|health\.nz)'
+
+# Routable IPv4 only. Private, loopback and RFC 5737 documentation ranges are fine.
+IP='((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])'
+FIXTURE_IP='^(10\.|127\.|192\.168\.|169\.254\.|172\.(1[6-9]|2[0-9]|3[01])\.|0\.|255\.255\.|192\.0\.2\.|198\.51\.100\.|203\.0\.113\.)'
+
+pick() { sed -E 's/^[^A-Za-z0-9]+//; s/[^A-Za-z0-9]+$//'; }
+
+ids=$(grep -oE "$ID" "$MSG" 2>/dev/null | pick | grep -vE "$FIXTURE_ID" | grep -c .)
+hosts=$(grep -oE "$HOST" "$MSG" 2>/dev/null | grep -vE "$FIXTURE_HOST" | grep -c .)
+mails=$(grep -oE "$GOVT_EMAIL" "$MSG" 2>/dev/null | grep -c .)
+addrs=$(grep -oE "$IP" "$MSG" 2>/dev/null | grep -vE "$FIXTURE_IP" | grep -c .)
+
+if [ "$ids" -ne 0 ] || [ "$hosts" -ne 0 ] || [ "$mails" -ne 0 ] || [ "$addrs" -ne 0 ]; then
+  echo "commit-msg: the message references a real Salesforce org or customer" >&2
+  echo "  ($ids id(s), $hosts host(s), $mails address(es), $addrs IP(s))." >&2
   exit 1
 fi
 
-# Flags a burst of Salesforce custom-object names — the signature of pasted org output.
+# Flags a burst of Salesforce custom-object names - the signature of pasted org output.
 # Structural rather than a denylist: naming the prefixes it protects would publish them.
 # A legitimate message references an object or two; real output arrives in threes and chains.
 count_objects() {
