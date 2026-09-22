@@ -1,46 +1,100 @@
 #!/bin/sh
-# Blocks a commit that would introduce real Salesforce org data into staged content.
-# Enable once per clone:  git config core.hooksPath .githooks
+# Blocks a commit that would introduce real Salesforce org data or customer identifiers
+# into staged content.  Enable once per clone:  git config core.hooksPath .githooks
 #
 # POSIX ERE only — BSD grep (macOS) has no -P, and a hook that silently fails to match is
 # worse than no hook at all.
 set -u
 
-# A real org id is 00D + 12 or 15 more alphanumerics. Test fixtures conventionally use
-# 'xx' or a long run of zeros (00Dxx0000000000EAA, 00D000000000001); real ids never carry
-# six consecutive zeros. Excluding fixtures matters: a guard that rejects the very id its
-# own error message recommends gets disabled by the first developer who hits it.
+# Ids are <prefix> + 12 or 15 more alphanumerics. Test fixtures conventionally use 'xx' or a
+# long run of zeros. Excluding fixtures matters: a guard that rejects the very id its own
+# error message recommends gets disabled by the first developer who hits it.
 #
-# Do not paste a real org id here to illustrate the rule. An earlier revision of this file
-# did exactly that, and the comment explaining how to spot a real id was itself the leak.
-ORG_ID='00D[A-Za-z0-9]{12,15}'
-FIXTURE_ID='00D[A-Za-z0-9]*([xX]{2}|0{6,})'
+# Do not paste a real id here to illustrate the rule. An earlier revision of this file did
+# exactly that, and the comment explaining how to spot a real id was itself the leak.
+#
+# The zero-run threshold is nine. It was six, on the stated assumption that a real id never
+# carries six consecutive zeros. Real ids routinely do — the common prefix + 2 chars +
+# zero-run + suffix shape clears six easily, and a genuine customer id reached a test file
+# past that threshold.
+#
+# The prefix set was org ids alone until real customer User ids, connected-app ids, routable
+# addresses and object names reached tracked test files on a feature branch with this guard
+# active and silent throughout. It matched neither of the two things it looked at.
+# A Salesforce id is a key prefix plus exactly 12 or 15 more alphanumerics - 15 or 18 in
+# total, never a length between. Matching a bare prefix + {12,15} instead collides with git
+# SHAs: a commit message quoting a hash beginning 888 was read as a connected-app id. So the
+# match is DELIMITED - it must be bounded by a non-alphanumeric or the string edge - which a
+# 40-character hash never satisfies. ERE has no portable word boundary (\b is GNU, [[:<:]] is
+# BSD), hence the explicit character classes; pick() strips the delimiters back off so the
+# extracted value still compares exactly against the allowlist.
+PREFIX='(00D|005|0H4|888|00e)'
+ID_BODY='[A-Za-z0-9]{12}([A-Za-z0-9]{3})?'
+ID="(^|[^A-Za-z0-9])${PREFIX}${ID_BODY}([^A-Za-z0-9]|\$)"
+FIXTURE_ID='(00D|005|0H4|888|00e)[A-Za-z0-9]*([xX]{2}|0{9,})'
+pick() { sed -E 's/^[^A-Za-z0-9]+//; s/[^A-Za-z0-9]+$//'; }
+
 # Matches the whole dotted host, not just the last label, so a sandbox host keeps its org
-# name. The fixture pattern is anchored at both ends, so the ENTIRE host must be a
-# fixture: unanchored, any real host whose name merely begins with an allowed word
-# would be waved through. Bare Salesforce suffixes (develop, sandbox, scratch) carry no
-# org name, so they are allowed too - they appear in code describing the domain format.
-# would be waved through. Describe that case rather than spelling one out - a literal
-# example here is itself a host this guard must flag.
+# name. The fixture pattern is anchored at both ends, so the ENTIRE host must be a fixture:
+# unanchored, any real host whose name merely begins with an allowed word would be waved
+# through. Bare Salesforce suffixes (develop, sandbox, scratch) carry no org name, so they
+# are allowed too - they appear in code describing the domain format. Describe that case
+# rather than spelling one out - a literal example here is itself a host this guard flags.
 HOST='[A-Za-z0-9][A-Za-z0-9.-]*\.my\.salesforce\.com'
 FIXTURE_HOST='^(acme|example|test|myorg|sample|demo|localhost|develop|sandbox|scratch|x)(--[A-Za-z0-9-]+)?(\.sandbox|\.develop)?\.my\.salesforce\.com$'
+
+# NZ health sector addresses. A service account name is customer data as much as an id is.
+GOVT_EMAIL='[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]*(govt\.nz|health\.nz)'
+
+# Routable IPv4 only. Private, loopback, link-local and the RFC 5737 documentation ranges
+# are fine to commit; a public address in a test file is almost always a captured one.
+IP='((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])'
+FIXTURE_IP='^(10\.|127\.|192\.168\.|169\.254\.|172\.(1[6-9]|2[0-9]|3[01])\.|0\.|255\.255\.|192\.0\.2\.|198\.51\.100\.|203\.0\.113\.)'
+
+# Synthetic fixtures that follow neither the 'xx' nor the zero-run convention are declared
+# here, one exact value per line, and committed. Real Salesforce VENDOR ids - standard
+# connected apps and the like - belong here too: they are public reference data. A repo's own
+# fixture idiom has to be admitted or the guard gets switched off, and declaring each value
+# explicitly is what stops that becoming a hole: anything absent from the list fails even if
+# it looks synthetic. Matched against extracted values, not lines, and anchored whole.
+ALLOWLIST='.githooks/fixture-allowlist'
+allow() { if [ -s "$ALLOWLIST" ]; then grep -vxFf "$ALLOWLIST"; else cat; fi; }
+
+# Customer VOCABULARY - org codes, product prefixes, credential and object names - cannot be
+# listed in this repo: it is public, so the denylist would itself publish the thing it exists
+# to catch. Keep those tokens in a local file git never sees, one ERE per line:
+#
+#     $(git rev-parse --git-common-dir)/client-denylist
+#
+# Absent, every structural check above still runs.
+DENYLIST="$(git rev-parse --git-common-dir 2>/dev/null)/client-denylist"
+
 fail=0
 
-# The guard files are scanned like everything else. Exempting them is how a leak hides in
-# the exemption list, and nothing here needs the exemption: the regex literals below are not
-# themselves org ids, and the fixture in the error message is excluded by shape.
+# The guard files are scanned like everything else. Exempting them is how a leak hides in the
+# exemption list, and nothing here needs it: the regex literals are not themselves ids, and
+# the fixtures named in the error message are excluded by shape.
 #
-# Ids and hosts are counted separately, on extracted matches rather than whole lines. Filtered
-# per line, a line holding a fixture host and a real id would pass — the fixture would clear
-# the id along with itself.
+# Each class is counted on extracted matches rather than whole lines. Filtered per line, a
+# line holding a fixture and a real value would pass - the fixture would clear the real value
+# along with itself.
 for f in $(git diff --cached --name-only --diff-filter=ACM); do
   blob=$(git show ":$f" 2>/dev/null)
-  ids=$(printf '%s' "$blob" | grep -oE "$ORG_ID" | grep -vcE "$FIXTURE_ID")
-  hosts=$(printf '%s' "$blob" | grep -oE "$HOST" | grep -vcE "$FIXTURE_HOST")
-  if [ "$ids" -ne 0 ] || [ "$hosts" -ne 0 ]; then
-    echo "pre-commit: $f references a real Salesforce org ($ids id(s), $hosts host(s)):" >&2
-    printf '%s' "$blob" | grep -nE "$ORG_ID" | grep -vE "$FIXTURE_ID" | head -2 >&2
+  ids=$(printf '%s' "$blob" | grep -oE "$ID" | pick | grep -vE "$FIXTURE_ID" | allow | grep -c .)
+  hosts=$(printf '%s' "$blob" | grep -oE "$HOST" | grep -vE "$FIXTURE_HOST" | allow | grep -c .)
+  mails=$(printf '%s' "$blob" | grep -oE "$GOVT_EMAIL" | allow | grep -c .)
+  addrs=$(printf '%s' "$blob" | grep -oE "$IP" | grep -vE "$FIXTURE_IP" | allow | grep -c .)
+  if [ "$ids" -ne 0 ] || [ "$hosts" -ne 0 ] || [ "$mails" -ne 0 ] || [ "$addrs" -ne 0 ]; then
+    echo "pre-commit: $f references real org or customer data" >&2
+    echo "  ($ids id(s), $hosts host(s), $mails address(es), $addrs IP(s)):" >&2
+    printf '%s' "$blob" | grep -nE "$ID" | grep -vE "$FIXTURE_ID" | head -2 >&2
     printf '%s' "$blob" | grep -nE "$HOST" | grep -vE "$FIXTURE_HOST" | head -2 >&2
+    printf '%s' "$blob" | grep -nE "$GOVT_EMAIL" | head -2 >&2
+    fail=1
+  fi
+  if [ -s "$DENYLIST" ] && printf '%s' "$blob" | grep -qInEf "$DENYLIST"; then
+    echo "pre-commit: $f matches the local customer denylist:" >&2
+    printf '%s' "$blob" | grep -nEf "$DENYLIST" | head -3 >&2
     fail=1
   fi
 done
@@ -48,13 +102,15 @@ done
 # Added/modified files only (a deletion cannot leak), matched on basename so an ordinary
 # path ending in package.json is not mistaken for an orgintel-*.json report.
 if git diff --cached --name-only --diff-filter=ACM \
-  | grep -IE '(^|/)(sf-audit-00D[A-Za-z0-9]*-[0-9]+|orgintel-(map|fingerprint)-[A-Za-z0-9]+-[0-9]+)\.(json|html|md)$|(^|/)(coupling-graph|landscape-manifest)\.json$' >/dev/null 2>&1; then
+  | grep -IE '(^|/)(sf-audit-00D[A-Za-z0-9]*-[0-9]+|orgintel-(map|fingerprint|anatomy)-[A-Za-z0-9]+-[0-9]+)\.(json|html|md)$|(^|/)(coupling-graph|landscape-manifest)\.json$' >/dev/null 2>&1; then
   echo "pre-commit: a generated report artefact is staged. These contain org data." >&2
   fail=1
 fi
 
 if [ "$fail" -ne 0 ]; then
-  echo "Use a fixture id (00Dxx0000000000EAA) or host (acme.my.salesforce.com)." >&2
+  echo "Synthesise the value: a fixture id (00Dxx0000000000EAA), host (acme.my.salesforce.com)," >&2
+  echo "or an address from 192.0.2.0/24. A synthetic value in neither convention goes in" >&2
+  echo "$ALLOWLIST." >&2
   exit 1
 fi
 exit 0

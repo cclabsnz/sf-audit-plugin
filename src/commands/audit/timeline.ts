@@ -21,7 +21,7 @@ export interface TimelineResult {
   written: string[];
 }
 
-/** `ip:1.2.3.4` — typed rather than inferred, so a value is never guessed at. */
+/** `ip:192.0.2.10` — typed rather than inferred, so a value is never guessed at. */
 const SEED_PREFIXES: Record<string, JoinKeyType> = {
   ip: 'clientIp',
   user: 'userId',
