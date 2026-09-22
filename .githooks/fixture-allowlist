@@ -1,0 +1,25 @@
+# Synthetic fixture values that follow neither the 'xx' nor the zero-run convention, and
+# real Salesforce VENDOR ids, which are public reference data. One exact value per line.
+# Matched against extracted values and anchored whole, so a line here cannot clear anything
+# but itself. Anything absent fails the guard even if it looks synthetic - that is the point.
+#
+# 159.223.10.10 is a routable address on purpose. GuestTrafficAnomalyCheck matches source IPs
+# against its own seed list of hosting/VPN prefixes, and 159.223. is DigitalOcean's. Swapped
+# for a documentation address the check stops firing and its test asserts nothing, so the
+# address is load-bearing test data rather than a captured one.
+005999999999999XYZ
+005AUDIT00000AA
+005INT00000001
+00e5w000001AbCd
+00eADMIN
+00eP0000000AbCdEAA
+0H44a00000000Ns
+0H44a00000000NsAAI
+0H44a00000000Nt
+0H44a00000000Nu
+0H44a00000000Nz
+0H4app000000001
+0H4app0000001AA
+0H4app0000001AAA
+159.223.10.10
+888xUNKNOWN0000

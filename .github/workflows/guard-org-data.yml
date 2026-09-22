@@ -1,17 +1,35 @@
 name: Guard org data
 
-# Fails the build if anything identifying a real Salesforce org reaches the repository:
-# org ids, sandbox hostnames, or generated audit artefacts. Content AND commit messages are
-# both scanned — the messages are the part people forget.
+# Fails the build if anything identifying a real Salesforce org or customer reaches the
+# repository: org, user, connected-app and platform-event ids, my.salesforce.com hostnames,
+# NZ health sector email addresses, routable IP addresses, or generated audit artefacts.
+# Content AND commit messages are both scanned — the messages are the part people forget.
 #
-# Test fixtures are excluded by shape: a real org id never contains 'xx' or six consecutive
-# zeros, whereas fixtures conventionally do (00Dxx0000000000EAA, 00D000000000001). A guard
-# that rejects the ids its own message recommends gets switched off by the first developer
-# who hits it.
+# Test fixtures are excluded by shape: a real id never contains 'xx' or a long run of zeros,
+# whereas fixtures conventionally do. A guard that rejects the ids its own message recommends
+# gets switched off by the first developer who hits it.
 #
-# Do not paste a real org id here to illustrate the rule. An earlier revision of this file
-# did exactly that, and the comment explaining how to spot a real id was itself the leak.
-# These files are therefore scanned like any other — see the absence of exemptions below.
+# Do not paste a real id or host here to illustrate the rule. An earlier revision of the
+# companion hook did exactly that, and the comment explaining how to spot a real id was
+# itself the leak. These files are therefore scanned like any other — note the absence of an
+# exemption list below.
+#
+# The fixture zero-run threshold is nine. It was six, which is below what real ids reach, and
+# a genuine customer id cleared six in this repo. Keep in step with .githooks/pre-commit.
+#
+# POSIX ERE throughout — GitHub runners have GNU grep, but these patterns are shared with the
+# local hook, which runs on BSD grep where -P does not exist. ERE has no negative lookahead,
+# so fixtures are removed by filtering the EXTRACTED matches rather than by an inline (?!...).
+# An earlier revision used (?!...) with -E: it silently matched nothing, so every real host
+# passed while the step still reported "clean". Filtering extracted matches rather than whole
+# lines also matters on its own - per line, a line holding a fixture and a real value passes,
+# because the fixture clears the real value along with itself.
+#
+# Customer VOCABULARY — org codes, product prefixes, credential and object names — is
+# deliberately absent here. This repo is public, so a denylist of those tokens would itself
+# publish what it exists to catch. Those live in a local, uncommitted file the pre-commit
+# hook reads; CI covers the structural shapes only. The two halves are not equivalent, and
+# that asymmetry is the price of the repo being public.
 on:
   push:
   pull_request:
@@ -20,20 +38,20 @@ on:
 permissions:
   contents: read
 
-# POSIX ERE throughout — GitHub runners have GNU grep, but these patterns are shared with the
-# local hooks, which run on BSD grep where -P does not exist. ERE has no negative lookahead,
-# so fixtures are removed by filtering the extracted matches rather than by an inline (?!...).
-# The previous revision used (?!...) with -E: it silently matched nothing, so every real
-# instance host passed while the step still reported "clean".
 env:
-  ORG_ID: '00D[A-Za-z0-9]{12,15}'
-  FIXTURE_ID: '00D[A-Za-z0-9]*([xX]{2}|0{6,})'
-  # Matches the whole dotted host so a sandbox host keeps its org name. The fixture pattern is
-  # anchored at both ends, so the ENTIRE host must be a fixture: unanchored, any real host
-  # whose name merely begins with an allowed word would be waved through. Described rather
-  # than illustrated — a literal example here is itself a host this guard must flag.
+  # Delimited, and exactly 15 or 18 characters - never a length between. An undelimited
+  # prefix + {12,15} collides with git SHAs: a message quoting a hash beginning 888 read as a
+  # connected-app id. A 40-character hash cannot satisfy the trailing delimiter. ERE has no
+  # portable word boundary, hence the explicit classes; the delimiters are stripped back off
+  # so the extracted value still compares exactly against the allowlist.
+  IDS: '(^|[^A-Za-z0-9])(00D|005|0H4|888|00e)[A-Za-z0-9]{12}([A-Za-z0-9]{3})?([^A-Za-z0-9]|$)'
+  FIXTURE_ID: '(00D|005|0H4|888|00e)[A-Za-z0-9]*([xX]{2}|0{9,})'
   HOST: '[A-Za-z0-9][A-Za-z0-9.-]*\.my\.salesforce\.com'
   FIXTURE_HOST: '^(acme|example|test|myorg|sample|demo|localhost|develop|sandbox|scratch|x)(--[A-Za-z0-9-]+)?(\.sandbox|\.develop)?\.my\.salesforce\.com$'
+  GOVT_EMAIL: '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]*(govt\.nz|health\.nz)'
+  IP: '((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])'
+  FIXTURE_IP: '^(10\.|127\.|192\.168\.|169\.254\.|172\.(1[6-9]|2[0-9]|3[01])\.|0\.|255\.255\.|192\.0\.2\.|198\.51\.100\.|203\.0\.113\.)'
+  ALLOW: '.githooks/fixture-allowlist'
 
 jobs:
   guard:
@@ -45,19 +63,22 @@ jobs:
 
       - name: Scan tracked content
         run: |
-          # GitHub runs `run:` under `bash -e`. `grep -c` exits 1 when the count is zero, so a
-          # bare assignment would abort the step before it could report anything - the guard
-          # would fail the build on a clean tree. `|| true` keeps the count and drops the status.
           set -uo pipefail
-          # Ids and hosts are counted separately. Filtering both on one line would let a line
-          # holding a fixture host *and* a real id pass, because the fixture would clear the
-          # whole line. -o judges each match on its own.
-          ids=$(git grep -hoIE "$ORG_ID" -- . | grep -vcE "$FIXTURE_ID" || true)
-          hosts=$(git grep -hoIE "$HOST" -- . | grep -vcE "$FIXTURE_HOST" || true)
-          if [ "$ids" -ne 0 ] || [ "$hosts" -ne 0 ]; then
-            git grep -InE "$ORG_ID" -- . | grep -vE "$FIXTURE_ID" | head -5 || true
+          # GitHub runs `run:` under `bash -e`. `grep -c` exits 1 on a zero count, so a bare
+          # assignment would abort the step before it could report - failing the build on a
+          # clean tree. `|| true` keeps the count and drops the status.
+          allow() { if [ -s "$ALLOW" ]; then grep -vxFf "$ALLOW"; else cat; fi; }
+          pick() { sed -E 's/^[^A-Za-z0-9]+//; s/[^A-Za-z0-9]+$//'; }
+          ids=$(git grep -hoIE "$IDS" -- . | pick | grep -vE "$FIXTURE_ID" | allow | grep -c . || true)
+          hosts=$(git grep -hoIE "$HOST" -- . | grep -vE "$FIXTURE_HOST" | allow | grep -c . || true)
+          mails=$(git grep -hoIE "$GOVT_EMAIL" -- . | allow | grep -c . || true)
+          addrs=$(git grep -hoIE "$IP" -- . | grep -vE "$FIXTURE_IP" | allow | grep -c . || true)
+          if [ "$ids" -ne 0 ] || [ "$hosts" -ne 0 ] || [ "$mails" -ne 0 ] || [ "$addrs" -ne 0 ]; then
+            git grep -InE "$IDS" -- . | grep -vE "$FIXTURE_ID" | head -5 || true
             git grep -InE "$HOST" -- . | grep -vE "$FIXTURE_HOST" | head -5 || true
-            echo "::error::Content references a real Salesforce org ($ids id(s), $hosts host(s))."
+            git grep -InE "$GOVT_EMAIL" -- . | head -5 || true
+            git grep -InE "$IP" -- . | grep -vE "$FIXTURE_IP" | head -5 || true
+            echo "::error::Content references real org or customer data ($ids id(s), $hosts host(s), $mails address(es), $addrs IP(s))."
             exit 1
           fi
           echo "content: clean"
@@ -66,7 +87,7 @@ jobs:
         run: |
           set -uo pipefail
           if git ls-files \
-            | grep -IE '(^|/)(sf-audit-00D[A-Za-z0-9]*-[0-9]+|orgintel-(map|fingerprint)-[A-Za-z0-9]+-[0-9]+)\.(json|html|md)$|(^|/)(coupling-graph|landscape-manifest)\.json$' ; then
+            | grep -IE '(^|/)(sf-audit-00D[A-Za-z0-9]*-[0-9]+|orgintel-(map|fingerprint|anatomy)-[A-Za-z0-9]+-[0-9]+)\.(json|html|md)$|(^|/)(coupling-graph|landscape-manifest)\.json$' ; then
             echo "::error::A generated report artefact is tracked. These contain org data."
             exit 1
           fi
@@ -75,10 +96,14 @@ jobs:
       - name: Scan commit messages
         run: |
           set -uo pipefail
-          ids=$(git log --format='%s%n%b' | grep -hoE "$ORG_ID" | grep -vcE "$FIXTURE_ID" || true)
-          hosts=$(git log --format='%s%n%b' | grep -hoE "$HOST" | grep -vcE "$FIXTURE_HOST" || true)
-          if [ "$ids" -ne 0 ] || [ "$hosts" -ne 0 ]; then
-            echo "::error::A commit message references a real Salesforce org ($ids id(s), $hosts host(s))."
+          allow() { if [ -s "$ALLOW" ]; then grep -vxFf "$ALLOW"; else cat; fi; }
+          pick() { sed -E 's/^[^A-Za-z0-9]+//; s/[^A-Za-z0-9]+$//'; }
+          msgs=$(git log --format='%s%n%b')
+          ids=$(printf '%s' "$msgs" | grep -hoE "$IDS" | pick | grep -vE "$FIXTURE_ID" | allow | grep -c . || true)
+          hosts=$(printf '%s' "$msgs" | grep -hoE "$HOST" | grep -vE "$FIXTURE_HOST" | allow | grep -c . || true)
+          mails=$(printf '%s' "$msgs" | grep -hoE "$GOVT_EMAIL" | allow | grep -c . || true)
+          if [ "$ids" -ne 0 ] || [ "$hosts" -ne 0 ] || [ "$mails" -ne 0 ]; then
+            echo "::error::A commit message references real org or customer data ($ids id(s), $hosts host(s), $mails address(es))."
             exit 1
           fi
           echo "commit messages: clean"

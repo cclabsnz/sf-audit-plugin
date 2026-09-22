@@ -41,7 +41,7 @@ describe('LoginAnomalyCheck', () => {
   });
 
   it('passes when no account exceeds the distinct-IP threshold', async () => {
-    const r = await check.run(makeCtx({ rows: logins('005Y', ['1.1.1.1', '1.1.1.2', '1.1.1.3']) }));
+    const r = await check.run(makeCtx({ rows: logins('005Y', ['192.0.2.1', '192.0.2.2', '192.0.2.3']) }));
     expect(r.findings.some((f) => f.id === 'login-anomaly-ok' && f.passed)).toBe(true);
   });
 });
