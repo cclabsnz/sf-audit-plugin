@@ -11,6 +11,8 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+## [v1.13.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.13.0) — 2026-09-25
+
 Five new attack chains, and the correlation defect that kept them from being expressible.
 
 ### Added
@@ -70,6 +72,11 @@ Five new attack chains, and the correlation defect that kept them from being exp
   step with `pre-commit`.
 - `repository.url` normalised so npm stops rewriting it on publish.
 - Trust documentation no longer carries a zero-vulnerability claim, which went stale within a day.
+- The attack-chain docs stated two different counts: the README feature list and the line above
+  the `docs/ATTACK-CHAINS.md` table both said eleven, while the table carried sixteen. The existing
+  drift guard asserted one phrasing in one file, which the README narrative satisfied on its own,
+  so neither stale count failed. `readme-chain-list.test.ts` now checks every stated count in both
+  docs against `NAMED_CHAINS.length` and names the file that disagrees.
 
 ## [v1.12.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.12.0) — 2026-09-07
 
