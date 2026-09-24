@@ -13,7 +13,7 @@ novel combination is still surfaced rather than missed. Every chain lists the fi
 steps, and remediating **any one step breaks the chain** — which is what makes this actionable
 rather than alarming.
 
-The eleven named chains:
+The sixteen named chains:
 
 | Chain | Severity | Fires when |
 |-------|----------|-----------|

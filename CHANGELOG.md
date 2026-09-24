@@ -11,6 +11,66 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+Five new attack chains, and the correlation defect that kept them from being expressible.
+
+### Added
+
+- **Five named attack chains**, taking the catalogue from eleven to sixteen:
+
+  - **Standing OAuth access outside every login control** (HIGH) — broad standing API access
+    (Full scope, a never-expiring refresh token, or both) combined with something that removes the
+    containment or the observation: a token matching no current connected app, a token unused for
+    months, or connected apps exempted from login IP enforcement. A refresh token is not a session.
+    Login controls engage once at authorisation and never again, and the exchange writes no
+    `LoginHistory` row, so this reach is invisible to a check that reads logins.
+  - **Self-service registration into an over-shared portal** (HIGH) — a site accepting
+    self-registration plus an external sharing model or portal-reachable code that gives any
+    account holder more than their own records. Every other chain starting from an authenticated
+    external user assumes the attacker already has an account.
+  - **Live session ID handed to an external endpoint** (HIGH) — an outbound message configured to
+    send the session ID, plus a reason a replayed session would be neither blocked nor recorded.
+  - **Org files served to anonymous callers, with no record of what left** (HIGH) — unauthenticated
+    file access plus no classification or monitoring. Deliberately asserts no pivot into org data,
+    because anonymous file access returns the file and stops.
+  - **Visualforce XSS pattern reaching a privileged session** (HIGH) — an unencoded markup pattern,
+    weakened browser-side controls, and privileged accounts to target. Asserts a reading order, not
+    exploitability: markup cannot show whether an attacker controls the rendered value.
+
+### Fixed
+
+- **Eleven findings now grant the attacker capabilities they always carried.** `ChainEngine`
+  correlates on capabilities, so a finding absent from `CapabilityRegistry` could never be a step in
+  a named chain and never appeared in the emergent pass either. Forty-seven of the ninety-two checks
+  were in that state, and nothing reported it: an absent key is indistinguishable from a deliberate
+  decision that the finding grants nothing.
+
+  The eleven: `custom-settings-credentials`, `apex-rest-without-sharing`,
+  `apex-crud-fls-without-sharing`, `apex-crud-fls-missing`, `outbound-messages-session-id`,
+  `public-content-public-documents`, `public-content-public-static-resources`,
+  `content-links-no-expiry`, `content-links-no-password`,
+  `experience-cloud-site-self-registration` and `connected-app-full-scope`.
+
+  Two non-grants are deliberate and pinned by tests, since a non-grant is the easiest thing to
+  regress by helpfully adding a capability. Content links grant `data-read` but not
+  `unauth-foothold`, which would pair them with every bulk-read sink in the emergent pass and assert
+  a path between unrelated data. `connected-app-infinite-refresh-token`, `oauth-token-stale` and
+  `oauth-token-unmatched-app` grant nothing, because persistence and disuse are evidence about a
+  token rather than reach an attacker holds; they earn their place as chain steps instead.
+
+- **`js-yaml` floor is stated rather than inherited from the lockfile**, so a consumer resolving the
+  tree independently cannot land on a version the `overrides` block was there to exclude.
+
+### Internal
+
+- The consumer-tree audit now packs the tarball and audits what actually ships, which is
+  authoritative when it disagrees with the lockfile audit. The `jszip` MIT election is recorded so
+  the licence gate matches the shipped tree.
+- The org-data commit guard widened past org ids to User and connected-app ids, `my.salesforce.com`
+  hosts, government email addresses and routable IPs, and the `commit-msg` hook was brought into
+  step with `pre-commit`.
+- `repository.url` normalised so npm stops rewriting it on publish.
+- Trust documentation no longer carries a zero-vulnerability claim, which went stale within a day.
+
 ## [v1.12.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.12.0) — 2026-09-07
 
 A check that shipped in the source but never ran, now registered, plus tests for three more.
