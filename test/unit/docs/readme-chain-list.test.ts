@@ -59,4 +59,25 @@ describe('attack-chain docs stay in sync with namedChains.ts', () => {
     );
     for (const chain of NAMED_CHAINS) expect(range).not.toContain(chain.title);
   });
+
+  it('spells the count correctly everywhere either doc states one', () => {
+    // The assertion above pins one phrasing in one file, which is how "eleven modelled chains"
+    // in the README's feature list and "The eleven named chains:" above the table both survived
+    // five chains being added. Every stated count has to agree, not just the one we thought of.
+    const word = NUMBER_WORDS[NAMED_CHAINS.length];
+    const stated = /\b([a-z]+)[ -](?:named|modelled|modeled)[ -]chains\b/gi;
+    const counts = [
+      ['README.md', README],
+      ['docs/ATTACK-CHAINS.md', CHAINS_DOC],
+    ] as const;
+
+    let found = 0;
+    for (const [name, doc] of counts) {
+      for (const match of doc.matchAll(stated)) {
+        found += 1;
+        expect(`${name}: ${match[1].toLowerCase()}`).toBe(`${name}: ${word}`);
+      }
+    }
+    expect(found).toBeGreaterThan(0); // the regex must still match something
+  });
 });

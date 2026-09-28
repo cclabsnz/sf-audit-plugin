@@ -16,7 +16,7 @@
 A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audit against any Salesforce org, risk-scores it with an A–F grade, and turns the result into a report your security team (or your client's) can act on.
 
 - **92 read-only checks** across identity, access, data, code, integrations, monitoring, and Agentforce / GenAI
-- **Attack-chain correlation:** links individual findings into named, multi-step attack scenarios — eleven modelled chains, plus an emergent pass for combinations nobody has named yet (see [Attack chains](#attack-chains))
+- **Attack-chain correlation:** links individual findings into named, multi-step attack scenarios — sixteen modelled chains, plus an emergent pass for combinations nobody has named yet (see [Attack chains](#attack-chains))
 - **Compliance mapping:** every finding mapped to **source-verified** controls across 10 frameworks (OWASP, OWASP LLM Top 10, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029, NZISM, HIPAA Security Rule, GDPR)
 - **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
 - **History & diff:** archives each run and shows security-posture drift over time
