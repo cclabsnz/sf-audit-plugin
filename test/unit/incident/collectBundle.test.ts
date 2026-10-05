@@ -5,7 +5,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { followUpIps } from '../../../src/incident/collect/followUp.js';
 import { collectBundle } from '../../../src/incident/collect/collectBundle.js';
-import { loadBundle } from '../../../src/incident/bundleIo.js';
+import { loadBundle, BundleIncompleteError } from '../../../src/incident/bundleIo.js';
 import { csvLine } from '../../../src/incident/csv.js';
 
 describe('followUpIps', () => {
@@ -60,5 +60,86 @@ describe('collectBundle', () => {
     await collectBundle({ soql, rest, orgId: '00Dxx0000000000EAA', orgName: 'Test' }, { sinceDays: 30, ipRangeFiles: [], outputDir: out, warn: () => {} });
     expect(rest.getRawToFile.mock.calls.length).toBe(firstDownloads + 1);
     await expect(loadBundle(dir)).resolves.toBeDefined();
+  });
+});
+
+describe('collectBundle trust gaps', () => {
+  const GUEST = '005xx000000gstAAAA';
+  const day = (o: number) => new Date(Date.parse('2026-09-15T00:00:00Z') + o * 86_400_000).toISOString().slice(0, 10);
+  const setup = (over: { events?: any[]; onQuery?: (q: string) => unknown } = {}) => {
+    const out = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-tg-'));
+    const qs: string[] = [];
+    const events = over.events ?? [{ EventIdentifier: 'e1', EventDate: '2026-09-15T04:04:34.000+0000', Score: 1, Username: 'a@example.com', UserId: GUEST, SourceIp: '203.0.113.9' }];
+    const soql = {
+      query: jest.fn(),
+      queryAll: jest.fn(async (q: string) => {
+        qs.push(q);
+        const o = over.onQuery?.(q);
+        if (o !== undefined) return o;
+        if (q.includes('GuestUserAnomalyEventStore')) return events;
+        if (q.includes("UserType = 'Guest'")) return [{ Id: GUEST, Username: 'a@example.com', Name: 'Site A Guest User', Profile: { Name: 'Site A Guest Profile' }, IsActive: true }];
+        if (q.includes('FROM Site')) return [{ Name: 'Site A', GuestUserId: GUEST }];
+        if (q.includes('UserPermissionAccess')) return [{ PermissionsQueryAllFiles: true, PermissionsViewAllData: true }];
+        if (q.includes('FROM EventLogFile')) return [-1, 0, 1].map((o2, i) => ({ Id: `0ATxx000000000${i}`, EventType: 'AuraRequest', LogDate: `${day(o2)}T00:00:00.000+0000` }));
+        return [];
+      }),
+    } as any;
+    const rest = {
+      get: jest.fn(), getRaw: jest.fn(),
+      getRawToFile: jest.fn(async (_p: string, dest: string) => {
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.writeFileSync(dest, csvLine(['TIMESTAMP_DERIVED', 'USER_ID', 'CLIENT_IP', 'ACTION_MESSAGE']) + csvLine(['2026-09-15T04:00:00.000Z', '005xx000000gstA', '203.0.113.9', '1$apex://X/ACTION$getItems=1']));
+        return 1;
+      }),
+    } as any;
+    const run = (orgId = '00Dxx0000000000EAA', window?: string) =>
+      collectBundle({ soql, rest, orgId, orgName: 'Test' }, { sinceDays: 30, window, ipRangeFiles: [], outputDir: out, warn: () => {} });
+    return { out, qs, soql, rest, run };
+  };
+
+  it('leaves an unfinished bundle that loadBundle refuses when follow-up fails', async () => {
+    const t = setup({ onQuery: (q) => { if (q.includes('FROM LoginHistory WHERE SourceIp IN')) throw new Error('boom'); return undefined; } });
+    await expect(t.run()).rejects.toThrow('boom');
+    await expect(loadBundle(t.out)).rejects.toBeInstanceOf(BundleIncompleteError);
+  });
+
+  it('does not reuse logs collected for a different org', async () => {
+    const t = setup();
+    await t.run('00Dxx0000000000EAA');
+    const first = t.rest.getRawToFile.mock.calls.length;
+    await t.run('00Dxx0000000001EAA');
+    expect(t.rest.getRawToFile.mock.calls.length).toBe(first * 2);
+  });
+
+  it('throws when a collected log file vanishes before sealing', async () => {
+    const t = setup({
+      onQuery: (q) => {
+        if (q.includes('FROM LoginHistory WHERE LoginTime')) fs.rmSync(path.join(t.out, 'logs/AuraRequest/2026-09-15.csv'), { force: true });
+        return undefined;
+      },
+    });
+    await expect(t.run()).rejects.toThrow(/Bundle file missing at seal: logs\/AuraRequest\/2026-09-15\.csv/);
+  });
+
+  it('in window mode keeps only anomaly events for a wave guest on a wave day, and follows up their IPs', async () => {
+    const ev = (id: string, date: string, ip: string) => ({ EventIdentifier: id, EventDate: date, Score: 1, Username: 'a@example.com', UserId: GUEST, SourceIp: ip });
+    const t = setup({ events: [ev('in', '2026-09-15T23:59:00.000+0000', '198.51.100.5'), ev('out', '2026-09-20T01:00:00.000+0000', '198.51.100.7')] });
+    const { dir } = await t.run('00Dxx0000000000EAA', '2026-09-15/2026-09-15');
+    const kept = JSON.parse(fs.readFileSync(path.join(dir, 'anomalies.json'), 'utf-8')) as Array<{ eventIdentifier: string }>;
+    expect(kept.map((e) => e.eventIdentifier)).toEqual(['in']);
+    const joined = t.qs.filter((q) => q.includes('FROM LoginHistory WHERE SourceIp IN')).join(' ');
+    expect(joined).toContain('198.51.100.5');
+    expect(joined).not.toContain('198.51.100.7');
+  });
+
+  it('removes .tmp when log streaming throws', async () => {
+    const t = setup();
+    t.rest.getRawToFile.mockImplementation(async (_p: string, dest: string) => {
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.writeFileSync(dest, 'partial');
+      throw new Error('stream failed');
+    });
+    await t.run().catch(() => undefined);
+    expect(fs.existsSync(path.join(t.out, '.tmp'))).toBe(false);
   });
 });

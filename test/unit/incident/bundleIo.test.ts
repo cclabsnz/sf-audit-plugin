@@ -2,7 +2,7 @@ import { describe, it, expect } from '@jest/globals';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { sha256File, writeJsonAtomic, loadBundle, BundleIntegrityError, BUNDLE_PATHS, logPath } from '../../../src/incident/bundleIo.js';
+import { sha256File, writeJsonAtomic, loadBundle, BundleIntegrityError, BundleIncompleteError, BUNDLE_PATHS, logPath } from '../../../src/incident/bundleIo.js';
 import { csvLine } from '../../../src/incident/csv.js';
 import type { BundleManifest } from '../../../src/incident/model.js';
 
@@ -21,7 +21,7 @@ async function makeBundle(): Promise<string> {
   await put(BUNDLE_PATHS.followUp, '{"logins":[],"users":[]}');
   await put(logPath('AuraRequest', '2026-01-02'), csvLine(['USER_ID']) + csvLine(['005xx000000gstA']));
   const manifest: BundleManifest = {
-    version: 1, orgId: '00Dxx0000000000EAA', orgName: 'Test', collectedAt: '2026-01-05T00:00:00Z', sinceDays: 30,
+    version: 1, complete: true, orgId: '00Dxx0000000000EAA', orgName: 'Test', collectedAt: '2026-01-05T00:00:00Z', sinceDays: 30,
     detectorAvailable: true, waves: [], guests: [],
     logs: [{ type: 'AuraRequest', day: '2026-01-02', status: 'collected', totalRows: 1, guestRows: 1, guestRowsByUser: {}, malformed: 0, file: logPath('AuraRequest', '2026-01-02') }],
     audit: { from: '2026-01-01', to: '2026-01-05', truncatedWindows: [], inaccessible: false },
@@ -46,6 +46,15 @@ describe('bundleIo', () => {
     const rows = [];
     for await (const r of b.rows('Sites', '2026-01-02')) rows.push(r);
     expect(rows).toEqual([]);
+  });
+  it('refuses an incomplete bundle unless allowIncomplete is passed', async () => {
+    const dir = await makeBundle();
+    const mp = path.join(dir, BUNDLE_PATHS.manifest);
+    const m = JSON.parse(fs.readFileSync(mp, 'utf-8')) as BundleManifest;
+    m.complete = false;
+    writeJsonAtomic(mp, m);
+    await expect(loadBundle(dir)).rejects.toBeInstanceOf(BundleIncompleteError);
+    await expect(loadBundle(dir, { allowIncomplete: true })).resolves.toBeDefined();
   });
   it('refuses a bundle whose files changed or vanished, naming them', async () => {
     const dir = await makeBundle();

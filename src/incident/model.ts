@@ -114,6 +114,7 @@ export interface RunningUserLimits { queryAllFiles: boolean; viewAllData: boolea
 
 export interface BundleManifest {
   version: 1;
+  complete: boolean;               // false until follow-up and the final seal succeed
   orgId: string;
   orgName: string;
   collectedAt: string;

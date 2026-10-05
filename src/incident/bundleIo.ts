@@ -36,6 +36,13 @@ export class BundleIntegrityError extends Error {
   }
 }
 
+export class BundleIncompleteError extends Error {
+  public constructor() {
+    super('Bundle collection did not finish (follow-up or sealing failed). Re-run incident collect into the same directory to resume.');
+    this.name = 'BundleIncompleteError';
+  }
+}
+
 export interface Bundle {
   dir: string;
   manifest: BundleManifest;
@@ -49,7 +56,7 @@ export interface Bundle {
 }
 
 /** Loads a bundle after checking every file against the manifest's sha256. */
-export async function loadBundle(dir: string): Promise<Bundle> {
+export async function loadBundle(dir: string, opts: { allowIncomplete?: boolean } = {}): Promise<Bundle> {
   const manifestPath = join(dir, BUNDLE_PATHS.manifest);
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as BundleManifest;
   const bad: string[] = [];
@@ -58,6 +65,7 @@ export async function loadBundle(dir: string): Promise<Bundle> {
     if (!existsSync(p) || (await sha256File(p)) !== expected) bad.push(rel);
   }
   if (bad.length > 0) throw new BundleIntegrityError(bad);
+  if (manifest.complete !== true && !opts.allowIncomplete) throw new BundleIncompleteError();
 
   const json = <T>(rel: string): T => JSON.parse(readFileSync(join(dir, rel), 'utf-8')) as T;
   const collected = new Map(manifest.logs.filter((l) => l.status === 'collected' && l.file).map((l) => [`${l.type}|${l.day}`, l.file!]));

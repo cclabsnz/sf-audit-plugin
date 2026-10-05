@@ -138,7 +138,7 @@ export async function generateScenario(dir = fs.mkdtempSync(path.join(os.tmpdir(
     { id: 'W3', guestId15: GUEST_A, site: SITE_A, days: [D2], eventIds: ['evt-w3'] },
   ];
   const manifest: BundleManifest = {
-    version: 1, orgId: '00Dxx0000000000EAA', orgName: 'Fixture Org', collectedAt: '2026-10-05T00:00:00Z', sinceDays: 120,
+    version: 1, complete: true, orgId: '00Dxx0000000000EAA', orgName: 'Fixture Org', collectedAt: '2026-10-05T00:00:00Z', sinceDays: 120,
     detectorAvailable: true, waves, guests, logs,
     audit: { from: '2026-06-23', to: '2026-10-05', truncatedWindows: [], inaccessible: false },
     limits: { queryAllFiles: false, viewAllData: true }, ipRangeFiles: [], files,

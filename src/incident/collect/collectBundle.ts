@@ -31,11 +31,13 @@ const addDays = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) 
  * Resume: logs a previous run into the same directory already collected, whose file still
  * matches the sha256 that run recorded. Anything else is downloaded again.
  */
-async function priorLogs(dir: string): Promise<Map<string, LogCoverage>> {
+async function priorLogs(dir: string, orgId: string, guestIds: Set<string>): Promise<Map<string, LogCoverage>> {
   const out = new Map<string, LogCoverage>();
   const p = join(dir, BUNDLE_PATHS.manifest);
   if (!existsSync(p)) return out;
   const prev = JSON.parse(readFileSync(p, 'utf-8')) as BundleManifest;
+  const prevGuests = new Set(prev.guests.map((g) => g.id15));
+  if (prev.orgId !== orgId || prevGuests.size !== guestIds.size || [...guestIds].some((g) => !prevGuests.has(g))) return out;
   for (const l of prev.logs) {
     if (l.status !== 'collected' || !l.file || !prev.files[l.file]) continue;
     const full = join(dir, l.file);
@@ -58,12 +60,20 @@ export async function collectBundle(
   }
   const guests = await snapshotGuests(ctx.soql, anomalies.events.map((e) => e.userId15), opts.warn);
   const waves = opts.window ? wavesFromWindow(parseDayWindow(opts.window), guests) : buildWaves(anomalies.events, guests, { event: opts.event });
-  const events = anomalies.events.filter((e) => waves.some((w) => w.eventIds.includes(e.eventIdentifier)));
+  // Window mode has no wave event ids, so match on the wave's guest and UTC day instead.
+  const events = anomalies.events.filter((e) => waves.some((w) => opts.window
+    ? w.guestId15 === e.userId15 && w.days.includes(new Date(e.eventDate).toISOString().slice(0, 10))
+    : w.eventIds.includes(e.eventIdentifier)));
 
   const days = collectionDays(waves);
-  const reuse = await priorLogs(dir);
-  const logs = await streamGuestLogs(ctx, dir, days, new Set(guests.map((g) => g.id15)), opts.warn, (t, d) => reuse.get(`${t}|${d}`));
-  rmSync(join(dir, '.tmp'), { recursive: true, force: true });
+  const guestIds = new Set(guests.map((g) => g.id15));
+  const reuse = await priorLogs(dir, ctx.orgId, guestIds);
+  let logs: LogCoverage[];
+  try {
+    logs = await streamGuestLogs(ctx, dir, days, guestIds, opts.warn, (t, d) => reuse.get(`${t}|${d}`));
+  } finally {
+    rmSync(join(dir, '.tmp'), { recursive: true, force: true });
+  }
 
   const limits = await readLimits(ctx.soql);
   const auditFrom = waves.length ? addDays(waves.map((w) => w.days[0]).sort()[0], -7) : collectedAt.slice(0, 10);
@@ -84,25 +94,29 @@ export async function collectBundle(
   writeJsonAtomic(join(dir, BUNDLE_PATHS.followUp), { logins: [], users: [] });
 
   const manifest: BundleManifest = {
-    version: 1, orgId: ctx.orgId, orgName: ctx.orgName, collectedAt, sinceDays: opts.sinceDays,
+    version: 1, complete: false, orgId: ctx.orgId, orgName: ctx.orgName, collectedAt, sinceDays: opts.sinceDays,
     detectorAvailable: anomalies.available, waves, guests, logs, audit: audit.coverage, limits, ipRangeFiles, files: {},
   };
-  const seal = async () => {
+  const seal = async (complete: boolean) => {
+    manifest.complete = complete;
     const rels = [BUNDLE_PATHS.anomalies, BUNDLE_PATHS.audit, BUNDLE_PATHS.loginsByDay, BUNDLE_PATHS.followUp, ...ipRangeFiles,
       ...logs.filter((l) => l.status === 'collected' && l.file).map((l) => l.file!)];
     manifest.files = {};
-    for (const rel of rels) if (existsSync(join(dir, rel))) manifest.files[rel] = await sha256File(join(dir, rel));
+    for (const rel of rels) {
+      if (!existsSync(join(dir, rel))) throw new Error(`Bundle file missing at seal: ${rel}`);
+      manifest.files[rel] = await sha256File(join(dir, rel));
+    }
     writeJsonAtomic(join(dir, BUNDLE_PATHS.manifest), manifest);
   };
-  await seal();
+  await seal(false);
 
   // Second pass: actor IPs need the collected logs, and their logins need the org.
-  const draft = await loadBundle(dir);
+  const draft = await loadBundle(dir, { allowIncomplete: true });
   const ranges = ipRangeFiles.length ? loadIpRanges(ipRangeFiles.map((rel) => ({ name: basename(rel), text: readFileSync(join(dir, rel), 'utf-8') }))) : null;
   const ips = new Set<string>();
   for (const w of waves) for (const a of await findActors(draft, w, ranges)) a.ips.forEach((ip) => ips.add(ip));
   for (const e of events) if (e.sourceIp) ips.add(e.sourceIp);
   writeJsonAtomic(join(dir, BUNDLE_PATHS.followUp), await followUpIps(ctx.soql, [...ips]));
-  await seal();
+  await seal(true);
   return { dir, manifest };
 }
