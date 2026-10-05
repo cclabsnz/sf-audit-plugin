@@ -79,9 +79,7 @@ describe('normaliseIp (I2)', () => {
   const V6_UPPER = '2001:DB8:0:0:0:0:0:1';
   const wave: Wave = { id: 'W6', guestId15: G, site: 's', days: ['2026-01-02'], eventIds: [] };
   const getItems = '1$serviceComponent://x.SelectableListDataProviderController/ACTION$getItems=1';
-  const aura = [
-    ...Array.from({ length: 120 }, (_, i) => ({ TIMESTAMP_DERIVED: `2026-01-02T0${i % 4}:00:00.000Z`, USER_ID: G, CLIENT_IP: i % 2 ? '2001:db8::1' : V6_UPPER, USER_AGENT: '', URI: '/', REQUEST_ID: `r${i}`, ACTION_MESSAGE: getItems })),
-  ];
+  const aura = Array.from({ length: 120 }, (_, i) => ({ TIMESTAMP_DERIVED: `2026-01-02T0${i % 4}:00:00.000Z`, USER_ID: G, CLIENT_IP: i % 2 ? '2001:db8::1' : V6_UPPER, USER_AGENT: '', URI: '/', REQUEST_ID: `r${i}`, ACTION_MESSAGE: getItems }));
   const sites = aura.map((r, i) => ({ REQUEST_ID: r.REQUEST_ID, RESPONSE_SIZE: i === 0 ? '9000' : '1846' }));
   const fake = {
     manifest: { waves: [wave], logs: [], guests: [] },

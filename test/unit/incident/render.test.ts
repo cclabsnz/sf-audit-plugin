@@ -122,3 +122,12 @@ describe('self-registrations in the actor window (I9)', () => {
     expect(renderMarkdown(red, ev)).not.toContain('Pat Visitor');
   });
 });
+
+describe('limits box', () => {
+  it('names the waves a wave-specific limit applies to, and leaves shared limits untagged', () => {
+    const md = renderMarkdown(r, buildEvidence(r));
+    const box = md.slice(md.indexOf("### What this report can't tell you"), md.indexOf('### Recommended next steps'));
+    expect(box).toMatch(/^- Response bodies are never logged/m);
+    expect(box).toMatch(/^- W1: The empty-reply size was inferred/m);
+  });
+});

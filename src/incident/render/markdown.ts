@@ -11,9 +11,16 @@ export const md = (s: string): string => s.replace(/\r?\n/g, ' ').replace(/\|/g,
 export const NOTHING_ASSESSED = 'No Guest User Anomaly waves were found in the collected period, so nothing was assessed.';
 export const WITHIN_BASELINE = 'Guest traffic stayed within baseline on every collected day.';
 
-/** The "What this report can't tell you" box: org-wide limits plus every wave's, deduplicated. */
+/**
+ * The "What this report can't tell you" box: org-wide limits plus every wave's, deduplicated.
+ * A wave limit that does not hold for every wave names the waves it applies to, so a caveat on
+ * one wave never reads as a caveat on another.
+ */
 export function reportLimits(r: IncidentResult): string[] {
-  return [...new Set([...r.globalLimits, ...r.waves.flatMap((w) => w.limits)])];
+  const waveIds = new Map<string, string[]>();
+  for (const w of r.waves) for (const l of new Set(w.limits)) waveIds.set(l, [...(waveIds.get(l) ?? []), w.wave.id]);
+  const perWave = [...waveIds.entries()].map(([l, ids]) => (ids.length === r.waves.length ? l : `${ids.join(', ')}: ${l}`));
+  return [...new Set([...r.globalLimits, ...perWave])];
 }
 
 export function waveSentence(w: IncidentResult['waves'][number], ev: Ev): string {
@@ -47,7 +54,7 @@ export function renderMarkdown(r: IncidentResult, ev: Ev): string {
   L.push("### What this report can't tell you", '');
   for (const l of reportLimits(r)) L.push(`- ${md(l)}`);
   L.push('', '### Recommended next steps', '');
-  for (const s of [...new Set(r.waves.flatMap((w) => w.nextSteps))]) L.push(`- ${md(s)}`);
+  for (const s of new Set(r.waves.flatMap((w) => w.nextSteps))) L.push(`- ${md(s)}`);
   L.push('', '## Timeline', '', `Controller calls per guest user per day ${ev.ref('volumes')}.`, '', '| Day | Guest | Controller calls | Page loads |', '|---|---|---:|---:|');
   const aura = auraCollectedDays(r.coverage.logs);
   for (const day of coveredDays(r.coverage.logs, r.volumes.map((v) => v.day))) {
