@@ -82,7 +82,7 @@ describe('streamGuestLogs', () => {
       get: jest.fn(), getRaw: jest.fn(),
       getRawToFile: jest.fn(async (_p: string, dest: string) => {
         fs.mkdirSync(path.dirname(dest), { recursive: true });
-        fs.writeFileSync(dest, csvLine(['USER_ID', 'CLIENT_IP']) + csvLine(['005xx000000gstA', '203.0.113.1']) + csvLine(['005xx000000othr', '10.0.0.1']));
+        fs.writeFileSync(dest, csvLine(['TIMESTAMP_DERIVED', 'USER_ID', 'CLIENT_IP', 'REQUEST_ID', 'ACTION_MESSAGE']) + csvLine(['2026-09-15T04:00:00.000Z', '005xx000000gstA', '203.0.113.1', 'r1', '']) + csvLine(['2026-09-15T04:00:01.000Z', '005xx000000othr', '10.0.0.1', 'r2', '']));
         return 1;
       }),
     } as any;
@@ -175,5 +175,56 @@ describe('collect --since (C1)', () => {
     const { default: Cmd } = await import('../../../src/commands/audit/incident/collect.js');
     expect(Cmd.flags.since.default).toBe(365);
     expect((Cmd.flags.since as unknown as { max: number }).max).toBe(365);
+  });
+});
+
+describe('streamGuestLogs fails closed (I5, I6)', () => {
+  const AURA_COLS = ['TIMESTAMP_DERIVED', 'USER_ID', 'CLIENT_IP', 'REQUEST_ID', 'ACTION_MESSAGE'];
+  const row = ['2026-09-15T04:00:00.000Z', '005xx000000gstA', '203.0.113.1', 'r1', '1$apex://X/ACTION$getItems=1'];
+  const run = async (body: string, files = [{ Id: '0ATxx0000000001', EventType: 'AuraRequest', LogDate: '2026-09-15T00:00:00.000+0000', LogFileLength: 10 }]) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-cols-'));
+    const soql = { query: jest.fn(), queryAll: jest.fn(async () => files) } as any;
+    const rest = { getRawToFile: jest.fn(async (_p: string, dest: string) => { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, body); return 1; }) } as any;
+    const warn = jest.fn();
+    const cov = await streamGuestLogs({ soql, rest }, dir, ['2026-09-15'], new Set(['005xx000000gstA']), warn);
+    return { dir, cov: cov.find((c) => c.type === 'AuraRequest' && c.day === '2026-09-15')!, warn, rest };
+  };
+  it('I5: collects a BOM-prefixed AuraRequest log, with the BOM stripped from the header', async () => {
+    const body = '﻿' + ['USER_ID', 'TIMESTAMP_DERIVED', 'CLIENT_IP', 'REQUEST_ID', 'ACTION_MESSAGE'].join(',') + '\n' + ['005xx000000gstA', ...row.filter((_, i) => i !== 1)].join(',') + '\n';
+    const { dir, cov } = await run(body);
+    expect(cov).toMatchObject({ status: 'collected', totalRows: 1, guestRows: 1 });
+    const out = fs.readFileSync(path.join(dir, cov.file!), 'utf-8');
+    expect(out.startsWith('"USER_ID"')).toBe(true);
+  });
+  it('I5: marks an AuraRequest log without ACTION_MESSAGE failed, naming the missing column', async () => {
+    const body = csvLine(AURA_COLS.filter((c) => c !== 'ACTION_MESSAGE')) + csvLine(row.slice(0, 4));
+    const { cov, warn } = await run(body);
+    expect(cov.status).toBe('failed');
+    expect(cov.detail).toBe('missing columns: ACTION_MESSAGE');
+    expect(cov.file).toBeUndefined();
+    expect(warn).toHaveBeenCalled();
+  });
+  it('I5: accepts USER_ID_DERIVED in place of USER_ID, and requires one of them', async () => {
+    const derived = AURA_COLS.map((c) => (c === 'USER_ID' ? 'USER_ID_DERIVED' : c));
+    expect((await run(csvLine(derived) + csvLine(row))).cov.status).toBe('collected');
+    const none = AURA_COLS.filter((c) => c !== 'USER_ID');
+    const r = await run(csvLine(none) + csvLine(row.filter((_, i) => i !== 1)));
+    expect(r.cov).toMatchObject({ status: 'failed', detail: 'missing columns: USER_ID or USER_ID_DERIVED' });
+  });
+  it('I5: requires REQUEST_ID and RESPONSE_SIZE on Sites', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-cols-'));
+    const soql = { query: jest.fn(), queryAll: jest.fn(async () => [{ Id: '0ATxx0000000002', EventType: 'Sites', LogDate: '2026-09-15T00:00:00.000+0000', LogFileLength: 10 }]) } as any;
+    const rest = { getRawToFile: jest.fn(async (_p: string, dest: string) => { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, csvLine(['USER_ID', 'REQUEST_ID']) + csvLine(['005xx000000gstA', 'r1'])); return 1; }) } as any;
+    const cov = await streamGuestLogs({ soql, rest }, dir, ['2026-09-15'], new Set(['005xx000000gstA']), () => {});
+    expect(cov.find((c) => c.type === 'Sites')).toMatchObject({ status: 'failed', detail: 'missing columns: RESPONSE_SIZE' });
+  });
+  it('I6: marks a type and day with more than one Daily file failed, and downloads neither', async () => {
+    const two = [
+      { Id: '0ATxx0000000001', EventType: 'AuraRequest', LogDate: '2026-09-15T00:00:00.000+0000', LogFileLength: 10 },
+      { Id: '0ATxx0000000002', EventType: 'AuraRequest', LogDate: '2026-09-15T00:00:00.000+0000', LogFileLength: 10 },
+    ];
+    const { cov, rest } = await run(csvLine(AURA_COLS) + csvLine(row), two);
+    expect(cov).toMatchObject({ status: 'failed', detail: 'multiple daily log files' });
+    expect(rest.getRawToFile).not.toHaveBeenCalled();
   });
 });

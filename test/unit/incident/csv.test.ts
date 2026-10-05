@@ -126,3 +126,13 @@ describe('filterLogFile', () => {
     }
   }, 300_000);
 });
+
+describe('filterLogFile BOM (I5)', () => {
+  it('strips a UTF-8 BOM from the header so USER_ID in the first column still matches', async () => {
+    const raw = w('bom.csv', '﻿USER_ID,CLIENT_IP\n005xx000000gstA,203.0.113.1\n');
+    const out = path.join(dir, 'bom-out.csv');
+    const r = await filterLogFile(raw, out, new Set(['005xx000000gstA']));
+    expect(r.guestRows).toBe(1);
+    expect((await all(readCsvRecords(out)))[0]).toEqual({ USER_ID: '005xx000000gstA', CLIENT_IP: '203.0.113.1' });
+  });
+});

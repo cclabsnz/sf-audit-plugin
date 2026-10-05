@@ -82,7 +82,7 @@ export async function analyseBundle(dir: string, opts: { spikeRatio?: number } =
     guests: m.guests,
     volumes,
     waves,
-    globalLimits: globalLimitsFor(m),
+    globalLimits: globalLimitsFor(m, b.followUp),
     config,
     coverage: { logs: m.logs, audit: m.audit, limits: m.limits, detectorAvailable: m.detectorAvailable, ipRanges: m.ipRangeFiles },
     // Zero waves, or a wave with no baseline, is "nothing assessed", never "within baseline".

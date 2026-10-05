@@ -1,6 +1,6 @@
 // test/unit/incident/verdict.test.ts
 import { describe, it, expect } from '@jest/globals';
-import { classify, outcomeOf, limitsFor, nextStepsFor, type VerdictInput } from '../../../src/incident/analyse/verdict.js';
+import { classify, globalLimitsFor, outcomeOf, limitsFor, nextStepsFor, type VerdictInput } from '../../../src/incident/analyse/verdict.js';
 import type { BundleManifest } from '../../../src/incident/model.js';
 
 const base: VerdictInput = {
@@ -99,5 +99,13 @@ describe('the no-evidence invariant', () => {
     expect(outcomeOf({ ...v, responses: { ...v.responses, returnedContent: [{} as never] } })).toBe('content-returned');
     expect(outcomeOf({ ...v, outcomes: { ...v.outcomes, successfulLogins: 1 } })).toBe('access-gained');
     expect(limitsFor({ ...v, outcomes: { ...v.outcomes, successfulLogins: 1 } }).join(' ')).not.toMatch(/Not assessed:/);
+  });
+});
+
+describe('globalLimitsFor', () => {
+  it('I4: states that login history for actor IPs was truncated', () => {
+    const msg = 'Login history for actor IPs was truncated at 10,000 rows per batch; some logins may be missing.';
+    expect(globalLimitsFor(manifest, { logins: [], users: [], truncated: true })).toContain(msg);
+    expect(globalLimitsFor(manifest, { logins: [], users: [] })).not.toContain(msg);
   });
 });

@@ -129,7 +129,12 @@ export interface BundleManifest {
   files: Record<string, string>;   // bundle-relative path -> sha256 hex
 }
 
-export interface FollowUp { logins: LoginRow[]; users: LinkedUser[] }
+export interface FollowUp {
+  logins: LoginRow[];
+  users: LinkedUser[];
+  /** True when a LoginHistory batch returned the queryAll cap, so some logins may be missing. */
+  truncated?: boolean;
+}
 
 export type ActionClass = 'data-access' | 'auth' | 'plumbing' | 'unknown';
 export type Classification = 'internal-testing' | 'automated-scan' | 'organic' | 'indeterminate';

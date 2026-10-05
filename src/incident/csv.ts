@@ -68,8 +68,25 @@ export interface FilterResult {
   malformed: number;
 }
 
-/** Copies the rows whose USER_ID or USER_ID_DERIVED belongs to a guest user; counts every row. */
-export async function filterLogFile(rawPath: string, outPath: string, guestIds: ReadonlySet<string>): Promise<FilterResult> {
+/** A log whose header lacks columns the analysis needs. Thrown before any row is written. */
+export class MissingColumnsError extends Error {
+  public constructor(public readonly missing: string[]) {
+    super(`missing columns: ${missing.join(', ')}`);
+    this.name = 'MissingColumnsError';
+  }
+}
+
+/**
+ * Copies the rows whose USER_ID or USER_ID_DERIVED belongs to a guest user; counts every row.
+ * A UTF-8 BOM is stripped from the header. `requiredColumns`, when given, returns the columns
+ * the header lacks; any at all fails the file closed with MissingColumnsError.
+ */
+export async function filterLogFile(
+  rawPath: string,
+  outPath: string,
+  guestIds: ReadonlySet<string>,
+  opts: { requiredColumns?: (header: string[]) => string[] } = {},
+): Promise<FilterResult> {
   await mkdir(dirname(outPath), { recursive: true });
   const out = createWriteStream(outPath);
   const result: FilterResult = { totalRows: 0, guestRows: 0, guestRowsByUser: {}, malformed: 0 };
@@ -100,6 +117,9 @@ export async function filterLogFile(rawPath: string, outPath: string, guestIds: 
   try {
     for await (const cells of readCsvCells(rawPath)) {
       if (!header) {
+        if (cells.length > 0 && cells[0].startsWith('\uFEFF')) cells[0] = cells[0].slice(1);
+        const missing = opts.requiredColumns?.(cells) ?? [];
+        if (missing.length > 0) throw new MissingColumnsError(missing);
         header = cells;
         userCols = ['USER_ID', 'USER_ID_DERIVED'].map((h) => header!.indexOf(h)).filter((i) => i >= 0);
         await write(csvLine(cells));

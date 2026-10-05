@@ -1,5 +1,5 @@
 // src/incident/analyse/verdict.ts
-import type { BundleManifest, Classification, Wave, WaveOutcome } from '../model.js';
+import type { BundleManifest, Classification, FollowUp, Wave, WaveOutcome } from '../model.js';
 import type { Actor } from './actors.js';
 import type { SpikeAssessment } from './baseline.js';
 import type { Asymmetry } from './configDelta.js';
@@ -57,7 +57,7 @@ export function outcomeOf(v: VerdictInput): WaveOutcome {
 }
 
 /** Org-wide limits: they hold for the whole report, including one with zero waves. */
-export function globalLimitsFor(m: BundleManifest): string[] {
+export function globalLimitsFor(m: BundleManifest, followUp?: FollowUp): string[] {
   const out: string[] = [];
   if (!m.detectorAvailable) out.push('Guest User Anomaly events were not available; waves come from the supplied window only.');
   if (m.audit.inaccessible) out.push('The setup audit trail could not be read, so configuration changes are unknown.');
@@ -65,6 +65,7 @@ export function globalLimitsFor(m: BundleManifest): string[] {
   if (m.ipRangeFiles.length === 0) out.push('Hosting provider not assessed: no --ip-ranges files were supplied.');
   if (!m.limits.queryAllFiles) out.push('The collecting user lacks Query All Files, so files owned by or shared with guest users were not checked.');
   if (!m.limits.viewAllData) out.push('The collecting user lacks View All Data, so record visibility checks are partial.');
+  if (followUp?.truncated) out.push('Login history for actor IPs was truncated at 10,000 rows per batch; some logins may be missing.');
   return out;
 }
 

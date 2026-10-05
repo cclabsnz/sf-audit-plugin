@@ -21,6 +21,16 @@ describe('followUpIps', () => {
   });
 });
 
+describe('followUpIps truncation (I4)', () => {
+  it('marks the follow-up truncated when a chunk returns the 10,000-row cap', async () => {
+    const row = { LoginTime: '2026-09-20T00:00:00.000+0000', UserId: '005xx000000tstUAAA', SourceIp: '203.0.113.9', Status: 'Failed' };
+    const full = { query: jest.fn(), queryAll: jest.fn(async (q: string) => (q.includes('FROM LoginHistory') ? Array.from({ length: 10_000 }, () => row) : [])) } as any;
+    expect((await followUpIps(full, ['203.0.113.9'])).truncated).toBe(true);
+    const few = { query: jest.fn(), queryAll: jest.fn(async (q: string) => (q.includes('FROM LoginHistory') ? [row] : [])) } as any;
+    expect((await followUpIps(few, ['203.0.113.9'])).truncated).toBeFalsy();
+  });
+});
+
 describe('collectBundle', () => {
   it('writes a bundle that loadBundle accepts, with follow-up for detected actor IPs', async () => {
     const out = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-cb-'));
@@ -42,7 +52,7 @@ describe('collectBundle', () => {
       get: jest.fn(), getRaw: jest.fn(),
       getRawToFile: jest.fn(async (_p: string, dest: string) => {
         fs.mkdirSync(path.dirname(dest), { recursive: true });
-        fs.writeFileSync(dest, csvLine(['TIMESTAMP_DERIVED', 'USER_ID', 'CLIENT_IP', 'ACTION_MESSAGE']) + csvLine(['2026-09-15T04:00:00.000Z', '005xx000000gstA', '203.0.113.9', '1$apex://X/ACTION$getItems=1']));
+        fs.writeFileSync(dest, csvLine(['TIMESTAMP_DERIVED', 'USER_ID', 'CLIENT_IP', 'REQUEST_ID', 'ACTION_MESSAGE']) + csvLine(['2026-09-15T04:00:00.000Z', '005xx000000gstA', '203.0.113.9', 'r1', '1$apex://X/ACTION$getItems=1']));
         return 1;
       }),
     } as any;
@@ -88,7 +98,7 @@ describe('collectBundle trust gaps', () => {
       get: jest.fn(), getRaw: jest.fn(),
       getRawToFile: jest.fn(async (_p: string, dest: string) => {
         fs.mkdirSync(path.dirname(dest), { recursive: true });
-        fs.writeFileSync(dest, csvLine(['TIMESTAMP_DERIVED', 'USER_ID', 'CLIENT_IP', 'ACTION_MESSAGE']) + csvLine(['2026-09-15T04:00:00.000Z', '005xx000000gstA', '203.0.113.9', '1$apex://X/ACTION$getItems=1']));
+        fs.writeFileSync(dest, csvLine(['TIMESTAMP_DERIVED', 'USER_ID', 'CLIENT_IP', 'REQUEST_ID', 'ACTION_MESSAGE']) + csvLine(['2026-09-15T04:00:00.000Z', '005xx000000gstA', '203.0.113.9', 'r1', '1$apex://X/ACTION$getItems=1']));
         return 1;
       }),
     } as any;
@@ -143,6 +153,26 @@ describe('collectBundle trust gaps', () => {
     const warn = jest.fn();
     await collectBundle({ soql: t.soql, rest: t.rest, orgId: '00Dxx0000000000EAA', orgName: 'Test' }, { sinceDays: 30, ipRangeFiles: [], outputDir: t.out, warn });
     expect(warn).toHaveBeenCalledWith('No anomaly waves found in the last 30 days; widen --since or pass --window.');
+  });
+
+  it('I3: a run that dies mid-download resumes, re-downloading only the remaining files', async () => {
+    const t = setup();
+    const impl = t.rest.getRawToFile.getMockImplementation()!;
+    let n = 0;
+    t.rest.getRawToFile.mockImplementation(async (p: string, dest: string) => {
+      if (++n === 3) throw Object.assign(new Error('disk full'), { code: 'ENOSPC' });
+      return impl(p, dest);
+    });
+    await expect(t.run()).rejects.toThrow('disk full');
+    expect(t.rest.getRawToFile).toHaveBeenCalledTimes(3);
+    const partial = JSON.parse(fs.readFileSync(path.join(t.out, 'manifest.json'), 'utf-8'));
+    expect(partial.complete).toBe(false);
+    expect(partial.logs.filter((l: { status: string }) => l.status === 'collected')).toHaveLength(2);
+    expect(Object.keys(partial.files)).toHaveLength(2);
+    t.rest.getRawToFile.mockImplementation(impl);
+    await t.run();
+    expect(t.rest.getRawToFile).toHaveBeenCalledTimes(4);
+    await expect(loadBundle(t.out)).resolves.toBeDefined();
   });
 
   it('removes .tmp when log streaming throws', async () => {

@@ -72,9 +72,24 @@ export async function collectBundle(
   const days = collectionDays(waves);
   const guestIds = new Set(guests.map((g) => g.id15));
   const reuse = await priorLogs(dir, ctx.orgId, guestIds);
+  // Checkpoint: rewrite an incomplete manifest after every log so a killed run resumes from the
+  // logs already filtered instead of downloading everything again.
+  const soFar: LogCoverage[] = [];
+  const hashes: Record<string, string> = {};
+  const checkpoint = async (c: LogCoverage): Promise<void> => {
+    soFar.push(c);
+    if (c.status === 'collected' && c.file) hashes[c.file] = await sha256File(join(dir, c.file));
+    const partial: BundleManifest = {
+      version: 1, complete: false, orgId: ctx.orgId, orgName: ctx.orgName, collectedAt, sinceDays: opts.sinceDays,
+      detectorAvailable: anomalies.available, waves, guests, logs: soFar,
+      audit: { from: '', to: '', truncatedWindows: [], inaccessible: true },
+      limits: { queryAllFiles: false, viewAllData: false }, ipRangeFiles: [], files: { ...hashes },
+    };
+    writeJsonAtomic(join(dir, BUNDLE_PATHS.manifest), partial);
+  };
   let logs: LogCoverage[];
   try {
-    logs = await streamGuestLogs(ctx, dir, days, guestIds, opts.warn, (t, d) => reuse.get(`${t}|${d}`));
+    logs = await streamGuestLogs(ctx, dir, days, guestIds, opts.warn, (t, d) => reuse.get(`${t}|${d}`), checkpoint);
   } finally {
     rmSync(join(dir, '.tmp'), { recursive: true, force: true });
   }
