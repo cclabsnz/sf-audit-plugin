@@ -1,5 +1,6 @@
 // src/incident/collect/snapshotOrg.ts
 import type { SoqlClient } from '@cclabsnz/sf-core';
+import { degrades } from './orgErrors.js';
 import { DEFAULTS, id15, type AuditCoverage, type AuditRow, type GuestUser, type LoginDayCount, type RunningUserLimits } from '../model.js';
 
 const quoteIds = (ids: string[]) => ids.map((i) => `'${i.replace(/[^A-Za-z0-9]/g, '')}'`).join(',');
@@ -7,17 +8,24 @@ const quoteIds = (ids: string[]) => ids.map((i) => `'${i.replace(/[^A-Za-z0-9]/g
 interface UserRow { Id: string; Username: string; Name: string; Profile?: { Name: string }; IsActive: boolean }
 
 /** Active guests plus any user an anomaly event named, so a since-deactivated guest's rows survive filtering. */
-export async function snapshotGuests(soql: SoqlClient, extraIds: string[]): Promise<GuestUser[]> {
+export async function snapshotGuests(soql: SoqlClient, extraIds: string[], warn: (m: string) => void = () => {}): Promise<GuestUser[]> {
   const active = await soql.queryAll<UserRow>("SELECT Id, Username, Name, Profile.Name, IsActive FROM User WHERE UserType = 'Guest' AND IsActive = true");
   const known = new Set(active.map((u) => id15(u.Id)));
   const missing = [...new Set(extraIds.map((x) => id15(x)!).filter((x) => x && !known.has(x)))];
   const extra = missing.length
     ? await soql.queryAll<UserRow>(`SELECT Id, Username, Name, Profile.Name, IsActive FROM User WHERE Id IN (${quoteIds(missing)})`)
     : [];
-  const sites = await soql.queryAll<{ Name: string; GuestUserId: string | null }>('SELECT Name, GuestUserId FROM Site');
+  const optional = async <T>(object: string, q: string): Promise<T[]> => {
+    try { return await soql.queryAll<T>(q); } catch (e) {
+      if (!degrades(e)) throw e;
+      warn(`Could not read ${object} (${String(e)}); continuing without it.`);
+      return [];
+    }
+  };
+  const sites = await optional<{ Name: string; GuestUserId: string | null }>('Site', 'SELECT Name, GuestUserId FROM Site');
   const users = [...active, ...extra];
   const perms = users.length
-    ? await soql.queryAll<{ AssigneeId: string; PermissionSet: { Label: string } }>(
+    ? await optional<{ AssigneeId: string; PermissionSet: { Label: string } }>('PermissionSetAssignment',
       `SELECT AssigneeId, PermissionSet.Label FROM PermissionSetAssignment WHERE AssigneeId IN (${quoteIds(users.map((u) => u.Id))}) AND PermissionSet.IsOwnedByProfile = false`)
     : [];
   return users.map((u) => {
@@ -39,7 +47,8 @@ export async function readLimits(soql: SoqlClient): Promise<RunningUserLimits> {
     const r = await soql.queryAll<{ PermissionsQueryAllFiles: boolean; PermissionsViewAllData: boolean }>(
       'SELECT PermissionsQueryAllFiles, PermissionsViewAllData FROM UserPermissionAccess');
     return { queryAllFiles: Boolean(r[0]?.PermissionsQueryAllFiles), viewAllData: Boolean(r[0]?.PermissionsViewAllData) };
-  } catch {
+  } catch (e) {
+    if (!degrades(e)) throw e;
     return { queryAllFiles: false, viewAllData: false };
   }
 }
@@ -77,7 +86,8 @@ export async function fetchAuditTrail(soql: SoqlClient, from: string, to: string
     const startMs = Date.parse(`${from}T00:00:00Z`);
     const endMs = Date.parse(`${to}T00:00:00Z`) + 86_400_000;
     for (let s = startMs; s < endMs; s += DEFAULTS.auditWindowDays * 86_400_000) await fetchWindow(s, Math.min(endMs, s + DEFAULTS.auditWindowDays * 86_400_000));
-  } catch {
+  } catch (e) {
+    if (!degrades(e)) throw e;
     coverage.inaccessible = true;
   }
   rows.sort((a, c) => a.createdDate.localeCompare(c.createdDate));
@@ -92,7 +102,8 @@ export async function loginsByDay(soql: SoqlClient, days: string[]): Promise<Log
     const r = await soql.queryAll<{ d: string; Status: string; n: number }>(
       `SELECT DAY_ONLY(LoginTime) d, Status, COUNT(Id) n FROM LoginHistory WHERE LoginTime >= ${first}T00:00:00Z AND LoginTime < ${last}T00:00:00Z GROUP BY DAY_ONLY(LoginTime), Status`);
     return r.filter((x) => days.includes(x.d)).map((x) => ({ day: x.d, status: x.Status, count: Number(x.n) }));
-  } catch {
+  } catch (e) {
+    if (!degrades(e)) throw e;
     return [];
   }
 }

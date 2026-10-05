@@ -1,7 +1,8 @@
 // src/incident/collect/streamGuestLogs.ts
-import { mkdirSync, rmSync, renameSync } from 'node:fs';
+import { mkdirSync, rmSync, renameSync, statfsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { RestClient, SoqlClient } from '@cclabsnz/sf-core';
+import { degrades } from './orgErrors.js';
 import { filterLogFile } from '../csv.js';
 import { logPath } from '../bundleIo.js';
 import { LOG_TYPES, type LogCoverage, type LogType, type Wave } from '../model.js';
@@ -30,17 +31,19 @@ export async function streamGuestLogs(
     ({ type, day, status, totalRows: 0, guestRows: 0, guestRowsByUser: {}, malformed: 0, detail });
   if (days.length === 0) return coverage;
 
-  let files: Array<{ Id: string; EventType: string; LogDate: string }>;
+  let files: Array<{ Id: string; EventType: string; LogDate: string; LogFileLength?: number }>;
   try {
     files = await deps.soql.queryAll(
       `SELECT Id, EventType, LogDate, LogFileLength FROM EventLogFile WHERE Interval = 'Daily' AND EventType IN (${LOG_TYPES.map((t) => `'${t}'`).join(',')}) ` +
       `AND LogDate >= ${days[0]}T00:00:00Z AND LogDate <= ${days[days.length - 1]}T00:00:00Z`);
   } catch (e) {
-    const status = /INSUFFICIENT_ACCESS/i.test(String(e)) ? 'no-permission' : 'failed';
-    return days.flatMap((d) => LOG_TYPES.map((t) => blank(t, d, status, String(e))));
+    if (!degrades(e)) throw e;
+    return days.flatMap((d) => LOG_TYPES.map((t) => blank(t, d, 'no-permission', 'EventLogFile is not readable: the running user needs the View Event Log Files permission.')));
   }
 
   const tmp = join(bundleDir, '.tmp');
+  // A killed earlier run can leave raw, unfiltered logs here, which contain non-guest data.
+  rmSync(tmp, { recursive: true, force: true });
   mkdirSync(tmp, { recursive: true });
   for (const day of days) {
     for (const type of LOG_TYPES) {
@@ -51,12 +54,25 @@ export async function streamGuestLogs(
       const raw = join(tmp, `${f.Id}.csv`);
       const rel = logPath(type, day);
       const part = join(bundleDir, `${rel}.part`);
+      let freeBytes: number | undefined;
+      try { const s = statfsSync(bundleDir); freeBytes = Number(s.bavail) * Number(s.bsize); } catch { freeBytes = undefined; }
+      if (freeBytes !== undefined && f.LogFileLength && freeBytes < 1.2 * f.LogFileLength) {
+        const mb = (n: number) => Math.ceil(n / 1_048_576);
+        rmSync(tmp, { recursive: true, force: true });
+        throw new Error(`Not enough free disk space for ${type} ${day} (${mb(1.2 * f.LogFileLength)} MB needed, ${Math.floor(freeBytes / 1_048_576)} MB free). Free space and re-run; completed logs are kept.`);
+      }
       try {
         await deps.rest.getRawToFile(`/sobjects/EventLogFile/${f.Id}/LogFile`, raw);
         const r = await filterLogFile(raw, part, guestIds);
         renameSync(part, join(bundleDir, rel));
         coverage.push({ type, day, status: 'collected', ...r, file: rel });
       } catch (e) {
+        if ((e as { code?: string })?.code === 'ENOSPC' || /HTTP 401/.test(String(e))) {
+          rmSync(part, { force: true });
+          rmSync(raw, { force: true });
+          rmSync(tmp, { recursive: true, force: true });
+          throw e;
+        }
         warn(`Could not collect ${type} for ${day}: ${String(e)}`);
         coverage.push(blank(type, day, /INSUFFICIENT_ACCESS|HTTP 403/i.test(String(e)) ? 'no-permission' : 'failed', String(e)));
         rmSync(part, { force: true });
@@ -65,5 +81,6 @@ export async function streamGuestLogs(
       }
     }
   }
+  rmSync(tmp, { recursive: true, force: true });
   return coverage;
 }

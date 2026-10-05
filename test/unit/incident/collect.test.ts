@@ -3,8 +3,9 @@ import { describe, it, expect, jest } from '@jest/globals';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { classifyOrgError } from '../../../src/incident/collect/orgErrors.js';
 import { buildWaves, parseDayWindow, readAnomalies } from '../../../src/incident/collect/discoverWaves.js';
-import { fetchAuditTrail, snapshotGuests } from '../../../src/incident/collect/snapshotOrg.js';
+import { fetchAuditTrail, loginsByDay, snapshotGuests } from '../../../src/incident/collect/snapshotOrg.js';
 import { streamGuestLogs, collectionDays } from '../../../src/incident/collect/streamGuestLogs.js';
 import { csvLine } from '../../../src/incident/csv.js';
 import type { GuestUser } from '../../../src/incident/model.js';
@@ -89,9 +90,82 @@ describe('streamGuestLogs', () => {
     const aura15 = cov.find((c) => c.type === 'AuraRequest' && c.day === '2026-09-15')!;
     expect(aura15).toMatchObject({ status: 'collected', totalRows: 2, guestRows: 1, guestRowsByUser: { '005xx000000gstA': 1 } });
     expect(cov.find((c) => c.type === 'AuraRequest' && c.day === '2026-09-16')!.status).toBe('missing');
-    expect(fs.readdirSync(path.join(dir, '.tmp'))).toEqual([]);
+    expect(fs.existsSync(path.join(dir, '.tmp'))).toBe(false);
   });
   it('computes collection days as wave days ±1', () => {
     expect(collectionDays([{ id: 'W1', guestId15: 'g', site: 's', days: ['2026-09-15'], eventIds: [] }])).toEqual(['2026-09-14', '2026-09-15', '2026-09-16']);
+  });
+});
+
+describe('error classification (fix round 1)', () => {
+  it('classifies org errors', () => {
+    expect(classifyOrgError(new Error("sObject type 'X' is not supported"))).toBe('unavailable');
+    expect(classifyOrgError(new Error('INVALID_TYPE: nope'))).toBe('unavailable');
+    expect(classifyOrgError(new Error('INSUFFICIENT_ACCESS_OR_READONLY'))).toBe('no-permission');
+    expect(classifyOrgError(new Error('HTTP 403 Forbidden'))).toBe('no-permission');
+    expect(classifyOrgError(new Error('INVALID_SESSION_ID: Session expired'))).toBe('error');
+  });
+  it('readAnomalies rethrows unclassified errors', async () => {
+    const soql = { query: jest.fn(), queryAll: jest.fn(async () => { throw new Error('INVALID_SESSION_ID: Session expired'); }) } as any;
+    await expect(readAnomalies(soql, 30)).rejects.toThrow(/INVALID_SESSION_ID/);
+  });
+  it('loginsByDay rethrows generic errors and degrades on permission errors', async () => {
+    const bad = { query: jest.fn(), queryAll: jest.fn(async () => { throw new Error('boom'); }) } as any;
+    await expect(loginsByDay(bad, ['2026-09-15'])).rejects.toThrow('boom');
+    const denied = { query: jest.fn(), queryAll: jest.fn(async () => { throw new Error('INSUFFICIENT_ACCESS'); }) } as any;
+    expect(await loginsByDay(denied, ['2026-09-15'])).toEqual([]);
+  });
+  it('fetchAuditTrail rethrows generic errors', async () => {
+    const bad = { query: jest.fn(), queryAll: jest.fn(async () => { throw new Error('boom'); }) } as any;
+    await expect(fetchAuditTrail(bad, '2026-09-01', '2026-09-05', [])).rejects.toThrow('boom');
+  });
+  it('snapshotGuests degrades when Site is unavailable and warns', async () => {
+    const soql = {
+      query: jest.fn(),
+      queryAll: jest.fn(async (q: string) => {
+        if (q.includes("UserType = 'Guest'")) return [{ Id: '005xx000000gstAAAA', Username: 'a@example.com', Name: 'G', Profile: { Name: 'P' }, IsActive: true }];
+        if (q.includes('FROM Site')) throw new Error('INVALID_TYPE: sObject type Site is not supported');
+        return [];
+      }),
+    } as any;
+    const warn = jest.fn();
+    const g = await snapshotGuests(soql, [], warn);
+    expect(g.map((x) => x.siteNames)).toEqual([[]]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Site'));
+  });
+});
+
+describe('parseDayWindow limits (fix round 1)', () => {
+  it('rejects impossible, reversed and oversized windows, and accepts 31 days', () => {
+    expect(() => parseDayWindow('2026-13-45/P1D')).toThrow(/exist/);
+    expect(() => parseDayWindow('2026-09-16/2026-09-14')).toThrow(/before/);
+    expect(() => parseDayWindow('2026-01-01/P99999D')).toThrow(/31/);
+    expect(parseDayWindow('2026-01-01/2026-01-31')).toHaveLength(31);
+    expect(parseDayWindow('2026-01-01/P31D')).toHaveLength(31);
+  });
+});
+
+describe('streamGuestLogs safety (fix round 1)', () => {
+  const file = [{ Id: '0ATxx0000000001', EventType: 'AuraRequest', LogDate: '2026-09-15T00:00:00.000+0000', LogFileLength: 10 }];
+  it('removes stale .tmp contents and leaves no .tmp behind', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-collect-'));
+    fs.mkdirSync(path.join(dir, '.tmp'));
+    fs.writeFileSync(path.join(dir, '.tmp', 'old.csv'), 'USER_ID\n005xx000000othr\n');
+    const soql = { query: jest.fn(), queryAll: jest.fn(async () => []) } as any;
+    await streamGuestLogs({ soql, rest: { getRawToFile: jest.fn() } as any }, dir, ['2026-09-15'], new Set(), () => {});
+    expect(fs.existsSync(path.join(dir, '.tmp'))).toBe(false);
+  });
+  it('rethrows ENOSPC instead of recording a failed log', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-collect-'));
+    const soql = { query: jest.fn(), queryAll: jest.fn(async () => file) } as any;
+    const rest = { getRawToFile: jest.fn(async () => { throw Object.assign(new Error('disk full'), { code: 'ENOSPC' }); }) } as any;
+    await expect(streamGuestLogs({ soql, rest }, dir, ['2026-09-15'], new Set(), () => {})).rejects.toThrow('disk full');
+  });
+  it('marks every entry no-permission when EventLogFile is unavailable', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-collect-'));
+    const soql = { query: jest.fn(), queryAll: jest.fn(async () => { throw new Error('INVALID_TYPE: EventLogFile'); }) } as any;
+    const cov = await streamGuestLogs({ soql, rest: {} as any }, dir, ['2026-09-15'], new Set(), () => {});
+    expect(cov.length).toBeGreaterThan(0);
+    expect(cov.every((c) => c.status === 'no-permission' && /View Event Log Files/.test(c.detail ?? ''))).toBe(true);
   });
 });
