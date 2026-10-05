@@ -8,7 +8,9 @@ import { readCsvCells, readCsvRecords, csvLine, filterLogFile } from '../../../s
 
 v8.setFlagsFromString('--expose_gc');
 const forceGc = vm.runInNewContext('gc') as () => void;
-const live = () => { forceGc(); return process.memoryUsage().heapUsed; };
+// Node keeps big strings decoded by readFileSync as EXTERNAL memory, so heapUsed alone misses them.
+// external already includes arrayBuffers.
+const live = () => { forceGc(); const m = process.memoryUsage(); return m.heapUsed + m.external; };
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-csv-'));
 const w = (name: string, body: string) => { const p = path.join(dir, name); fs.writeFileSync(p, body); return p; };
@@ -43,8 +45,10 @@ describe('readCsvCells', () => {
   });
   it('handles CR/LF split across chunks', async () => {
     const csv = '"a"\r\n"b"\r\n';
+    expect(csv[3]).toBe('\r');
+    expect(csv[4]).toBe('\n');
     const p = w('split-crlf.csv', csv);
-    const rows = await all(readCsvCells(p, { chunkSize: 3 }));
+    const rows = await all(readCsvCells(p, { chunkSize: 4 })); // chunk 0 ends with CR, chunk 1 starts with LF
     expect(rows).toEqual([['a'], ['b']]);
   });
   it('yields nothing for an empty file and only the header for a header-only file', async () => {
@@ -79,25 +83,14 @@ describe('filterLogFile', () => {
     expect(await filterLogFile(w('ho.csv', csvLine(['USER_ID'])), out, new Set(['x']))).toEqual({ totalRows: 0, guestRows: 0, guestRowsByUser: {}, malformed: 0 });
     expect(await filterLogFile(w('em.csv', ''), out, new Set(['x']))).toEqual({ totalRows: 0, guestRows: 0, guestRowsByUser: {}, malformed: 0 });
   });
-  it('rejects with EISDIR when output path is a directory, with 10s timeout', async () => {
-    // Create a directory at the output path; mkdir(dirname) succeeds, but createWriteStream emits EISDIR.
-    const outDir = path.join(dir, 'dir-out-' + Date.now());
+  it('rejects with the original EISDIR when the output path is a directory', async () => {
+    // mkdir(dirname) succeeds, createWriteStream then emits EISDIR; cleanup must not mask it.
+    const outDir = path.join(dir, 'dir-out');
     fs.mkdirSync(outDir);
     const raw = w('raw2.csv', csvLine(['USER_ID']) + csvLine(['005xx000000gstA']));
-
-    // Use timeout to fail if the call hangs
-    let completed = false;
-    const timeoutPromise = new Promise<void>((_, reject) =>
-      setTimeout(() => !completed && reject(new Error('filterLogFile hung')), 10000)
-    );
-
-    const filterPromise = filterLogFile(raw, outDir, new Set(['005xx000000gstA'])).then(
-      () => { completed = true; },
-      (err) => { completed = true; throw err; }
-    );
-
-    await expect(Promise.race([filterPromise, timeoutPromise])).rejects.toMatchObject({ code: 'EISDIR' });
-  });
+    await expect(filterLogFile(raw, outDir, new Set(['005xx000000gstA']))).rejects.toMatchObject({ code: 'EISDIR' });
+    expect(fs.statSync(outDir).isDirectory()).toBe(true);
+  }, 10_000);
   it('streams a file far larger than the live-heap bound', async () => {
     const LIMIT = 64 * 1024 * 1024; // live heap may not grow by more than 64 MiB
     const input = path.join(dir, 'huge.csv');
@@ -125,7 +118,7 @@ describe('filterLogFile', () => {
       const r = await filterLogFile(input, output, new Set(['005xx000000gstA']));
       peak = Math.max(peak, live() - base);
       expect(r.totalRows).toBe(numRows);
-      if (peak >= LIMIT) throw new Error(`live heap grew ${(peak / 1048576).toFixed(1)} MiB`);
+      if (peak >= LIMIT) throw new Error(`live memory grew ${(peak / 1048576).toFixed(1)} MiB`);
     } finally {
       clearInterval(timer);
       fs.rmSync(input, { force: true });
