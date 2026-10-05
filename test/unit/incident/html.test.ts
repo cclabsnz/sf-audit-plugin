@@ -9,6 +9,24 @@ import { renderHtml } from '../../../src/incident/render/html.js';
 let r: IncidentResult;
 beforeAll(async () => { r = await analyseBundle(await generateScenario()); });
 
+
+/** The page's visible markup: everything outside <script> elements. Index-based, not a regex filter. */
+function withoutScripts(html: string): string {
+  const lower = html.toLowerCase();
+  let out = '';
+  let i = 0;
+  for (;;) {
+    const start = lower.indexOf('<script', i);
+    if (start === -1) return out + html.slice(i);
+    out += html.slice(i, start);
+    const close = lower.indexOf('</script', start);
+    if (close === -1) return out;
+    const end = lower.indexOf('>', close);
+    if (end === -1) return out;
+    i = end + 1;
+  }
+}
+
 describe('renderHtml', () => {
   it('is self-contained, puts verdicts and limits first, and cites evidence', () => {
     const html = renderHtml(r, buildEvidence(r), DEFAULT_BRANDING);
@@ -17,7 +35,7 @@ describe('renderHtml', () => {
     expect(html.indexOf('Unattributed automated scan')).toBeLessThan(first);
     expect(html.indexOf("What this report can&#39;t tell you") >= 0 || html.indexOf("What this report can't tell you") >= 0).toBe(true);
     expect(html).toMatch(/\[E\d+\]/);
-    expect(/\b(attack|breach)/i.test(html.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, ''))).toBe(false);
+    expect(/\b(attack|breach)/i.test(withoutScripts(html))).toBe(false);
   });
   it('escapes values from the org', () => {
     const evil = structuredClone(r);
