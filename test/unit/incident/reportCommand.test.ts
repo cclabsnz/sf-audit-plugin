@@ -4,7 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { DEFAULT_BRANDING } from '@cclabsnz/sf-core';
 import { generateScenario } from '../../fixtures/incident/generate.js';
-import { writeReport } from '../../../src/commands/audit/incident/report.js';
+import { writeReport, parseFormats } from '../../../src/commands/audit/incident/report.js';
 
 describe('writeReport', () => {
   it('writes html, md, json and evidence CSVs', async () => {
@@ -16,5 +16,16 @@ describe('writeReport', () => {
     const out = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-out-'));
     const written = await writeReport(await generateScenario(), { formats: ['md', 'json'], outputDir: out, redact: true, spikeRatio: 5, branding: DEFAULT_BRANDING });
     for (const p of written) expect(fs.readFileSync(p, 'utf-8')).not.toMatch(/test\.tester@example\.com|198\.51\.100\.143/);
+  });
+});
+
+describe('parseFormats', () => {
+  it('splits and trims', () => {
+    expect(parseFormats('html,md')).toEqual(['html', 'md']);
+    expect(parseFormats(' json ')).toEqual(['json']);
+  });
+  it('throws on unknown or empty input', () => {
+    expect(() => parseFormats('pdf')).toThrow(/Unknown --format value\(s\): pdf\. Use html, md, json\./);
+    expect(() => parseFormats('')).toThrow(/Use html, md, json/);
   });
 });

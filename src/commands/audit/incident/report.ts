@@ -11,6 +11,15 @@ import { renderHtml } from '../../../incident/render/html.js';
 
 export interface IncidentReportResult { written: string[] }
 
+export function parseFormats(input: string): string[] {
+  const formats = input.split(',').map((f) => f.trim()).filter((f) => f.length > 0);
+  const bad = formats.filter((f) => !['html', 'md', 'json'].includes(f));
+  if (formats.length === 0 || bad.length > 0) {
+    throw new Error(`Unknown --format value(s): ${bad.length > 0 ? bad.join(', ') : input || '(empty)'}. Use html, md, json.`);
+  }
+  return formats;
+}
+
 export async function writeReport(bundleDir: string, opts: { formats: string[]; outputDir: string; redact: boolean; spikeRatio: number; branding: Branding }): Promise<string[]> {
   let result = await analyseBundle(bundleDir, { spikeRatio: opts.spikeRatio });
   if (opts.redact) result = redactResult(result);
@@ -39,18 +48,20 @@ export default class AuditIncidentReportCommand extends SfCommand<IncidentReport
     format: Flags.string({ summary: 'Comma-separated: html,md,json.', default: 'html,md,json' }),
     output: Flags.string({ char: 'o', summary: 'Directory to write the report into.', default: '.' }),
     redact: Flags.boolean({ summary: 'Replace linked users with ids and truncate IPs to /24 for wider sharing.', default: false }),
-    'spike-ratio': Flags.integer({ summary: 'A day is a spike when controller calls reach this multiple of the baseline median.', default: 5 }),
+    'spike-ratio': Flags.integer({ summary: 'A day is a spike when controller calls reach this multiple of the baseline median.', default: 5, min: 1 }),
     branding: Flags.string({ summary: 'Path to a report-branding.json.', helpValue: './report-branding.json' }),
     'prepared-for': Flags.string({ summary: 'Client name shown on the report.' }),
   };
 
   public async run(): Promise<IncidentReportResult> {
     const { flags } = await this.parse(AuditIncidentReportCommand);
+    let formats: string[];
+    try { formats = parseFormats(flags.format); } catch (e) { this.error((e as Error).message, { exit: 2 }); }
     let overrides: BrandingOverrides | undefined;
     if (flags.branding) overrides = JSON.parse(fs.readFileSync(flags.branding, 'utf-8')) as BrandingOverrides;
     try {
       const written = await writeReport(flags.bundle, {
-        formats: flags.format.split(',').map((f) => f.trim()),
+        formats,
         outputDir: flags.output,
         redact: flags.redact,
         spikeRatio: flags['spike-ratio'],
