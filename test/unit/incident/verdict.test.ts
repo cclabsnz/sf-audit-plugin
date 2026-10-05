@@ -63,3 +63,41 @@ describe('verdict precedence and caveats', () => {
     expect(limitsFor({ ...base, responses: { ...base.responses, unmatchedCalls: 3 } }).join(' ')).toMatch(/3 data-access or auth calls had no matching Sites row/);
   });
 });
+
+describe('the no-evidence invariant', () => {
+  const nullBase = { ...base.spikes[0], baselineMedian: null, ratio: null };
+  it('allows no-evidence only when every condition holds', () => {
+    expect(outcomeOf(base)).toBe('no-evidence');
+    expect(limitsFor(base).join(' ')).not.toMatch(/Not assessed/);
+  });
+  it('is not-assessed when required logs are missing, and says why', () => {
+    const v = { ...base, requiredLogsPresent: false };
+    expect(outcomeOf(v)).toBe('not-assessed');
+    expect(limitsFor(v).join(' ')).toMatch(/Not assessed: AuraRequest or Sites logs were not collected for every wave day/);
+  });
+  it('is not-assessed when the empty-reply size was inferred, and says why', () => {
+    const v = { ...base, responses: { ...base.responses, emptySizeInferred: true, emptySize: 5000, dataAccessCalls: 9, joined: 9, dataAccessJoined: 9 } };
+    expect(outcomeOf(v)).toBe('not-assessed');
+    expect(limitsFor(v).join(' ')).toMatch(/Not assessed: the empty-reply size could only be inferred from the replies under test/);
+  });
+  it('is not-assessed when data-access calls exist but none joined to a reply size, and says why', () => {
+    const v = { ...base, responses: { ...base.responses, dataAccessCalls: 5, joined: 0, dataAccessJoined: 0, unmatchedCalls: 5 } };
+    expect(outcomeOf(v)).toBe('not-assessed');
+    expect(limitsFor(v).join(' ')).toMatch(/Not assessed: none of the 5 data-access calls could be joined to a reply size/);
+  });
+  it('is not-assessed when only auth calls joined and every data-access call is unmatched (conservative)', () => {
+    const v = { ...base, responses: { ...base.responses, dataAccessCalls: 5, joined: 3, dataAccessJoined: 0, unmatchedCalls: 5 } };
+    expect(outcomeOf(v)).toBe('not-assessed');
+  });
+  it('is not-assessed when a wave day has no baseline median, and says why', () => {
+    const v = { ...base, spikes: [nullBase] };
+    expect(outcomeOf(v)).toBe('not-assessed');
+    expect(limitsFor(v).join(' ')).toMatch(/Not assessed: no baseline day was collected, so wave-day volume could not be compared/);
+  });
+  it('keeps the precedence access-gained > content-returned > not-assessed', () => {
+    const v = { ...base, spikes: [nullBase], responses: { ...base.responses, emptySizeInferred: true } };
+    expect(outcomeOf({ ...v, responses: { ...v.responses, returnedContent: [{} as never] } })).toBe('content-returned');
+    expect(outcomeOf({ ...v, outcomes: { ...v.outcomes, successfulLogins: 1 } })).toBe('access-gained');
+    expect(limitsFor({ ...v, outcomes: { ...v.outcomes, successfulLogins: 1 } }).join(' ')).not.toMatch(/Not assessed:/);
+  });
+});

@@ -30,10 +30,29 @@ export function classify(v: VerdictInput): Classification {
   return 'indeterminate';
 }
 
+/**
+ * Why a wave cannot be called no-evidence. No-evidence is allowed only when this is empty:
+ * the required logs are present, the empty-reply size came from a reference set, any
+ * data-access call was joined to a reply size, and every wave day has a baseline median.
+ * The join test uses data-access joins, not all joins: a joined auth reply says nothing about
+ * what a data read returned (stricter than `joined > 0`).
+ */
+export function notAssessedReasons(v: VerdictInput): string[] {
+  const out: string[] = [];
+  if (!v.requiredLogsPresent) out.push('AuraRequest or Sites logs were not collected for every wave day');
+  if (v.responses.emptySizeInferred) out.push('the empty-reply size could only be inferred from the replies under test');
+  if (v.responses.dataAccessCalls > 0 && (v.responses.joined === 0 || v.responses.dataAccessJoined === 0)) {
+    out.push(`none of the ${v.responses.dataAccessCalls} data-access calls could be joined to a reply size`);
+  }
+  if (!v.spikes.every((s) => s.baselineMedian !== null)) out.push('no baseline day was collected, so wave-day volume could not be compared');
+  return out;
+}
+
+/** Precedence: access-gained > content-returned > not-assessed > no-evidence. */
 export function outcomeOf(v: VerdictInput): WaveOutcome {
   if (v.outcomes.successfulLogins > 0) return 'access-gained';
   if (v.responses.returnedContent.length > 0) return 'content-returned';
-  if (!v.requiredLogsPresent) return 'not-assessed';
+  if (notAssessedReasons(v).length > 0) return 'not-assessed';
   return 'no-evidence';
 }
 
@@ -52,6 +71,7 @@ export function globalLimitsFor(m: BundleManifest): string[] {
 /** Limits specific to one wave. Org-wide limits live in globalLimitsFor. */
 export function limitsFor(v: VerdictInput): string[] {
   const out = ['Response bodies are never logged by Salesforce, so the content of any reply is unknown; only its size is.'];
+  if (outcomeOf(v) === 'not-assessed') out.push(`Not assessed: ${notAssessedReasons(v).join('; ')}.`);
   if (!v.requiredLogsPresent) out.push(`AuraRequest or Sites logs were not collected for ${v.wave.days.join(', ')}, so reply sizes could not be assessed.`);
   if (v.actors.some((a) => !a.hostingAssessed && a.block.includes(':'))) out.push('Hosting provider not assessed for IPv6 addresses.');
   if (v.actors.length === 0 && (v.spikes.some((s) => s.isSpike) || v.wave.eventIds.length > 0)) {

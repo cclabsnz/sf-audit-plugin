@@ -117,3 +117,16 @@ describe('C5: --redact removes linked users\' names everywhere', () => {
     }
   });
 });
+
+describe('the no-evidence invariant on whole bundles', () => {
+  it('P8b: an inferred empty size gives not-assessed, never no-evidence', async () => {
+    const { r, w3 } = await w3Of(await noReferenceReplies());
+    expect(w3.result).toBe('not-assessed');
+    expect(r.withinBaseline).toBe(false);
+  });
+  it('a wave with a null baseline median is not-assessed, never no-evidence', async () => {
+    const r = await analyseBundle(await nullBaseline());
+    expect(r.waves[0].result).toBe('not-assessed');
+    expect(r.waves[0].limits.join(' ')).toMatch(/Not assessed: no baseline day was collected/);
+  });
+});
