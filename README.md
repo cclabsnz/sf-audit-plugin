@@ -218,6 +218,14 @@ To triage captured logs for abuse patterns, pair `events pull` with the companio
 **[sfelf-triage](https://github.com/cclabsnz/sfelf-triage)**, which reads this plugin's
 `~/.sf/event-baseline/<orgId>` layout directly.
 
+### Investigating a guest anomaly
+
+`sf audit incident collect --target-org <alias>` finds Guest User Anomaly waves and saves a
+guest-filtered evidence bundle to `~/.sf/incidents/`. `sf audit incident report --bundle <dir>`
+analyses it offline and writes an HTML/Markdown/JSON report with evidence CSVs. Pass
+`--ip-ranges` with provider range files you have downloaded to classify hosting; the plugin
+never fetches them. Use `--redact` before sharing beyond the client's security team.
+
 ## Requirements
 
 - Node.js 18+

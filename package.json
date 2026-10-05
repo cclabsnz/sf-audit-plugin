@@ -81,6 +81,9 @@
           },
           "apps": {
             "description": "Analyze connected-app least-privilege from EventLogFile usage"
+          },
+          "incident": {
+            "description": "Investigate Guest User Anomaly events: collect an evidence bundle, then report"
           }
         }
       }
