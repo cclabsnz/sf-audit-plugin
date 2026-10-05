@@ -13,6 +13,8 @@ export interface ResponseSummary {
   joined: number;
   returnedContent: ReturnedContent[];
   blankRequestIdsDropped: number;
+  /** Actor auth and data-access calls whose REQUEST_ID had no Sites size that day. */
+  unmatchedCalls: number;
 }
 
 /**
@@ -23,10 +25,12 @@ export interface ResponseSummary {
  */
 export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): Promise<ResponseSummary> {
   const actorIps = new Set(actors.flatMap((a) => a.ips));
-  const out: ResponseSummary = { emptySize: null, band: DEFAULTS.emptyBandBytes, dataAccessCalls: 0, joined: 0, returnedContent: [], blankRequestIdsDropped: 0 };
+  const out: ResponseSummary = { emptySize: null, band: DEFAULTS.emptyBandBytes, dataAccessCalls: 0, joined: 0, returnedContent: [], blankRequestIdsDropped: 0, unmatchedCalls: 0 };
   if (actorIps.size === 0) return out;
 
-  const samples: Array<{ size: number; dataAccess: boolean; row: Record<string, string> }> = [];
+  // Streamed: a size frequency map plus compact data-access candidates; no whole rows are kept.
+  const freq = new Map<number, number>();
+  const candidates: ReturnedContent[] = [];
   for (const day of wave.days) {
     const sizes = new Map<string, number>();
     for await (const s of b.rows('Sites', day)) {
@@ -42,21 +46,20 @@ export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): 
       const dataAccess = cls.has('data-access');
       if (dataAccess) out.dataAccessCalls++;
       if (!dataAccess && !cls.has('auth')) continue;
-      const size = sizes.get((r.REQUEST_ID ?? '').trim());
-      if (size === undefined) continue;
+      const requestId = (r.REQUEST_ID ?? '').trim();
+      const size = sizes.get(requestId);
+      if (size === undefined) { out.unmatchedCalls++; continue; }
       out.joined++;
-      samples.push({ size, dataAccess, row: r });
+      freq.set(size, (freq.get(size) ?? 0) + 1);
+      if (dataAccess) candidates.push({ requestId, timestamp: r.TIMESTAMP_DERIVED, ip: r.CLIENT_IP, size, actions: parseActions(r.ACTION_MESSAGE) });
     }
   }
 
-  const freq = new Map<number, number>();
-  for (const s of samples) freq.set(s.size, (freq.get(s.size) ?? 0) + 1);
   const mode = [...freq.entries()].sort((a, c) => c[1] - a[1] || a[0] - c[0])[0]?.[0];
   if (mode === undefined) return out;
   out.emptySize = mode;
-  out.returnedContent = samples
-    .filter((s) => s.dataAccess && s.size > mode + out.band)
-    .map((s) => ({ requestId: s.row.REQUEST_ID, timestamp: s.row.TIMESTAMP_DERIVED, ip: s.row.CLIENT_IP, size: s.size, actions: parseActions(s.row.ACTION_MESSAGE) }))
+  out.returnedContent = candidates
+    .filter((s) => s.size > mode + out.band)
     .sort((a, c) => a.timestamp.localeCompare(c.timestamp));
   return out;
 }
