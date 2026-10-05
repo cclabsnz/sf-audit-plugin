@@ -7,7 +7,7 @@ const base: VerdictInput = {
   wave: { id: 'W1', guestId15: 'g', site: 'S', days: ['2026-01-02'], eventIds: [] },
   spikes: [{ day: '2026-01-02', controllerCalls: 10, baselineMedian: 10, ratio: 1, isSpike: false, detectorSample: null }],
   actors: [],
-  responses: { emptySize: null, band: 64, dataAccessCalls: 0, joined: 0, unmatchedCalls: 0, returnedContent: [], blankRequestIdsDropped: 0 },
+  responses: { emptySize: null, emptySizeInferred: false, band: 64, dataAccessCalls: 0, joined: 0, dataAccessJoined: 0, referenceReplies: 0, unmatchedCalls: 0, returnedContent: [], blankRequestIdsDropped: 0 },
   outcomes: { actorLogins: [], successfulLogins: 0, failedLogins: 0, selfRegistrationsInActorWindow: [], identityLinks: [] },
   requiredLogsPresent: true,
 };
@@ -23,6 +23,16 @@ describe('verdict', () => {
   });
   it('is organic for a spike with no actor blocks', () => {
     expect(classify({ ...base, spikes: [{ ...base.spikes[0], isSpike: true, ratio: 9 }] })).toBe('organic');
+  });
+  it('C2: is indeterminate, not organic, for an actor-less spike that returned content', () => {
+    const v = { ...base, spikes: [{ ...base.spikes[0], isSpike: true, ratio: 9 }], responses: { ...base.responses, returnedContent: [{} as never] } };
+    expect(classify(v)).toBe('indeterminate');
+  });
+  it('C2: states that no source block was isolated for a spike or detector event without actors', () => {
+    const msg = 'No single source block was isolated; reply sizes were assessed across all guest traffic on the wave days.';
+    expect(limitsFor({ ...base, spikes: [{ ...base.spikes[0], isSpike: true, ratio: 9 }] })).toContain(msg);
+    expect(limitsFor({ ...base, wave: { ...base.wave, eventIds: ['e1'] } })).toContain(msg);
+    expect(limitsFor(base)).not.toContain(msg);
   });
   it('always states that response bodies are never logged', () => {
     expect(limitsFor(base).join(' ')).toMatch(/bodies are never logged/);

@@ -50,7 +50,7 @@ export function renderMarkdown(r: IncidentResult, ev: Ev): string {
     L.push('', `## ${w.wave.id} detail`, '', `Actors ${ev.ref(`${w.wave.id}:actors`)}:`, '');
     for (const a of w.actors) L.push(`- ${md(a.block)} (${a.ips.length} IPs), ${a.firstSeen} to ${a.lastSeen}, ${a.controllerCalls} controller calls, ${a.steady ? 'steady' : 'irregular'} volume, ${(a.emptyUaShare * 100).toFixed(0)}% empty user agent${a.markers.length ? `, scanner markers: ${md(a.markers.join(', '))}` : ''}${a.hostingAssessed ? `, hosting: ${md(a.hosting ?? 'none matched')}` : ''}.`);
     L.push('', `Actions by class ${ev.ref(`${w.wave.id}:actions`)}: ${Object.entries(w.actions.byClass).map(([k, v]) => `${k} ${v}`).join(', ')}.`);
-    L.push(`Empty-reply size ${w.responses.emptySize ?? 'unknown'} bytes (±${w.responses.band}).`);
+    L.push(`Empty-reply size ${w.responses.emptySize ?? 'unknown'} bytes (±${w.responses.band}${w.responses.emptySizeInferred ? ', inferred from the replies under test' : ''}); ${w.responses.returnedContent.length} of ${w.responses.dataAccessCalls} data-access replies from any guest IP were larger ${ev.ref(`${w.wave.id}:returned`)}.`);
   }
   L.push('', '## Configuration changes', '', `${ev.ref('config')}`, '');
   for (const p of r.config.periods) L.push(`- **${md(p.label)}:** ${Object.entries(p.bySite).map(([s, cs]) => `${md(s)} ${cs.length}`).join(', ') || 'none'}${p.shared.length ? `; ${p.shared.length} change(s) to labels shared by several sites, not counted per site` : ''}`);

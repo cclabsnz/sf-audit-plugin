@@ -95,20 +95,26 @@ function isSteady(hourly: Map<string, number>, first: string, last: string): boo
 
 /**
  * Actor blocks for a wave: any block whose controller calls on a wave day exceed
- * max(outlierFloor, outlierMultiple × the busiest block on any baseline day), plus any block
+ * max(outlierFloor, outlierMultiple × the busiest block on any baseline day, ignoring blocks that
+ * also appear on a wave day), plus any block
  * holding an anomaly event's SourceIp (which catches low-volume probes that are not spikes).
  */
 export async function findActors(b: Bundle, wave: Wave, ranges: IpRangeSet | null): Promise<Actor[]> {
+  const waveAggs = new Map<string, Map<string, BlockAgg>>();
+  for (const day of wave.days) waveAggs.set(day, await aggregate(b, wave.guestId15, day));
+  // A block seen on a wave day is ignored on baseline days: a scan that runs past midnight into a
+  // baseline day must not raise its own threshold.
+  const waveBlocks = new Set([...waveAggs.values()].flatMap((m) => [...m.keys()]));
   let baselineMax = 0;
   for (const day of baselineDaysFor(b.manifest, wave.guestId15)) {
-    for (const a of (await aggregate(b, wave.guestId15, day)).values()) baselineMax = Math.max(baselineMax, a.calls);
+    for (const [key, a] of await aggregate(b, wave.guestId15, day)) if (!waveBlocks.has(key)) baselineMax = Math.max(baselineMax, a.calls);
   }
   const threshold = Math.max(DEFAULTS.outlierFloor, DEFAULTS.outlierMultiple * baselineMax);
   const detectorBlocks = new Set(b.anomalies.filter((e) => wave.eventIds.includes(e.eventIdentifier) && e.sourceIp).map((e) => blockOf(e.sourceIp!.trim())));
 
   const merged = new Map<string, { agg: BlockAgg; days: Set<string>; sources: Set<'detector-ip' | 'outlier'> }>();
   for (const day of wave.days) {
-    for (const [key, a] of await aggregate(b, wave.guestId15, day)) {
+    for (const [key, a] of waveAggs.get(day)!) {
       const sources: Array<'detector-ip' | 'outlier'> = [];
       if (a.calls > threshold) sources.push('outlier');
       if (detectorBlocks.has(key)) sources.push('detector-ip');

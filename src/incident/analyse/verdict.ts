@@ -24,7 +24,9 @@ export function isScannerLike(a: Actor): boolean {
 export function classify(v: VerdictInput): Classification {
   if (v.outcomes.identityLinks.length > 0) return 'internal-testing';
   if (v.actors.some(isScannerLike)) return 'automated-scan';
-  if (v.spikes.some((s) => s.isSpike) && v.actors.length === 0) return 'organic';
+  // Organic needs a spike with no isolated source AND nothing returned: content returned to
+  // unattributed traffic is not shown to be organic.
+  if (v.spikes.some((s) => s.isSpike) && v.actors.length === 0 && v.responses.returnedContent.length === 0) return 'organic';
   return 'indeterminate';
 }
 
@@ -52,6 +54,12 @@ export function limitsFor(v: VerdictInput): string[] {
   const out = ['Response bodies are never logged by Salesforce, so the content of any reply is unknown; only its size is.'];
   if (!v.requiredLogsPresent) out.push(`AuraRequest or Sites logs were not collected for ${v.wave.days.join(', ')}, so reply sizes could not be assessed.`);
   if (v.actors.some((a) => !a.hostingAssessed && a.block.includes(':'))) out.push('Hosting provider not assessed for IPv6 addresses.');
+  if (v.actors.length === 0 && (v.spikes.some((s) => s.isSpike) || v.wave.eventIds.length > 0)) {
+    out.push('No single source block was isolated; reply sizes were assessed across all guest traffic on the wave days.');
+  }
+  if (v.responses.emptySizeInferred) {
+    out.push('The empty-reply size was inferred from the replies being tested; a scanner receiving identical non-empty replies would not be detected.');
+  }
   if (v.outcomes.selfRegistrationsInActorWindow.length > 0) out.push('Self-registrations occurred during the actor window; the audit trail records no IP, so they cannot be attributed.');
   if (v.responses.unmatchedCalls > 0) out.push(`${v.responses.unmatchedCalls} data-access or auth calls had no matching Sites row; their reply sizes are unknown.`);
   if (v.outcomes.identityLinks.length > 0 && v.actors.some(isScannerLike)) out.push('An identity link and scanner-like traffic were both seen; the link alone does not show the traffic was authorised.');

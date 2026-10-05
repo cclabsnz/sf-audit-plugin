@@ -19,8 +19,8 @@ export function buildEvidence(r: IncidentResult): { tables: EvidenceTable[]; ref
       rows: w.actors.map((a) => [a.id, a.block, a.ips.join(' '), a.firstSeen, a.lastSeen, String(a.controllerCalls), String(a.steady), a.emptyUaShare.toFixed(2), a.markers.join(' '), a.hostingAssessed ? (a.hosting ?? 'none') : 'not assessed']) });
     raw.push({ key: `${id}:actions`, title: `${id} actions invoked by actors`, columns: ['action', 'class', 'count'],
       rows: w.actions.byName.map((x) => [x.name, x.cls, String(x.count)]) });
-    raw.push({ key: `${id}:returned`, title: `${id} data-access replies larger than the empty size`, columns: ['timestamp', 'request_id', 'ip', 'size_bytes', 'actions'],
-      rows: w.responses.returnedContent.map((x) => [x.timestamp, x.requestId, x.ip, String(x.size), x.actions.join(' ')]) });
+    raw.push({ key: `${id}:returned`, title: `${id} data-access replies larger than the empty size`, columns: ['timestamp', 'request_id', 'ip', 'actor', 'size_bytes', 'actions'],
+      rows: w.responses.returnedContent.map((x) => [x.timestamp, x.requestId, x.ip, x.actorId || '(none isolated)', String(x.size), x.actions.join(' ')]) });
     raw.push({ key: `${id}:logins`, title: `${id} logins from actor IPs (no date bound)`, columns: ['login_time', 'ip', 'user', 'status', 'actor'],
       rows: w.outcomes.actorLogins.map((l) => [l.loginTime, l.sourceIp, l.userId15, l.status, l.actorId]) });
     raw.push({ key: `${id}:links`, title: `${id} identity links`, columns: ['ip', 'user', 'name', 'email', 'created', 'created_by', 'login_time'],
