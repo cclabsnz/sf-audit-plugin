@@ -6,7 +6,7 @@ import type { RestClient, SoqlClient } from '@cclabsnz/sf-core';
 import { BUNDLE_PATHS, loadBundle, sha256File, writeJsonAtomic } from '../bundleIo.js';
 import type { BundleManifest, LogCoverage, LogType } from '../model.js';
 import { findActors } from '../analyse/actors.js';
-import { loadIpRanges } from '../ipRanges.js';
+import { loadIpRanges, rangeFileName } from '../ipRanges.js';
 import { buildWaves, parseDayWindow, readAnomalies, wavesFromWindow } from './discoverWaves.js';
 import { fetchAuditTrail, loginsByDay, readLimits, snapshotGuests } from './snapshotOrg.js';
 import { collectionDays, streamGuestLogs } from './streamGuestLogs.js';
@@ -58,8 +58,8 @@ export async function collectBundle(
   if (!anomalies.available && !opts.window) {
     throw new Error('Guest User Anomaly events are not available in this org (Threat Detection storage off or not licensed). Re-run with --window YYYY-MM-DD/YYYY-MM-DD.');
   }
-  const guests = await snapshotGuests(ctx.soql, anomalies.events.map((e) => e.userId15), opts.warn);
-  const waves = opts.window ? wavesFromWindow(parseDayWindow(opts.window), guests) : buildWaves(anomalies.events, guests, { event: opts.event });
+  const { guests, warnings: snapshotWarnings } = await snapshotGuests(ctx.soql, anomalies.events.map((e) => e.userId15), opts.warn);
+  const waves = opts.window ? wavesFromWindow(parseDayWindow(opts.window), guests) : buildWaves(anomalies.events, guests, { event: opts.event, warn: opts.warn });
   if (!opts.window && opts.event && waves.length === 0) {
     throw new Error(`--event ${opts.event} matches no Guest User Anomaly wave in the last ${opts.sinceDays} days. Check the EventIdentifier or widen --since.`);
   }
@@ -100,8 +100,9 @@ export async function collectBundle(
   const loginCounts = await loginsByDay(ctx.soql, days);
 
   const ipRangeFiles: string[] = [];
-  for (const f of opts.ipRangeFiles) {
-    const rel = `ip-ranges/${basename(f)}`;
+  for (const [index, f] of opts.ipRangeFiles.entries()) {
+    // Indexed, so two files with the same name (aws/ranges.txt, gcp/ranges.txt) cannot overwrite each other.
+    const rel = `ip-ranges/${index}-${basename(f)}`;
     mkdirSync(join(dir, 'ip-ranges'), { recursive: true });
     copyFileSync(f, join(dir, rel));
     ipRangeFiles.push(rel);
@@ -114,7 +115,7 @@ export async function collectBundle(
 
   const manifest: BundleManifest = {
     version: 1, complete: false, orgId: ctx.orgId, orgName: ctx.orgName, collectedAt, sinceDays: opts.sinceDays,
-    detectorAvailable: anomalies.available, waves, guests, logs, audit: audit.coverage, limits, ipRangeFiles, files: {},
+    detectorAvailable: anomalies.available, waves, guests, logs, audit: audit.coverage, limits, ipRangeFiles, snapshotWarnings, files: {},
   };
   const seal = async (complete: boolean) => {
     manifest.complete = complete;
@@ -131,7 +132,7 @@ export async function collectBundle(
 
   // Second pass: actor IPs need the collected logs, and their logins need the org.
   const draft = await loadBundle(dir, { allowIncomplete: true });
-  const ranges = ipRangeFiles.length ? loadIpRanges(ipRangeFiles.map((rel) => ({ name: basename(rel), text: readFileSync(join(dir, rel), 'utf-8') }))) : null;
+  const ranges = ipRangeFiles.length ? loadIpRanges(ipRangeFiles.map((rel) => ({ name: rangeFileName(rel), text: readFileSync(join(dir, rel), 'utf-8') }))) : null;
   const ips = new Set<string>();
   for (const w of waves) for (const a of await findActors(draft, w, ranges)) a.ips.forEach((ip) => ips.add(ip));
   for (const e of events) if (e.sourceIp) ips.add(e.sourceIp);

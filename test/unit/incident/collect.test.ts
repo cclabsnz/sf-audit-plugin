@@ -43,7 +43,7 @@ describe('snapshotGuests', () => {
         return [];
       }),
     } as any;
-    const g = await snapshotGuests(soql, ['005xx000000oldG']);
+    const { guests: g } = await snapshotGuests(soql, ['005xx000000oldG']);
     expect(g.map((x) => [x.id15, x.active, x.siteNames])).toEqual([['005xx000000gstA', true, ['Site A']], ['005xx000000oldG', false, []]]);
   });
 });
@@ -129,9 +129,11 @@ describe('error classification (fix round 1)', () => {
       }),
     } as any;
     const warn = jest.fn();
-    const g = await snapshotGuests(soql, [], warn);
+    const { guests: g, warnings } = await snapshotGuests(soql, [], warn);
     expect(g.map((x) => x.siteNames)).toEqual([[]]);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Site'));
+    // M2: degraded reads are also returned, so collect can record them in the manifest.
+    expect(warnings).toEqual([expect.stringContaining('Could not read Site')]);
   });
 });
 
@@ -226,5 +228,15 @@ describe('streamGuestLogs fails closed (I5, I6)', () => {
     const { cov, rest } = await run(csvLine(AURA_COLS) + csvLine(row), two);
     expect(cov).toMatchObject({ status: 'failed', detail: 'multiple daily log files' });
     expect(rest.getRawToFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('buildWaves (M1)', () => {
+  it('skips an event with an empty userId15 and warns', () => {
+    const warn = jest.fn();
+    const ev = (id: string, u: string) => ({ eventIdentifier: id, eventDate: '2026-09-15T01:00:00Z', score: 1, userId15: u, username: 'x' });
+    const waves = buildWaves([ev('a', ''), ev('b', 'A')], [guest('A', 'Site A')], { warn });
+    expect(waves.map((w) => w.eventIds)).toEqual([['b']]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('a'));
   });
 });

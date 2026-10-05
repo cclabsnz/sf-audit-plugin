@@ -39,9 +39,13 @@ const dayOf = (iso: string) => new Date(iso).toISOString().slice(0, 10);
 const nextDay = (d: string) => new Date(Date.parse(`${d}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 const siteFor = (g: GuestUser | undefined, fallback: string) => g?.siteNames[0] ?? g?.username ?? fallback;
 
-export function buildWaves(events: AnomalyEvent[], guests: GuestUser[], opts: { event?: string }): Wave[] {
+export function buildWaves(events: AnomalyEvent[], guests: GuestUser[], opts: { event?: string; warn?: (m: string) => void }): Wave[] {
   const byGuest = new Map<string, AnomalyEvent[]>();
   for (const e of [...events].sort((a, c) => a.eventDate.localeCompare(c.eventDate))) {
+    if (!e.userId15) {
+      opts.warn?.(`Skipping Guest User Anomaly event ${e.eventIdentifier}: it names no user, so its rows cannot be attributed to a guest.`);
+      continue;
+    }
     const list = byGuest.get(e.userId15) ?? [];
     list.push(e);
     byGuest.set(e.userId15, list);

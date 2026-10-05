@@ -18,3 +18,11 @@ describe('ip ranges', () => {
     expect(parseIpRangeFile('vps.txt', '192.0.2.4/\n')).toEqual([]);
   });
 });
+
+describe('rangeFileName (M3)', () => {
+  it('drops the bundle index prefix so the hosting label is the original file name', async () => {
+    const { rangeFileName } = await import('../../../src/incident/ipRanges.js');
+    expect(rangeFileName('ip-ranges/1-cloud.txt')).toBe('cloud.txt');
+    expect(rangeFileName('ip-ranges/cloud.txt')).toBe('cloud.txt');
+  });
+});

@@ -8,7 +8,8 @@ const quoteIds = (ids: string[]) => ids.map((i) => `'${i.replace(/[^A-Za-z0-9]/g
 interface UserRow { Id: string; Username: string; Name: string; Profile?: { Name: string }; IsActive: boolean }
 
 /** Active guests plus any user an anomaly event named, so a since-deactivated guest's rows survive filtering. */
-export async function snapshotGuests(soql: SoqlClient, extraIds: string[], warn: (m: string) => void = () => {}): Promise<GuestUser[]> {
+export async function snapshotGuests(soql: SoqlClient, extraIds: string[], warn: (m: string) => void = () => {}): Promise<{ guests: GuestUser[]; warnings: string[] }> {
+  const warnings: string[] = [];
   const active = await soql.queryAll<UserRow>("SELECT Id, Username, Name, Profile.Name, IsActive FROM User WHERE UserType = 'Guest' AND IsActive = true");
   const known = new Set(active.map((u) => id15(u.Id)));
   const missing = [...new Set(extraIds.map((x) => id15(x)!).filter((x) => x && !known.has(x)))];
@@ -18,7 +19,9 @@ export async function snapshotGuests(soql: SoqlClient, extraIds: string[], warn:
   const optional = async <T>(object: string, q: string): Promise<T[]> => {
     try { return await soql.queryAll<T>(q); } catch (e) {
       if (!degrades(e)) throw e;
-      warn(`Could not read ${object} (${String(e)}); continuing without it.`);
+      const m = `Could not read ${object} (${String(e)}); continuing without it.`;
+      warnings.push(m);
+      warn(m);
       return [];
     }
   };
@@ -28,7 +31,7 @@ export async function snapshotGuests(soql: SoqlClient, extraIds: string[], warn:
     ? await optional<{ AssigneeId: string; PermissionSet: { Label: string } }>('PermissionSetAssignment',
       `SELECT AssigneeId, PermissionSet.Label FROM PermissionSetAssignment WHERE AssigneeId IN (${quoteIds(users.map((u) => u.Id))}) AND PermissionSet.IsOwnedByProfile = false`)
     : [];
-  return users.map((u) => {
+  const guests = users.map((u) => {
     const i = id15(u.Id)!;
     return {
       id15: i,
@@ -40,6 +43,7 @@ export async function snapshotGuests(soql: SoqlClient, extraIds: string[], warn:
       active: u.IsActive && known.has(i),
     };
   });
+  return { guests, warnings };
 }
 
 export async function readLimits(soql: SoqlClient): Promise<RunningUserLimits> {

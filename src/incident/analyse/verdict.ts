@@ -65,6 +65,7 @@ export function globalLimitsFor(m: BundleManifest, followUp?: FollowUp): string[
   if (m.ipRangeFiles.length === 0) out.push('Hosting provider not assessed: no --ip-ranges files were supplied.');
   if (!m.limits.queryAllFiles) out.push('The collecting user lacks Query All Files, so files owned by or shared with guest users were not checked.');
   if (!m.limits.viewAllData) out.push('The collecting user lacks View All Data, so record visibility checks are partial.');
+  for (const w of m.snapshotWarnings ?? []) out.push(`Guest configuration was read only in part: ${w}`);
   if (followUp?.truncated) out.push('Login history for actor IPs was truncated at 10,000 rows per batch; some logins may be missing.');
   return out;
 }

@@ -1,9 +1,9 @@
 // src/incident/analyse/index.ts
 import { readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
 import { loadBundle } from '../bundleIo.js';
 import { DEFAULTS, REQUIRED_LOG_TYPES, type AuditCoverage, type BundleManifest, type Classification, type GuestUser, type LogCoverage, type RunningUserLimits, type WaveOutcome } from '../model.js';
-import { loadIpRanges } from '../ipRanges.js';
+import { loadIpRanges, rangeFileName } from '../ipRanges.js';
 import { findActors } from './actors.js';
 import { summariseActionCounts, type ActionSummary } from './actions.js';
 import { assessSpikes, computeDayVolumes, type DayVolume } from './baseline.js';
@@ -46,7 +46,7 @@ export async function analyseBundle(dir: string, opts: { spikeRatio?: number } =
   const b = await loadBundle(dir);
   const m = b.manifest;
   const ranges = m.ipRangeFiles.length
-    ? loadIpRanges(m.ipRangeFiles.map((rel) => ({ name: basename(rel), text: readFileSync(join(dir, rel), 'utf-8') })))
+    ? loadIpRanges(m.ipRangeFiles.map((rel) => ({ name: rangeFileName(rel), text: readFileSync(join(dir, rel), 'utf-8') })))
     : null;
   const volumes = await computeDayVolumes(b);
   const config = computeConfigDelta(b.audit, m.guests, m.waves);

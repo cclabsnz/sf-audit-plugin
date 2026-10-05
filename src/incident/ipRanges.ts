@@ -61,3 +61,8 @@ export function loadIpRanges(files: Array<{ name: string; text: string }>): IpRa
     },
   };
 }
+
+/** The original file name of a bundled range file: collect stores it as `ip-ranges/{index}-{name}`. */
+export function rangeFileName(rel: string): string {
+  return (rel.split('/').pop() ?? rel).replace(/^\d+-/, '');
+}

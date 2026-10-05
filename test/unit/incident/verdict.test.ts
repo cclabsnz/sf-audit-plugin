@@ -109,3 +109,11 @@ describe('globalLimitsFor', () => {
     expect(globalLimitsFor(manifest, { logins: [], users: [] })).not.toContain(msg);
   });
 });
+
+describe('globalLimitsFor snapshot warnings (M2)', () => {
+  it('states each degraded snapshot read', () => {
+    const m = { ...manifest, snapshotWarnings: ['Could not read Site (INVALID_TYPE); continuing without it.'] } as BundleManifest;
+    expect(globalLimitsFor(m).join(' ')).toContain('Guest configuration was read only in part: Could not read Site (INVALID_TYPE); continuing without it.');
+    expect(globalLimitsFor(manifest).join(' ')).not.toMatch(/read only in part/);
+  });
+});

@@ -175,6 +175,22 @@ describe('collectBundle trust gaps', () => {
     await expect(loadBundle(t.out)).resolves.toBeDefined();
   });
 
+  it('M2: records degraded snapshot reads in the manifest', async () => {
+    const t = setup({ onQuery: (q) => { if (q.includes('FROM Site')) throw new Error('INVALID_TYPE: sObject type Site is not supported'); return undefined; } });
+    const { manifest } = await t.run();
+    expect(manifest.snapshotWarnings).toEqual([expect.stringContaining('Could not read Site')]);
+  });
+
+  it('M3: keeps two --ip-ranges files with the same name apart', async () => {
+    const src = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-ipr-'));
+    for (const d of ['aws', 'gcp']) { fs.mkdirSync(path.join(src, d)); fs.writeFileSync(path.join(src, d, 'ranges.txt'), d === 'aws' ? '192.0.2.0/24' : '198.51.100.0/24'); }
+    const t = setup();
+    const { dir, manifest } = await collectBundle({ soql: t.soql, rest: t.rest, orgId: '00Dxx0000000000EAA', orgName: 'Test' },
+      { sinceDays: 30, ipRangeFiles: [path.join(src, 'aws', 'ranges.txt'), path.join(src, 'gcp', 'ranges.txt')], outputDir: t.out, warn: () => {} });
+    expect(manifest.ipRangeFiles).toEqual(['ip-ranges/0-ranges.txt', 'ip-ranges/1-ranges.txt']);
+    expect(manifest.ipRangeFiles.map((f) => fs.readFileSync(path.join(dir, f), 'utf-8'))).toEqual(['192.0.2.0/24', '198.51.100.0/24']);
+  });
+
   it('removes .tmp when log streaming throws', async () => {
     const t = setup();
     t.rest.getRawToFile.mockImplementation(async (_p: string, dest: string) => {

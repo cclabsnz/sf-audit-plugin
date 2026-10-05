@@ -126,6 +126,8 @@ export interface BundleManifest {
   audit: AuditCoverage;
   limits: RunningUserLimits;
   ipRangeFiles: string[];          // bundle-relative paths
+  /** Degraded reads while snapshotting guest configuration (optional: older bundles lack it). */
+  snapshotWarnings?: string[];
   files: Record<string, string>;   // bundle-relative path -> sha256 hex
 }
 

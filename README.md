@@ -224,7 +224,9 @@ To triage captured logs for abuse patterns, pair `events pull` with the companio
 guest-filtered evidence bundle to `~/.sf/incidents/`. `sf audit incident report --bundle <dir>`
 analyses it offline and writes an HTML/Markdown/JSON report with evidence CSVs. Pass
 `--ip-ranges` with provider range files you have downloaded to classify hosting; the plugin
-never fetches them. Use `--redact` before sharing beyond the client's security team.
+never fetches them. Use `--redact` before sharing beyond the client's security team. Bundles in
+`~/.sf/incidents` hold guest-traffic rows and linked-user details unencrypted, so handle them as
+sensitive data.
 
 ## Requirements
 
