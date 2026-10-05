@@ -10,8 +10,9 @@ import { analyseBundle } from '../../../src/incident/analyse/index.js';
 import { buildEvidence } from '../../../src/incident/render/evidence.js';
 import { renderHtml } from '../../../src/incident/render/html.js';
 import { renderMarkdown } from '../../../src/incident/render/markdown.js';
-import { uncollectedWaveDay, customApexReplies, midnightSpill, noReferenceReplies, nullBaseline, rotatingIps, uniformNonEmptyReplies, zeroWaves } from '../../fixtures/incident/variants.js';
-import { generateScenario, LINKED_USER } from '../../fixtures/incident/generate.js';
+import { uncollectedWaveDay, customApexReplies, midnightSpill, midnightSpillDataReads, noReferenceReplies, nullBaseline, rotatingIps, uniformNonEmptyReplies, zeroWaves } from '../../fixtures/incident/variants.js';
+import { D2, generateScenario, LINKED_USER } from '../../fixtures/incident/generate.js';
+import { rewriteLog } from '../../fixtures/incident/variants.js';
 import { writeReport } from '../../../src/commands/audit/incident/report.js';
 
 const NOTHING_ASSESSED = 'No Guest User Anomaly waves were found in the collected period, so nothing was assessed.';
@@ -146,5 +147,27 @@ describe('I8: an uncollected day is shown as not collected, never as zero', () =
     const i = chart.days.indexOf('2026-09-15');
     expect(i).toBeGreaterThanOrEqual(0);
     expect(chart.series.every((s) => s.data[i] === null)).toBe(true);
+  });
+});
+
+describe('Residual 1: an actor spilling past midnight cannot set the empty-reply size', () => {
+  it('baseline-day data reads from blocks active on the wave days are excluded from the reference set', async () => {
+    const { r, w3 } = await w3Of(await midnightSpillDataReads());
+    expect(w3.responses.emptySize).toBe(1861);
+    expect(w3.responses.returnedContent.length).toBeGreaterThanOrEqual(7);
+    expect(w3.result).toBe('content-returned');
+    expect(r.withinBaseline).toBe(false);
+  });
+});
+
+describe('Residual 3: content-returning replies missing from Sites cannot read as no evidence', () => {
+  it('drops the 7 large replies from Sites; W3 is not-assessed and says why', async () => {
+    const dir = await generateScenario();
+    const large = new Set(['9385', '8488', '4442', '2701', '2185']);
+    await rewriteLog(dir, 'Sites', D2, (row) => (large.has(row.RESPONSE_SIZE) ? null : row));
+    const { w3 } = await w3Of(dir);
+    expect(w3.responses.returnedContent).toEqual([]);
+    expect(w3.result).toBe('not-assessed');
+    expect(w3.limits.join(' ')).toMatch(/data-access calls could be joined to a reply size/);
   });
 });

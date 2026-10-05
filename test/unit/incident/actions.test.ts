@@ -69,3 +69,20 @@ describe('summariseActions', () => {
     expect(summariseActionCounts(counts)).toEqual(summariseActions([a, b]));
   });
 });
+
+describe('auth is matched on whole method names, not substrings', () => {
+  it.each([
+    ['PortalService.getVerifiedProviders', 'data-access'],
+    ['PortalService.getLoginHistory', 'data-access'],
+    ['MemberService.listRegisteredMembers', 'data-access'],
+    ['PortalService.fetchPasswordPolicyDocs', 'data-access'],
+    ['SiteLoginFormController.login', 'auth'],
+    ['CommunitiesLoginController.logout', 'auth'],
+    ['LightningForgotPasswordController.forgotPassword', 'auth'],
+    ['SiteRegisterController.selfRegister', 'auth'],
+    ['SiteLoginFormController.getIsUsernamePasswordEnabled', 'auth'],
+    ['SiteLoginFormController.getSelfRegistrationUrl', 'auth'],
+    ['SiteLoginFormController.getForgotPasswordUrl', 'auth'],
+    ['IdentityController.verifyEmail', 'auth'],
+  ])('%s → %s', (name, cls) => { expect(classifyAction(name)).toBe(cls); });
+});

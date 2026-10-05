@@ -117,3 +117,23 @@ describe('globalLimitsFor snapshot warnings (M2)', () => {
     expect(globalLimitsFor(manifest).join(' ')).not.toMatch(/read only in part/);
   });
 });
+
+describe('residual 3: no-evidence needs every call understood and every data read joined', () => {
+  const assessed = { ...base.responses, emptySize: 1861, referenceReplies: 40 };
+  it('is no-evidence when all 20 data-access calls joined, none returned content, and nothing was unparsed', () => {
+    expect(outcomeOf({ ...base, responses: { ...assessed, dataAccessCalls: 20, joined: 20, dataAccessJoined: 20 } })).toBe('no-evidence');
+  });
+  it('is not-assessed when any controller call could not be parsed, even with no data-access calls', () => {
+    const v = { ...base, responses: { ...assessed, unparsedCalls: 198 } };
+    expect(outcomeOf(v)).toBe('not-assessed');
+    expect(limitsFor(v).join(' ')).toMatch(/198 controller calls could not be parsed/);
+  });
+  it('is not-assessed when any data-access call could not be joined to a reply size', () => {
+    const v = { ...base, responses: { ...assessed, dataAccessCalls: 198, joined: 191, dataAccessJoined: 191, unmatchedCalls: 7 } };
+    expect(outcomeOf(v)).toBe('not-assessed');
+    expect(limitsFor(v).join(' ')).toMatch(/only 191 of 198 data-access calls could be joined/);
+  });
+  it('is not-assessed even when a single data-access call is unjoined', () => {
+    expect(outcomeOf({ ...base, responses: { ...assessed, dataAccessCalls: 20, joined: 19, dataAccessJoined: 19, unmatchedCalls: 1 } })).toBe('not-assessed');
+  });
+});

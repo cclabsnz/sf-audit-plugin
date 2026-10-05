@@ -101,11 +101,11 @@ describe('normaliseIp (I2)', () => {
     const o = computeOutcomes(fake, wave, actors);
     expect(o.actorLogins.map((l) => l.actorId)).toEqual(['W6-A1']);
   });
-  it('followUpIps queries one normalised form per address', async () => {
+  it('followUpIps dedupes differently written forms of one address into its three canonical forms', async () => {
     const qs: string[] = [];
     const soql = { query: async () => [], queryAll: async (q: string) => { qs.push(q); return []; } } as never;
     await followUpIps(soql, [V6_UPPER, '2001:db8::1', ' 2001:db8::0001 ']);
     const login = qs.find((q) => q.includes('FROM LoginHistory'))!;
-    expect(login).toContain("IN ('2001:db8::1')");
+    expect(login).toContain("IN ('2001:db8::1','2001:db8:0:0:0:0:0:1','2001:0db8:0000:0000:0000:0000:0000:0001')");
   });
 });

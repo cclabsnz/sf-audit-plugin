@@ -9,6 +9,14 @@ import { loadBundle, BundleIncompleteError } from '../../../src/incident/bundleI
 import { csvLine } from '../../../src/incident/csv.js';
 
 describe('followUpIps', () => {
+  it('queries every textual form of an IPv6 address, so an expanded SourceIp is still found', async () => {
+    const qs: string[] = [];
+    const soql = { query: jest.fn(), queryAll: jest.fn(async (q: string) => { qs.push(q); return []; }) } as any;
+    await followUpIps(soql, ['2001:DB8::1', '192.0.2.7']);
+    const q = qs.find((x) => x.includes('FROM LoginHistory'))!;
+    for (const form of ["'2001:db8::1'", "'2001:db8:0:0:0:0:0:1'", "'2001:0db8:0000:0000:0000:0000:0000:0001'", "'192.0.2.7'"]) expect(q).toContain(form);
+  });
+
   it('queries LoginHistory by an IN list with no date bound, in chunks, and sanitises IPs', async () => {
     const qs: string[] = [];
     const soql = { query: jest.fn(), queryAll: jest.fn(async (q: string) => { qs.push(q); return []; }) } as any;

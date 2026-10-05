@@ -1,6 +1,6 @@
 import type { Bundle } from '../bundleIo.js';
 import { DEFAULTS, id15, type Wave } from '../model.js';
-import { baselineDaysFor, normaliseIp, type Actor } from './actors.js';
+import { baselineDaysFor, blockOf, normaliseIp, type Actor } from './actors.js';
 import { classesOf, parseActions } from './actions.js';
 
 export interface ReturnedContent {
@@ -16,7 +16,8 @@ export interface ReturnedContent {
 export interface ResponseSummary {
   /**
    * Most common reply size in the reference set: the guest's auth replies on the wave days plus
-   * its data-access replies on baseline days. Learned from replies that are NOT under test.
+   * its data-access replies on baseline days, excluding blocks also active on the wave days.
+   * Learned from replies that are NOT under test.
    */
   emptySize: number | null;
   /** True when the reference set was empty and the size was taken from the replies under test. */
@@ -73,10 +74,15 @@ export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): 
   const reference = new Map<number, number>();
   const testedFreq = new Map<number, number>();
   const tested: ReturnedContent[] = [];
+  // Blocks that sent guest controller calls on the wave days. Their baseline-day replies are
+  // left out of the reference set: a scan that runs past midnight would otherwise set its own
+  // "empty" size from the next day's replies.
+  const waveBlocks = new Set<string>();
   for (const day of wave.days) {
     const sizes = await sizesFor(day, true);
     for await (const r of b.rows('AuraRequest', day)) {
       if (!r.ACTION_MESSAGE || !isGuest(r)) continue;
+      waveBlocks.add(blockOf(normaliseIp(r.CLIENT_IP ?? '')));
       if (parseActions(r.ACTION_MESSAGE).length === 0) { out.unparsedCalls++; continue; }
       const cls = classesOf(r.ACTION_MESSAGE);
       const dataAccess = cls.has('data-access');
@@ -97,6 +103,7 @@ export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): 
     const sizes = await sizesFor(day, false);
     for await (const r of b.rows('AuraRequest', day)) {
       if (!r.ACTION_MESSAGE || !isGuest(r) || !classesOf(r.ACTION_MESSAGE).has('data-access')) continue;
+      if (waveBlocks.has(blockOf(normaliseIp(r.CLIENT_IP ?? '')))) continue;
       const size = sizes.get((r.REQUEST_ID ?? '').trim());
       if (size !== undefined) reference.set(size, (reference.get(size) ?? 0) + 1);
     }

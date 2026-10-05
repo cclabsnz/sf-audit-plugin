@@ -7,11 +7,27 @@ const CHUNK = 100;
 const cleanIp = (ip: string) => (/^[0-9A-Fa-f:.]+$/.test(ip) ? ip : null);
 
 /**
+ * The forms LoginHistory.SourceIp may hold for one address. IPv4 has one; IPv6 is queried as
+ * compressed, fully expanded, and zero-padded, because an exact-match IN list misses any form
+ * it does not name. Matching afterwards is on normaliseIp, so all forms compare equal.
+ */
+export function ipForms(raw: string): string[] {
+  const compressed = normaliseIp(raw);
+  if (!compressed.includes(':') || compressed.includes('.')) return [compressed];
+  const [head, tail] = compressed.split('::');
+  const left = head ? head.split(':') : [];
+  const right = tail !== undefined && tail !== '' ? tail.split(':') : [];
+  const groups = tail === undefined ? left : [...left, ...Array<string>(8 - left.length - right.length).fill('0'), ...right];
+  if (groups.length !== 8) return [compressed];
+  return [...new Set([compressed, groups.join(':'), groups.map((g) => g.padStart(4, '0')).join(':')])];
+}
+
+/**
  * LoginHistory for actor IPs with no date bound: the identifying login in the motivating
  * case came five days after the wave. SourceIp does not support LIKE, hence an IN list.
  */
 export async function followUpIps(soql: SoqlClient, ips: string[]): Promise<FollowUp> {
-  const clean = [...new Set(ips.map((ip) => cleanIp(normaliseIp(ip))).filter((x): x is string => x !== null))];
+  const clean = [...new Set(ips.flatMap(ipForms).map(cleanIp).filter((x): x is string => x !== null))];
   const logins: FollowUp['logins'] = [];
   let truncated = false;
   for (let i = 0; i < clean.length; i += CHUNK) {

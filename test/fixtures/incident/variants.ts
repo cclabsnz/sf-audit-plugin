@@ -15,6 +15,7 @@ export type Row = Record<string, string>;
 
 const SPILL_DAY = '2026-09-16';
 const RICH_TEXT = '1$serviceComponent://ui.communities.components.aura.components.forceCommunity.richText.RichTextController/ACTION$getParsedRichTextValue=0';
+const GET_ITEMS = '1$serviceComponent://ui.force.components.controllers.lists.selectableListDataProvider.SelectableListDataProviderController/ACTION$getItems=12';
 export const FETCH_CASES = '1$apex://PortalService/ACTION$fetchCases=12';
 
 export function readManifest(dir: string): BundleManifest {
@@ -92,6 +93,27 @@ export async function midnightSpill(): Promise<string> {
       const rid = `RSPILL${j}${String(i).padStart(5, '0')}`;
       aura.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, USER_AGENT: '', URI: '/sfsites/aura', REQUEST_ID: rid, ACTION_MESSAGE: RICH_TEXT });
       sites.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, REQUEST_ID: rid, RESPONSE_SIZE: '1856', URI: '/sfsites/aura' });
+    }
+  });
+  await rewriteLog(dir, 'AuraRequest', SPILL_DAY, (r) => r, aura);
+  await rewriteLog(dir, 'Sites', SPILL_DAY, (r) => r, sites);
+  return dir;
+}
+
+/**
+ * Residual 1: the actor's spill past midnight is data reads that return 10,000 bytes. Those
+ * baseline-day replies must not become the "empty" reference size for W3.
+ */
+export async function midnightSpillDataReads(): Promise<string> {
+  const dir = await generateScenario();
+  const aura: Row[] = [];
+  const sites: Row[] = [];
+  ACTOR_IPS.slice(0, 3).forEach((ip, j) => {
+    for (let i = 0; i < 600; i++) {
+      const ts = `${SPILL_DAY}T0${i % 2}:${String(i % 60).padStart(2, '0')}:00.000Z`;
+      const rid = `RSPILLD${j}${String(i).padStart(5, '0')}`;
+      aura.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, USER_AGENT: '', URI: '/sfsites/aura', REQUEST_ID: rid, ACTION_MESSAGE: GET_ITEMS });
+      sites.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, REQUEST_ID: rid, RESPONSE_SIZE: '10000', URI: '/sfsites/aura' });
     }
   });
   await rewriteLog(dir, 'AuraRequest', SPILL_DAY, (r) => r, aura);

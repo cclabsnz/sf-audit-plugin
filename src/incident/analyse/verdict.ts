@@ -32,8 +32,9 @@ export function classify(v: VerdictInput): Classification {
 
 /**
  * Why a wave cannot be called no-evidence. No-evidence is allowed only when this is empty:
- * the required logs are present, the empty-reply size came from a reference set, any
- * data-access call was joined to a reply size, and every wave day has a baseline median.
+ * the required logs are present, the empty-reply size came from a reference set, every
+ * controller call parsed, EVERY data-access call was joined to a reply size (any unjoined read
+ * could be the one that returned content), and every wave day has a baseline median.
  * The join test uses data-access joins, not all joins: a joined auth reply says nothing about
  * what a data read returned (stricter than `joined > 0`).
  */
@@ -41,8 +42,12 @@ export function notAssessedReasons(v: VerdictInput): string[] {
   const out: string[] = [];
   if (!v.requiredLogsPresent) out.push('AuraRequest or Sites logs were not collected for every wave day');
   if (v.responses.emptySizeInferred) out.push('the empty-reply size could only be inferred from the replies under test');
-  if (v.responses.dataAccessCalls > 0 && (v.responses.joined === 0 || v.responses.dataAccessJoined === 0)) {
-    out.push(`none of the ${v.responses.dataAccessCalls} data-access calls could be joined to a reply size`);
+  const { dataAccessCalls, dataAccessJoined, unparsedCalls } = v.responses;
+  if (unparsedCalls > 0) out.push(`${unparsedCalls} controller calls could not be parsed, so what they did is unknown`);
+  if (dataAccessJoined < dataAccessCalls) {
+    out.push(dataAccessJoined === 0
+      ? `none of the ${dataAccessCalls} data-access calls could be joined to a reply size`
+      : `only ${dataAccessJoined} of ${dataAccessCalls} data-access calls could be joined to a reply size`);
   }
   if (!v.spikes.every((s) => s.baselineMedian !== null)) out.push('no baseline day was collected, so wave-day volume could not be compared');
   return out;

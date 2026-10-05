@@ -13,8 +13,14 @@ export function parseActions(actionMessage: string): string[] {
   return out;
 }
 
-/** Matched against the METHOD only, never the controller: LoginHistoryController.getRecords is a read. */
-const AUTH_METHOD = /(login|logout|password|selfreg|register|signup|verif)/i;
+/**
+ * Matched against the WHOLE method name, never a substring and never the controller:
+ * LoginHistoryController.getRecords, getLoginHistory and getVerifiedProviders are reads. The
+ * getter shape covers login-form configuration calls (getForgotPasswordUrl,
+ * getIsSelfRegistrationEnabled, getIsUsernamePasswordEnabled).
+ */
+const AUTH_METHOD =
+  /^(?:login|logout|forgotPassword|resetPassword|changePassword|setPassword|selfRegister|register|signup|verify\w*|passwordless\w*|get(?:Is)?\w*(?:Password|Registration|SelfReg|Login)\w*(?:Url|Enabled))$/i;
 const PLUMBING = [
   /^RichTextController\./, /^NavigationMenuDataProviderController\./, /^NetworkTrackingController\./,
   /^InstrumentationBeaconController\./, /^QuarterbackController\./, /^ComponentController\./,
