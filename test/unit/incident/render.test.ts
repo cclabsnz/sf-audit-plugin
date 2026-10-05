@@ -8,6 +8,8 @@ import { analyseBundle, type IncidentResult } from '../../../src/incident/analys
 import { buildEvidence, writeEvidence } from '../../../src/incident/render/evidence.js';
 import { redactResult } from '../../../src/incident/render/redact.js';
 import { renderMarkdown } from '../../../src/incident/render/markdown.js';
+import { renderHtml } from '../../../src/incident/render/html.js';
+import { DEFAULT_BRANDING } from '@cclabsnz/sf-core';
 
 let r: IncidentResult;
 beforeAll(async () => { r = await analyseBundle(await generateScenario()); });
@@ -91,5 +93,32 @@ describe('zero-baseline spike (I1)', () => {
     const md = renderMarkdown(c, buildEvidence(c));
     expect(md).toContain(`5,200 guest controller calls on ${w.spikes[0].day} against a zero baseline`);
     expect(md).not.toMatch(/null|NaN|undefined×/);
+  });
+});
+
+describe('self-registrations in the actor window (I9)', () => {
+  const reg = { createdDate: '2026-06-30T22:50:00Z', createdBy: 'Site A Guest User', section: 'Customer Portal', action: 'createdcustomeruser', display: 'Created new Customer User Pat Visitor' };
+  const withReg = () => {
+    const c = structuredClone(r);
+    c.waves.find((w) => w.wave.id === 'W1')!.outcomes.selfRegistrationsInActorWindow = [reg];
+    return c;
+  };
+  it('has an evidence table per wave and lists them in the Markdown and HTML detail', () => {
+    const c = withReg();
+    const ev = buildEvidence(c);
+    const t = ev.tables.find((x) => x.key === 'W1:selfreg')!;
+    expect(t.columns).toEqual(['created_date', 'created_by', 'display']);
+    expect(t.rows).toEqual([[reg.createdDate, reg.createdBy, reg.display]]);
+    expect(ev.tables.find((x) => x.key === 'W3:selfreg')!.rows).toEqual([]);
+    const md = renderMarkdown(c, ev);
+    expect(md.slice(md.indexOf('## W1 detail'))).toContain('Pat Visitor');
+    const html = renderHtml(c, ev, DEFAULT_BRANDING);
+    expect(html.slice(html.indexOf('id="detail"'))).toContain('Pat Visitor');
+  });
+  it('is still redacted', () => {
+    const red = redactResult(withReg());
+    const ev = buildEvidence(red);
+    expect(JSON.stringify(ev.tables)).not.toContain('Pat Visitor');
+    expect(renderMarkdown(red, ev)).not.toContain('Pat Visitor');
   });
 });

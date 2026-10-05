@@ -10,7 +10,7 @@ import { analyseBundle } from '../../../src/incident/analyse/index.js';
 import { buildEvidence } from '../../../src/incident/render/evidence.js';
 import { renderHtml } from '../../../src/incident/render/html.js';
 import { renderMarkdown } from '../../../src/incident/render/markdown.js';
-import { customApexReplies, midnightSpill, noReferenceReplies, nullBaseline, rotatingIps, uniformNonEmptyReplies, zeroWaves } from '../../fixtures/incident/variants.js';
+import { uncollectedWaveDay, customApexReplies, midnightSpill, noReferenceReplies, nullBaseline, rotatingIps, uniformNonEmptyReplies, zeroWaves } from '../../fixtures/incident/variants.js';
 import { generateScenario, LINKED_USER } from '../../fixtures/incident/generate.js';
 import { writeReport } from '../../../src/commands/audit/incident/report.js';
 
@@ -128,5 +128,23 @@ describe('the no-evidence invariant on whole bundles', () => {
     const r = await analyseBundle(await nullBaseline());
     expect(r.waves[0].result).toBe('not-assessed');
     expect(r.waves[0].limits.join(' ')).toMatch(/Not assessed: no baseline day was collected/);
+  });
+});
+
+describe('I8: an uncollected day is shown as not collected, never as zero', () => {
+  it('the spike, the evidence CSVs, the timeline table and the chart all say not collected', async () => {
+    const { r, w3 } = await w3Of(await uncollectedWaveDay());
+    expect(w3.spikes[0]).toMatchObject({ day: '2026-09-15', controllerCalls: null, ratio: null, isSpike: false });
+    expect(w3.result).toBe('not-assessed');
+    const ev = buildEvidence(r);
+    expect(ev.tables.find((t) => t.key === 'W3:spike')!.rows[0][1]).toBe('not collected');
+    expect(ev.tables.find((t) => t.key === 'volumes')!.rows.some((row) => row[0] === '2026-09-15' && row[2] === 'not collected')).toBe(true);
+    const md = renderMarkdown(r, ev);
+    expect(md).toMatch(/\| 2026-09-15 \| [^|]+ \| not collected \|/);
+    const html = renderHtml(r, ev, DEFAULT_BRANDING);
+    const chart = JSON.parse(/var d=(\{.*?\});var c=/s.exec(html)![1].replace(/\\u003c/g, '<')) as { days: string[]; series: Array<{ data: Array<number | null> }> };
+    const i = chart.days.indexOf('2026-09-15');
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(chart.series.every((s) => s.data[i] === null)).toBe(true);
   });
 });

@@ -125,3 +125,14 @@ export async function noReferenceReplies(): Promise<string> {
   await rewriteLog(dir, 'AuraRequest', D2, (r) => (actorRow(r) && isLogin(r) ? { ...r, ACTION_MESSAGE: RICH_TEXT } : r));
   return dir;
 }
+
+/** I8: the W3 day's AuraRequest log was not collected. */
+export async function uncollectedWaveDay(): Promise<string> {
+  const dir = await generateScenario();
+  editManifest(dir, (m) => {
+    const l = m.logs.find((x) => x.type === 'AuraRequest' && x.day === D2)!;
+    l.status = 'missing';
+    delete l.file;
+  });
+  return dir;
+}

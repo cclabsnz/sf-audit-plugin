@@ -3,7 +3,7 @@ import { esc, fontFaceCss, type Branding } from '@cclabsnz/sf-core';
 import { chartJsScript } from '../../renderers/chartAsset.js';
 import type { IncidentResult } from '../analyse/index.js';
 import type { buildEvidence } from './evidence.js';
-import { CLASSIFICATION_LABEL, RESULT_LABEL } from './labels.js';
+import { CLASSIFICATION_LABEL, RESULT_LABEL, auraCollectedDays, coveredDays } from './labels.js';
 import { NOTHING_ASSESSED, WITHIN_BASELINE, reportLimits, waveSentence } from './markdown.js';
 
 type Ev = ReturnType<typeof buildEvidence>;
@@ -11,10 +11,12 @@ type Ev = ReturnType<typeof buildEvidence>;
 const RESULT_TONE: Record<string, string> = { 'access-gained': 'high', 'content-returned': 'medium', 'no-evidence': 'low', 'not-assessed': 'muted' };
 
 function timelineData(r: IncidentResult) {
-  const days = [...new Set(r.volumes.map((v) => v.day))].sort();
+  const days = coveredDays(r.coverage.logs, r.volumes.map((v) => v.day));
+  const aura = auraCollectedDays(r.coverage.logs);
+  // null for a day whose AuraRequest log was not collected: Chart.js leaves a gap, never a zero.
   const series = r.guests.filter((g) => r.volumes.some((v) => v.guestId15 === g.id15)).map((g) => ({
     label: g.siteNames[0] ?? g.username,
-    data: days.map((d) => r.volumes.find((v) => v.guestId15 === g.id15 && v.day === d)?.controllerCalls ?? 0),
+    data: days.map((d) => (aura.has(d) ? r.volumes.find((v) => v.guestId15 === g.id15 && v.day === d)?.controllerCalls ?? 0 : null)),
   }));
   return { days, series, waveDays: [...new Set(r.waves.flatMap((w) => w.wave.days))] };
 }
@@ -51,6 +53,8 @@ export function renderHtml(r: IncidentResult, ev: Ev, b: Branding): string {
       ${w.actors.map((a) => `<tr><td class="mono">${esc(a.block)} <small>(${plural(a.ips.length, 'IP')})</small></td><td>${esc(stamp(a.firstSeen.slice(0, 16)))} – ${esc(a.lastSeen.slice(11, 16))}</td><td class="n">${n(a.controllerCalls)}</td><td>${a.steady ? 'steady' : 'irregular'}</td><td class="n">${(a.emptyUaShare * 100).toFixed(0)}%</td><td>${esc(a.markers.join(', ') || '—')}</td><td>${esc(a.hostingAssessed ? (a.hosting ?? 'none matched') : 'not assessed')}</td></tr>`).join('') || '<tr><td colspan="7">No actor blocks above the outlier threshold.</td></tr>'}
       </tbody></table></div><p class="ref">${esc(ev.ref(`${w.wave.id}:actors`))}</p>
       <p>Actions by class: ${Object.entries(w.actions.byClass).map(([k, v]) => `${esc(k)} <b>${n(v)}</b>`).join(' · ')} <span class="ref">${esc(ev.ref(`${w.wave.id}:actions`))}</span></p>
+      <p>Self-registrations during the actor window: ${w.outcomes.selfRegistrationsInActorWindow.length ? `${n(w.outcomes.selfRegistrationsInActorWindow.length)}, listed for review; the audit trail records no IP, so they are not attributed` : 'none'} <span class="ref">${esc(ev.ref(`${w.wave.id}:selfreg`))}</span></p>
+      ${w.outcomes.selfRegistrationsInActorWindow.length ? `<ul>${w.outcomes.selfRegistrationsInActorWindow.map((x) => `<li><span class="mono">${esc(stamp(x.createdDate))}</span> ${esc(x.display)} <small>(by ${esc(x.createdBy)})</small></li>`).join('')}</ul>` : ''}
       <p>Empty-reply size <b>${w.responses.emptySize === null || w.responses.emptySize === undefined ? 'unknown' : `${n(w.responses.emptySize)} bytes`}</b> (±${w.responses.band}${w.responses.emptySizeInferred ? ', inferred from the replies under test' : ''}); <b>${n(w.responses.returnedContent.length)}</b> of ${n(w.responses.dataAccessCalls)} data-access replies from any guest IP were larger <span class="ref">${esc(ev.ref(`${w.wave.id}:returned`))}</span>.</p>
     </div>`).join('');
   const config = r.config.periods.map((p) => `<tr><td>${esc(p.label)}</td><td>${Object.entries(p.bySite).map(([s, cs]) => `${esc(s)} <b>${cs.length}</b>`).join(', ') || 'none'}${p.shared.length ? ` <small>(${p.shared.length} shared, not counted per site)</small>` : ''}</td></tr>`).join('');
@@ -126,7 +130,7 @@ ${r.waves.length === 0 ? `<p>${esc(NOTHING_ASSESSED)}</p>` : r.withinBaseline ? 
 <div class="waves">${waves}</div>
 <div class="limits"><h3>What this report can't tell you</h3><ul>${limits}</ul></div>
 <div class="steps"><h3>Recommended next steps</h3><ol>${steps}</ol></div></section>
-<section id="timeline">${sec('02', 'Timeline')}<p>Guest controller calls per day, one line per site. <span class="key"></span>Shaded days are the wave days. ${esc(ev.ref('volumes'))}</p><div class="chartbox"><canvas id="tl" height="130" role="img" aria-label="Guest controller calls per day, by site">Chart needs JavaScript. The daily counts are in the volumes evidence table.</canvas></div></section>
+<section id="timeline">${sec('02', 'Timeline')}<p>Guest controller calls per day, one line per site. <span class="key"></span>Shaded days are the wave days. A gap in a line is a day whose AuraRequest log was not collected. ${esc(ev.ref('volumes'))}</p><div class="chartbox"><canvas id="tl" height="130" role="img" aria-label="Guest controller calls per day, by site">Chart needs JavaScript. The daily counts are in the volumes evidence table.</canvas></div></section>
 <section id="detail">${sec('03', 'Wave detail')}${detail}</section>
 <section id="config">${sec('04', 'Configuration changes')}<div class="tablewrap"><table><thead><tr><th>Period</th><th>Changes by site</th></tr></thead><tbody>${config}</tbody></table></div>${asym}<p class="ref">${esc(ev.ref('config'))}</p></section>
 <section id="method">${sec('05', 'Method and evidence')}

@@ -1,7 +1,7 @@
 // src/incident/render/markdown.ts
 import type { IncidentResult } from '../analyse/index.js';
 import type { buildEvidence } from './evidence.js';
-import { CLASSIFICATION_LABEL, RESULT_LABEL } from './labels.js';
+import { CLASSIFICATION_LABEL, NOT_COLLECTED, RESULT_LABEL, auraCollectedDays, coveredDays } from './labels.js';
 
 type Ev = ReturnType<typeof buildEvidence>;
 
@@ -49,10 +49,17 @@ export function renderMarkdown(r: IncidentResult, ev: Ev): string {
   L.push('', '### Recommended next steps', '');
   for (const s of [...new Set(r.waves.flatMap((w) => w.nextSteps))]) L.push(`- ${md(s)}`);
   L.push('', '## Timeline', '', `Controller calls per guest user per day ${ev.ref('volumes')}.`, '', '| Day | Guest | Controller calls | Page loads |', '|---|---|---:|---:|');
-  for (const v of r.volumes) L.push(`| ${v.day} | ${md(r.guests.find((g) => g.id15 === v.guestId15)?.siteNames[0] ?? v.guestId15)} | ${v.controllerCalls} | ${v.pageLoads} |`);
+  const aura = auraCollectedDays(r.coverage.logs);
+  for (const day of coveredDays(r.coverage.logs, r.volumes.map((v) => v.day))) {
+    if (!aura.has(day)) { L.push(`| ${day} | all guests | ${NOT_COLLECTED} | ${NOT_COLLECTED} |`); continue; }
+    for (const v of r.volumes.filter((x) => x.day === day)) L.push(`| ${v.day} | ${md(r.guests.find((g) => g.id15 === v.guestId15)?.siteNames[0] ?? v.guestId15)} | ${v.controllerCalls} | ${v.pageLoads} |`);
+  }
   for (const w of r.waves) {
     L.push('', `## ${w.wave.id} detail`, '', `Actors ${ev.ref(`${w.wave.id}:actors`)}:`, '');
     for (const a of w.actors) L.push(`- ${md(a.block)} (${a.ips.length} IPs), ${a.firstSeen} to ${a.lastSeen}, ${a.controllerCalls} controller calls, ${a.steady ? 'steady' : 'irregular'} volume, ${(a.emptyUaShare * 100).toFixed(0)}% empty user agent${a.markers.length ? `, scanner markers: ${md(a.markers.join(', '))}` : ''}${a.hostingAssessed ? `, hosting: ${md(a.hosting ?? 'none matched')}` : ''}.`);
+    const regs = w.outcomes.selfRegistrationsInActorWindow;
+    L.push('', `Self-registrations during the actor window ${ev.ref(`${w.wave.id}:selfreg`)}: ${regs.length ? 'the audit trail records no IP, so these are listed for review, not attributed.' : 'none.'}`);
+    if (regs.length) L.push('', ...regs.map((x) => `- ${x.createdDate}: ${md(x.display)} (by ${md(x.createdBy)})`));
     L.push('', `Actions by class ${ev.ref(`${w.wave.id}:actions`)}: ${Object.entries(w.actions.byClass).map(([k, v]) => `${k} ${v}`).join(', ')}.`);
     L.push(`Empty-reply size ${w.responses.emptySize ?? 'unknown'} bytes (±${w.responses.band}${w.responses.emptySizeInferred ? ', inferred from the replies under test' : ''}); ${w.responses.returnedContent.length} of ${w.responses.dataAccessCalls} data-access replies from any guest IP were larger ${ev.ref(`${w.wave.id}:returned`)}.`);
   }
