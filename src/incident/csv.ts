@@ -1,4 +1,4 @@
-import { createReadStream, createWriteStream, rmSync } from 'node:fs';
+import { createReadStream, createWriteStream, rmSync, existsSync, statSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { finished } from 'node:stream/promises';
@@ -117,7 +117,14 @@ export async function filterLogFile(rawPath: string, outPath: string, guestIds: 
     await finished(out);
   } catch (err) {
     out.destroy();
-    rmSync(outPath, { force: true });
+    try {
+      // Only delete if it's a file, not a directory
+      if (existsSync(outPath) && statSync(outPath).isFile()) {
+        rmSync(outPath, { force: true });
+      }
+    } catch {
+      // Ignore cleanup errors; rethrow original error
+    }
     throw err;
   }
   return result;
