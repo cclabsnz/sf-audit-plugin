@@ -2,13 +2,17 @@
 // One regression per false-assurance path from the final review. A reassuring result
 // ("No evidence of access", "within baseline") must never appear unless the evidence supports it.
 import { describe, it, expect } from '@jest/globals';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { DEFAULT_BRANDING } from '@cclabsnz/sf-core';
 import { analyseBundle } from '../../../src/incident/analyse/index.js';
 import { buildEvidence } from '../../../src/incident/render/evidence.js';
 import { renderHtml } from '../../../src/incident/render/html.js';
 import { renderMarkdown } from '../../../src/incident/render/markdown.js';
 import { customApexReplies, midnightSpill, noReferenceReplies, nullBaseline, rotatingIps, uniformNonEmptyReplies, zeroWaves } from '../../fixtures/incident/variants.js';
-import { generateScenario } from '../../fixtures/incident/generate.js';
+import { generateScenario, LINKED_USER } from '../../fixtures/incident/generate.js';
+import { writeReport } from '../../../src/commands/audit/incident/report.js';
 
 const NOTHING_ASSESSED = 'No Guest User Anomaly waves were found in the collected period, so nothing was assessed.';
 const WITHIN_BASELINE = 'Guest traffic stayed within baseline on every collected day.';
@@ -96,5 +100,20 @@ describe('C3: any parsed call that is not auth or plumbing is assessed as data a
     expect(w3.responses.returnedContent.every((x) => x.actions.includes('PortalService.fetchCases'))).toBe(true);
     expect(w3.result).toBe('content-returned');
     expect(r.withinBaseline).toBe(false);
+  });
+});
+
+describe('C5: --redact removes linked users\' names everywhere', () => {
+  it('redacted HTML, MD and JSON contain neither the name nor the email, and do contain the user id', async () => {
+    const out = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-redact-'));
+    const written = await writeReport(await generateScenario(), { formats: ['html', 'md', 'json'], outputDir: out, redact: true, spikeRatio: 5, branding: DEFAULT_BRANDING });
+    for (const p of written) {
+      const text = fs.readFileSync(p, 'utf-8');
+      expect(text).not.toMatch(/test tester/i);
+      expect(text).not.toMatch(/test\.tester@example\.com/i);
+    }
+    for (const name of ['incident-report.html', 'incident-report.md', 'incident-report.json']) {
+      expect(fs.readFileSync(path.join(out, name), 'utf-8')).toContain(LINKED_USER);
+    }
   });
 });
