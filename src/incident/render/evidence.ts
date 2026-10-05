@@ -38,11 +38,14 @@ export function buildEvidence(r: IncidentResult): { tables: EvidenceTable[]; ref
   return { tables, ref: (key) => (byKey.has(key) ? `[${byKey.get(key)}]` : '') };
 }
 
+/** Spreadsheet formula-injection guard, applied to written files only (csvLine stays raw for the log filter). */
+const neutralise = (c: string): string => (/^[=+\-@\t\r]/.test(c) ? `'${c}` : c);
+
 export function writeEvidence(dir: string, tables: EvidenceTable[]): string[] {
   mkdirSync(join(dir, 'evidence'), { recursive: true });
   return tables.map((t) => {
     const p = join(dir, 'evidence', `${t.id}.csv`);
-    writeFileSync(p, csvLine(t.columns) + t.rows.map(csvLine).join(''));
+    writeFileSync(p, csvLine(t.columns.map(neutralise)) + t.rows.map((row) => csvLine(row.map(neutralise))).join(''));
     return p;
   });
 }

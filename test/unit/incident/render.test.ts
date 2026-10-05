@@ -46,3 +46,39 @@ describe('renderMarkdown', () => {
     expect(/\b(attack|breach)/i.test(md)).toBe(false);
   });
 });
+
+describe('fix round 1', () => {
+  it('redacts compressed IPv6, IPv4 followed by a slash, and leaves timestamps alone', () => {
+    const c = structuredClone(r);
+    const w = c.waves.find((x) => x.actors.length > 0)!;
+    w.actors[0].userAgents[0] = { ua: '2001:db8::1 http://203.0.113.9/path 2001:db8:0:0:1:2:3:4 at 04:04:34', count: 1 };
+    w.actors[0].ips = ['2001:db8::1'];
+    c.coverage.logs[0].detail = '2001:db8::1 http://203.0.113.9/path 2001:db8:0:0:1:2:3:4 at 04:04:34';
+    const red = redactResult(c);
+    const ra = red.waves.find((x) => x.actors.length > 0)!.actors[0];
+    expect(ra.ips).toEqual(['2001:db8:0:0::/64']);
+    for (const text of [ra.userAgents[0].ua, red.coverage.logs[0].detail!]) {
+      expect(text).not.toMatch(/2001:db8::1|:1:2:3:4|203\.0\.113\.9/);
+      expect(text).toContain('2001:db8:0:0::/64');
+      expect(text).toContain('203.0.113.0/24');
+      expect(text).toContain('04:04:34');
+    }
+  });
+
+  it('neutralises spreadsheet formulas in written evidence only', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-ev-'));
+    const [p] = writeEvidence(dir, [{ id: 'E1', key: 'k', title: 't', columns: ['c'], rows: [['=HYPERLINK("x")']] }]);
+    expect(fs.readFileSync(p, 'utf8')).toContain('"\'=HYPERLINK(""x"")"');
+  });
+
+  it('keeps Markdown intact for hostile site names', () => {
+    const base = renderMarkdown(r, buildEvidence(r));
+    const c = structuredClone(r);
+    c.waves[0].wave.site = 'A|B\nC';
+    const out = renderMarkdown(c, buildEvidence(c));
+    expect(out).toContain(`### ${c.waves[0].wave.id}: A\\|B C,`);
+    const rows = (t: string) => t.split('\n').filter((l) => /^\| \d{4}-/.test(l)).length;
+    expect(rows(out)).toBe(rows(base));
+    expect(out).toContain('### Gaps in collection');
+  });
+});
