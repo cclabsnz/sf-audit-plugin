@@ -35,7 +35,10 @@ export function computeOutcomes(b: Bundle, wave: Wave, actors: Actor[]): Outcome
   const windows = actors.map((a) => [a.firstSeen, a.lastSeen] as const);
   const selfRegistrationsInActorWindow = b.audit.filter((r) =>
     r.createdBy === waveGuestName && /^Created new Customer User\b/.test(r.display) &&
-    windows.some(([f, t]) => Date.parse(r.createdDate) >= Date.parse(f) && Date.parse(r.createdDate) <= Date.parse(t)));
+    windows.some(([f, t]) => {
+      const at = Date.parse(r.createdDate), from = Date.parse(f), to = Date.parse(t);
+      return !Number.isNaN(at) && !Number.isNaN(from) && !Number.isNaN(to) && at >= from && at <= to;
+    }));
 
   return { actorLogins, successfulLogins: ok.length, failedLogins: actorLogins.length - ok.length, selfRegistrationsInActorWindow, identityLinks };
 }
