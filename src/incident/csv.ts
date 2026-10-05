@@ -1,7 +1,7 @@
-import { createReadStream, createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream, rmSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { once } from 'node:events';
+import { finished } from 'node:stream/promises';
 import { id15 } from './model.js';
 
 /**
@@ -9,8 +9,9 @@ import { id15 } from './model.js';
  * whole-file parser in timeline/loadCaptures.ts cannot be used here. The state machine carries
  * across read chunks, including a quote that ends one chunk.
  */
-export async function* readCsvCells(path: string): AsyncGenerator<string[]> {
-  const stream = createReadStream(path, { encoding: 'utf8', highWaterMark: 1 << 20 });
+export async function* readCsvCells(path: string, opts?: { chunkSize?: number }): AsyncGenerator<string[]> {
+  const chunkSize = opts?.chunkSize ?? (1 << 20);
+  const stream = createReadStream(path, { encoding: 'utf8', highWaterMark: chunkSize });
   let field = '';
   let row: string[] = [];
   let inQuotes = false;
@@ -45,9 +46,9 @@ export async function* readCsvCells(path: string): AsyncGenerator<string[]> {
   if (started || row.length > 0) { row.push(field); yield row; }
 }
 
-export async function* readCsvRecords(path: string): AsyncGenerator<Record<string, string>> {
+export async function* readCsvRecords(path: string, opts?: { chunkSize?: number }): AsyncGenerator<Record<string, string>> {
   let header: string[] | undefined;
-  for await (const cells of readCsvCells(path)) {
+  for await (const cells of readCsvCells(path, opts)) {
     if (!header) { header = cells; continue; }
     if (cells.length !== header.length) continue;
     const rec: Record<string, string> = {};
@@ -74,7 +75,28 @@ export async function filterLogFile(rawPath: string, outPath: string, guestIds: 
   const result: FilterResult = { totalRows: 0, guestRows: 0, guestRowsByUser: {}, malformed: 0 };
   let header: string[] | undefined;
   let userCols: number[] = [];
-  const write = async (s: string) => { if (!out.write(s)) await once(out, 'drain'); };
+  let streamError: Error | null = null;
+
+  out.on('error', (err) => { if (!streamError) streamError = err; });
+
+  const write = async (s: string) => {
+    if (streamError) throw streamError;
+    if (!out.write(s)) await new Promise<void>((resolve, reject) => {
+      const onDrain = () => {
+        out.removeListener('error', onError);
+        if (streamError) reject(streamError);
+        else resolve();
+      };
+      const onError = (err: Error) => {
+        out.removeListener('drain', onDrain);
+        streamError = err;
+        reject(err);
+      };
+      out.once('drain', onDrain);
+      out.once('error', onError);
+    });
+  };
+
   try {
     for await (const cells of readCsvCells(rawPath)) {
       if (!header) {
@@ -91,9 +113,12 @@ export async function filterLogFile(rawPath: string, outPath: string, guestIds: 
       result.guestRowsByUser[guest] = (result.guestRowsByUser[guest] ?? 0) + 1;
       await write(csvLine(cells));
     }
-  } finally {
     out.end();
-    await once(out, 'close');
+    await finished(out);
+  } catch (err) {
+    out.destroy();
+    rmSync(outPath, { force: true });
+    throw err;
   }
   return result;
 }

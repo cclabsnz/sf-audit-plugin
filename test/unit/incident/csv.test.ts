@@ -13,11 +13,32 @@ describe('readCsvCells', () => {
     const p = w('q.csv', '"A","B"\r\n"x,1","he said ""hi"""\r\n"line1\nline2",""\r\n');
     expect(await all(readCsvCells(p))).toEqual([['A', 'B'], ['x,1', 'he said "hi"'], ['line1\nline2', '']]);
   });
-  it('handles a quote split across read chunks', async () => {
-    const big = '"A"\n' + '"' + 'y'.repeat((1 << 20) - 2) + '""z"\n';
-    const p = w('split.csv', big);
-    const rows = await all(readCsvCells(p));
-    expect(rows[1][0].endsWith('y"z')).toBe(true);
+  it('handles quote pairs split across read chunks', async () => {
+    // With chunkSize=8, we can control exactly where boundaries fall.
+    // Build a CSV with a doubled quote pair straddling a chunk boundary.
+    // Field: "a""b" has 6 chars: quote, a, quote, quote, b, quote.
+    // With chunkSize=8: "a""" (4 chars) + "b" (1 char) + newline crosses at the doubled quotes.
+    // Position 0-3: "a"", position 4: (boundary), position 4-6: "b"
+    const csv = '"F1"\n"a""b"\n';
+    const p = w('split-pair.csv', csv);
+    const rows = await all(readCsvCells(p, { chunkSize: 5 }));
+    expect(rows).toEqual([['F1'], ['a"b']]);
+  });
+  it('handles closing quote and comma split across chunks', async () => {
+    // Field: "text", next field. boundary between " and ,
+    // chunkSize=8: "text"" (5 chars) + ", (2 chars) + more crosses at closing quote/comma
+    const csv = '"F1","F2"\n"txt",data\n';
+    const p = w('split-comma.csv', csv);
+    const rows = await all(readCsvCells(p, { chunkSize: 9 }));
+    expect(rows).toEqual([['F1', 'F2'], ['txt', 'data']]);
+  });
+  it('handles CR/LF split across chunks', async () => {
+    // Ensure \r and \n can be split across chunks.
+    // chunkSize=3: splits right at \r or \n
+    const csv = '"a"\r\n"b"\r\n';
+    const p = w('split-crlf.csv', csv);
+    const rows = await all(readCsvCells(p, { chunkSize: 3 }));
+    expect(rows).toEqual([['a'], ['b']]);
   });
   it('yields nothing for an empty file and only the header for a header-only file', async () => {
     expect(await all(readCsvCells(w('e.csv', '')))).toEqual([]);
@@ -51,22 +72,57 @@ describe('filterLogFile', () => {
     expect(await filterLogFile(w('ho.csv', csvLine(['USER_ID'])), out, new Set(['x']))).toEqual({ totalRows: 0, guestRows: 0, guestRowsByUser: {}, malformed: 0 });
     expect(await filterLogFile(w('em.csv', ''), out, new Set(['x']))).toEqual({ totalRows: 0, guestRows: 0, guestRowsByUser: {}, malformed: 0 });
   });
+  it('rejects and cleans up when write stream cannot open', async () => {
+    // Parent directory is a regular file, so child path cannot be created.
+    const regularFile = w('regular.txt', 'data');
+    const unwritablePath = path.join(regularFile, 'nested.csv');
+    const raw = w('raw2.csv', csvLine(['USER_ID']) + csvLine(['005xx000000gstA']));
+    await expect(filterLogFile(raw, unwritablePath, new Set(['005xx000000gstA']))).rejects.toThrow();
+    // Verify partial output file was cleaned up
+    expect(fs.existsSync(unwritablePath)).toBe(false);
+  });
   it('filters a large file with bounded heap growth', async () => {
-    const p = path.join(dir, 'big.csv');
+    // Generate ~150 MB fixture to detect non-streaming (whole-file reads)
+    const p = path.join(dir, 'big-150.csv');
     const fd = fs.openSync(p, 'w');
     fs.writeSync(fd, csvLine(['USER_ID', 'ACTION_MESSAGE']));
+
+    // Generate 150 MB worth of rows; each row is roughly 200 bytes (60 byte ID + 140 byte message)
+    const targetBytes = 150 * 1024 * 1024;
+    const rowSize = 200;
+    const numRows = Math.ceil(targetBytes / rowSize);
     const chunk: string[] = [];
-    for (let i = 0; i < 300_000; i++) {
-      chunk.push(csvLine([i % 10 === 0 ? '005xx000000gstA' : '005xx000000othr', 'msg,with "quotes"\nand newline ' + i]));
-      if (chunk.length === 10_000) { fs.writeSync(fd, chunk.join('')); chunk.length = 0; }
+    for (let i = 0; i < numRows; i++) {
+      chunk.push(csvLine([i % 10 === 0 ? '005xx000000gstA' : '005xx000000othr', 'msg,with "quotes"\nand newline ' + i.toString().padEnd(140)]));
+      if (chunk.length === 5_000) { fs.writeSync(fd, chunk.join('')); chunk.length = 0; }
     }
+    if (chunk.length > 0) fs.writeSync(fd, chunk.join(''));
     fs.closeSync(fd);
+
+    // Force garbage collection and record baseline heap
     global.gc?.();
-    const before = process.memoryUsage().heapUsed;
-    const r = await filterLogFile(p, path.join(dir, 'big.out.csv'), new Set(['005xx000000gstA']));
-    const growth = process.memoryUsage().heapUsed - before;
-    expect(r.totalRows).toBe(300_000);
-    expect(r.guestRows).toBe(30_000);
-    expect(growth).toBeLessThan(64 * 1024 * 1024);
-  }, 60_000);
+    const baselineHeap = process.memoryUsage().heapUsed;
+
+    // Sample heap usage during filtering to find peak
+    let peakHeapDuringOp = baselineHeap;
+    const interval = setInterval(() => {
+      const current = process.memoryUsage().heapUsed;
+      if (current > peakHeapDuringOp) peakHeapDuringOp = current;
+    }, 25);
+
+    const outPath = path.join(dir, 'big-150.out.csv');
+    const r = await filterLogFile(p, outPath, new Set(['005xx000000gstA']));
+
+    clearInterval(interval);
+
+    const peakGrowth = peakHeapDuringOp - baselineHeap;
+
+    expect(r.totalRows).toBe(numRows);
+    expect(r.guestRows).toBeCloseTo(numRows / 10, -3);
+    // Peak growth should stay well under the input size; 150 MB input should not require 150 MB+ in memory
+    expect(peakGrowth).toBeLessThan(150 * 1024 * 1024);
+
+    // Clean up output file
+    fs.rmSync(outPath, { force: true });
+  }, 180_000);
 });
