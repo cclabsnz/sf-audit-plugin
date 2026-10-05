@@ -20,7 +20,11 @@ export function waveSentence(w: IncidentResult['waves'][number], ev: Ev): string
   const id = w.wave.id;
   const spike = w.spikes.find((s) => s.isSpike);
   const parts: string[] = [];
-  if (spike) parts.push(`${spike.controllerCalls.toLocaleString('en-NZ')} guest controller calls on ${spike.day}, ${spike.ratio!.toFixed(1)}× baseline ${ev.ref(`${id}:spike`)}`);
+  if (spike) {
+    const calls = `${(spike.controllerCalls ?? 0).toLocaleString('en-NZ')} guest controller calls on ${spike.day}`;
+    // A zero baseline median has no ratio: say so rather than dereferencing it.
+    parts.push(spike.ratio === null ? `${calls} against a zero baseline ${ev.ref(`${id}:spike`)}` : `${calls}, ${spike.ratio.toFixed(1)}× baseline ${ev.ref(`${id}:spike`)}`);
+  }
   if (w.actors.length) parts.push(`${w.actors.length} actor block(s), led by ${md(w.actors[0].block)} ${ev.ref(`${id}:actors`)}`);
   parts.push(`${w.outcomes.successfulLogins} successful login(s) from actor IPs ${ev.ref(`${id}:logins`)}`);
   parts.push(`${w.responses.returnedContent.length} of ${w.responses.dataAccessCalls} data-access replies larger than empty ${ev.ref(`${id}:returned`)}`);

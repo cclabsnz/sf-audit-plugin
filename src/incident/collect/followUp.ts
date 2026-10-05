@@ -1,6 +1,7 @@
 // src/incident/collect/followUp.ts
 import type { SoqlClient } from '@cclabsnz/sf-core';
 import { id15, type FollowUp } from '../model.js';
+import { normaliseIp } from '../analyse/actors.js';
 
 const CHUNK = 100;
 const cleanIp = (ip: string) => (/^[0-9A-Fa-f:.]+$/.test(ip) ? ip : null);
@@ -10,7 +11,7 @@ const cleanIp = (ip: string) => (/^[0-9A-Fa-f:.]+$/.test(ip) ? ip : null);
  * case came five days after the wave. SourceIp does not support LIKE, hence an IN list.
  */
 export async function followUpIps(soql: SoqlClient, ips: string[]): Promise<FollowUp> {
-  const clean = [...new Set(ips.map(cleanIp).filter((x): x is string => x !== null))];
+  const clean = [...new Set(ips.map((ip) => cleanIp(normaliseIp(ip))).filter((x): x is string => x !== null))];
   const logins: FollowUp['logins'] = [];
   for (let i = 0; i < clean.length; i += CHUNK) {
     const list = clean.slice(i, i + CHUNK).map((ip) => `'${ip}'`).join(',');

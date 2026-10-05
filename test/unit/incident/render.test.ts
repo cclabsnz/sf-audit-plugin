@@ -82,3 +82,14 @@ describe('fix round 1', () => {
     expect(out).toContain('### Gaps in collection');
   });
 });
+
+describe('zero-baseline spike (I1)', () => {
+  it('renders a spike with a null ratio without throwing', () => {
+    const c = structuredClone(r);
+    const w = c.waves.find((x) => x.wave.id === 'W3')!;
+    w.spikes = [{ ...w.spikes[0], baselineMedian: 0, ratio: null, isSpike: true }];
+    const md = renderMarkdown(c, buildEvidence(c));
+    expect(md).toContain(`5,200 guest controller calls on ${w.spikes[0].day} against a zero baseline`);
+    expect(md).not.toMatch(/null|NaN|undefined×/);
+  });
+});

@@ -1,6 +1,6 @@
 import type { Bundle } from '../bundleIo.js';
 import type { AuditRow, LoginRow, Wave } from '../model.js';
-import type { Actor } from './actors.js';
+import { normaliseIp, type Actor } from './actors.js';
 
 export interface IdentityLink { ip: string; userId15: string; userName: string; email: string; userCreatedDate: string; createdByGuest: string; loginTime: string }
 
@@ -18,8 +18,8 @@ export function isSelfRegistration(row: AuditRow): boolean {
 }
 
 export function computeOutcomes(b: Bundle, wave: Wave, actors: Actor[]): Outcomes {
-  const actorOf = new Map(actors.flatMap((a) => a.ips.map((ip) => [ip, a.id] as const)));
-  const actorLogins = b.followUp.logins.filter((l) => actorOf.has(l.sourceIp)).map((l) => ({ ...l, actorId: actorOf.get(l.sourceIp)! }));
+  const actorOf = new Map(actors.flatMap((a) => a.ips.map((ip) => [normaliseIp(ip), a.id] as const)));
+  const actorLogins = b.followUp.logins.filter((l) => actorOf.has(normaliseIp(l.sourceIp))).map((l) => ({ ...l, actorId: actorOf.get(normaliseIp(l.sourceIp))! }));
   const ok = actorLogins.filter((l) => l.status === 'Success');
   const guestNames = new Map(b.manifest.guests.map((g) => [g.id15, g.name]));
   const waveGuestName = guestNames.get(wave.guestId15);

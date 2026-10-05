@@ -1,6 +1,6 @@
 import type { Bundle } from '../bundleIo.js';
 import { DEFAULTS, id15, type Wave } from '../model.js';
-import { baselineDaysFor, type Actor } from './actors.js';
+import { baselineDaysFor, normaliseIp, type Actor } from './actors.js';
 import { classesOf, parseActions } from './actions.js';
 
 export interface ReturnedContent {
@@ -52,7 +52,7 @@ const modeOf = (freq: Map<number, number>): number | undefined =>
  * replies cannot set its own "empty" baseline.
  */
 export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): Promise<ResponseSummary> {
-  const actorOf = new Map(actors.flatMap((a) => a.ips.map((ip) => [ip.trim().toLowerCase(), a.id] as const)));
+  const actorOf = new Map(actors.flatMap((a) => a.ips.map((ip) => [normaliseIp(ip), a.id] as const)));
   const out: ResponseSummary = {
     emptySize: null, emptySizeInferred: false, band: DEFAULTS.emptyBandBytes, dataAccessCalls: 0, joined: 0, dataAccessJoined: 0,
     referenceReplies: 0, returnedContent: [], blankRequestIdsDropped: 0, unmatchedCalls: 0, unparsedCalls: 0,
@@ -89,8 +89,8 @@ export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): 
       if (!dataAccess) { reference.set(size, (reference.get(size) ?? 0) + 1); continue; }
       out.dataAccessJoined++;
       testedFreq.set(size, (testedFreq.get(size) ?? 0) + 1);
-      const ip = (r.CLIENT_IP ?? '').trim();
-      tested.push({ requestId, timestamp: r.TIMESTAMP_DERIVED, ip, size, actions: parseActions(r.ACTION_MESSAGE), actorId: actorOf.get(ip.toLowerCase()) ?? '' });
+      const ip = normaliseIp(r.CLIENT_IP ?? '');
+      tested.push({ requestId, timestamp: r.TIMESTAMP_DERIVED, ip, size, actions: parseActions(r.ACTION_MESSAGE), actorId: actorOf.get(ip) ?? '' });
     }
   }
   for (const day of baselineDaysFor(b.manifest, wave.guestId15)) {

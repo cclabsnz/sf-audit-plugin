@@ -32,6 +32,37 @@ const MARKERS: Array<{ name: string; re: RegExp }> = [
   { name: 'unicode-escape', re: /%u00/i },
 ];
 
+/**
+ * One canonical form per address, used on both sides of every IP comparison: trimmed,
+ * lowercased, and for IPv6 fully expanded then compressed per RFC 5952 (leading zeros dropped,
+ * the first longest run of two or more zero groups written as ::). Text that is not a plain
+ * IPv6 address (including IPv4-embedded forms) is only trimmed and lowercased.
+ */
+export function normaliseIp(raw: string): string {
+  const ip = (raw ?? '').trim().toLowerCase();
+  if (!ip.includes(':') || ip.includes('.')) return ip;
+  const halves = ip.split('::');
+  if (halves.length > 2) return ip;
+  const left = halves[0] ? halves[0].split(':') : [];
+  const right = halves.length === 2 && halves[1] ? halves[1].split(':') : [];
+  const fill = halves.length === 2 ? 8 - left.length - right.length : 0;
+  if ((halves.length === 1 && left.length !== 8) || fill < 0 || (halves.length === 2 && fill < 1)) return ip;
+  const groups = [...left, ...Array<string>(fill).fill('0'), ...right];
+  if (groups.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return ip;
+  const hex = groups.map((g) => parseInt(g, 16).toString(16));
+  let bestStart = -1;
+  let bestLen = 0;
+  for (let i = 0; i < 8;) {
+    if (hex[i] !== '0') { i++; continue; }
+    let j = i;
+    while (j < 8 && hex[j] === '0') j++;
+    if (j - i > bestLen) { bestStart = i; bestLen = j - i; }
+    i = j;
+  }
+  if (bestLen < 2) return hex.join(':');
+  return `${hex.slice(0, bestStart).join(':')}::${hex.slice(bestStart + bestLen).join(':')}`;
+}
+
 export function blockOf(rawIp: string): string {
   const ip = rawIp.trim().toLowerCase();
   if (ip.includes(':')) {
@@ -58,7 +89,7 @@ async function aggregate(b: Bundle, guestId15: string, day: string): Promise<Map
   const blocks = new Map<string, BlockAgg>();
   for await (const r of b.rows('AuraRequest', day)) {
     if (id15(r.USER_ID) !== guestId15 && id15(r.USER_ID_DERIVED) !== guestId15) continue;
-    const ip = (r.CLIENT_IP ?? '').trim().toLowerCase();
+    const ip = normaliseIp(r.CLIENT_IP ?? '');
     if (!ip) continue;
     const key = blockOf(ip);
     const ts = (r.TIMESTAMP_DERIVED ?? '').trim();
@@ -110,7 +141,7 @@ export async function findActors(b: Bundle, wave: Wave, ranges: IpRangeSet | nul
     for (const [key, a] of await aggregate(b, wave.guestId15, day)) if (!waveBlocks.has(key)) baselineMax = Math.max(baselineMax, a.calls);
   }
   const threshold = Math.max(DEFAULTS.outlierFloor, DEFAULTS.outlierMultiple * baselineMax);
-  const detectorBlocks = new Set(b.anomalies.filter((e) => wave.eventIds.includes(e.eventIdentifier) && e.sourceIp).map((e) => blockOf(e.sourceIp!.trim())));
+  const detectorBlocks = new Set(b.anomalies.filter((e) => wave.eventIds.includes(e.eventIdentifier) && e.sourceIp).map((e) => blockOf(normaliseIp(e.sourceIp!))));
 
   const merged = new Map<string, { agg: BlockAgg; days: Set<string>; sources: Set<'detector-ip' | 'outlier'> }>();
   for (const day of wave.days) {
