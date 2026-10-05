@@ -16,7 +16,7 @@ const manifest = { limits: { queryAllFiles: true, viewAllData: true }, ipRangeFi
 describe('verdict', () => {
   it('is not-assessed (never no-evidence) when required logs are missing', () => {
     expect(outcomeOf({ ...base, requiredLogsPresent: false })).toBe('not-assessed');
-    expect(limitsFor({ ...base, requiredLogsPresent: false }, manifest).join(' ')).toMatch(/not collected/);
+    expect(limitsFor({ ...base, requiredLogsPresent: false }).join(' ')).toMatch(/not collected/);
   });
   it('is indeterminate with no actors and no spike', () => {
     expect(classify(base)).toBe('indeterminate');
@@ -25,7 +25,7 @@ describe('verdict', () => {
     expect(classify({ ...base, spikes: [{ ...base.spikes[0], isSpike: true, ratio: 9 }] })).toBe('organic');
   });
   it('always states that response bodies are never logged', () => {
-    expect(limitsFor(base, manifest).join(' ')).toMatch(/bodies are never logged/);
+    expect(limitsFor(base).join(' ')).toMatch(/bodies are never logged/);
   });
 });
 
@@ -43,9 +43,9 @@ describe('verdict precedence and caveats', () => {
     const v: VerdictInput = { ...base, actors: [scanner], outcomes: { ...base.outcomes, identityLinks: [link] } };
     expect(classify(v)).toBe('internal-testing');
     expect(nextStepsFor(v, [], manifest).join(' ')).toMatch(/treat this as an incident/);
-    expect(limitsFor(v, manifest).join(' ')).toMatch(/link alone does not show/);
+    expect(limitsFor(v).join(' ')).toMatch(/link alone does not show/);
   });
   it('states unmatched call counts', () => {
-    expect(limitsFor({ ...base, responses: { ...base.responses, unmatchedCalls: 3 } }, manifest).join(' ')).toMatch(/3 data-access or auth calls had no matching Sites row/);
+    expect(limitsFor({ ...base, responses: { ...base.responses, unmatchedCalls: 3 } }).join(' ')).toMatch(/3 data-access or auth calls had no matching Sites row/);
   });
 });

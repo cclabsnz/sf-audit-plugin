@@ -19,7 +19,7 @@ export default class AuditIncidentCollectCommand extends SfCommand<IncidentColle
   ];
   public static flags = {
     'target-org': Flags.requiredOrg(),
-    since: Flags.integer({ summary: 'Days of Guest User Anomaly events to read (max 365).', default: 30, min: 1, max: 365 }),
+    since: Flags.integer({ summary: 'Days of Guest User Anomaly events to read. Defaults to the oldest available, capped at 365.', default: 365, min: 1, max: 365 }),
     window: Flags.string({ summary: 'Explicit day window instead of discovery: YYYY-MM-DD/YYYY-MM-DD or YYYY-MM-DD/PnD (max 31 days).', helpValue: '2026-09-14/2026-09-16' }),
     event: Flags.string({ summary: 'Keep only the wave containing this EventIdentifier.' }),
     'ip-ranges': Flags.string({ summary: 'Local provider range file (AWS ip-ranges.json, GCP cloud.json, Azure service tags, or CIDR list). Repeatable.', multiple: true }),

@@ -35,16 +35,23 @@ export function outcomeOf(v: VerdictInput): WaveOutcome {
   return 'no-evidence';
 }
 
-export function limitsFor(v: VerdictInput, m: BundleManifest): string[] {
-  const out = ['Response bodies are never logged by Salesforce, so the content of any reply is unknown; only its size is.'];
-  if (!v.requiredLogsPresent) out.push(`AuraRequest or Sites logs were not collected for ${v.wave.days.join(', ')}, so reply sizes could not be assessed.`);
-  if (!m.limits.queryAllFiles) out.push('The collecting user lacks Query All Files, so files owned by or shared with guest users were not checked.');
-  if (!m.limits.viewAllData) out.push('The collecting user lacks View All Data, so record visibility checks are partial.');
-  if (m.ipRangeFiles.length === 0) out.push('Hosting provider not assessed: no --ip-ranges files were supplied.');
-  if (v.actors.some((a) => !a.hostingAssessed && a.block.includes(':'))) out.push('Hosting provider not assessed for IPv6 addresses.');
+/** Org-wide limits: they hold for the whole report, including one with zero waves. */
+export function globalLimitsFor(m: BundleManifest): string[] {
+  const out: string[] = [];
   if (!m.detectorAvailable) out.push('Guest User Anomaly events were not available; waves come from the supplied window only.');
   if (m.audit.inaccessible) out.push('The setup audit trail could not be read, so configuration changes are unknown.');
   if (m.audit.truncatedWindows.length > 0) out.push(`The setup audit trail was truncated for ${m.audit.truncatedWindows.length} window(s); some changes may be missing.`);
+  if (m.ipRangeFiles.length === 0) out.push('Hosting provider not assessed: no --ip-ranges files were supplied.');
+  if (!m.limits.queryAllFiles) out.push('The collecting user lacks Query All Files, so files owned by or shared with guest users were not checked.');
+  if (!m.limits.viewAllData) out.push('The collecting user lacks View All Data, so record visibility checks are partial.');
+  return out;
+}
+
+/** Limits specific to one wave. Org-wide limits live in globalLimitsFor. */
+export function limitsFor(v: VerdictInput): string[] {
+  const out = ['Response bodies are never logged by Salesforce, so the content of any reply is unknown; only its size is.'];
+  if (!v.requiredLogsPresent) out.push(`AuraRequest or Sites logs were not collected for ${v.wave.days.join(', ')}, so reply sizes could not be assessed.`);
+  if (v.actors.some((a) => !a.hostingAssessed && a.block.includes(':'))) out.push('Hosting provider not assessed for IPv6 addresses.');
   if (v.outcomes.selfRegistrationsInActorWindow.length > 0) out.push('Self-registrations occurred during the actor window; the audit trail records no IP, so they cannot be attributed.');
   if (v.responses.unmatchedCalls > 0) out.push(`${v.responses.unmatchedCalls} data-access or auth calls had no matching Sites row; their reply sizes are unknown.`);
   if (v.outcomes.identityLinks.length > 0 && v.actors.some(isScannerLike)) out.push('An identity link and scanner-like traffic were both seen; the link alone does not show the traffic was authorised.');

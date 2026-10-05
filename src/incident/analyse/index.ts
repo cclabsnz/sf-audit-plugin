@@ -10,7 +10,7 @@ import { assessSpikes, computeDayVolumes, type DayVolume } from './baseline.js';
 import { computeConfigDelta, type Asymmetry, type Period } from './configDelta.js';
 import { computeOutcomes } from './outcomes.js';
 import { analyseResponses } from './responses.js';
-import { classify, limitsFor, nextStepsFor, outcomeOf, type VerdictInput } from './verdict.js';
+import { classify, globalLimitsFor, limitsFor, nextStepsFor, outcomeOf, type VerdictInput } from './verdict.js';
 
 export { FORBIDDEN_WORDS } from './verdict.js';
 
@@ -31,6 +31,8 @@ export interface IncidentResult {
   guests: GuestUser[];
   volumes: DayVolume[];
   waves: WaveResult[];
+  /** Org-wide limits, shown with the per-wave limits even when there are zero waves. */
+  globalLimits: string[];
   config: { periods: Period[]; asymmetries: Asymmetry[] };
   coverage: { logs: LogCoverage[]; audit: AuditCoverage; limits: RunningUserLimits; detectorAvailable: boolean; ipRanges: string[] };
   withinBaseline: boolean;
@@ -66,7 +68,7 @@ export async function analyseBundle(dir: string, opts: { spikeRatio?: number } =
       actions: summariseActionCounts(actors.map((a) => a.actionCounts)),
       classification: classify(v),
       result: outcomeOf(v),
-      limits: limitsFor(v, m),
+      limits: limitsFor(v),
       nextSteps: nextStepsFor(v, asymmetries, m),
       asymmetries,
     });
@@ -80,8 +82,13 @@ export async function analyseBundle(dir: string, opts: { spikeRatio?: number } =
     guests: m.guests,
     volumes,
     waves,
+    globalLimits: globalLimitsFor(m),
     config,
     coverage: { logs: m.logs, audit: m.audit, limits: m.limits, detectorAvailable: m.detectorAvailable, ipRanges: m.ipRangeFiles },
-    withinBaseline: waves.every((w) => w.requiredLogsPresent && !w.spikes.some((s) => s.isSpike) && w.actors.length === 0),
+    // Zero waves, or a wave with no baseline, is "nothing assessed", never "within baseline".
+    withinBaseline: waves.length > 0 && waves.every((w) => w.requiredLogsPresent
+      && w.spikes.every((s) => s.baselineMedian !== null)
+      && !w.spikes.some((s) => s.isSpike)
+      && w.actors.length === 0),
   };
 }

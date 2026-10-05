@@ -60,6 +60,10 @@ export async function collectBundle(
   }
   const guests = await snapshotGuests(ctx.soql, anomalies.events.map((e) => e.userId15), opts.warn);
   const waves = opts.window ? wavesFromWindow(parseDayWindow(opts.window), guests) : buildWaves(anomalies.events, guests, { event: opts.event });
+  if (!opts.window && opts.event && waves.length === 0) {
+    throw new Error(`--event ${opts.event} matches no Guest User Anomaly wave in the last ${opts.sinceDays} days. Check the EventIdentifier or widen --since.`);
+  }
+  if (!opts.window && waves.length === 0) opts.warn(`No anomaly waves found in the last ${opts.sinceDays} days; widen --since or pass --window.`);
   // Window mode has no wave event ids, so match on the wave's guest and UTC day instead.
   const events = anomalies.events.filter((e) => waves.some((w) => opts.window
     ? w.guestId15 === e.userId15 && w.days.includes(new Date(e.eventDate).toISOString().slice(0, 10))

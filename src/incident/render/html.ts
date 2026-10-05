@@ -4,7 +4,7 @@ import { chartJsScript } from '../../renderers/chartAsset.js';
 import type { IncidentResult } from '../analyse/index.js';
 import type { buildEvidence } from './evidence.js';
 import { CLASSIFICATION_LABEL, RESULT_LABEL } from './labels.js';
-import { waveSentence } from './markdown.js';
+import { NOTHING_ASSESSED, WITHIN_BASELINE, reportLimits, waveSentence } from './markdown.js';
 
 type Ev = ReturnType<typeof buildEvidence>;
 
@@ -34,8 +34,8 @@ export function renderHtml(r: IncidentResult, ev: Ev, b: Branding): string {
     .map((c) => `${r.waves.filter((w) => w.classification === c).length} ${CLASSIFICATION_LABEL[c].toLowerCase()}`).join(' · ');
   const scorecard = `<div class="scorecard"><div class="big">${n(r.waves.length)}</div>
     <div><div class="label">${r.waves.length === 1 ? 'Wave of guest traffic examined' : 'Waves of guest traffic examined'}</div>
-    <div class="chips">${tally || '<span class="chip tone-low">No waves found</span>'}</div>
-    <p class="tally">${classes ? esc(classes) : ''}</p></div></div>`;
+    <div class="chips">${tally || '<span class="chip tone-muted">Nothing assessed</span>'}</div>
+    <p class="tally">${r.waves.length === 0 ? esc(NOTHING_ASSESSED) : classes ? esc(classes) : ''}</p></div></div>`;
   const waves = r.waves.map((w) => `
     <article class="wave tone-${RESULT_TONE[w.result]}">
       <header><span class="wid">${esc(w.wave.id)}</span><h3>${esc(w.wave.site)}</h3><span class="days">${esc(w.wave.days.join(', '))}</span></header>
@@ -43,7 +43,7 @@ export function renderHtml(r: IncidentResult, ev: Ev, b: Branding): string {
         <div><span class="label">Result</span><span class="chip solid tone-${RESULT_TONE[w.result]}">${esc(RESULT_LABEL[w.result])}</span></div></div>
       <p class="evidence">${esc(waveSentence(w, ev))}</p>
     </article>`).join('');
-  const limits = [...new Set(r.waves.flatMap((w) => w.limits))].map((l) => `<li>${esc(l)}</li>`).join('');
+  const limits = reportLimits(r).map((l) => `<li>${esc(l)}</li>`).join('');
   const steps = [...new Set(r.waves.flatMap((w) => w.nextSteps))].map((s) => `<li>${esc(s)}</li>`).join('');
   const detail = r.waves.map((w) => `
     <div class="detail"><h3><span class="pnum">${esc(w.wave.id)}</span>${esc(w.wave.site)} · ${esc(w.wave.days.join(', '))}</h3>
@@ -122,7 +122,7 @@ code{font-family:var(--mono);font-size:12px;word-break:break-all;text-transform:
 <div class="meta">${esc(r.orgName)} · collected ${esc(stamp(r.collectedAt))}${b.preparedFor ? ` · prepared for ${esc(b.preparedFor)}` : ''}</div>
 ${scorecard}</header>
 <section id="summary">${sec('01', 'Summary')}
-${r.withinBaseline ? '<p>Guest traffic stayed within baseline on every collected day.</p>' : ''}
+${r.waves.length === 0 ? `<p>${esc(NOTHING_ASSESSED)}</p>` : r.withinBaseline ? `<p>${esc(WITHIN_BASELINE)}</p>` : ''}
 <div class="waves">${waves}</div>
 <div class="limits"><h3>What this report can't tell you</h3><ul>${limits}</ul></div>
 <div class="steps"><h3>Recommended next steps</h3><ol>${steps}</ol></div></section>

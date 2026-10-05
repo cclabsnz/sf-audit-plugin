@@ -30,12 +30,13 @@ describe('incident analysis acceptance (spec §1 scenario)', () => {
     }
   });
   it('states the Query All Files limit and the missing hosting assessment', () => {
-    const all = r.waves.flatMap((w) => w.limits).join(' ');
+    // C1: org-wide limits moved from each wave to the report-level globalLimits.
+    const all = [...r.globalLimits, ...r.waves.flatMap((w) => w.limits)].join(' ');
     expect(all).toMatch(/Query All Files/);
     expect(all).toMatch(/Hosting provider not assessed/);
   });
   it('never uses the words attack or breach in generated text', () => {
-    const text = r.waves.flatMap((w) => [...w.limits, ...w.nextSteps]).join(' ');
+    const text = [...r.globalLimits, ...r.waves.flatMap((w) => [...w.limits, ...w.nextSteps])].join(' ');
     expect(FORBIDDEN_WORDS.test(text)).toBe(false);
   });
   it('is not within baseline when a wave has missing required logs', async () => {

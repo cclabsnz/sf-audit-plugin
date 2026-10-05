@@ -8,6 +8,14 @@ type Ev = ReturnType<typeof buildEvidence>;
 /** Makes an org-sourced value safe to interpolate into Markdown (tables, headings, raw HTML). */
 export const md = (s: string): string => s.replace(/\r?\n/g, ' ').replace(/\|/g, '\\|').replace(/</g, '&lt;');
 
+export const NOTHING_ASSESSED = 'No Guest User Anomaly waves were found in the collected period, so nothing was assessed.';
+export const WITHIN_BASELINE = 'Guest traffic stayed within baseline on every collected day.';
+
+/** The "What this report can't tell you" box: org-wide limits plus every wave's, deduplicated. */
+export function reportLimits(r: IncidentResult): string[] {
+  return [...new Set([...r.globalLimits, ...r.waves.flatMap((w) => w.limits)])];
+}
+
 export function waveSentence(w: IncidentResult['waves'][number], ev: Ev): string {
   const id = w.wave.id;
   const spike = w.spikes.find((s) => s.isSpike);
@@ -24,7 +32,8 @@ export function renderMarkdown(r: IncidentResult, ev: Ev): string {
   const L: string[] = [];
   L.push(`# Guest-access incident report: ${md(r.orgName)}`, '', `Collected ${r.collectedAt}. Bundle manifest sha256 \`${r.manifestSha256}\`.`, '');
   L.push('## Summary', '');
-  if (r.withinBaseline) L.push('Guest traffic stayed within baseline on every collected day.', '');
+  if (r.waves.length === 0) L.push(NOTHING_ASSESSED, '');
+  else if (r.withinBaseline) L.push(WITHIN_BASELINE, '');
   for (const w of r.waves) {
     L.push(`### ${w.wave.id}: ${md(w.wave.site)}, ${w.wave.days.join(', ')}`, '',
       `- **Classification:** ${CLASSIFICATION_LABEL[w.classification]}`,
@@ -32,7 +41,7 @@ export function renderMarkdown(r: IncidentResult, ev: Ev): string {
       `- **Evidence:** ${waveSentence(w, ev)}`, '');
   }
   L.push("### What this report can't tell you", '');
-  for (const l of [...new Set(r.waves.flatMap((w) => w.limits))]) L.push(`- ${md(l)}`);
+  for (const l of reportLimits(r)) L.push(`- ${md(l)}`);
   L.push('', '### Recommended next steps', '');
   for (const s of [...new Set(r.waves.flatMap((w) => w.nextSteps))]) L.push(`- ${md(s)}`);
   L.push('', '## Timeline', '', `Controller calls per guest user per day ${ev.ref('volumes')}.`, '', '| Day | Guest | Controller calls | Page loads |', '|---|---|---:|---:|');

@@ -132,6 +132,19 @@ describe('collectBundle trust gaps', () => {
     expect(joined).not.toContain('198.51.100.7');
   });
 
+  it('C1: rejects when --event matches no wave', async () => {
+    const t = setup();
+    await expect(collectBundle({ soql: t.soql, rest: t.rest, orgId: '00Dxx0000000000EAA', orgName: 'Test' },
+      { sinceDays: 30, event: 'no-such-event', ipRangeFiles: [], outputDir: t.out, warn: () => {} })).rejects.toThrow(/--event no-such-event matches no Guest User Anomaly wave/);
+  });
+
+  it('C1: warns when discovery finds no waves', async () => {
+    const t = setup({ events: [] });
+    const warn = jest.fn();
+    await collectBundle({ soql: t.soql, rest: t.rest, orgId: '00Dxx0000000000EAA', orgName: 'Test' }, { sinceDays: 30, ipRangeFiles: [], outputDir: t.out, warn });
+    expect(warn).toHaveBeenCalledWith('No anomaly waves found in the last 30 days; widen --since or pass --window.');
+  });
+
   it('removes .tmp when log streaming throws', async () => {
     const t = setup();
     t.rest.getRawToFile.mockImplementation(async (_p: string, dest: string) => {

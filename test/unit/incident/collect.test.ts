@@ -169,3 +169,11 @@ describe('streamGuestLogs safety (fix round 1)', () => {
     expect(cov.every((c) => c.status === 'no-permission' && /View Event Log Files/.test(c.detail ?? ''))).toBe(true);
   });
 });
+
+describe('collect --since (C1)', () => {
+  it('defaults to 365 days, the oldest available, and caps at 365', async () => {
+    const { default: Cmd } = await import('../../../src/commands/audit/incident/collect.js');
+    expect(Cmd.flags.since.default).toBe(365);
+    expect((Cmd.flags.since as unknown as { max: number }).max).toBe(365);
+  });
+});
