@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it, expect, beforeAll } from '@jest/globals';
-import { generateScenario, SITE_A, SITE_B } from '../../fixtures/incident/generate.js';
+import { generateScenario, GUEST_A, SITE_A, SITE_B } from '../../fixtures/incident/generate.js';
 import { analyseBundle, FORBIDDEN_WORDS, type IncidentResult } from '../../../src/incident/analyse/index.js';
 
 let r: IncidentResult;
@@ -48,5 +48,32 @@ describe('incident analysis acceptance (spec §1 scenario)', () => {
     const res = await analyseBundle(dir);
     expect(res.waves.find((w) => w.wave.days.includes('2026-09-15'))!.requiredLogsPresent).toBe(false);
     expect(res.withinBaseline).toBe(false);
+  });
+});
+
+describe('withinBaseline on a quiet wave', () => {
+  const quiet = [{ id: 'W1', guestId15: GUEST_A, site: SITE_A, days: ['2026-09-14'], eventIds: [] }];
+  async function quietBundle(markSitesMissing: boolean): Promise<string> {
+    const dir = await generateScenario();
+    const mp = join(dir, 'manifest.json');
+    const m = JSON.parse(readFileSync(mp, 'utf-8'));
+    m.waves = quiet;
+    if (markSitesMissing) {
+      const log = m.logs.find((l: { type: string; day: string }) => l.type === 'Sites' && l.day === '2026-09-14');
+      log.status = 'missing';
+      delete log.file;
+    }
+    writeFileSync(mp, JSON.stringify(m));
+    return dir;
+  }
+  it('is within baseline when every log is collected', async () => {
+    const res = await analyseBundle(await quietBundle(false));
+    expect(res.withinBaseline).toBe(true);
+    expect(res.waves[0].result).toBe('no-evidence');
+  });
+  it('is not within baseline when the Sites log is missing', async () => {
+    const res = await analyseBundle(await quietBundle(true));
+    expect(res.withinBaseline).toBe(false);
+    expect(res.waves[0].result).toBe('not-assessed');
   });
 });
