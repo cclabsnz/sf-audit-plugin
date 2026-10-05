@@ -1,5 +1,5 @@
 import type { Bundle } from '../bundleIo.js';
-import { id15, type LogType, type Wave } from '../model.js';
+import { DEFAULTS, id15, type LogType, type Wave } from '../model.js';
 import { baselineDaysFor } from './actors.js';
 
 export interface DayVolume {
@@ -56,20 +56,22 @@ function median(xs: number[]): number | null {
 export function assessSpikes(b: Bundle, volumes: DayVolume[], wave: Wave, spikeRatio: number): SpikeAssessment[] {
   const own = volumes.filter((v) => v.guestId15 === wave.guestId15);
   const calls = (day: string) => own.find((v) => v.day === day)?.controllerCalls ?? 0;
-  // Only days on which this guest has rows count as baseline: a guest with no traffic has no
-  // baseline, not a baseline of zero.
-  const base = baselineDaysFor(b.manifest, wave.guestId15).filter((d) => own.some((v) => v.day === d));
+  // Only days with AuraRequest traffic from this guest count as baseline: a day that exists only
+  // through corroboration rows is not a baseline day, and no traffic at all means no baseline.
+  const base = baselineDaysFor(b.manifest, wave.guestId15).filter((d) => own.some((v) => v.day === d && v.controllerCalls + v.pageLoads > 0));
   const baselineMedian = median(base.map(calls));
   return wave.days.map((day) => {
     const c = calls(day);
     const ratio = baselineMedian ? c / baselineMedian : null;
+    // A zero median has no ratio; a quiet baseline must not hide a burst, so use the actor floor.
+    const isSpike = baselineMedian === 0 ? c >= DEFAULTS.outlierFloor : ratio !== null && ratio >= spikeRatio;
     const events = b.anomalies.filter((e) => wave.eventIds.includes(e.eventIdentifier) && e.eventDate.startsWith(day) && e.totalControllerEvents !== undefined);
     return {
       day,
       controllerCalls: c,
       baselineMedian,
       ratio,
-      isSpike: ratio !== null && ratio >= spikeRatio,
+      isSpike,
       detectorSample: events.length ? events.reduce((s, e) => s + (e.totalControllerEvents ?? 0), 0) : null,
     };
   });
