@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { parseActions, classifyAction, summariseActions } from '../../../src/incident/analyse/actions.js';
+import { parseActions, classifyAction, summariseActions, summariseActionCounts } from '../../../src/incident/analyse/actions.js';
 
 describe('parseActions', () => {
   it('splits a batched ACTION_MESSAGE into named actions', () => {
@@ -40,5 +40,14 @@ describe('summariseActions', () => {
     ]);
     expect(s.byClass).toEqual({ 'data-access': 2, auth: 1, plumbing: 0, unknown: 0 });
     expect(s.byName[0]).toEqual({ name: 'SelectableListDataProviderController.getItems', cls: 'data-access', count: 2 });
+  });
+  it('summariseActionCounts over two count maps equals summariseActions over the messages', () => {
+    const a = '1$serviceComponent://x.SelectableListDataProviderController/ACTION$getItems=1;1$apex://SiteLoginFormController/ACTION$login=1';
+    const b = '1$serviceComponent://x.SelectableListDataProviderController/ACTION$getItems=1';
+    const counts: Array<Record<string, number>> = [
+      { 'SelectableListDataProviderController.getItems': 1, 'SiteLoginFormController.login': 1 },
+      { 'SelectableListDataProviderController.getItems': 1 },
+    ];
+    expect(summariseActionCounts(counts)).toEqual(summariseActions([a, b]));
   });
 });

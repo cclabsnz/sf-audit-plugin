@@ -47,13 +47,13 @@ export interface ActionSummary {
   byName: Array<{ name: string; cls: ActionClass; count: number }>;
 }
 
-export function summariseActions(messages: Iterable<string>): ActionSummary {
+export function summariseActionCounts(counts: Iterable<Record<string, number>>): ActionSummary {
   const byClass: Record<ActionClass, number> = { 'data-access': 0, auth: 0, plumbing: 0, unknown: 0 };
   const byName = new Map<string, number>();
-  for (const m of messages) {
-    for (const n of parseActions(m)) {
-      byClass[classifyAction(n)]++;
-      byName.set(n, (byName.get(n) ?? 0) + 1);
+  for (const c of counts) {
+    for (const [name, n] of Object.entries(c)) {
+      byClass[classifyAction(name)] += n;
+      byName.set(name, (byName.get(name) ?? 0) + n);
     }
   }
   return {
@@ -61,4 +61,10 @@ export function summariseActions(messages: Iterable<string>): ActionSummary {
     byName: [...byName.entries()].map(([name, count]) => ({ name, cls: classifyAction(name), count }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
   };
+}
+
+export function summariseActions(messages: Iterable<string>): ActionSummary {
+  const counts: Record<string, number> = {};
+  for (const m of messages) for (const n of parseActions(m)) counts[n] = (counts[n] ?? 0) + 1;
+  return summariseActionCounts([counts]);
 }

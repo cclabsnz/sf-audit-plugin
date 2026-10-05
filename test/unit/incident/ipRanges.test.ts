@@ -14,4 +14,7 @@ describe('ip ranges', () => {
     expect(set.lookup('198.51.100.1')).toBeNull();
     expect(set.lookup('2001:db8::1')).toBeNull();
   });
+  it('rejects a CIDR with an empty prefix length', () => {
+    expect(parseIpRangeFile('vps.txt', '192.0.2.4/\n')).toEqual([]);
+  });
 });

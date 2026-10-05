@@ -19,7 +19,7 @@ function cidr(prefix: string, label: string): Range | null {
   const [addr, bitsText] = prefix.split('/');
   const base = ipv4ToInt(addr);
   const bits = Number(bitsText);
-  if (base === null || !Number.isInteger(bits) || bits < 0 || bits > 32) return null;
+  if (base === null || !bitsText?.trim() || !Number.isInteger(bits) || bits < 0 || bits > 32) return null;
   return { base, bits, label };
 }
 

@@ -2,6 +2,7 @@ import type { Bundle } from '../bundleIo.js';
 import type { BundleManifest, Wave } from '../model.js';
 import { DEFAULTS, id15 } from '../model.js';
 import type { IpRangeSet } from '../ipRanges.js';
+import { parseActions } from './actions.js';
 
 export interface Actor {
   id: string;
@@ -20,8 +21,8 @@ export interface Actor {
   hosting: string | null;
   hostingAssessed: boolean;
   sources: Array<'detector-ip' | 'outlier'>;
-  /** Controller-bearing ACTION_MESSAGE values, kept for action and response analysis. */
-  actionMessages: string[];
+  /** Invocation counts per parsed action name (Controller.method). Bounded by distinct names. */
+  actionCounts: Record<string, number>;
 }
 
 const MARKERS: Array<{ name: string; re: RegExp }> = [
@@ -31,7 +32,8 @@ const MARKERS: Array<{ name: string; re: RegExp }> = [
   { name: 'unicode-escape', re: /%u00/i },
 ];
 
-export function blockOf(ip: string): string {
+export function blockOf(rawIp: string): string {
+  const ip = rawIp.trim().toLowerCase();
   if (ip.includes(':')) {
     const [head, tail] = ip.split('::');
     const left = head ? head.split(':') : [];
@@ -50,26 +52,28 @@ export function baselineDaysFor(manifest: BundleManifest, guestId15: string): st
   return [...days].filter((d) => !waveDays.has(d)).sort();
 }
 
-interface BlockAgg { ips: Set<string>; calls: number; loads: number; first: string; last: string; hourly: Map<string, number>; ua: Map<string, number>; markers: Set<string>; messages: string[] }
+interface BlockAgg { ips: Set<string>; calls: number; loads: number; first: string; last: string; hourly: Map<string, number>; ua: Map<string, number>; markers: Set<string>; actions: Map<string, number> }
 
-async function aggregate(b: Bundle, guestId15: string, day: string, keepMessages: boolean): Promise<Map<string, BlockAgg>> {
+async function aggregate(b: Bundle, guestId15: string, day: string): Promise<Map<string, BlockAgg>> {
   const blocks = new Map<string, BlockAgg>();
   for await (const r of b.rows('AuraRequest', day)) {
     if (id15(r.USER_ID) !== guestId15 && id15(r.USER_ID_DERIVED) !== guestId15) continue;
-    const ip = (r.CLIENT_IP ?? '').trim();
+    const ip = (r.CLIENT_IP ?? '').trim().toLowerCase();
     if (!ip) continue;
     const key = blockOf(ip);
+    const ts = (r.TIMESTAMP_DERIVED ?? '').trim();
     let a = blocks.get(key);
-    if (!a) { a = { ips: new Set(), calls: 0, loads: 0, first: r.TIMESTAMP_DERIVED, last: r.TIMESTAMP_DERIVED, hourly: new Map(), ua: new Map(), markers: new Set(), messages: [] }; blocks.set(key, a); }
+    if (!a) { a = { ips: new Set(), calls: 0, loads: 0, first: ts, last: ts, hourly: new Map(), ua: new Map(), markers: new Set(), actions: new Map() }; blocks.set(key, a); }
     a.ips.add(ip);
-    const ts = r.TIMESTAMP_DERIVED ?? '';
-    if (ts < a.first) a.first = ts;
-    if (ts > a.last) a.last = ts;
+    if (ts) {
+      if (!a.first || ts < a.first) a.first = ts;
+      if (ts > a.last) a.last = ts;
+    }
     if (r.ACTION_MESSAGE) {
       a.calls++;
       const hour = ts.slice(0, 13);
       a.hourly.set(hour, (a.hourly.get(hour) ?? 0) + 1);
-      if (keepMessages) a.messages.push(r.ACTION_MESSAGE);
+      for (const n of parseActions(r.ACTION_MESSAGE)) a.actions.set(n, (a.actions.get(n) ?? 0) + 1);
     } else a.loads++;
     const ua = r.USER_AGENT ?? '';
     a.ua.set(ua, (a.ua.get(ua) ?? 0) + 1);
@@ -97,14 +101,14 @@ function isSteady(hourly: Map<string, number>, first: string, last: string): boo
 export async function findActors(b: Bundle, wave: Wave, ranges: IpRangeSet | null): Promise<Actor[]> {
   let baselineMax = 0;
   for (const day of baselineDaysFor(b.manifest, wave.guestId15)) {
-    for (const a of (await aggregate(b, wave.guestId15, day, false)).values()) baselineMax = Math.max(baselineMax, a.calls);
+    for (const a of (await aggregate(b, wave.guestId15, day)).values()) baselineMax = Math.max(baselineMax, a.calls);
   }
   const threshold = Math.max(DEFAULTS.outlierFloor, DEFAULTS.outlierMultiple * baselineMax);
-  const detectorBlocks = new Set(b.anomalies.filter((e) => wave.eventIds.includes(e.eventIdentifier) && e.sourceIp).map((e) => blockOf(e.sourceIp!)));
+  const detectorBlocks = new Set(b.anomalies.filter((e) => wave.eventIds.includes(e.eventIdentifier) && e.sourceIp).map((e) => blockOf(e.sourceIp!.trim())));
 
   const merged = new Map<string, { agg: BlockAgg; days: Set<string>; sources: Set<'detector-ip' | 'outlier'> }>();
   for (const day of wave.days) {
-    for (const [key, a] of await aggregate(b, wave.guestId15, day, true)) {
+    for (const [key, a] of await aggregate(b, wave.guestId15, day)) {
       const sources: Array<'detector-ip' | 'outlier'> = [];
       if (a.calls > threshold) sources.push('outlier');
       if (detectorBlocks.has(key)) sources.push('detector-ip');
@@ -120,7 +124,7 @@ export async function findActors(b: Bundle, wave: Wave, ranges: IpRangeSet | nul
       a.hourly.forEach((v, k) => m.agg.hourly.set(k, (m.agg.hourly.get(k) ?? 0) + v));
       a.ua.forEach((v, k) => m.agg.ua.set(k, (m.agg.ua.get(k) ?? 0) + v));
       a.markers.forEach((x) => m.agg.markers.add(x));
-      m.agg.messages.push(...a.messages);
+      a.actions.forEach((v, k) => m.agg.actions.set(k, (m.agg.actions.get(k) ?? 0) + v));
     }
   }
 
@@ -147,7 +151,7 @@ export async function findActors(b: Bundle, wave: Wave, ranges: IpRangeSet | nul
         hosting: ranges && v4 ? ranges.lookup(ips[0]) : null,
         hostingAssessed: ranges !== null && v4,
         sources: [...sources].sort() as Array<'detector-ip' | 'outlier'>,
-        actionMessages: agg.messages,
+        actionCounts: Object.fromEntries([...agg.actions.entries()].sort()),
       };
     });
 }
