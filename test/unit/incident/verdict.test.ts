@@ -7,7 +7,7 @@ const base: VerdictInput = {
   wave: { id: 'W1', guestId15: 'g', site: 'S', days: ['2026-01-02'], eventIds: [] },
   spikes: [{ day: '2026-01-02', controllerCalls: 10, baselineMedian: 10, ratio: 1, isSpike: false, detectorSample: null }],
   actors: [],
-  responses: { emptySize: null, emptySizeInferred: false, band: 64, dataAccessCalls: 0, joined: 0, dataAccessJoined: 0, referenceReplies: 0, unmatchedCalls: 0, returnedContent: [], blankRequestIdsDropped: 0 },
+  responses: { emptySize: null, emptySizeInferred: false, band: 64, dataAccessCalls: 0, joined: 0, dataAccessJoined: 0, referenceReplies: 0, unmatchedCalls: 0, unparsedCalls: 0, returnedContent: [], blankRequestIdsDropped: 0 },
   outcomes: { actorLogins: [], successfulLogins: 0, failedLogins: 0, selfRegistrationsInActorWindow: [], identityLinks: [] },
   requiredLogsPresent: true,
 };
@@ -54,6 +54,10 @@ describe('verdict precedence and caveats', () => {
     expect(classify(v)).toBe('internal-testing');
     expect(nextStepsFor(v, [], manifest).join(' ')).toMatch(/treat this as an incident/);
     expect(limitsFor(v).join(' ')).toMatch(/link alone does not show/);
+  });
+  it('C3: states how many controller calls could not be parsed', () => {
+    expect(limitsFor({ ...base, responses: { ...base.responses, unparsedCalls: 4 } })).toContain('4 controller calls could not be parsed; their nature is unknown.');
+    expect(limitsFor(base).join(' ')).not.toMatch(/could not be parsed/);
   });
   it('states unmatched call counts', () => {
     expect(limitsFor({ ...base, responses: { ...base.responses, unmatchedCalls: 3 } }).join(' ')).toMatch(/3 data-access or auth calls had no matching Sites row/);

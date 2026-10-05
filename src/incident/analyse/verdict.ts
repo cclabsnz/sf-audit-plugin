@@ -61,6 +61,7 @@ export function limitsFor(v: VerdictInput): string[] {
     out.push('The empty-reply size was inferred from the replies being tested; a scanner receiving identical non-empty replies would not be detected.');
   }
   if (v.outcomes.selfRegistrationsInActorWindow.length > 0) out.push('Self-registrations occurred during the actor window; the audit trail records no IP, so they cannot be attributed.');
+  if (v.responses.unparsedCalls > 0) out.push(`${v.responses.unparsedCalls} controller calls could not be parsed; their nature is unknown.`);
   if (v.responses.unmatchedCalls > 0) out.push(`${v.responses.unmatchedCalls} data-access or auth calls had no matching Sites row; their reply sizes are unknown.`);
   if (v.outcomes.identityLinks.length > 0 && v.actors.some(isScannerLike)) out.push('An identity link and scanner-like traffic were both seen; the link alone does not show the traffic was authorised.');
   return out;

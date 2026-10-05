@@ -13,29 +13,31 @@ export function parseActions(actionMessage: string): string[] {
   return out;
 }
 
-const AUTH = /(login|forgotpassword|selfregist|signup|register|passwordless|verif)/i;
+/** Matched against the METHOD only, never the controller: LoginHistoryController.getRecords is a read. */
+const AUTH_METHOD = /(login|logout|password|selfreg|register|signup|verif)/i;
 const PLUMBING = [
   /^RichTextController\./, /^NavigationMenuDataProviderController\./, /^NetworkTrackingController\./,
   /^InstrumentationBeaconController\./, /^QuarterbackController\./, /^ComponentController\./,
   /^HostConfigController\./, /^PubliclyCacheableAttributeLoaderController\./, /^omnistudio__/,
   /recaptcha/i, /^LabelController\./, /^DynamicThemeController\./,
 ];
-const DATA_ACCESS = [
-  /\.getItems$/, /\.getRecord\w*$/, /\.executeGraphQL$/, /\.getListUi\w*$/, /\.getRelatedList\w*$/,
-  /\.getLookupRecords$/, /\.search\w*$/,
+const DATA_ACCESS_METHOD = [
+  /^getItems$/, /^getRecord\w*$/, /^executeGraphQL$/, /^getListUi\w*$/, /^getRelatedList\w*$/,
+  /^getLookupRecords$/, /^search\w*$/,
 ];
-const STANDARD_CONTROLLER = /^(?:[A-Z]\w*Controller|[A-Z]\w*DataProvider)\.\w+$/;
 
 /**
- * Auth wins over everything (a login controller is never data access). Custom Apex that is not
- * plumbing counts as data access: an @AuraEnabled method callable by a guest is a read surface.
+ * Classified by method, data access first: a known read method is data access whatever its
+ * controller is called. Then auth (method only), then known plumbing. Anything else that parsed
+ * may read data — an @AuraEnabled method callable by a guest is a read surface — so it is
+ * assessed as data access. `unknown` is kept for compatibility and never returned for a parsed name.
  */
 export function classifyAction(name: string): ActionClass {
-  if (AUTH.test(name)) return 'auth';
+  const method = name.slice(name.lastIndexOf('.') + 1);
+  if (DATA_ACCESS_METHOD.some((r) => r.test(method))) return 'data-access';
+  if (AUTH_METHOD.test(method)) return 'auth';
   if (PLUMBING.some((r) => r.test(name))) return 'plumbing';
-  if (DATA_ACCESS.some((r) => r.test(name))) return 'data-access';
-  if (STANDARD_CONTROLLER.test(name)) return 'data-access';
-  return 'unknown';
+  return 'data-access';
 }
 
 export function classesOf(actionMessage: string): Set<ActionClass> {

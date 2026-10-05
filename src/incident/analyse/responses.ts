@@ -33,7 +33,8 @@ export interface ResponseSummary {
   returnedContent: ReturnedContent[];
   blankRequestIdsDropped: number;
   /** Data-access and auth calls on the wave days whose REQUEST_ID had no Sites size that day. */
-  unmatchedCalls: number;
+  unmatchedCalls: number;  /** Guest controller calls on the wave days with an ACTION_MESSAGE that parsed to no action. */
+  unparsedCalls: number;
 }
 
 const modeOf = (freq: Map<number, number>): number | undefined =>
@@ -54,7 +55,7 @@ export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): 
   const actorOf = new Map(actors.flatMap((a) => a.ips.map((ip) => [ip.trim().toLowerCase(), a.id] as const)));
   const out: ResponseSummary = {
     emptySize: null, emptySizeInferred: false, band: DEFAULTS.emptyBandBytes, dataAccessCalls: 0, joined: 0, dataAccessJoined: 0,
-    referenceReplies: 0, returnedContent: [], blankRequestIdsDropped: 0, unmatchedCalls: 0,
+    referenceReplies: 0, returnedContent: [], blankRequestIdsDropped: 0, unmatchedCalls: 0, unparsedCalls: 0,
   };
   const isGuest = (r: Record<string, string>) => id15(r.USER_ID) === wave.guestId15 || id15(r.USER_ID_DERIVED) === wave.guestId15;
   const sizesFor = async (day: string, countBlanks: boolean): Promise<Map<string, number>> => {
@@ -76,6 +77,7 @@ export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): 
     const sizes = await sizesFor(day, true);
     for await (const r of b.rows('AuraRequest', day)) {
       if (!r.ACTION_MESSAGE || !isGuest(r)) continue;
+      if (parseActions(r.ACTION_MESSAGE).length === 0) { out.unparsedCalls++; continue; }
       const cls = classesOf(r.ACTION_MESSAGE);
       const dataAccess = cls.has('data-access');
       if (dataAccess) out.dataAccessCalls++;

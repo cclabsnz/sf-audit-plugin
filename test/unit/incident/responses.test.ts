@@ -45,4 +45,14 @@ describe('analyseResponses', () => {
     expect(r.unmatchedCalls).toBe(1);
     expect(r.returnedContent).toEqual([]);
   });
+  it('C3: counts guest controller calls whose ACTION_MESSAGE cannot be parsed', async () => {
+    const aura = [
+      { CLIENT_IP: '203.0.113.9', USER_ID: '005xx000000gstA', USER_ID_DERIVED: '', ACTION_MESSAGE: 'something-unrecognised', REQUEST_ID: 'r1', TIMESTAMP_DERIVED: '2026-01-01T00:00:01Z' },
+      { CLIENT_IP: '203.0.113.9', USER_ID: '005xx000000gstA', USER_ID_DERIVED: '', ACTION_MESSAGE: '', REQUEST_ID: 'r2', TIMESTAMP_DERIVED: '2026-01-01T00:00:02Z' },
+    ];
+    const wave = { id: 'WX', guestId15: '005xx000000gstA', site: 's', days: ['2026-01-01'], eventIds: [] } as Wave;
+    const stub = { manifest: { waves: [wave], logs: [] }, rows: (type: string) => (async function* () { yield* (type === 'Sites' ? [] : aura); })() } as unknown as Bundle;
+    const r = await analyseResponses(stub, wave, []);
+    expect(r.unparsedCalls).toBe(1);
+  });
 });

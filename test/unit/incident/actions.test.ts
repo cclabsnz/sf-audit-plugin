@@ -28,7 +28,25 @@ describe('classifyAction', () => {
     ['omnistudio__FlexRuntime.logUsageEvents', 'plumbing'],
     ['AIR_GoogleRecaptchaController.getSiteKey', 'plumbing'],
     ['ComponentController.reportFailedAction', 'plumbing'],
+    ['SiteLoginFormController.getForgotPasswordUrl', 'auth'],
   ])('%s → %s', (name, cls) => { expect(classifyAction(name)).toBe(cls); });
+});
+
+describe('classifyAction by method, data-access first (C3)', () => {
+  it.each([
+    ['VerifiedProviderListController.getItems', 'data-access'],
+    ['LoginHistoryController.getRecords', 'data-access'],
+    ['MemberRegisterController.getMembers', 'data-access'],
+    ['PortalService.fetchCases', 'data-access'],
+    ['AIR_Custom.lookup', 'data-access'],
+  ])('%s → %s', (name, cls) => { expect(classifyAction(name)).toBe(cls); });
+  it('classifies an execute(...) target by its own method', () => {
+    expect(parseActions('1$aura://ApexActionController/ACTION$execute(AIR_Custom.lookup)=1')).toEqual(['AIR_Custom.lookup']);
+    expect(classifyAction(parseActions('1$aura://ApexActionController/ACTION$execute(AIR_Custom.lookup)=1')[0])).toBe('data-access');
+  });
+  it('never returns unknown for a parsed name', () => {
+    for (const n of ['X.y', 'Foo.bar', 'a__B.c', 'LoginThing.doStuff']) expect(classifyAction(n)).not.toBe('unknown');
+  });
 });
 
 describe('summariseActions', () => {

@@ -7,7 +7,7 @@ import { analyseBundle } from '../../../src/incident/analyse/index.js';
 import { buildEvidence } from '../../../src/incident/render/evidence.js';
 import { renderHtml } from '../../../src/incident/render/html.js';
 import { renderMarkdown } from '../../../src/incident/render/markdown.js';
-import { midnightSpill, noReferenceReplies, nullBaseline, rotatingIps, uniformNonEmptyReplies, zeroWaves } from '../../fixtures/incident/variants.js';
+import { customApexReplies, midnightSpill, noReferenceReplies, nullBaseline, rotatingIps, uniformNonEmptyReplies, zeroWaves } from '../../fixtures/incident/variants.js';
 import { generateScenario } from '../../fixtures/incident/generate.js';
 
 const NOTHING_ASSESSED = 'No Guest User Anomaly waves were found in the collected period, so nothing was assessed.';
@@ -85,5 +85,16 @@ describe('C4: the empty-reply size comes from a reference set, not the replies u
     const { w3 } = await w3Of(await noReferenceReplies());
     expect(w3.responses.emptySizeInferred).toBe(true);
     expect(w3.limits.join(' ')).toContain('The empty-reply size was inferred from the replies being tested; a scanner receiving identical non-empty replies would not be detected.');
+  });
+});
+
+describe('C3: any parsed call that is not auth or plumbing is assessed as data access', () => {
+  it('W3 replies from apex://PortalService/ACTION$fetchCases are flagged as content-returned', async () => {
+    const { r, w3 } = await w3Of(await customApexReplies());
+    expect(w3.responses.dataAccessCalls).toBe(198);
+    expect(w3.responses.returnedContent).toHaveLength(7);
+    expect(w3.responses.returnedContent.every((x) => x.actions.includes('PortalService.fetchCases'))).toBe(true);
+    expect(w3.result).toBe('content-returned');
+    expect(r.withinBaseline).toBe(false);
   });
 });
