@@ -6,7 +6,8 @@ import { CLASSIFICATION_LABEL, NOT_COLLECTED, RESULT_LABEL, auraCollectedDays, c
 type Ev = ReturnType<typeof buildEvidence>;
 
 /** Makes an org-sourced value safe to interpolate into Markdown (tables, headings, raw HTML). */
-export const md = (s: string): string => s.replace(/\r?\n/g, ' ').replace(/\|/g, '\\|').replace(/</g, '&lt;');
+export const md = (s: string): string =>
+  s.replace(/\\/g, '\\\\').replace(/\r?\n/g, ' ').replace(/\|/g, '\\|').replace(/</g, '&lt;');
 
 export const NOTHING_ASSESSED = 'No Guest User Anomaly waves were found in the collected period, so nothing was assessed.';
 export const WITHIN_BASELINE = 'Guest traffic stayed within baseline on every collected day.';

@@ -17,7 +17,7 @@ describe('renderHtml', () => {
     expect(html.indexOf('Unattributed automated scan')).toBeLessThan(first);
     expect(html.indexOf("What this report can&#39;t tell you") >= 0 || html.indexOf("What this report can't tell you") >= 0).toBe(true);
     expect(html).toMatch(/\[E\d+\]/);
-    expect(/\b(attack|breach)/i.test(html.replace(/<script>[\s\S]*?<\/script>/g, ''))).toBe(false);
+    expect(/\b(attack|breach)/i.test(html.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, ''))).toBe(false);
   });
   it('escapes values from the org', () => {
     const evil = structuredClone(r);

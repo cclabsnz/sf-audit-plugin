@@ -7,7 +7,7 @@ import { generateScenario } from '../../fixtures/incident/generate.js';
 import { analyseBundle, type IncidentResult } from '../../../src/incident/analyse/index.js';
 import { buildEvidence, writeEvidence } from '../../../src/incident/render/evidence.js';
 import { redactResult } from '../../../src/incident/render/redact.js';
-import { renderMarkdown } from '../../../src/incident/render/markdown.js';
+import { md, renderMarkdown } from '../../../src/incident/render/markdown.js';
 import { renderHtml } from '../../../src/incident/render/html.js';
 import { DEFAULT_BRANDING } from '@cclabsnz/sf-core';
 
@@ -129,5 +129,13 @@ describe('limits box', () => {
     const box = md.slice(md.indexOf("### What this report can't tell you"), md.indexOf('### Recommended next steps'));
     expect(box).toMatch(/^- Response bodies are never logged/m);
     expect(box).toMatch(/^- W1: The empty-reply size was inferred/m);
+  });
+});
+
+describe('md', () => {
+  it('escapes backslashes first so a trailing backslash cannot unescape a pipe', () => {
+    expect(md('a\\|b')).toBe('a\\\\\\|b');
+    expect(md('ends\\')).toBe('ends\\\\');
+    expect(md('x|y\n<z')).toBe('x\\|y &lt;z');
   });
 });

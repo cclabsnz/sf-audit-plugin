@@ -1,4 +1,5 @@
 import type { AuditRow, GuestUser, Wave } from '../model.js';
+import { containsWord } from '../text.js';
 import { isSelfRegistration } from './outcomes.js';
 
 export interface ConfigChange { at: string; by: string; section: string | null; display: string; sites: string[] }
@@ -16,8 +17,7 @@ function labelsOf(g: GuestUser): string[] {
 }
 
 function mentions(text: string, label: string): boolean {
-  const esc = label.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`(^|[^A-Za-z0-9])${esc}($|[^A-Za-z0-9])`, 'i').test(text);
+  return containsWord(text, label);
 }
 
 /**

