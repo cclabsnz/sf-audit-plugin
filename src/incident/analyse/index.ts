@@ -82,6 +82,6 @@ export async function analyseBundle(dir: string, opts: { spikeRatio?: number } =
     waves,
     config,
     coverage: { logs: m.logs, audit: m.audit, limits: m.limits, detectorAvailable: m.detectorAvailable, ipRanges: m.ipRangeFiles },
-    withinBaseline: waves.every((w) => !w.spikes.some((s) => s.isSpike) && w.actors.length === 0),
+    withinBaseline: waves.every((w) => w.requiredLogsPresent && !w.spikes.some((s) => s.isSpike) && w.actors.length === 0),
   };
 }

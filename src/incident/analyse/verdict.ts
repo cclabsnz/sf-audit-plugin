@@ -17,17 +17,21 @@ export interface VerdictInput {
 
 export const FORBIDDEN_WORDS = /\b(attack|breach)\w*/i;
 
+export function isScannerLike(a: Actor): boolean {
+  return a.steady && (a.markers.length > 0 || a.emptyUaShare > 0.5);
+}
+
 export function classify(v: VerdictInput): Classification {
   if (v.outcomes.identityLinks.length > 0) return 'internal-testing';
-  if (v.actors.some((a) => a.steady && (a.markers.length > 0 || a.emptyUaShare > 0.5))) return 'automated-scan';
+  if (v.actors.some(isScannerLike)) return 'automated-scan';
   if (v.spikes.some((s) => s.isSpike) && v.actors.length === 0) return 'organic';
   return 'indeterminate';
 }
 
 export function outcomeOf(v: VerdictInput): WaveOutcome {
-  if (!v.requiredLogsPresent) return 'not-assessed';
   if (v.outcomes.successfulLogins > 0) return 'access-gained';
   if (v.responses.returnedContent.length > 0) return 'content-returned';
+  if (!v.requiredLogsPresent) return 'not-assessed';
   return 'no-evidence';
 }
 
@@ -43,6 +47,7 @@ export function limitsFor(v: VerdictInput, m: BundleManifest): string[] {
   if (m.audit.truncatedWindows.length > 0) out.push(`The setup audit trail was truncated for ${m.audit.truncatedWindows.length} window(s); some changes may be missing.`);
   if (v.outcomes.selfRegistrationsInActorWindow.length > 0) out.push('Self-registrations occurred during the actor window; the audit trail records no IP, so they cannot be attributed.');
   if (v.responses.unmatchedCalls > 0) out.push(`${v.responses.unmatchedCalls} data-access or auth calls had no matching Sites row; their reply sizes are unknown.`);
+  if (v.outcomes.identityLinks.length > 0 && v.actors.some(isScannerLike)) out.push('An identity link and scanner-like traffic were both seen; the link alone does not show the traffic was authorised.');
   return out;
 }
 
@@ -50,7 +55,7 @@ export function nextStepsFor(v: VerdictInput, asymmetries: Asymmetry[], m: Bundl
   const steps: string[] = [];
   const days = v.wave.days.join(', ');
   for (const a of v.actors) {
-    if (classify(v) === 'automated-scan') steps.push(`Confirm with your security team whether an authorised test ran on ${days} from ${a.block}${a.hosting ? ` (${a.hosting})` : ''}. If none did, treat this as an incident.`);
+    if (isScannerLike(a)) steps.push(`Confirm with your security team whether an authorised test ran on ${days} from ${a.block}${a.hosting ? ` (${a.hosting})` : ''}. If none did, treat this as an incident.`);
   }
   if (v.responses.returnedContent.length > 0) steps.push(`Replay the ${v.responses.returnedContent.length} data-access calls that returned content, as the guest user, to establish what they returned.`);
   for (const l of v.outcomes.identityLinks) steps.push(`Confirm the testing with ${l.userName} (${l.email}); deactivate that user if the test is complete.`);

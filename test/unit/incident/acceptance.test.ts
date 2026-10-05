@@ -1,4 +1,6 @@
 // test/unit/incident/acceptance.test.ts
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect, beforeAll } from '@jest/globals';
 import { generateScenario, SITE_A, SITE_B } from '../../fixtures/incident/generate.js';
 import { analyseBundle, FORBIDDEN_WORDS, type IncidentResult } from '../../../src/incident/analyse/index.js';
@@ -35,5 +37,16 @@ describe('incident analysis acceptance (spec §1 scenario)', () => {
   it('never uses the words attack or breach in generated text', () => {
     const text = r.waves.flatMap((w) => [...w.limits, ...w.nextSteps]).join(' ');
     expect(FORBIDDEN_WORDS.test(text)).toBe(false);
+  });
+  it('is not within baseline when a wave has missing required logs', async () => {
+    const dir = await generateScenario();
+    const mp = join(dir, 'manifest.json');
+    const m = JSON.parse(readFileSync(mp, 'utf-8'));
+    const log = m.logs.find((l: { type: string; day: string }) => l.type === 'AuraRequest' && l.day === '2026-09-15');
+    log.status = 'missing';
+    writeFileSync(mp, JSON.stringify(m));
+    const res = await analyseBundle(dir);
+    expect(res.waves.find((w) => w.wave.days.includes('2026-09-15'))!.requiredLogsPresent).toBe(false);
+    expect(res.withinBaseline).toBe(false);
   });
 });
