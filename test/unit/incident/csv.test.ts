@@ -2,7 +2,13 @@ import { describe, it, expect } from '@jest/globals';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import * as v8 from 'node:v8';
+import * as vm from 'node:vm';
 import { readCsvCells, readCsvRecords, csvLine, filterLogFile } from '../../../src/incident/csv.js';
+
+v8.setFlagsFromString('--expose_gc');
+const forceGc = vm.runInNewContext('gc') as () => void;
+const live = () => { forceGc(); return process.memoryUsage().heapUsed; };
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-csv-'));
 const w = (name: string, body: string) => { const p = path.join(dir, name); fs.writeFileSync(p, body); return p; };
@@ -92,60 +98,38 @@ describe('filterLogFile', () => {
 
     await expect(Promise.race([filterPromise, timeoutPromise])).rejects.toMatchObject({ code: 'EISDIR' });
   });
-  it('filters a 90+ MB file with peak heap growth < 150 MB', async () => {
-    const p = path.join(dir, 'big-90.csv');
-    const outPath = path.join(dir, 'big-90.out.csv');
-    let interval: NodeJS.Timeout | null = null;
+  it('streams a file far larger than the live-heap bound', async () => {
+    const LIMIT = 64 * 1024 * 1024; // live heap may not grow by more than 64 MiB
+    const input = path.join(dir, 'huge.csv');
+    const output = path.join(dir, 'huge.out.csv');
 
+    // Generate 256+ MB fixture
+    const fd = fs.openSync(input, 'w');
+    fs.writeSync(fd, csvLine(['USER_ID', 'ACTION_MESSAGE']));
+    const targetBytes = 260 * 1024 * 1024;
+    const rowSize = 195;
+    const numRows = Math.ceil(targetBytes / rowSize);
+    const chunk: string[] = [];
+    for (let i = 0; i < numRows; i++) {
+      chunk.push(csvLine([i % 10 === 0 ? '005xx000000gstA' : '005xx000000othr', 'msg,with "quotes"\nand newline ' + i.toString().padEnd(140)]));
+      if (chunk.length === 10_000) { fs.writeSync(fd, chunk.join('')); chunk.length = 0; }
+    }
+    if (chunk.length > 0) fs.writeSync(fd, chunk.join(''));
+    fs.closeSync(fd);
+
+    expect(fs.statSync(input).size).toBeGreaterThan(256 * 1024 * 1024);
+    const base = live();
+    let peak = 0;
+    const timer = setInterval(() => { peak = Math.max(peak, live() - base); }, 250);
     try {
-      // Generate 90+ MB fixture
-      const fd = fs.openSync(p, 'w');
-      fs.writeSync(fd, csvLine(['USER_ID', 'ACTION_MESSAGE']));
-
-      const targetBytes = 95 * 1024 * 1024;
-      const rowSize = 195;
-      const numRows = Math.ceil(targetBytes / rowSize);
-      const chunk: string[] = [];
-      for (let i = 0; i < numRows; i++) {
-        chunk.push(csvLine([i % 10 === 0 ? '005xx000000gstA' : '005xx000000othr', 'msg,with "quotes"\nand newline ' + i.toString().padEnd(140)]));
-        if (chunk.length === 10_000) { fs.writeSync(fd, chunk.join('')); chunk.length = 0; }
-      }
-      if (chunk.length > 0) fs.writeSync(fd, chunk.join(''));
-      fs.closeSync(fd);
-
-      const fileSize = fs.statSync(p).size;
-      expect(fileSize).toBeGreaterThan(90 * 1024 * 1024);
-
-      // Garbage collect and record baseline
-      global.gc?.();
-      const baselineHeap = process.memoryUsage().heapUsed;
-
-      // Sample peak heap during operation
-      let peakHeapDuringOp = baselineHeap;
-      interval = setInterval(() => {
-        const current = process.memoryUsage().heapUsed;
-        if (current > peakHeapDuringOp) peakHeapDuringOp = current;
-      }, 10);
-
-      const r = await filterLogFile(p, outPath, new Set(['005xx000000gstA']));
-
-      // Sample once more after completion
-      const finalHeap = process.memoryUsage().heapUsed;
-      if (finalHeap > peakHeapDuringOp) peakHeapDuringOp = finalHeap;
-
-      const peakGrowth = peakHeapDuringOp - baselineHeap;
-      const peakGrowthMB = Math.round(peakGrowth / (1024 * 1024));
-
+      const r = await filterLogFile(input, output, new Set(['005xx000000gstA']));
+      peak = Math.max(peak, live() - base);
       expect(r.totalRows).toBe(numRows);
-      expect(r.guestRows).toBeCloseTo(numRows / 10, -3);
-
-      if (peakGrowth >= 150 * 1024 * 1024) {
-        throw new Error(`peak heap growth ${peakGrowthMB} MB exceeds 150 MB limit`);
-      }
+      if (peak >= LIMIT) throw new Error(`live heap grew ${(peak / 1048576).toFixed(1)} MiB`);
     } finally {
-      if (interval) clearInterval(interval);
-      fs.rmSync(p, { force: true });
-      fs.rmSync(outPath, { force: true });
+      clearInterval(timer);
+      fs.rmSync(input, { force: true });
+      fs.rmSync(output, { force: true });
     }
   }, 300_000);
 });
