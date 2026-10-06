@@ -11,6 +11,48 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+## [v1.14.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.14.0) — 2026-10-06
+
+Two investigation commands for Real-Time Event Monitoring **Guest User Anomaly** alerts, and every
+open dependency advisory cleared.
+
+### Added
+
+- **`sf audit incident collect`** (read-only). Discovers anomaly *waves* (adjacent days on one
+  site), then for each wave day plus one baseline day either side streams the EventLogFiles, keeps
+  only guest-user rows, and snapshots the audit trail, guest configuration and logins from actor
+  addresses into a sha256-sealed bundle under `~/.sf/incidents/`. Collection is resumable (intact
+  logs are reused), a bundle is refused until it is sealed complete, and only "unavailable" or
+  "no permission" errors degrade to a stated gap; anything else stops the run.
+- **`sf audit incident report`** (offline). Analyses a bundle and writes an HTML report (prints
+  to PDF), Markdown, JSON, and one evidence CSV behind every number cited. `--redact` truncates
+  addresses and replaces linked users' names and emails with their ids.
+- **The analysis**:
+  - spike against baseline, counting controller calls only and never summing across log types;
+  - actor blocks, told apart from always-on proxies by their own history and the org's normal
+    busiest block;
+  - reply sizes via unambiguous AuraRequest/Sites joins, against an empty size learned per action;
+  - login outcomes and identity links, with shared egress (proxies, NAT) set aside;
+  - guest-access configuration changes between waves, including hardening applied to one site but
+    not another.
+- **No false reassurance.** "No evidence of access" and "within baseline" are reported only when
+  the collected evidence supports them; otherwise a wave reads "not assessed" with the reason, and
+  every report states what it cannot tell you.
+
+### Security
+
+- Cleared all open Dependabot advisories: `undici` 8.10.0 → 8.11.2, and `csv-parse` 5 → 7 by
+  raising `@salesforce/core` to `^9.3.0`, which carries the fix to installers, not just this repo.
+- Raised the `fast-uri@3` override floor to `^3.1.8` and the `brace-expansion` floor to
+  `^5.0.11`. `pnpm audit --prod` and a packed consumer-tree `npm audit` both report zero
+  vulnerabilities.
+
+### Notes
+
+- Not a security check: the check count stays at 92 and the security grade is unaffected.
+- `--ip-ranges` reads provider range files you supply; the plugin never fetches them, so the org
+  stays the only network destination.
+
 ## [v1.13.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.13.0) — 2026-09-25
 
 Five new attack chains, and the correlation defect that kept them from being expressible.
