@@ -11,6 +11,22 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+## [v1.15.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.15.0) — 2026-10-06
+
+One new check, and four existing checks that stop reporting conclusions they had not established.
+
+### Added
+
+- **`lightning-message-channel`** flags Lightning Message Service channels with `isExposed=true`,
+  which outside namespaces, including every installed managed package, can publish to and
+  subscribe on. Sharing rules, org-wide defaults and field-level security do not reach the bus.
+  Salesforce's AppExchange Security Review requires `isExposed=false`, and the setting cannot be
+  reversed once true, so remediation is a new channel plus migrating its publishers and
+  subscribers, not a toggle. Installed channels are reported separately at LOW, since the fix sits
+  with the vendor. The finding says what the metadata cannot show: what a channel carries is
+  visible only in the publishing component. One Tooling query; grants no attack-chain capability.
+  Check count is now **93**.
+
 ### Fixed
 
 - **Four checks no longer report conclusions they had not established.** Each was both untested and
@@ -42,8 +58,16 @@ Merged to `main`, not yet released.
   nullable for External Credential-backed entries. The inventory finding handled that; the unused,
   HTTP and anonymous notes interpolated it directly.
 
+### Security
+
+- Removed `sprintf-js` from the dependency tree (GHSA-hp3w-g68c-fv3c, no patched release). It
+  reached the tree only through Jest's coverage loader via `js-yaml` 3; that loader now resolves
+  `js-yaml` 4, which does not depend on it. Development-only, and not in the shipped runtime.
+
 ### Changed
 
+- npm description corrected from 88 to 93 checks, with keywords for event monitoring, guest-user
+  and incident-response searches. The README feature list now includes `sf audit incident`.
 - 57 unit tests across those four checks, taking the untested-check count from 33 of 93 to 29 and
   the suite to 151 files / 1519 tests. Branch coverage 75%, statements 84%.
 
