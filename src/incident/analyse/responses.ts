@@ -159,7 +159,9 @@ export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): 
       tested.push({ requestId, timestamp: r.TIMESTAMP_DERIVED, ip, size, actions: parseActions(r.ACTION_MESSAGE), actorId: actorOf.get(ip) ?? '', action });
     }
   }
-  const baselineActions = new Set<string>();
+  // Blocks absent on the wave days that called each data-access action on baseline days. An action
+  // is ordinary traffic only when 3+ such blocks used it: one call from a fresh IP proves nothing.
+  const baselineBlocks = new Map<string, Set<string>>();
   for (const day of baselineDaysFor(b.manifest, wave.guestId15)) {
     const replyOf = await repliesFor(day, false);
     for await (const r of b.rows('AuraRequest', day)) {
@@ -170,10 +172,12 @@ export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): 
       reference.set(size, (reference.get(size) ?? 0) + 1);
       const action = primaryAction(r.ACTION_MESSAGE, true);
       bump(referenceByAction, action, size);
-      baselineActions.add(action);
+      let blocks = baselineBlocks.get(action);
+      if (!blocks) { blocks = new Set(); baselineBlocks.set(action, blocks); }
+      blocks.add(blockOf(normaliseIp(r.CLIENT_IP ?? '')));
     }
   }
-  out.baselineActions = [...baselineActions].sort();
+  out.baselineActions = [...baselineBlocks].filter(([, blocks]) => blocks.size >= 3).map(([action]) => action).sort();
   out.referenceReplies = [...reference.values()].reduce((s, n) => s + n, 0);
 
   let mode = modeOf(reference);

@@ -4,7 +4,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { analyseBundle } from '../../../src/incident/analyse/index.js';
 import { generateScenario } from '../../fixtures/incident/generate.js';
-import { actorlessCustomReads, alwaysOnProxy, credentialStuffing, exfilFromOtherIps, realisticBaselineReads, selfRegisteredThrowaways, sharedEgressActor, sharedRequestIds, singleBaselineSpill, visitorReadsOnScanDay } from '../../fixtures/incident/variants.js';
+import { actorlessCustomReads, alwaysOnProxy, credentialStuffing, exfilFromOtherIps, exfilWithOneBaselineCall, quietContentReturned, realisticBaselineReads, selfRegisteredThrowaways, sharedEgressActor, sharedRequestIds, singleBaselineSpill, visitorReadsOnScanDay } from '../../fixtures/incident/variants.js';
 
 // One analysis per bundle: analyseBundle re-hashes every file, which is slow on CI runners.
 const analysed = new Map<string, ReturnType<typeof analyseBundle>>();
@@ -71,9 +71,10 @@ describe('ordinary visitors on the wave days', () => {
     const { D2 } = await import('../../fixtures/incident/generate.js');
     await rewriteLog(dir, 'Sites', D2, (r) => (['9385', '8488', '4442', '2701', '2185'].includes(r.RESPONSE_SIZE) ? { ...r, RESPONSE_SIZE: '1846' } : r));
     const w3 = await wave(dir, 'W3');
-    // The visitors' getItems content is normal (the action recurs on baseline days), so it is
-    // context; the actor got only empty replies and every read joined.
-    expect(w3.result).toBe('no-evidence');
+    // The visitors' getItems content is normal traffic, so it does not make the wave
+    // content-returned; but unexplained non-actor content still blocks no-evidence.
+    expect(w3.result).toBe('not-assessed');
+    expect(w3.limits.join(' ')).toMatch(/replies to other guest traffic/);
   });
 });
 
@@ -125,6 +126,19 @@ describe('pre-merge review: adversarial cases', () => {
     const r = await analyseBundle(await singleBaselineSpill());
     const w3 = r.waves.find((w) => w.wave.id === 'W3')!;
     expect(w3.actors.map((a) => a.block)).toContain('203.0.113.0/24');
+    expect(r.withinBaseline).toBe(false);
+  });
+});
+
+describe('pre-merge re-review', () => {
+  it('N1: one baseline call from a fresh IP does not make the attacker\'s action "normal"', async () => {
+    const w3 = await wave(await exfilWithOneBaselineCall(), 'W3');
+    expect(w3.responses.baselineActions).not.toContain('PortalService.fetchCases');
+    expect(w3.result).toBe('content-returned');
+  });
+  it('N2: "within baseline" never sits above a wave that returned content', async () => {
+    const r = await analyseBundle(await quietContentReturned());
+    expect(r.waves[0].result).toBe('content-returned');
     expect(r.withinBaseline).toBe(false);
   });
 });

@@ -49,6 +49,8 @@ export function notAssessedReasons(v: VerdictInput): string[] {
       ? `none of the ${dataAccessCalls} data-access calls could be joined to a reply size`
       : `only ${dataAccessJoined} of ${dataAccessCalls} data-access calls could be joined to a reply size`);
   }
+  const contextual = v.responses.returnedContent.length - decisiveReturned(v).length;
+  if (contextual > 0) out.push(`${contextual} replies to other guest traffic returned content that cannot be ruled out as the actor's`);
   if (v.outcomes.sharedEgressLogins > 0) out.push(`${v.outcomes.sharedEgressLogins} successful logins from shared actor IPs could not be attributed`);
   if (!v.spikes.every((s) => s.baselineMedian !== null)) out.push('no baseline day was collected, so wave-day volume could not be compared');
   return out;

@@ -345,3 +345,21 @@ export async function singleBaselineSpill(): Promise<string> {
   });
   return dir;
 }
+
+/** Re-review N1: as exfilFromOtherIps, plus ONE fetchCases call on a baseline day from a fresh IP. */
+export async function exfilWithOneBaselineCall(): Promise<string> {
+  const dir = await exfilFromOtherIps();
+  await rewriteLog(dir, 'AuraRequest', '2026-09-14', (r) => r, [{ TIMESTAMP_DERIVED: '2026-09-14T09:00:00.000Z', USER_ID: GUEST_A, CLIENT_IP: '192.0.2.77', USER_AGENT: 'Mozilla/5.0', URI: '/sfsites/aura', REQUEST_ID: 'RONE', ACTION_MESSAGE: FETCH_CASES_MSG }]);
+  await rewriteLog(dir, 'Sites', '2026-09-14', (r) => r, [{ TIMESTAMP_DERIVED: '2026-09-14T09:00:00.000Z', USER_ID: GUEST_A, CLIENT_IP: '192.0.2.77', REQUEST_ID: 'RONE', RESPONSE_SIZE: '9000', URI: '/sfsites/aura' }]);
+  return dir;
+}
+
+/** Re-review N2: no actor and no spike, but 5 custom reads from rotating IPs return 9 KB. */
+export async function quietContentReturned(): Promise<string> {
+  const dir = await generateScenario();
+  await rewriteLog(dir, 'AuraRequest', D2, (r) => (actorRow(r) && !isLogin(r) ? null : r), Array.from({ length: 5 }, (_, i) => ({ TIMESTAMP_DERIVED: `${D2}T07:0${i}:00.000Z`, USER_ID: GUEST_A, CLIENT_IP: `198.51.100.${30 + i}`, USER_AGENT: 'Mozilla/5.0', URI: '/sfsites/aura', REQUEST_ID: `RQ${i}`, ACTION_MESSAGE: FETCH_CASES_MSG })));
+  await rewriteLog(dir, 'Sites', D2, (r) => r, Array.from({ length: 5 }, (_, i) => ({ TIMESTAMP_DERIVED: `${D2}T07:0${i}:00.000Z`, USER_ID: GUEST_A, CLIENT_IP: `198.51.100.${30 + i}`, REQUEST_ID: `RQ${i}`, RESPONSE_SIZE: '9000', URI: '/sfsites/aura' })));
+  // Keep only the W3 wave so withinBaseline depends on it alone.
+  editManifest(dir, (m) => { m.waves = m.waves.filter((w) => w.id === 'W3'); });
+  return dir;
+}

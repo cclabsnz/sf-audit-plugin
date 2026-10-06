@@ -89,6 +89,8 @@ export async function analyseBundle(dir: string, opts: { spikeRatio?: number } =
     withinBaseline: waves.length > 0 && waves.every((w) => w.requiredLogsPresent
       && w.spikes.every((s) => s.baselineMedian !== null)
       && !w.spikes.some((s) => s.isSpike)
-      && w.actors.length === 0),
+      && w.actors.length === 0
+      // Never above a wave that returned content, gained access, or could not be assessed.
+      && w.result === 'no-evidence'),
   };
 }
