@@ -3,16 +3,16 @@
 What is planned for `@cclabsnz/sf-audit` over the next year, and what is deliberately not.
 
 This is a direction of travel, not a commitment with dates. It is maintained by one person
-alongside consulting work, so sequence is more reliable than schedule. Current version: 1.8.x.
+alongside consulting work, so sequence is more reliable than schedule. Current version: 1.14.x.
 
 Anything already shipped lives in [CHANGELOG.md](../CHANGELOG.md).
 
 ## Near term
 
-**Finish the test coverage sweep.** 33 of the 92 checks still have no unit test file. The
+**Finish the test coverage sweep.** 33 of the 93 checks still have no unit test file. The
 statement-coverage figure (80%) is now adequate, but that is a side effect rather than the point:
 every check corrected for reporting a conclusion it had not established was found by writing a test,
-never by reading the code. The remaining 36 are unexamined claims.
+never by reading the code. The remaining 33 are unexamined claims.
 
 **Complete the reporting-accuracy audit.** A sweep for checks that can reach a pass after a silently
 caught query failure flagged 17 candidates. Five were confirmed and fixed; the heuristic over-reports
