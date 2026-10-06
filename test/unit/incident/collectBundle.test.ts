@@ -9,11 +9,20 @@ import { loadBundle, BundleIncompleteError } from '../../../src/incident/bundleI
 import { csvLine } from '../../../src/incident/csv.js';
 
 describe('followUpIps', () => {
+  it('queries each address separately, so one busy IP cannot use up the row cap for the others', async () => {
+    const qs: string[] = [];
+    const soql = { query: jest.fn(), queryAll: jest.fn(async (q: string) => { qs.push(q); return []; }) } as any;
+    await followUpIps(soql, ['192.0.2.7', '198.51.100.143', '2001:db8::1']);
+    const logins = qs.filter((x) => x.includes('FROM LoginHistory'));
+    expect(logins).toHaveLength(3);
+    expect(logins.find((q) => q.includes('2001:db8::1'))).toContain("'2001:db8:0:0:0:0:0:1'");
+  });
+
   it('queries every textual form of an IPv6 address, so an expanded SourceIp is still found', async () => {
     const qs: string[] = [];
     const soql = { query: jest.fn(), queryAll: jest.fn(async (q: string) => { qs.push(q); return []; }) } as any;
     await followUpIps(soql, ['2001:DB8::1', '192.0.2.7']);
-    const q = qs.find((x) => x.includes('FROM LoginHistory'))!;
+    const q = qs.filter((x) => x.includes('FROM LoginHistory')).join(' ');
     for (const form of ["'2001:db8::1'", "'2001:db8:0:0:0:0:0:1'", "'2001:0db8:0000:0000:0000:0000:0000:0001'", "'192.0.2.7'"]) expect(q).toContain(form);
   });
 
@@ -23,7 +32,7 @@ describe('followUpIps', () => {
     const ips = Array.from({ length: 150 }, (_, i) => `10.0.${Math.floor(i / 250)}.${i % 250}`).concat(["192.0.2.4' OR 'x"]);
     await followUpIps(soql, ips);
     const loginQs = qs.filter((q) => q.includes('FROM LoginHistory'));
-    expect(loginQs).toHaveLength(2);
+    expect(loginQs).toHaveLength(150);
     expect(loginQs.every((q) => !/LoginTime/.test(q.split('WHERE')[1]))).toBe(true);
     expect(qs.join(' ')).not.toContain("OR 'x");
   });

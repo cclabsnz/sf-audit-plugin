@@ -53,17 +53,29 @@ export function notAssessedReasons(v: VerdictInput): string[] {
   return out;
 }
 
+/**
+ * Returned content that decides the result. With an isolated actor, only the actor's replies
+ * count: a public site returns content to its ordinary visitors all the time. Without one,
+ * every guest reply counts, because nothing separates the actor from the visitors.
+ */
+export function decisiveReturned(v: VerdictInput): ResponseSummary['returnedContent'] {
+  const all = v.responses.returnedContent;
+  return v.actors.length > 0 ? all.filter((x) => x.actorId !== '') : all;
+}
+
 /** Precedence: access-gained > content-returned > not-assessed > no-evidence. */
 export function outcomeOf(v: VerdictInput): WaveOutcome {
   if (v.outcomes.successfulLogins > 0) return 'access-gained';
-  if (v.responses.returnedContent.length > 0) return 'content-returned';
+  if (decisiveReturned(v).length > 0) return 'content-returned';
   if (notAssessedReasons(v).length > 0) return 'not-assessed';
   return 'no-evidence';
 }
 
 /** Org-wide limits: they hold for the whole report, including one with zero waves. */
 export function globalLimitsFor(m: BundleManifest, followUp?: FollowUp): string[] {
-  const out: string[] = [];
+  const out: string[] = [
+    'Guest traffic carries no identity: activity by one person behind a shared proxy or NAT is only visible if it lifts that block well above its own history; a slow probe inside normal proxy volume cannot be seen in these logs.',
+  ];
   if (!m.detectorAvailable) out.push('Guest User Anomaly events were not available; waves come from the supplied window only.');
   if (m.audit.inaccessible) out.push('The setup audit trail could not be read, so configuration changes are unknown.');
   if (m.audit.truncatedWindows.length > 0) out.push(`The setup audit trail was truncated for ${m.audit.truncatedWindows.length} window(s); some changes may be missing.`);
@@ -89,7 +101,17 @@ export function limitsFor(v: VerdictInput): string[] {
   }
   if (v.outcomes.selfRegistrationsInActorWindow.length > 0) out.push('Self-registrations occurred during the actor window; the audit trail records no IP, so they cannot be attributed.');
   if (v.responses.unparsedCalls > 0) out.push(`${v.responses.unparsedCalls} controller calls could not be parsed; their nature is unknown.`);
+  const contextual = v.responses.returnedContent.length - decisiveReturned(v).length;
+  if (contextual > 0) out.push(`${contextual} replies to other guest traffic on the wave days were larger than empty; a public site returns content to its visitors, so these are listed in the evidence but do not decide the result.`);
+  if (v.responses.judgedAgainstFallback > 0 && v.responses.emptySize !== null) {
+    out.push(`${v.responses.judgedAgainstFallback} data-access calls were judged against the site-wide reference size of ${v.responses.emptySize} bytes because their action had no empty size of its own; smaller non-empty replies may have been missed.`);
+  }
+  if (v.responses.ambiguousCalls > 0) out.push(`${v.responses.ambiguousCalls} calls shared a request id with other rows, so their reply sizes could not be told apart.`);
   if (v.responses.unmatchedCalls > 0) out.push(`${v.responses.unmatchedCalls} data-access or auth calls had no matching Sites row; their reply sizes are unknown.`);
+  const sharedIps = v.actors.flatMap((a) => a.sharedEgressIps);
+  if (sharedIps.length > 0) {
+    out.push(`${sharedIps.length} actor IP(s) are shared by many users (a proxy or NAT): ${v.outcomes.sharedEgressLogins} logins from them are not counted as access, and one person's activity behind them cannot be separated in these logs.`);
+  }
   if (v.outcomes.identityLinks.length > 0 && v.actors.some(isScannerLike)) out.push('An identity link and scanner-like traffic were both seen; the link alone does not show the traffic was authorised.');
   return out;
 }
@@ -100,7 +122,8 @@ export function nextStepsFor(v: VerdictInput, asymmetries: Asymmetry[], m: Bundl
   for (const a of v.actors) {
     if (isScannerLike(a)) steps.push(`Confirm with your security team whether an authorised test ran on ${days} from ${a.block}${a.hosting ? ` (${a.hosting})` : ''}. If none did, treat this as an incident.`);
   }
-  if (v.responses.returnedContent.length > 0) steps.push(`Replay the ${v.responses.returnedContent.length} data-access calls that returned content, as the guest user, to establish what they returned.`);
+  const decisive = decisiveReturned(v).length;
+  if (decisive > 0) steps.push(`Replay the ${decisive} data-access calls that returned content, as the guest user, to establish what they returned.`);
   for (const l of v.outcomes.identityLinks) steps.push(`Confirm the testing with ${l.userName} (${l.email}); deactivate that user if the test is complete.`);
   for (const s of asymmetries) steps.push(`Review whether the ${s.comparedChanges} guest-access changes made to ${s.comparedSite} between waves should also apply to ${s.site}.`);
   if (!m.limits.queryAllFiles) steps.push('Re-run collection as a user with Query All Files to check guest-owned files.');

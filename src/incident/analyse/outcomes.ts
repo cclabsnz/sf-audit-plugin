@@ -6,7 +6,10 @@ export interface IdentityLink { ip: string; userId15: string; userName: string; 
 
 export interface Outcomes {
   actorLogins: Array<LoginRow & { actorId: string }>;
+  /** Successful logins from actor IPs that are NOT shared egress. */
   successfulLogins: number;
+  /** Successful logins from shared-egress actor IPs: listed, never counted as access. */
+  sharedEgressLogins: number;
   failedLogins: number;
   /** Cannot be tied to an IP (the audit trail has none); listed for review, never counted as access. */
   selfRegistrationsInActorWindow: AuditRow[];
@@ -20,7 +23,9 @@ export function isSelfRegistration(row: AuditRow): boolean {
 export function computeOutcomes(b: Bundle, wave: Wave, actors: Actor[]): Outcomes {
   const actorOf = new Map(actors.flatMap((a) => a.ips.map((ip) => [normaliseIp(ip), a.id] as const)));
   const actorLogins = b.followUp.logins.filter((l) => actorOf.has(normaliseIp(l.sourceIp))).map((l) => ({ ...l, actorId: actorOf.get(normaliseIp(l.sourceIp))! }));
-  const ok = actorLogins.filter((l) => l.status === 'Success');
+  const shared = new Set(actors.flatMap((a) => a.sharedEgressIps.map(normaliseIp)));
+  const success = actorLogins.filter((l) => l.status === 'Success');
+  const ok = success.filter((l) => !shared.has(normaliseIp(l.sourceIp)));
   const guestNames = new Map(b.manifest.guests.map((g) => [g.id15, g.name]));
   const waveGuestName = guestNames.get(wave.guestId15);
 
@@ -40,5 +45,8 @@ export function computeOutcomes(b: Bundle, wave: Wave, actors: Actor[]): Outcome
       return !Number.isNaN(at) && !Number.isNaN(from) && !Number.isNaN(to) && at >= from && at <= to;
     }));
 
-  return { actorLogins, successfulLogins: ok.length, failedLogins: actorLogins.length - ok.length, selfRegistrationsInActorWindow, identityLinks };
+  return {
+    actorLogins, successfulLogins: ok.length, sharedEgressLogins: success.length - ok.length,
+    failedLogins: actorLogins.length - success.length, selfRegistrationsInActorWindow, identityLinks,
+  };
 }

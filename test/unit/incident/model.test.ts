@@ -14,6 +14,6 @@ describe('incident model', () => {
     expect(id15('  ')).toBeUndefined();
   });
   it('pins the agreed thresholds', () => {
-    expect(DEFAULTS).toEqual({ spikeRatio: 5, emptyBandBytes: 64, auditWindowDays: 4, auditPageCap: 10000, outlierFloor: 100, outlierMultiple: 3 });
+    expect(DEFAULTS).toEqual({ spikeRatio: 5, emptyBandBytes: 64, auditWindowDays: 4, auditPageCap: 10000, outlierFloor: 100, outlierMultiple: 3, sharedEgressUsers: 8 });
   });
 });

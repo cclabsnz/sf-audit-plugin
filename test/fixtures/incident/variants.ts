@@ -9,7 +9,7 @@ import * as path from 'node:path';
 import { csvLine, readCsvRecords } from '../../../src/incident/csv.js';
 import { BUNDLE_PATHS, logPath, sha256File } from '../../../src/incident/bundleIo.js';
 import type { BundleManifest, LogType } from '../../../src/incident/model.js';
-import { ACTOR_IPS, D2, GUEST_A, SITE_A, generateScenario } from './generate.js';
+import { ACTOR_IPS, BASELINE_DAYS as BASELINE_DAYS_ALL, D1 as D1_ALL, D2, GUEST_A, SITE_A, generateScenario } from './generate.js';
 
 export type Row = Record<string, string>;
 
@@ -156,5 +156,93 @@ export async function uncollectedWaveDay(): Promise<string> {
     l.status = 'missing';
     delete l.file;
   });
+  return dir;
+}
+
+// ---- Patterns seen in the first real-org validation run ----------------------------------
+
+const GET_ITEMS_MSG = '1$serviceComponent://ui.force.components.controllers.lists.selectableListDataProvider.SelectableListDataProviderController/ACTION$getItems=12';
+const ALL_DAYS = [...BASELINE_DAYS_ALL, D1_ALL, D2].sort();
+export const PROXY_IPS = Array.from({ length: 11 }, (_, i) => `192.0.2.${10 + i}`);
+
+/** An always-on corporate proxy: busy every day, a little busier on the wave days. Never an actor. */
+export async function alwaysOnProxy(): Promise<string> {
+  const dir = await generateScenario();
+  for (const day of ALL_DAYS) {
+    const calls = day === D2 || day === D1_ALL ? 2070 : 1500;
+    const aura: Row[] = [];
+    const sites: Row[] = [];
+    for (let i = 0; i < calls; i++) {
+      const ip = PROXY_IPS[i % PROXY_IPS.length];
+      const ts = `${day}T${String(i % 24).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}:00.000Z`;
+      const rid = `RPX${day.replace(/-/g, '')}${String(i).padStart(6, '0')}`;
+      aura.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, USER_AGENT: `Mozilla/5.0 (Windows NT 10.0) Chrome/14${i % 9}.0`, URI: '/sfsites/aura', REQUEST_ID: rid, ACTION_MESSAGE: RICH_TEXT });
+      sites.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, REQUEST_ID: rid, RESPONSE_SIZE: '1856', URI: '/sfsites/aura' });
+    }
+    await rewriteLog(dir, 'AuraRequest', day, (r) => r, aura);
+    await rewriteLog(dir, 'Sites', day, (r) => r, sites);
+  }
+  return dir;
+}
+
+/** A W3 actor IP that many distinct guest-created users also log in from: shared egress. */
+export async function sharedEgressActor(): Promise<string> {
+  const dir = await generateScenario();
+  const f = JSON.parse(fs.readFileSync(path.join(dir, BUNDLE_PATHS.followUp), 'utf-8'));
+  for (let i = 0; i < 20; i++) {
+    const id = `005xx00000shr${String(i).padStart(2, '0')}`;
+    f.logins.push({ loginTime: `2026-09-2${i % 9}T01:00:00Z`, userId15: id, sourceIp: ACTOR_IPS[0], status: 'Success' });
+    f.users.push({ id15: id, name: `Member ${i}`, email: `member${i}@example.com`, createdDate: '2026-08-01T00:00:00Z', createdById15: GUEST_A, profileName: 'Site A Member', isActive: true });
+  }
+  await rewriteJson(dir, BUNDLE_PATHS.followUp, f);
+  return dir;
+}
+
+/** Every W3 actor getItems call shares one REQUEST_ID, which has 785 Sites rows, one of them 1 MB. */
+export async function sharedRequestIds(): Promise<string> {
+  const dir = await generateScenario();
+  const shared = new Set<string>();
+  await rewriteLog(dir, 'AuraRequest', D2, (r) => {
+    if (actorRow(r) && isGetItems(r)) { shared.add(r.REQUEST_ID); return { ...r, REQUEST_ID: 'RSHARED' }; }
+    return r;
+  });
+  const extra: Row[] = Array.from({ length: 785 }, (_, i) => ({ TIMESTAMP_DERIVED: `${D2}T04:04:${String(i % 60).padStart(2, '0')}.000Z`, USER_ID: GUEST_A, CLIENT_IP: ACTOR_IPS[0], REQUEST_ID: 'RSHARED', RESPONSE_SIZE: i === 0 ? '1023096' : '1787', URI: '/sfsites/aura' }));
+  await rewriteLog(dir, 'Sites', D2, (r) => (shared.has(r.REQUEST_ID) ? null : r), extra);
+  return dir;
+}
+
+/** Legitimate visitors' reads on baseline days return data: mostly 2247 bytes, sometimes an empty 1846. */
+export async function realisticBaselineReads(): Promise<string> {
+  const dir = await generateScenario();
+  for (const day of ['2026-09-14', '2026-09-16']) {
+    const aura: Row[] = [];
+    const sites: Row[] = [];
+    for (let i = 0; i < 600; i++) {
+      const ip = `10.250.${i % 20}.1`;
+      const ts = `${day}T${String(i % 24).padStart(2, '0')}:00:00.000Z`;
+      const rid = `RBR${day.replace(/-/g, '')}${String(i).padStart(5, '0')}`;
+      aura.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, USER_AGENT: 'Mozilla/5.0', URI: '/sfsites/aura', REQUEST_ID: rid, ACTION_MESSAGE: GET_ITEMS_MSG });
+      sites.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, REQUEST_ID: rid, RESPONSE_SIZE: i % 6 === 0 ? '1846' : '2247', URI: '/sfsites/aura' });
+    }
+    await rewriteLog(dir, 'AuraRequest', day, (r) => r, aura);
+    await rewriteLog(dir, 'Sites', day, (r) => r, sites);
+  }
+  return dir;
+}
+
+/** Ordinary visitors' getItems on the scan day: 100 empty lists (1846) and 50 data-bearing replies (5000). */
+export async function visitorReadsOnScanDay(): Promise<string> {
+  const dir = await generateScenario();
+  const aura: Row[] = [];
+  const sites: Row[] = [];
+  for (let i = 0; i < 150; i++) {
+    const ip = `10.${(i % 20) + 1}.0.1`;
+    const ts = `${D2}T${String(i % 24).padStart(2, '0')}:30:00.000Z`;
+    const rid = `RVR${String(i).padStart(5, '0')}`;
+    aura.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, USER_AGENT: 'Mozilla/5.0', URI: '/sfsites/aura', REQUEST_ID: rid, ACTION_MESSAGE: GET_ITEMS_MSG });
+    sites.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, REQUEST_ID: rid, RESPONSE_SIZE: i < 100 ? '1846' : '5000', URI: '/sfsites/aura' });
+  }
+  await rewriteLog(dir, 'AuraRequest', D2, (r) => r, aura);
+  await rewriteLog(dir, 'Sites', D2, (r) => r, sites);
   return dir;
 }

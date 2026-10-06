@@ -23,6 +23,23 @@ export interface Actor {
   sources: Array<'detector-ip' | 'outlier'>;
   /** Invocation counts per parsed action name (Controller.method). Bounded by distinct names. */
   actionCounts: Record<string, number>;
+  /**
+   * Actor IPs that many distinct users also log in from (a proxy or NAT). Logins from them are
+   * not access, and one person's activity behind them cannot be separated in these logs.
+   */
+  sharedEgressIps: string[];
+}
+
+/** IPs that more than DEFAULTS.sharedEgressUsers distinct users have logged in from. */
+export function sharedEgressIps(b: Bundle): Set<string> {
+  const users = new Map<string, Set<string>>();
+  for (const l of b.followUp.logins) {
+    const ip = normaliseIp(l.sourceIp);
+    let s = users.get(ip);
+    if (!s) { s = new Set(); users.set(ip, s); }
+    s.add(l.userId15);
+  }
+  return new Set([...users.entries()].filter(([, s]) => s.size > DEFAULTS.sharedEgressUsers).map(([ip]) => ip));
 }
 
 const MARKERS: Array<{ name: string; re: RegExp }> = [
@@ -133,21 +150,25 @@ function isSteady(hourly: Map<string, number>, first: string, last: string): boo
 export async function findActors(b: Bundle, wave: Wave, ranges: IpRangeSet | null): Promise<Actor[]> {
   const waveAggs = new Map<string, Map<string, BlockAgg>>();
   for (const day of wave.days) waveAggs.set(day, await aggregate(b, wave.guestId15, day));
-  // A block seen on a wave day is ignored on baseline days: a scan that runs past midnight into a
-  // baseline day must not raise its own threshold.
-  const waveBlocks = new Set([...waveAggs.values()].flatMap((m) => [...m.keys()]));
-  let baselineMax = 0;
-  for (const day of baselineDaysFor(b.manifest, wave.guestId15)) {
-    for (const [key, a] of await aggregate(b, wave.guestId15, day)) if (!waveBlocks.has(key)) baselineMax = Math.max(baselineMax, a.calls);
-  }
-  const threshold = Math.max(DEFAULTS.outlierFloor, DEFAULTS.outlierMultiple * baselineMax);
+  // Proxy vs attacker. A block is an outlier only when its wave-day calls exceed BOTH its own
+  // history (3x its quietest baseline day, so an always-on proxy is never an actor) AND the
+  // org's normal busiest block (3x the busiest block on the QUIETEST baseline day, which a scan
+  // spilling past midnight into one baseline day cannot raise).
+  const baselineDays = baselineDaysFor(b.manifest, wave.guestId15);
+  const perDay: Array<Map<string, BlockAgg>> = [];
+  for (const day of baselineDays) perDay.push(await aggregate(b, wave.guestId15, day));
+  const busiest = perDay.map((m) => Math.max(0, ...[...m.values()].map((a) => a.calls)));
+  const globalRef = busiest.length ? Math.min(...busiest) : 0;
+  const ownMin = (key: string) => (perDay.length ? Math.min(...perDay.map((m) => m.get(key)?.calls ?? 0)) : 0);
+  const thresholdFor = (key: string) => Math.max(DEFAULTS.outlierFloor, DEFAULTS.outlierMultiple * globalRef, DEFAULTS.outlierMultiple * ownMin(key));
+  const shared = sharedEgressIps(b);
   const detectorBlocks = new Set(b.anomalies.filter((e) => wave.eventIds.includes(e.eventIdentifier) && e.sourceIp).map((e) => blockOf(normaliseIp(e.sourceIp!))));
 
   const merged = new Map<string, { agg: BlockAgg; days: Set<string>; sources: Set<'detector-ip' | 'outlier'> }>();
   for (const day of wave.days) {
     for (const [key, a] of waveAggs.get(day)!) {
       const sources: Array<'detector-ip' | 'outlier'> = [];
-      if (a.calls > threshold) sources.push('outlier');
+      if (a.calls > thresholdFor(key)) sources.push('outlier');
       if (detectorBlocks.has(key)) sources.push('detector-ip');
       if (sources.length === 0) continue;
       const m = merged.get(key);
@@ -189,6 +210,7 @@ export async function findActors(b: Bundle, wave: Wave, ranges: IpRangeSet | nul
         hostingAssessed: ranges !== null && v4,
         sources: [...sources].sort() as Array<'detector-ip' | 'outlier'>,
         actionCounts: Object.fromEntries([...agg.actions.entries()].sort()),
+        sharedEgressIps: ips.filter((ip) => shared.has(normaliseIp(ip))),
       };
     });
 }

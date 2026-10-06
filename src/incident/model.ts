@@ -20,6 +20,8 @@ export const DEFAULTS = {
   auditPageCap: 10000,
   outlierFloor: 100,
   outlierMultiple: 3,
+  /** An IP with logins from more distinct users than this is shared egress (proxy, NAT). */
+  sharedEgressUsers: 8,
 } as const;
 
 export function id15(id: string | undefined | null): string | undefined {

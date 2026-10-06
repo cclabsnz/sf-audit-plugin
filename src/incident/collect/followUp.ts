@@ -27,11 +27,14 @@ export function ipForms(raw: string): string[] {
  * case came five days after the wave. SourceIp does not support LIKE, hence an IN list.
  */
 export async function followUpIps(soql: SoqlClient, ips: string[]): Promise<FollowUp> {
-  const clean = [...new Set(ips.flatMap(ipForms).map(cleanIp).filter((x): x is string => x !== null))];
+  // One query per address (all its textual forms together): a busy shared IP that hits the row
+  // cap must not crowd another address's logins out of the same batch.
+  const perIp = [...new Map(ips.map((ip) => [normaliseIp(ip), ipForms(ip).map(cleanIp).filter((x): x is string => x !== null)])).values()]
+    .filter((forms) => forms.length > 0);
   const logins: FollowUp['logins'] = [];
   let truncated = false;
-  for (let i = 0; i < clean.length; i += CHUNK) {
-    const list = clean.slice(i, i + CHUNK).map((ip) => `'${ip}'`).join(',');
+  for (const forms of perIp) {
+    const list = forms.map((ip) => `'${ip}'`).join(',');
     const rows = await soql.queryAll<{ LoginTime: string; UserId: string; SourceIp: string; Status: string; LoginUrl?: string; Browser?: string }>(
       `SELECT LoginTime, UserId, SourceIp, Status, LoginUrl, Browser FROM LoginHistory WHERE SourceIp IN (${list})`);
     if (rows.length >= DEFAULTS.auditPageCap) truncated = true;

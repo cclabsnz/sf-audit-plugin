@@ -57,6 +57,7 @@ describe('findActors robustness', () => {
     const fake = {
       manifest: { waves: [wave], logs: [] },
       anomalies: [{ eventIdentifier: 'e1', sourceIp: ' 10.9.9.9 ' }],
+      followUp: { logins: [], users: [] },
       rows: async function* () { yield* rows; },
     } as unknown as Bundle;
     fake.manifest.waves[0].eventIds = ['e1'];
@@ -95,7 +96,7 @@ describe('normaliseIp (I2)', () => {
     expect(actors[0].ips).toEqual(['2001:db8::1']);
   });
   it('an uppercase CLIENT_IP matches the lowercase actor IP in responses and logins', async () => {
-    const actors = [{ id: 'W6-A1', ips: ['2001:db8::1'] }] as never;
+    const actors = [{ id: 'W6-A1', ips: ['2001:db8::1'], sharedEgressIps: [] }] as never;
     const r = await analyseResponses(fake, wave, actors);
     expect(r.returnedContent.map((x) => x.actorId)).toEqual(['W6-A1']);
     const o = computeOutcomes(fake, wave, actors);
