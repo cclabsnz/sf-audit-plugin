@@ -53,6 +53,13 @@ describe('ClientReportRenderer', () => {
     expect(html).not.toContain('http://');
   });
 
+  it('credits the tool in the footer without naming the org', () => {
+    const html = r.render(makeResult());
+    const footer = html.slice(html.indexOf('<footer>'));
+    expect(footer).toContain('utm_campaign=executive-report');
+    expect(footer).not.toContain('acme');
+  });
+
   it('shows the per-check impact narrative for a priority', () => {
     const html = r.render(makeResult());
     expect(html).toContain('no second factor');

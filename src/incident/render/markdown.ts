@@ -1,6 +1,7 @@
 // src/incident/render/markdown.ts
 import type { IncidentResult } from '../analyse/index.js';
 import type { buildEvidence } from './evidence.js';
+import { toolCreditMarkdown } from '../../renderers/toolCredit.js';
 import { CLASSIFICATION_LABEL, NOT_COLLECTED, RESULT_LABEL, auraCollectedDays, coveredDays } from './labels.js';
 
 type Ev = ReturnType<typeof buildEvidence>;
@@ -85,5 +86,6 @@ export function renderMarkdown(r: IncidentResult, ev: Ev): string {
   else L.push('None');
   L.push('', '## Evidence index', '');
   for (const t of ev.tables) L.push(`- **${t.id}** ${t.title} (${t.rows.length} rows)`);
+  L.push('', '---', '', toolCreditMarkdown('incident-report'));
   return L.join('\n') + '\n';
 }

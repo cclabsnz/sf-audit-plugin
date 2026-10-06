@@ -1,6 +1,7 @@
 // src/incident/render/html.ts
 import { esc, fontFaceCss, type Branding } from '@cclabsnz/sf-core';
 import { chartJsScript } from '../../renderers/chartAsset.js';
+import { toolCreditHtml } from '../../renderers/toolCredit.js';
 import type { IncidentResult } from '../analyse/index.js';
 import type { buildEvidence } from './evidence.js';
 import { CLASSIFICATION_LABEL, RESULT_LABEL, auraCollectedDays, coveredDays } from './labels.js';
@@ -114,6 +115,7 @@ th.n,td.n{text-align:right}td.n{font-variant-numeric:tabular-nums}td.mono{font-f
 .key{display:inline-block;width:12px;height:12px;background:rgba(181,71,8,0.18);border:1px solid rgba(181,71,8,0.5);vertical-align:-1px;margin-right:4px}
 .chartbox{position:relative;border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--bgalt);break-inside:avoid}
 .chartbox canvas{display:block;width:100%}
+.credit{margin-top:40px;font-size:12px}.credit a{color:inherit}
 .method{padding-left:18px}.method li{margin-bottom:4px;max-width:70ch}
 .index{list-style:none;margin:8px 0 0;padding:0;columns:2;column-gap:32px;font-size:13px}
 .index li{display:flex;gap:10px;padding:4px 0;border-bottom:1px solid var(--border);break-inside:avoid}.index b{font-family:var(--mono);font-size:12px;color:var(--primary);min-width:34px;font-weight:600}
@@ -141,6 +143,7 @@ ${r.waves.length === 0 ? `<p>${esc(NOTHING_ASSESSED)}</p>` : r.withinBaseline ? 
 ${coverage ? `<h3>Gaps in collection</h3><div class="tablewrap"><table><thead><tr><th>Type</th><th>Day</th><th>Status</th></tr></thead><tbody>${coverage}</tbody></table></div>` : ''}
 <p class="meta">Bundle manifest sha256 <code>${esc(r.manifestSha256)}</code></p>
 <h3>Evidence index</h3><ul class="index">${evidenceIndex}</ul></section>
+<p class="credit muted">${toolCreditHtml('incident-report')}</p>
 </div>
 <script>${chartJsScript()}</script>
 <script>(function(){var d=${chart};var c=document.getElementById('tl');if(!c||!window.Chart)return;

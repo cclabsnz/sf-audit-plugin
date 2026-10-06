@@ -6,6 +6,7 @@ import type { Branding } from '@cclabsnz/sf-core';
 import { esc } from '@cclabsnz/sf-core';
 import { fontFaceCss } from '@cclabsnz/sf-core';
 import { getCheckMeta } from '../findings/CheckMeta.js';
+import { toolCreditHtml } from './toolCredit.js';
 import { selectPriorities } from '../report/ExecutivePriorities.js';
 import { buildRoadmap, type Roadmap } from '../report/RemediationRoadmap.js';
 import type { Framework } from '../compliance/types.js';
@@ -226,6 +227,6 @@ ${tier('Projects', 'weeks', roadmap.project)}`;
       ? ` · <a href="https://${esc(b.website.replace(/^https?:\/\//, ''))}">${esc(b.website.replace(/^https?:\/\//, ''))}</a>`
       : '';
     return `<footer><span class="label">Scope &amp; Liability</span>
-Read-only, point-in-time configuration review: not a penetration test, not a code audit. The grade is a prioritisation aid, not a certification. Validate findings before remediation. © ${new Date().getFullYear()} ${esc(b.firmName)} · ${esc(b.contact)}${site}</footer>`;
+Read-only, point-in-time configuration review: not a penetration test, not a code audit. The grade is a prioritisation aid, not a certification. Validate findings before remediation. © ${new Date().getFullYear()} ${esc(b.firmName)} · ${esc(b.contact)}${site}<br>${toolCreditHtml('executive-report')}</footer>`;
   }
 }
