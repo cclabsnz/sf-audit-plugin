@@ -5,7 +5,7 @@ describe('containsWord', () => {
   it('matches whole words case-insensitively and treats metacharacters literally', () => {
     expect(containsWord('Changed profile Site A Guest Profile', 'site a')).toBe(true);
     expect(containsWord('Changed profile Site AB Guest Profile', 'Site A')).toBe(false);
-    expect(containsWord('Repair log updated', 'AIR')).toBe(false);
+    expect(containsWord('Template log updated', 'ATE')).toBe(false);
     expect(containsWord('Granted (Files+) access', '(Files+)')).toBe(true);
     expect(containsWord('Sitea.b', 'a.b')).toBe(false);
     expect(containsWord('anything', '')).toBe(false);

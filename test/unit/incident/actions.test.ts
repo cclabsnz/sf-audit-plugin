@@ -4,11 +4,11 @@ import { parseActions, classifyAction, summariseActions, summariseActionCounts }
 describe('parseActions', () => {
   it('splits a batched ACTION_MESSAGE into named actions', () => {
     const m = '3$apex://SiteLoginFormController/ACTION$getForgotPasswordUrl=21;1$apex://SiteLoginFormController/ACTION$login=7;' +
-      '1$aura://ApexActionController/ACTION$execute(AIR_GoogleRecaptchaController.getSiteKey)=2;' +
+      '1$aura://ApexActionController/ACTION$execute(Acme_RecaptchaController.getSiteKey)=2;' +
       '1$serviceComponent://ui.force.components.controllers.lists.selectableListDataProvider.SelectableListDataProviderController/ACTION$getItems=159';
     expect(parseActions(m)).toEqual([
       'SiteLoginFormController.getForgotPasswordUrl', 'SiteLoginFormController.login',
-      'AIR_GoogleRecaptchaController.getSiteKey', 'SelectableListDataProviderController.getItems',
+      'Acme_RecaptchaController.getSiteKey', 'SelectableListDataProviderController.getItems',
     ]);
   });
   it('returns [] for an empty message', () => { expect(parseActions('')).toEqual([]); });
@@ -26,7 +26,7 @@ describe('classifyAction', () => {
     ['RichTextController.getParsedRichTextValue', 'plumbing'],
     ['HostConfigController.getConfigData', 'plumbing'],
     ['omnistudio__FlexRuntime.logUsageEvents', 'plumbing'],
-    ['AIR_GoogleRecaptchaController.getSiteKey', 'plumbing'],
+    ['Acme_RecaptchaController.getSiteKey', 'plumbing'],
     ['ComponentController.reportFailedAction', 'plumbing'],
     ['SiteLoginFormController.getForgotPasswordUrl', 'auth'],
   ])('%s → %s', (name, cls) => { expect(classifyAction(name)).toBe(cls); });
@@ -38,11 +38,11 @@ describe('classifyAction by method, data-access first (C3)', () => {
     ['LoginHistoryController.getRecords', 'data-access'],
     ['MemberRegisterController.getMembers', 'data-access'],
     ['PortalService.fetchCases', 'data-access'],
-    ['AIR_Custom.lookup', 'data-access'],
+    ['Acme_Custom.lookup', 'data-access'],
   ])('%s → %s', (name, cls) => { expect(classifyAction(name)).toBe(cls); });
   it('classifies an execute(...) target by its own method', () => {
-    expect(parseActions('1$aura://ApexActionController/ACTION$execute(AIR_Custom.lookup)=1')).toEqual(['AIR_Custom.lookup']);
-    expect(classifyAction(parseActions('1$aura://ApexActionController/ACTION$execute(AIR_Custom.lookup)=1')[0])).toBe('data-access');
+    expect(parseActions('1$aura://ApexActionController/ACTION$execute(Acme_Custom.lookup)=1')).toEqual(['Acme_Custom.lookup']);
+    expect(classifyAction(parseActions('1$aura://ApexActionController/ACTION$execute(Acme_Custom.lookup)=1')[0])).toBe('data-access');
   });
   it('never returns unknown for a parsed name', () => {
     for (const n of ['X.y', 'Foo.bar', 'a__B.c', 'LoginThing.doStuff']) expect(classifyAction(n)).not.toBe('unknown');
