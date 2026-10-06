@@ -28,6 +28,13 @@ function withoutScripts(html: string): string {
 }
 
 describe('renderHtml', () => {
+  it('credits the tool after the evidence index, tagged as the incident report', () => {
+    const html = renderHtml(r, buildEvidence(r), DEFAULT_BRANDING);
+    expect(html.indexOf('utm_campaign=incident-report')).toBeGreaterThan(html.indexOf('Evidence index'));
+    const credit = html.slice(html.indexOf('class="credit'), html.indexOf('</p>', html.indexOf('class="credit')));
+    expect(credit).toContain('sf-audit');
+    expect(credit).not.toContain(r.orgName);
+  });
   it('is self-contained, puts verdicts and limits first, and cites evidence', () => {
     const html = renderHtml(r, buildEvidence(r), DEFAULT_BRANDING);
     expect(html).not.toMatch(/<script[^>]+src=|<link[^>]+href=["']?https?:/i);

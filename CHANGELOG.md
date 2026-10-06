@@ -11,6 +11,14 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+### Changed
+
+- **The executive and incident reports now credit the tool.** One line at the end, "Prepared with
+  sf-audit, an open-source, read-only Salesforce security tool", matching the credit the technical
+  reports already carry. The link is tagged with the report type only (`executive-report` or
+  `incident-report`) and never the org or client. It is a plain hyperlink, so opening a report
+  still fetches nothing.
+
 ## [v1.15.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.15.0) — 2026-10-06
 
 One new check, and four existing checks that stop reporting conclusions they had not established.

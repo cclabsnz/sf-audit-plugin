@@ -38,6 +38,11 @@ describe('redactResult', () => {
 });
 
 describe('renderMarkdown', () => {
+  it('ends with the tool credit', () => {
+    const out = renderMarkdown(r, buildEvidence(r)).trimEnd();
+    expect(out.endsWith('Salesforce security tool.')).toBe(true);
+    expect(out).toContain('utm_campaign=incident-report');
+  });
   it('leads with the per-wave verdicts and the limits box, with evidence refs', () => {
     const md = renderMarkdown(r, buildEvidence(r));
     const summary = md.slice(0, md.indexOf('## Timeline'));
