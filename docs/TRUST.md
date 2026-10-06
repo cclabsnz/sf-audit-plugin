@@ -8,6 +8,7 @@ Because this tool authenticates against production orgs, "is it safe to run?" de
   ```bash
   npm test test/unit/invariants
   ```
+- **`incident collect` keeps both promises.** It reads with SOQL and REST GETs only, downloads event logs through the same `getRawToFile` path as `events pull`, and classifies hosting only from `--ip-ranges` files on your disk.
 - **What you install matches the public source.** Releases are published from GitHub Actions via [npm trusted publishing (OIDC)](https://docs.npmjs.com/trusted-publishers) with [build provenance](https://docs.npmjs.com/generating-provenance-statements) — no long-lived token, and the npm page shows a signed attestation linking the tarball to the exact public commit that built it. Verify it yourself:
 
   ```bash
