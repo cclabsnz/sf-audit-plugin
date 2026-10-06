@@ -49,6 +49,9 @@ permissions below, and nothing else. A starter permission-set definition is in
 |---|---|---|
 | **View Roles and Role Hierarchy** | `ViewRoles` | Complete visibility of role-based sharing context |
 
+- **View Event Log Files**, **View Setup and Configuration**: required by `sf audit incident collect`.
+- **Query All Files**: lets `incident collect` see files owned by guest users. Without it the report states the gap.
+
 ## What the tool does **NOT** need
 
 Grant **none** of these. They are unnecessary for a read-only audit and a client
