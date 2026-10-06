@@ -35,7 +35,7 @@ describe('computeConfigDelta attribution', () => {
   ];
 
   it('(a) does not match a short label inside a longer word', () => {
-    const { periods } = computeConfigDelta([row('Repair log updated')], [guest('005xx000000gstA', 'U1', 'AIR', 'P1')], waves);
+    const { periods } = computeConfigDelta([row('Template log updated')], [guest('005xx000000gstA', 'U1', 'ATE', 'P1')], waves);
     expect(between(periods).bySite).toEqual({});
   });
   it('(b) does not credit "Site A" for "Site AB"', () => {
