@@ -99,8 +99,22 @@ export class LegacyApiVersionCheck implements SecurityCheck {
         });
       }
     } catch {
-      // RemoteProxy LIKE query may not be supported in all org editions — skip silently.
-      // RemoteSitesCheck covers general remote site access concerns.
+      // The LIKE predicate on RemoteProxy is not supported in every edition, so this query
+      // legitimately fails. Skipping silently left no trace, which made the absence of a SOAP
+      // finding indistinguishable from having established that there are none. RemoteSitesCheck
+      // is not cover for this: it reports remote sites in general and makes no SOAP
+      // determination, so nothing else in the audit answers this question.
+      findings.push({
+        id: 'legacy-api-soap-remote-sites-inconclusive',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'Remote site settings could not be filtered for SOAP endpoints',
+        detail:
+          'Querying RemoteProxy with a LIKE predicate on EndpointUrl failed. The object is unavailable in some editions, and the query also fails without Tooling API access to it. Whether this org has active remote sites pointing at /services/Soap/ endpoints is therefore unestablished rather than answered in the negative.',
+        remediation:
+          'Grant the audit user Tooling API access to RemoteProxy and re-run. Otherwise review Setup → Remote Site Settings by hand for endpoints containing /services/Soap/.',
+      });
     }
 
     // Advisory: inbound SOAP API detection requires EventLogFile CSV analysis.

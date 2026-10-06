@@ -115,7 +115,7 @@ data exists the claim is scoped rather than dropped — `public-group-sharing` s
 tables it checked and which it could not, because an object may be absent by org edition rather
 than by permission.
 
-**Coverage of the argument.** 93 checks, 147 test suites, 1462 tests. Coverage is not itself an
+**Coverage of the argument.** 93 checks, 151 test suites, 1519 tests. Coverage is not itself an
 assurance argument, but an untested check is an unexamined claim, and every defect listed above was
 found by writing a test rather than by reading the code.
 
@@ -124,7 +124,7 @@ read as coverage of the codebase. `jest.config.ts` sets no `collectCoverageFrom`
 test actually imports are instrumented, and files no test reaches are absent from the denominator
 rather than counted as zero. It instruments 88 of the 171 files under `src/`, so the figure
 describes a little over half the codebase and says nothing about the rest. It is coverage of the
-tested code. 33 of the 93 checks still have no
+tested code. 29 of the 93 checks still have no
 unit test file, which is the figure that matters here and is tracked in
 [ROADMAP.md](ROADMAP.md).
 

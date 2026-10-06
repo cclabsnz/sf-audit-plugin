@@ -9,17 +9,22 @@ Anything already shipped lives in [CHANGELOG.md](../CHANGELOG.md).
 
 ## Near term
 
-**Finish the test coverage sweep.** 33 of the 93 checks still have no unit test file. The
-statement-coverage figure (80%) is now adequate, but that is a side effect rather than the point:
+**Finish the test coverage sweep.** 29 of the 93 checks still have no unit test file. The
+statement-coverage figure (84%) is now adequate, but that is a side effect rather than the point:
 every check corrected for reporting a conclusion it had not established was found by writing a test,
-never by reading the code. The remaining 33 are unexamined claims.
+never by reading the code. The remaining 29 are unexamined claims.
 
 **Complete the reporting-accuracy audit.** A sweep for checks that can reach a pass after a silently
-caught query failure flagged 17 candidates. Five were confirmed and fixed; the heuristic over-reports
+caught query failure flagged 17 candidates. Nine were confirmed and fixed; the heuristic over-reports
 and the rest need reading individually. Until that is finished, some checks may still conflate "we
 checked and it is fine" with "we could not check".
 
-**Branch coverage.** Currently 68%. Statement coverage says a line ran; branch coverage says the
+The four most recent were found by taking the intersection of this sweep and the one above - a check
+that both swallows a query failure and has no test - which turned out to be the productive place to
+look. One of them did not conflate the two states but inverted them: it asserted a HIGH finding
+against named users on the strength of a query that had failed.
+
+**Branch coverage.** Currently 75%. Statement coverage says a line ran; branch coverage says the
 decision was exercised in both directions. For a tool whose output is threshold decisions, the
 second number matters more.
 

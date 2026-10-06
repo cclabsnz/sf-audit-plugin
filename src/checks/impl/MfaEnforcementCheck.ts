@@ -59,7 +59,27 @@ export class MfaEnforcementCheck implements SecurityCheck {
       );
       mfaEnforcedIds = new Set(mfaResult.records.map((r) => r.AssigneeId));
     } catch {
-      // PermissionsMultiFactorForUiLogins may not exist in all editions — treat as none enforced
+      // PermissionsMultiFactorForUiLogins is absent in some editions, so this query legitimately
+      // fails. It previously fell through with an empty set, which is not a neutral default: with
+      // nothing enforced every portal user lands in `withoutMfa`, and the check then stated as
+      // established fact, at HIGH, that each named user lacks MFA. Over-reporting is not the safe
+      // direction — it produces a remediation task against real users and an SBS-AUTH-004 claim
+      // that no evidence supports. The MFA status is unknown, so say that and stop.
+      return {
+        findings: [
+          {
+            id: 'mfa-enforcement-inconclusive',
+            category: this.category,
+            riskLevel: 'INFO',
+            inconclusive: true,
+            title: `MFA enforcement for ${allPortalUsers.length} external/portal user(s) could not be determined`,
+            detail:
+              `This org has ${allPortalUsers.length} active external/portal user(s), but PermissionSetAssignment could not be filtered on PermissionsMultiFactorForUiLogins. The field is absent in some editions, and the query also fails without access to PermissionSetAssignment. Whether these users have MFA enforced is therefore unestablished, so SBS-AUTH-004 is unevaluated rather than failed.`,
+            remediation:
+              'Grant the audit user read access to PermissionSetAssignment and re-run. If the permission does not exist in this edition, verify MFA for external users manually in Setup, and through the identity provider where portal logins are federated.',
+          },
+        ],
+      };
     }
 
     const withoutMfa = allPortalUsers.filter((u) => !mfaEnforcedIds.has(u.Id));

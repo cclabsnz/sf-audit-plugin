@@ -55,51 +55,53 @@ export class NamedCredentialsCheck implements SecurityCheck {
     // Scan Apex code to find which named credentials are actually referenced
     // Named credentials are referenced as 'callout:DeveloperName' in Apex
     let apexBodies: Array<{ name: string; body: string }> = ctx.cache.apexBodies ?? [];
+    // Whether the unused analysis has a basis. False only when the Apex read failed, which is
+    // not the same as finding no references — hence a flag rather than an empty-set default.
+    let apexScanned = true;
+
+    // Endpoint is nullable for External Credential-backed entries. Interpolating it directly put
+    // the literal "null" into advice shown to an operator.
+    const endpointNote = (endpoint: string | null, advice: string): string =>
+      `${endpoint ?? '(no endpoint — External Credential)'}: ${advice}`;
 
     if (apexBodies.length === 0) {
       try {
         const apexRecords = await new ApexRepository(ctx.tooling).listClasses({ excludeManaged: true });
         apexBodies = apexRecords.map((r) => ({ name: r.name, body: r.body ?? '' }));
       } catch {
-        // If we can't scan Apex, emit inventory only
-        findings.push({
-          id: 'named-credentials-inventory',
-          category: this.category,
-          riskLevel: 'INFO',
-          title: `${count} named credential(s) configured`,
-          detail: 'Named credentials provide a secure way to store endpoint URLs and authentication details for external callouts.',
-          remediation: 'Periodically review named credentials to ensure endpoints are current and credentials remain valid.',
-          affectedItems: records.map((r) => ({
-            label: r.MasterLabel,
-            url: setupUrl,
-            note: r.Endpoint ?? '(no endpoint — External Credential)',
-          })),
-        });
-        return { findings, metrics: { namedCredentialsCount: count, unusedNamedCredentialsCount: 0 } };
+        // Losing the Apex scan costs the unused analysis and nothing else. Returning here also
+        // discarded the HTTP-endpoint and anonymous-principal findings, which are derived purely
+        // from the credential records already in hand — including a HIGH finding for plaintext
+        // HTTP that was fully established. Carry on with what the records support.
+        apexScanned = false;
       }
     }
 
     const combinedApexSource = apexBodies.map((c) => c.body).join('\n');
 
-    const unusedCredentials = records.filter((r) => {
-      // Named credentials are referenced as callout:DeveloperName or callout:MasterLabel
-      // Literal search, not a pattern built from the credential's own name: MasterLabel is free
-      // text from Setup, and a bracket in it used to crash the check while a quantifier quietly
-      // matched the wrong thing.
-      return (
-        !referencesCallout(combinedApexSource, r.DeveloperName) &&
-        !referencesCallout(combinedApexSource, r.MasterLabel.replace(/\s+/g, '_'))
-      );
-    });
+    const unusedCredentials = apexScanned
+      ? records.filter((r) => {
+          // Named credentials are referenced as callout:DeveloperName or callout:MasterLabel
+          // Literal search, not a pattern built from the credential's own name: MasterLabel is free
+          // text from Setup, and a bracket in it used to crash the check while a quantifier quietly
+          // matched the wrong thing.
+          return (
+            !referencesCallout(combinedApexSource, r.DeveloperName) &&
+            !referencesCallout(combinedApexSource, r.MasterLabel.replace(/\s+/g, '_'))
+          );
+        })
+      : [];
 
-    const usedCredentials = records.filter((r) => !unusedCredentials.includes(r));
+    const usedCredentials = apexScanned ? records.filter((r) => !unusedCredentials.includes(r)) : [];
 
     // Inventory finding
     findings.push({
       id: 'named-credentials-inventory',
       category: this.category,
       riskLevel: 'INFO',
-      title: `${count} named credential(s) configured (${usedCredentials.length} used, ${unusedCredentials.length} unused in Apex)`,
+      title: apexScanned
+        ? `${count} named credential(s) configured (${usedCredentials.length} used, ${unusedCredentials.length} unused in Apex)`
+        : `${count} named credential(s) configured`,
       detail: 'Named credentials provide a secure way to store endpoint URLs and authentication details for external callouts.',
       remediation: 'Periodically review named credentials to ensure endpoints are current and credentials remain valid.',
       affectedItems: records.map((r) => ({
@@ -108,6 +110,20 @@ export class NamedCredentialsCheck implements SecurityCheck {
         note: r.Endpoint ?? '(no endpoint — External Credential)',
       })),
     });
+
+    if (!apexScanned) {
+      findings.push({
+        id: 'named-credentials-unused-inconclusive',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'Apex could not be scanned: named credentials were not checked for references',
+        detail:
+          'Listing Apex classes through the Tooling API failed, so which credentials are referenced by code is unestablished. Absence of an "unused credentials" finding below therefore means the analysis did not run, not that every credential is in use. The endpoint and principal-type findings are unaffected: both derive from the credential records, which were read successfully.',
+        remediation:
+          'Grant the audit user Tooling API access to ApexClass and re-run to get the unused-credential analysis.',
+      });
+    }
 
     // Flag unused credentials
     if (unusedCredentials.length > 0) {
@@ -123,7 +139,7 @@ export class NamedCredentialsCheck implements SecurityCheck {
         affectedItems: unusedCredentials.map((r) => ({
           label: r.MasterLabel,
           url: setupUrl,
-          note: `${r.Endpoint}: verify if still required, delete if orphaned`,
+          note: endpointNote(r.Endpoint, 'verify if still required, delete if orphaned'),
         })),
       });
     }
@@ -143,7 +159,7 @@ export class NamedCredentialsCheck implements SecurityCheck {
         affectedItems: httpEndpoints.map((r) => ({
           label: r.MasterLabel,
           url: setupUrl,
-          note: `${r.Endpoint}: migrate to HTTPS`,
+          note: endpointNote(r.Endpoint, 'migrate to HTTPS'),
         })),
       });
     }
@@ -164,7 +180,7 @@ export class NamedCredentialsCheck implements SecurityCheck {
         affectedItems: anonymousCreds.map((r) => ({
           label: r.MasterLabel,
           url: setupUrl,
-          note: `${r.Endpoint}: verify that no authentication is required`,
+          note: endpointNote(r.Endpoint, 'verify that no authentication is required'),
         })),
       });
     }
@@ -173,7 +189,9 @@ export class NamedCredentialsCheck implements SecurityCheck {
       findings,
       metrics: {
         namedCredentialsCount: count,
-        unusedNamedCredentialsCount: unusedCredentials.length,
+        // Omitted when the Apex scan failed: zero would be read as "none are unused", which was
+        // never established.
+        ...(apexScanned ? { unusedNamedCredentialsCount: unusedCredentials.length } : {}),
       },
     };
   }

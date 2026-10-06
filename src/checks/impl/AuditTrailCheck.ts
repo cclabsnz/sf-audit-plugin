@@ -61,6 +61,10 @@ export class AuditTrailCheck implements SecurityCheck {
       id: 'permission-security-changes',
       category: this.category,
       riskLevel: securityRiskLevel,
+      // Zero sensitive-section changes is a pass, not a LOW finding. scoring.ts excludes only
+      // passed and inconclusive findings from the penalty numerator, so leaving this unmarked
+      // charged a clean seven days against the org's health score.
+      passed: securityChangeCount === 0,
       title: `${securityChangeCount} permission or security configuration change(s) in the last 7 days`,
       detail:
         'Frequent permission and security changes can indicate privilege escalation activity or risky configuration drift.',
@@ -131,7 +135,22 @@ export class AuditTrailCheck implements SecurityCheck {
         });
       }
     } catch {
-      // PermissionsManageEventLogFiles may not exist in orgs without Event Monitoring — skip silently
+      // PermissionsManageEventLogFiles does not exist in orgs without Event Monitoring, so this
+      // query legitimately fails. Skipping silently was wrong: with no finding emitted, a reader
+      // cannot tell "nobody can delete event logs" from "we were unable to find out", and only
+      // the first of those is a pass. Declared inconclusive so it is scored as INFO, carries no
+      // penalty, and is still shown.
+      findings.push({
+        id: 'event-log-delete-permission-inconclusive',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'Manage Event Log Files assignments could not be queried',
+        detail:
+          'PermissionSetAssignment could not be filtered on PermissionsManageEventLogFiles. The field is absent in orgs without Event Monitoring, and the query also fails without access to PermissionSetAssignment, so who can delete event monitoring data is unestablished. SBS-MON-002 is unevaluated rather than satisfied.',
+        remediation:
+          'If the org has Event Monitoring, grant the audit user read access to PermissionSetAssignment and re-run. Otherwise there are no EventLogFile records to protect and no action is needed.',
+      });
     }
 
     return { findings };
