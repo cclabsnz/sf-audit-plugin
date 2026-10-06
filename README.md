@@ -22,6 +22,7 @@ A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audi
 - **History & diff:** archives each run and shows security-posture drift over time
 - **Free event baseline:** `sf audit events pull` captures the org's free daily `EventLogFile` logs to local disk before the 1-day retention window drops them — no Event Monitoring / Shield add-on needed
 - **Connected-app least-privilege:** `sf audit apps` reads the `RestApi` EventLogFile to see which objects each connected app actually uses, compares that against what its run-as user is granted, and reports the over-grant per object and read/write bit — plus a suggested least-privilege permission set
+- **Guest User Anomaly investigation:** `sf audit incident collect` saves the guest user's evidence for each anomaly wave, and `sf audit incident report` analyses it offline into a cited verdict: who it was, whether content came back, and whether anyone logged in ([walkthrough](https://www.softwareinsights.dev/posts/salesforce-guest-user-anomaly-investigation-sf-audit-incident/))
 - Strictly read-only (SOQL/Tooling/REST GETs + Metadata API reads); see [PERMISSIONS.md](PERMISSIONS.md) for the least-privilege access it needs
 
 ## Installation
