@@ -11,6 +11,10 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+## [v1.15.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.15.1) — 2026-10-06
+
+The executive and incident reports now say which tool produced them. No change to any check, flag or finding.
+
 ### Changed
 
 - **The executive and incident reports now credit the tool.** One line at the end, "Prepared with
