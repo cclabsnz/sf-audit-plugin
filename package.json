@@ -1,7 +1,7 @@
 {
   "name": "@cclabsnz/sf-audit",
   "version": "1.14.0",
-  "description": "Read-only Salesforce security audit for the sf CLI: 88 checks, attack-chain correlation, A-F risk grading, and compliance mapping to OWASP, SOC 2, ISO 27001, NZISM and more.",
+  "description": "Read-only Salesforce security audit for the sf CLI: 93 checks, attack-chain correlation, A-F risk grading, compliance mapping, free EventLogFile capture, and Guest User Anomaly investigation.",
   "keywords": [
     "salesforce",
     "salesforce-cli",
@@ -19,7 +19,16 @@
     "agentforce",
     "devsecops",
     "permissions",
-    "audit"
+    "audit",
+    "salesforce-security",
+    "event-monitoring",
+    "eventlogfile",
+    "guest-user",
+    "experience-cloud",
+    "incident-response",
+    "forensics",
+    "connected-apps",
+    "health-check"
   ],
   "license": "Apache-2.0",
   "type": "module",
