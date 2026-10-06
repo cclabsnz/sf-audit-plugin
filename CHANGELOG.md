@@ -11,6 +11,42 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+### Fixed
+
+- **Four checks no longer report conclusions they had not established.** Each was both untested and
+  held a `catch` that swallowed a query failure; writing the tests is what surfaced the defects, as
+  it has every previous time.
+
+  - **`mfa-enforcement` asserted a HIGH finding on a failed query.** When
+    `PermissionsMultiFactorForUiLogins` could not be read - the field is absent in some editions -
+    the empty result was treated as "nobody has MFA enforced", so every external user fell into the
+    shortfall bucket and the check named them, at HIGH, as lacking MFA. Over-reporting was not the
+    safe direction: it produced a remediation task against real users and an SBS-AUTH-004 claim on
+    no evidence. Now inconclusive.
+  - **`audit-trail` charged a clean org for being clean.** Zero sensitive-section changes in seven
+    days produced an unmarked LOW finding, and `scoring.ts` excludes only passed and inconclusive
+    findings from the penalty numerator - so a quiet week cost health score. Now marked passed. Its
+    Manage Event Log Files query also failed silently, leaving SBS-MON-002 looking satisfied rather
+    than unevaluated; now inconclusive.
+  - **`named-credentials` discarded a HIGH finding it had already established.** A failed Apex scan
+    returned early, which also threw away the plaintext-HTTP (SBS-INT-003) and anonymous-principal
+    findings - both derived purely from the credential records, which had been read successfully.
+    The Apex scan only ever informed the unused analysis, so only that is now skipped, and it says
+    so. `unusedNamedCredentialsCount` is omitted rather than reported as zero when not computed.
+  - **`legacy-api-version` left no trace when RemoteProxy could not be filtered.** The absence of a
+    SOAP remote-site finding was indistinguishable from having established there are none. The
+    sibling `remote-sites` check is not cover for it: that reports remote sites in general and makes
+    no SOAP determination. Now inconclusive.
+
+- **`named-credentials` no longer prints the word "null" into operator advice.** `Endpoint` is
+  nullable for External Credential-backed entries. The inventory finding handled that; the unused,
+  HTTP and anonymous notes interpolated it directly.
+
+### Changed
+
+- 57 unit tests across those four checks, taking the untested-check count from 33 of 93 to 29 and
+  the suite to 151 files / 1519 tests. Branch coverage 75%, statements 84%.
+
 ## [v1.14.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.14.0) — 2026-10-06
 
 Two investigation commands for Real-Time Event Monitoring **Guest User Anomaly** alerts, and every
