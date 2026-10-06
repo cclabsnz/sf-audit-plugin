@@ -77,6 +77,12 @@ sf audit security --target-org myOrg --json
 sf audit security --target-org myOrg --json --digest
 ```
 
+In GitHub Actions, [cclabsnz/sf-audit-action](https://github.com/cclabsnz/sf-audit-action) wraps this:
+it installs the plugin, logs in from a secret, writes a digest to the job summary, uploads the reports
+and applies `--fail-on`. It audits the org, not the repository, so run it on a schedule against
+production or after deploying to a validation sandbox, and from a private repository: anyone can read
+a public repository's job summaries.
+
 ### Exit codes
 
 | Code | Meaning |
