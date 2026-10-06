@@ -32,8 +32,8 @@ const config: Config = {
   },
   testMatch: ['**/*.test.ts'],
   // The incident tests generate and analyse a synthetic multi-day bundle in their hooks; that
-  // takes ~1-2 s locally and over 5 s (Jest's default) on CI runners. A real hang still fails.
-  testTimeout: 30_000,
+  // takes ~1-2 s locally and 15-20x longer on CI runners. A real hang still fails.
+  testTimeout: 60_000,
 };
 
 export default config;

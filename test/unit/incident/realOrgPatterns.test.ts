@@ -6,7 +6,12 @@ import { analyseBundle } from '../../../src/incident/analyse/index.js';
 import { generateScenario } from '../../fixtures/incident/generate.js';
 import { alwaysOnProxy, realisticBaselineReads, sharedEgressActor, sharedRequestIds, visitorReadsOnScanDay } from '../../fixtures/incident/variants.js';
 
-const wave = async (dir: string, id: string) => (await analyseBundle(dir)).waves.find((w) => w.wave.id === id)!;
+// One analysis per bundle: analyseBundle re-hashes every file, which is slow on CI runners.
+const analysed = new Map<string, ReturnType<typeof analyseBundle>>();
+const wave = async (dir: string, id: string) => {
+  if (!analysed.has(dir)) analysed.set(dir, analyseBundle(dir));
+  return (await analysed.get(dir)!).waves.find((w) => w.wave.id === id)!;
+};
 
 describe('proxies are not attackers', () => {
   it('an always-on proxy busier on the wave days is not an actor; the scan block still is', async () => {
