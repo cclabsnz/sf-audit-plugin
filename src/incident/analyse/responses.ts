@@ -11,6 +11,8 @@ export interface ReturnedContent {
   actions: string[];
   /** The actor block that sent the call, or '' when it came from no isolated block. */
   actorId: string;
+  /** The action the reply is attributed to (the batch's first data-access action). */
+  action: string;
 }
 
 export interface ResponseSummary {
@@ -38,6 +40,8 @@ export interface ResponseSummary {
   ambiguousCalls: number;
   /** Empty-reply size learned per action from the reference set (smallest recurring size). */
   emptySizeByAction: Record<string, number>;
+  /** Data-access actions seen on baseline days from blocks absent on the wave days: ordinary traffic. */
+  baselineActions: string[];
   /** Joined data-access calls whose action had no empty size of its own, judged against emptySize. */
   judgedAgainstFallback: number;
   /** Guest controller calls on the wave days with an ACTION_MESSAGE that parsed to no action. */
@@ -70,7 +74,7 @@ export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): 
   const out: ResponseSummary = {
     emptySize: null, emptySizeInferred: false, band: DEFAULTS.emptyBandBytes, dataAccessCalls: 0, joined: 0, dataAccessJoined: 0,
     referenceReplies: 0, returnedContent: [], blankRequestIdsDropped: 0, unmatchedCalls: 0, unparsedCalls: 0,
-    ambiguousCalls: 0, emptySizeByAction: {}, judgedAgainstFallback: 0,
+    ambiguousCalls: 0, emptySizeByAction: {}, baselineActions: [], judgedAgainstFallback: 0,
   };
   const isGuest = (r: Record<string, string>) => id15(r.USER_ID) === wave.guestId15 || id15(r.USER_ID_DERIVED) === wave.guestId15;
   /**
@@ -110,9 +114,13 @@ export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): 
 
   // Streamed: size frequency maps plus compact data-access candidates; no whole rows are kept.
   const reference = new Map<number, number>();
+  // Reference sizes per action from replies NOT under test: wave-day auth replies and baseline reads.
   const referenceByAction = new Map<string, Map<number, number>>();
+  // Ordinary visitors' wave-day replies per action, with the blocks each size came from. These ARE
+  // under test, so they may only LOWER an action's empty size, never set it.
+  const visitorByAction = new Map<string, Map<number, Set<string>>>();
   const testedFreq = new Map<number, number>();
-  const tested: Array<ReturnedContent & { action: string }> = [];
+  const tested: ReturnedContent[] = [];
   // Blocks that sent guest controller calls on the wave days. Their baseline-day replies are
   // left out of the reference set: a scan that runs past midnight would otherwise set its own
   // "empty" size from the next day's replies.
@@ -141,12 +149,17 @@ export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): 
       out.dataAccessJoined++;
       testedFreq.set(size, (testedFreq.get(size) ?? 0) + 1);
       const ip = normaliseIp(r.CLIENT_IP ?? '');
-      // Ordinary visitors' replies teach each action's smallest recurring size (an empty list).
-      // An actor cannot lower that floor, and its own replies are never part of it.
-      if (!actorOf.has(ip)) bump(referenceByAction, action, size);
+      if (!actorOf.has(ip)) {
+        let bySize = visitorByAction.get(action);
+        if (!bySize) { bySize = new Map(); visitorByAction.set(action, bySize); }
+        let blocks = bySize.get(size);
+        if (!blocks) { blocks = new Set(); bySize.set(size, blocks); }
+        blocks.add(blockOf(ip));
+      }
       tested.push({ requestId, timestamp: r.TIMESTAMP_DERIVED, ip, size, actions: parseActions(r.ACTION_MESSAGE), actorId: actorOf.get(ip) ?? '', action });
     }
   }
+  const baselineActions = new Set<string>();
   for (const day of baselineDaysFor(b.manifest, wave.guestId15)) {
     const replyOf = await repliesFor(day, false);
     for await (const r of b.rows('AuraRequest', day)) {
@@ -155,17 +168,14 @@ export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): 
       const size = replyOf((r.REQUEST_ID ?? '').trim());
       if (typeof size !== 'number') continue;
       reference.set(size, (reference.get(size) ?? 0) + 1);
-      bump(referenceByAction, primaryAction(r.ACTION_MESSAGE, true), size);
+      const action = primaryAction(r.ACTION_MESSAGE, true);
+      bump(referenceByAction, action, size);
+      baselineActions.add(action);
     }
   }
+  out.baselineActions = [...baselineActions].sort();
   out.referenceReplies = [...reference.values()].reduce((s, n) => s + n, 0);
 
-  // Per action, the empty reply is the SMALLEST size that recurs (an empty list), not the most
-  // common one: legitimate reads on baseline days return data, so their mode is not "empty".
-  for (const [action, freq] of referenceByAction) {
-    const size = smallestRecurring(freq);
-    if (action && size !== undefined) out.emptySizeByAction[action] = size;
-  }
   let mode = modeOf(reference);
   if (mode === undefined && tested.length > 0) {
     mode = modeOf(testedFreq);
@@ -174,10 +184,28 @@ export async function analyseResponses(b: Bundle, wave: Wave, actors: Actor[]): 
   if (mode === undefined) return out;
   out.emptySize = mode;
   const fallback = mode;
+  // Per action, the empty reply is the SMALLEST size that recurs (an empty list), not the most
+  // common one: legitimate reads return data, so their mode is not "empty". Visitors' wave-day
+  // replies may lower it, but only to a size that recurs across 3+ blocks and is no larger than
+  // the reference would allow, so replies under test can never set their own baseline.
+  for (const action of new Set([...referenceByAction.keys(), ...visitorByAction.keys()])) {
+    if (!action) continue;
+    const base = referenceByAction.has(action) ? smallestRecurring(referenceByAction.get(action)!) : undefined;
+    // An inferred fallback came from the replies under test, so it can never be a cap.
+    const cap = base ?? (out.emptySizeInferred ? undefined : fallback);
+    const visitorSizes = visitorByAction.get(action);
+    let lowered: number | undefined;
+    if (visitorSizes) {
+      const counts = new Map([...visitorSizes].map(([size, blocks]) => [size, blocks.size] as const));
+      const candidate = smallestRecurring(counts);
+      if (candidate !== undefined && cap !== undefined && (visitorSizes.get(candidate)?.size ?? 0) >= 3 && candidate <= cap) lowered = candidate;
+    }
+    const size = base === undefined ? lowered : lowered === undefined ? base : Math.min(base, lowered);
+    if (size !== undefined) out.emptySizeByAction[action] = size;
+  }
   out.judgedAgainstFallback = tested.filter((s) => out.emptySizeByAction[s.action] === undefined).length;
   out.returnedContent = tested
     .filter((s) => s.size > (out.emptySizeByAction[s.action] ?? fallback) + out.band)
-    .map(({ action: _action, ...rest }) => rest)
     .sort((a, c) => a.timestamp.localeCompare(c.timestamp));
   return out;
 }

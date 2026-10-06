@@ -9,13 +9,22 @@ import { loadBundle, BundleIncompleteError } from '../../../src/incident/bundleI
 import { csvLine } from '../../../src/incident/csv.js';
 
 describe('followUpIps', () => {
-  it('queries each address separately, so one busy IP cannot use up the row cap for the others', async () => {
+  it('batches addresses, and re-queries a batch one address at a time only when it hits the row cap', async () => {
     const qs: string[] = [];
-    const soql = { query: jest.fn(), queryAll: jest.fn(async (q: string) => { qs.push(q); return []; }) } as any;
-    await followUpIps(soql, ['192.0.2.7', '198.51.100.143', '2001:db8::1']);
+    const soql = { query: jest.fn(), queryAll: jest.fn(async (q: string) => {
+      qs.push(q);
+      // The first batch is "busy": it returns the cap, so its addresses are re-queried singly.
+      if (qs.filter((x) => x.includes('FROM LoginHistory')).length === 1) return Array.from({ length: 10000 }, () => ({ LoginTime: '2026-01-01T00:00:00Z', UserId: '005xx000000busy', SourceIp: '10.0.0.0', Status: 'Success' }));
+      return [];
+    }) } as any;
+    const ips = Array.from({ length: 45 }, (_, i) => `10.0.0.${i}`);
+    const f = await followUpIps(soql, ips);
     const logins = qs.filter((x) => x.includes('FROM LoginHistory'));
-    expect(logins).toHaveLength(3);
-    expect(logins.find((q) => q.includes('2001:db8::1'))).toContain("'2001:db8:0:0:0:0:0:1'");
+    expect(logins).toHaveLength(2 + 30); // two batches (30 + 15), then the 30 addresses of the capped batch singly
+    // The single re-queries came back under the cap, so nothing is truncated and the capped
+    // batch's rows were discarded in favour of the complete per-address results.
+    expect(f.truncated).toBeUndefined();
+    expect(f.logins).toEqual([]);
   });
 
   it('queries every textual form of an IPv6 address, so an expanded SourceIp is still found', async () => {
@@ -32,7 +41,7 @@ describe('followUpIps', () => {
     const ips = Array.from({ length: 150 }, (_, i) => `10.0.${Math.floor(i / 250)}.${i % 250}`).concat(["192.0.2.4' OR 'x"]);
     await followUpIps(soql, ips);
     const loginQs = qs.filter((q) => q.includes('FROM LoginHistory'));
-    expect(loginQs).toHaveLength(150);
+    expect(loginQs).toHaveLength(5);
     expect(loginQs.every((q) => !/LoginTime/.test(q.split('WHERE')[1]))).toBe(true);
     expect(qs.join(' ')).not.toContain("OR 'x");
   });

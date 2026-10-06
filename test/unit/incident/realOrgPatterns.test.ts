@@ -4,7 +4,7 @@
 import { describe, it, expect } from '@jest/globals';
 import { analyseBundle } from '../../../src/incident/analyse/index.js';
 import { generateScenario } from '../../fixtures/incident/generate.js';
-import { alwaysOnProxy, realisticBaselineReads, sharedEgressActor, sharedRequestIds, visitorReadsOnScanDay } from '../../fixtures/incident/variants.js';
+import { actorlessCustomReads, alwaysOnProxy, credentialStuffing, exfilFromOtherIps, realisticBaselineReads, selfRegisteredThrowaways, sharedEgressActor, sharedRequestIds, singleBaselineSpill, visitorReadsOnScanDay } from '../../fixtures/incident/variants.js';
 
 // One analysis per bundle: analyseBundle re-hashes every file, which is slow on CI runners.
 const analysed = new Map<string, ReturnType<typeof analyseBundle>>();
@@ -71,7 +71,9 @@ describe('ordinary visitors on the wave days', () => {
     const { D2 } = await import('../../fixtures/incident/generate.js');
     await rewriteLog(dir, 'Sites', D2, (r) => (['9385', '8488', '4442', '2701', '2185'].includes(r.RESPONSE_SIZE) ? { ...r, RESPONSE_SIZE: '1846' } : r));
     const w3 = await wave(dir, 'W3');
-    expect(w3.result).not.toBe('content-returned');
+    // The visitors' getItems content is normal (the action recurs on baseline days), so it is
+    // context; the actor got only empty replies and every read joined.
+    expect(w3.result).toBe('no-evidence');
   });
 });
 
@@ -81,5 +83,48 @@ describe('fallback empty size is disclosed', () => {
     expect(w3.responses.emptySizeByAction['SelectableListDataProviderController.getItems']).toBeUndefined();
     expect(w3.responses.judgedAgainstFallback).toBe(198);
     expect(w3.limits.join(' ')).toMatch(/198 data-access calls were judged against the site-wide reference size of 1861 bytes/);
+  });
+});
+
+describe('pre-merge review: adversarial cases', () => {
+  it('C1a: failed logins never make an actor IP look shared; a success after stuffing is access', async () => {
+    const w3 = await wave(await credentialStuffing(), 'W3');
+    expect(w3.actors[0].sharedEgressIps).toEqual([]);
+    expect(w3.outcomes.successfulLogins).toBe(1);
+    expect(w3.result).toBe('access-gained');
+  });
+  it('C1b: self-registered throwaway users never make an actor IP look shared', async () => {
+    const w3 = await wave(await selfRegisteredThrowaways(), 'W3');
+    expect(w3.actors[0].sharedEgressIps).toEqual([]);
+    expect(w3.result).toBe('access-gained');
+  });
+  it('C1c: successful logins from a genuinely shared actor IP block no-evidence', async () => {
+    const dir = await sharedEgressActor();
+    const { rewriteLog } = await import('../../fixtures/incident/variants.js');
+    const { D2 } = await import('../../fixtures/incident/generate.js');
+    await rewriteLog(dir, 'Sites', D2, (r) => (Number(r.RESPONSE_SIZE) > 1900 && Number(r.RESPONSE_SIZE) < 99999 ? { ...r, RESPONSE_SIZE: '1846' } : r));
+    const w3 = await wave(dir, 'W3');
+    expect(w3.outcomes.sharedEgressLogins).toBe(20);
+    expect(w3.result).toBe('not-assessed');
+    expect(w3.limits.join(' ')).toMatch(/20 successful logins from shared actor IPs could not be attributed/);
+  });
+  it('C2: replies under test cannot teach their own empty size', async () => {
+    const w3 = await wave(await actorlessCustomReads(), 'W3');
+    expect(w3.responses.emptySizeByAction['PortalService.fetchCases']).toBeUndefined();
+    expect(w3.responses.returnedContent.length).toBe(600);
+    expect(w3.result).toBe('content-returned');
+    expect(w3.classification).not.toBe('organic');
+  });
+  it('C3: content returned to the attacker on other IPs, for an action unseen on baseline days, decides the result', async () => {
+    const w3 = await wave(await exfilFromOtherIps(), 'W3');
+    expect(w3.actors.map((a) => a.block)).toEqual(['203.0.113.0/24']);
+    expect(w3.responses.returnedContent.filter((x) => x.actorId === '').length).toBe(5);
+    expect(w3.result).toBe('content-returned');
+  });
+  it('C4: with one baseline day, a scan that spilled past midnight is still an actor', async () => {
+    const r = await analyseBundle(await singleBaselineSpill());
+    const w3 = r.waves.find((w) => w.wave.id === 'W3')!;
+    expect(w3.actors.map((a) => a.block)).toContain('203.0.113.0/24');
+    expect(r.withinBaseline).toBe(false);
   });
 });

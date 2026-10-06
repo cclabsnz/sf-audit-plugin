@@ -55,7 +55,7 @@ describe('findActors robustness', () => {
     const row = (ts: string) => ({ TIMESTAMP_DERIVED: ts, USER_ID: guest, CLIENT_IP: '10.9.9.9', USER_AGENT: '', URI: '/', ACTION_MESSAGE: '1$apex://SiteLoginFormController/ACTION$login=1' });
     const rows = [row(''), ...Array.from({ length: 150 }, (_, i) => row(`2026-01-02T0${i % 4}:00:00.000Z`))];
     const fake = {
-      manifest: { waves: [wave], logs: [] },
+      manifest: { waves: [wave], logs: [], guests: [] },
       anomalies: [{ eventIdentifier: 'e1', sourceIp: ' 10.9.9.9 ' }],
       followUp: { logins: [], users: [] },
       rows: async function* () { yield* rows; },

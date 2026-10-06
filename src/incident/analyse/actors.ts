@@ -30,10 +30,18 @@ export interface Actor {
   sharedEgressIps: string[];
 }
 
-/** IPs that more than DEFAULTS.sharedEgressUsers distinct users have logged in from. */
+/**
+ * IPs that more than DEFAULTS.sharedEgressUsers distinct users SUCCESSFULLY logged in from, counting
+ * only users known not to have been created through a guest site. Failed logins (credential
+ * stuffing) and self-registered throwaway accounts can therefore never make an attacker's IP look
+ * like a proxy; an unknown creator does not count either.
+ */
 export function sharedEgressIps(b: Bundle): Set<string> {
+  const guestIds = new Set(b.manifest.guests.map((g) => g.id15));
+  const staff = new Set(b.followUp.users.filter((u) => u.createdById15 && !guestIds.has(u.createdById15)).map((u) => u.id15));
   const users = new Map<string, Set<string>>();
   for (const l of b.followUp.logins) {
+    if (l.status !== 'Success' || !staff.has(l.userId15)) continue;
     const ip = normaliseIp(l.sourceIp);
     let s = users.get(ip);
     if (!s) { s = new Set(); users.set(ip, s); }
@@ -157,10 +165,17 @@ export async function findActors(b: Bundle, wave: Wave, ranges: IpRangeSet | nul
   const baselineDays = baselineDaysFor(b.manifest, wave.guestId15);
   const perDay: Array<Map<string, BlockAgg>> = [];
   for (const day of baselineDays) perDay.push(await aggregate(b, wave.guestId15, day));
-  const busiest = perDay.map((m) => Math.max(0, ...[...m.values()].map((a) => a.calls)));
-  const globalRef = busiest.length ? Math.min(...busiest) : 0;
-  const ownMin = (key: string) => (perDay.length ? Math.min(...perDay.map((m) => m.get(key)?.calls ?? 0)) : 0);
-  const thresholdFor = (key: string) => Math.max(DEFAULTS.outlierFloor, DEFAULTS.outlierMultiple * globalRef, DEFAULTS.outlierMultiple * ownMin(key));
+  const waveBlocks = new Set([...waveAggs.values()].flatMap((m) => [...m.keys()]));
+  // The org's normal busiest block ignores blocks also active on the wave days, so a scan that
+  // spills past midnight cannot raise it; the quietest such day is the reference.
+  const busiest = perDay.map((m) => [...m].reduce((max, [key, a]) => (waveBlocks.has(key) ? max : Math.max(max, a.calls)), 0));
+  const globalRef = busiest.length ? busiest.reduce((a, c) => Math.min(a, c)) : 0;
+  // A block's own history exempts it only when it is active across the day on EVERY baseline day
+  // (12+ distinct hours): an always-on proxy qualifies, a spill clustered at midnight does not.
+  const allDay = (key: string) => perDay.length > 0 && perDay.every((m) => (m.get(key)?.hourly.size ?? 0) >= 12);
+  const ownMin = (key: string) => perDay.reduce((min, m) => Math.min(min, m.get(key)?.calls ?? 0), Infinity);
+  const thresholdFor = (key: string) =>
+    Math.max(DEFAULTS.outlierFloor, DEFAULTS.outlierMultiple * globalRef, allDay(key) ? DEFAULTS.outlierMultiple * ownMin(key) : 0);
   const shared = sharedEgressIps(b);
   const detectorBlocks = new Set(b.anomalies.filter((e) => wave.eventIds.includes(e.eventIdentifier) && e.sourceIp).map((e) => blockOf(normaliseIp(e.sourceIp!))));
 

@@ -7,7 +7,7 @@ const base: VerdictInput = {
   wave: { id: 'W1', guestId15: 'g', site: 'S', days: ['2026-01-02'], eventIds: [] },
   spikes: [{ day: '2026-01-02', controllerCalls: 10, baselineMedian: 10, ratio: 1, isSpike: false, detectorSample: null }],
   actors: [],
-  responses: { emptySize: null, emptySizeInferred: false, band: 64, dataAccessCalls: 0, joined: 0, dataAccessJoined: 0, referenceReplies: 0, unmatchedCalls: 0, unparsedCalls: 0, ambiguousCalls: 0, emptySizeByAction: {}, judgedAgainstFallback: 0, returnedContent: [], blankRequestIdsDropped: 0 },
+  responses: { emptySize: null, emptySizeInferred: false, band: 64, dataAccessCalls: 0, joined: 0, dataAccessJoined: 0, referenceReplies: 0, unmatchedCalls: 0, unparsedCalls: 0, ambiguousCalls: 0, emptySizeByAction: {}, baselineActions: [], judgedAgainstFallback: 0, returnedContent: [], blankRequestIdsDropped: 0 },
   outcomes: { actorLogins: [], successfulLogins: 0, sharedEgressLogins: 0, failedLogins: 0, selfRegistrationsInActorWindow: [], identityLinks: [] },
   requiredLogsPresent: true,
 };
@@ -135,5 +135,12 @@ describe('residual 3: no-evidence needs every call understood and every data rea
   });
   it('is not-assessed even when a single data-access call is unjoined', () => {
     expect(outcomeOf({ ...base, responses: { ...assessed, dataAccessCalls: 20, joined: 19, dataAccessJoined: 19, unmatchedCalls: 1 } })).toBe('not-assessed');
+  });
+});
+
+describe('organic requires an assessed wave (I2)', () => {
+  it('is indeterminate, not organic, when the wave could not be assessed', () => {
+    const v = { ...base, spikes: [{ ...base.spikes[0], isSpike: true, ratio: 9 }], responses: { ...base.responses, unparsedCalls: 5 } };
+    expect(classify(v)).toBe('indeterminate');
   });
 });

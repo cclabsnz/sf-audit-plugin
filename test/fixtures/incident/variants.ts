@@ -185,14 +185,16 @@ export async function alwaysOnProxy(): Promise<string> {
   return dir;
 }
 
-/** A W3 actor IP that many distinct guest-created users also log in from: shared egress. */
+/** A W3 actor IP that many distinct staff users (not created through the guest site) log in from: shared egress. */
+const STAFF_CREATOR = '005xx000000admn';
+
 export async function sharedEgressActor(): Promise<string> {
   const dir = await generateScenario();
   const f = JSON.parse(fs.readFileSync(path.join(dir, BUNDLE_PATHS.followUp), 'utf-8'));
   for (let i = 0; i < 20; i++) {
     const id = `005xx00000shr${String(i).padStart(2, '0')}`;
     f.logins.push({ loginTime: `2026-09-2${i % 9}T01:00:00Z`, userId15: id, sourceIp: ACTOR_IPS[0], status: 'Success' });
-    f.users.push({ id15: id, name: `Member ${i}`, email: `member${i}@example.com`, createdDate: '2026-08-01T00:00:00Z', createdById15: GUEST_A, profileName: 'Site A Member', isActive: true });
+    f.users.push({ id15: id, name: `Staff ${i}`, email: `staff${i}@example.com`, createdDate: '2026-08-01T00:00:00Z', createdById15: STAFF_CREATOR, profileName: 'Staff', isActive: true });
   }
   await rewriteJson(dir, BUNDLE_PATHS.followUp, f);
   return dir;
@@ -244,5 +246,102 @@ export async function visitorReadsOnScanDay(): Promise<string> {
   }
   await rewriteLog(dir, 'AuraRequest', D2, (r) => r, aura);
   await rewriteLog(dir, 'Sites', D2, (r) => r, sites);
+  // The same action is normal on baseline days too (other visitors, other blocks), so the
+  // wave-day visitor content is context, not evidence.
+  for (const day of ['2026-09-14', '2026-09-16']) {
+    const a: Row[] = [];
+    const st: Row[] = [];
+    for (let i = 0; i < 60; i++) {
+      const ip = `10.240.${i % 20}.1`;
+      const ts = `${day}T${String(i % 24).padStart(2, '0')}:10:00.000Z`;
+      const rid = `RVB${day.replace(/-/g, '')}${String(i).padStart(4, '0')}`;
+      a.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, USER_AGENT: 'Mozilla/5.0', URI: '/sfsites/aura', REQUEST_ID: rid, ACTION_MESSAGE: GET_ITEMS_MSG });
+      st.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, REQUEST_ID: rid, RESPONSE_SIZE: i % 3 === 0 ? '1846' : '5000', URI: '/sfsites/aura' });
+    }
+    await rewriteLog(dir, 'AuraRequest', day, (r) => r, a);
+    await rewriteLog(dir, 'Sites', day, (r) => r, st);
+  }
+  return dir;
+}
+// ---- Adversarial cases from the pre-merge review -------------------------------------------
+
+const FETCH_CASES_MSG = '1$apex://PortalService/ACTION$fetchCases=12';
+
+async function addFollowUp(dir: string, logins: Array<{ user: string; ip: string; status: string; creator: string }>): Promise<void> {
+  const f = JSON.parse(fs.readFileSync(path.join(dir, BUNDLE_PATHS.followUp), 'utf-8'));
+  for (const l of logins) {
+    f.logins.push({ loginTime: '2026-09-15T05:00:00Z', userId15: l.user, sourceIp: l.ip, status: l.status });
+    if (!f.users.some((u: { id15: string }) => u.id15 === l.user)) {
+      f.users.push({ id15: l.user, name: `User ${l.user.slice(-3)}`, email: `${l.user.slice(-3)}@example.com`, createdDate: '2026-01-01T00:00:00Z', createdById15: l.creator, profileName: 'P', isActive: true });
+    }
+  }
+  await rewriteJson(dir, BUNDLE_PATHS.followUp, f);
+}
+
+/** Review C1a: an actor IP fails against 9 existing staff accounts, then succeeds on a 10th. */
+export async function credentialStuffing(): Promise<string> {
+  const dir = await generateScenario();
+  const logins = Array.from({ length: 9 }, (_, i) => ({ user: `005xx000000cs${String(i).padStart(2, '0')}`, ip: ACTOR_IPS[0], status: 'Invalid Password', creator: STAFF_CREATOR }));
+  logins.push({ user: '005xx000000cs99', ip: ACTOR_IPS[0], status: 'Success', creator: STAFF_CREATOR });
+  await addFollowUp(dir, logins);
+  return dir;
+}
+
+/** Review C1b: the actor self-registers 10 throwaway users and logs in as each. */
+export async function selfRegisteredThrowaways(): Promise<string> {
+  const dir = await generateScenario();
+  await addFollowUp(dir, Array.from({ length: 10 }, (_, i) => ({ user: `005xx000000tw${String(i).padStart(2, '0')}`, ip: ACTOR_IPS[0], status: 'Success', creator: GUEST_A })));
+  return dir;
+}
+
+/** Review C2: an actor-less attacker calls a custom read only it uses, 9000 bytes each, from 60 /24s. */
+export async function actorlessCustomReads(): Promise<string> {
+  const dir = await generateScenario();
+  const aura: Row[] = [];
+  const sites: Row[] = [];
+  for (let i = 0; i < 600; i++) {
+    const ip = `10.${100 + (i % 60)}.${Math.floor(i / 60)}.1`;
+    const ts = `${D2}T${String(i % 24).padStart(2, '0')}:20:00.000Z`;
+    const rid = `RCR${String(i).padStart(5, '0')}`;
+    aura.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, USER_AGENT: 'Mozilla/5.0', URI: '/sfsites/aura', REQUEST_ID: rid, ACTION_MESSAGE: FETCH_CASES_MSG });
+    sites.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, REQUEST_ID: rid, RESPONSE_SIZE: '9000', URI: '/sfsites/aura' });
+  }
+  // Keep the scanner's 40 failed logins (below the actor floor): they are the independent reference.
+  await rewriteLog(dir, 'AuraRequest', D2, (r) => (actorRow(r) && !isLogin(r) ? null : r), aura);
+  await rewriteLog(dir, 'Sites', D2, (r) => r, sites);
+  return dir;
+}
+
+/** Review C3: the scanner block gets only empty replies; 5 custom reads from other IPs return 9 KB. */
+export async function exfilFromOtherIps(): Promise<string> {
+  const dir = await generateScenario();
+  await rewriteLog(dir, 'Sites', D2, (r) => (ACTOR_IPS.includes(r.CLIENT_IP) && Number(r.RESPONSE_SIZE) > 1900 && Number(r.RESPONSE_SIZE) < 99999 ? { ...r, RESPONSE_SIZE: '1846' } : r));
+  const aura: Row[] = [];
+  const sites: Row[] = [];
+  for (let i = 0; i < 5; i++) {
+    const ip = `198.51.100.${10 + i}`;
+    const ts = `${D2}T06:0${i}:00.000Z`;
+    const rid = `REX${i}`;
+    aura.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, USER_AGENT: 'Mozilla/5.0', URI: '/sfsites/aura', REQUEST_ID: rid, ACTION_MESSAGE: FETCH_CASES_MSG });
+    sites.push({ TIMESTAMP_DERIVED: ts, USER_ID: GUEST_A, CLIENT_IP: ip, REQUEST_ID: rid, RESPONSE_SIZE: '9000', URI: '/sfsites/aura' });
+  }
+  await rewriteLog(dir, 'AuraRequest', D2, (r) => r, aura);
+  await rewriteLog(dir, 'Sites', D2, (r) => r, sites);
+  return dir;
+}
+
+/** Review C4: only one baseline day is collected, and the scan spilled 2000 calls into its first two hours. */
+export async function singleBaselineSpill(): Promise<string> {
+  const dir = await generateScenario();
+  const aura: Row[] = [];
+  ACTOR_IPS.slice(0, 4).forEach((ip, j) => {
+    for (let i = 0; i < 500; i++) {
+      aura.push({ TIMESTAMP_DERIVED: `2026-09-16T0${i % 2}:${String(i % 60).padStart(2, '0')}:00.000Z`, USER_ID: GUEST_A, CLIENT_IP: ip, USER_AGENT: '', URI: '/sfsites/aura', REQUEST_ID: `RSB${j}${String(i).padStart(4, '0')}`, ACTION_MESSAGE: RICH_TEXT });
+    }
+  });
+  await rewriteLog(dir, 'AuraRequest', '2026-09-16', (r) => r, aura);
+  editManifest(dir, (m) => {
+    for (const l of m.logs) if (['2026-06-29', '2026-07-01', '2026-09-14'].includes(l.day)) { l.status = 'missing'; delete l.file; }
+  });
   return dir;
 }

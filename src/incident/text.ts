@@ -5,13 +5,17 @@
 
 const isWordChar = (c: string | undefined): boolean => c !== undefined && /[A-Za-z0-9]/.test(c);
 
-/** Every start index of `needle` in `text`, compared case-insensitively. */
+/**
+ * Every start index of `needle` in `text`, compared case-insensitively slice by slice. Searching
+ * a lowercased copy would drift: some characters lengthen when lowercased (U+0130 'İ').
+ */
 function indexesOf(text: string, needle: string): number[] {
-  const hay = text.toLowerCase();
-  const n = needle.toLowerCase();
   const out: number[] = [];
-  if (!n) return out;
-  for (let i = hay.indexOf(n); i !== -1; i = hay.indexOf(n, i + n.length)) out.push(i);
+  if (!needle) return out;
+  const n = needle.toLowerCase();
+  for (let i = 0; i + needle.length <= text.length;) {
+    if (text.slice(i, i + needle.length).toLowerCase() === n) { out.push(i); i += needle.length; } else i++;
+  }
   return out;
 }
 

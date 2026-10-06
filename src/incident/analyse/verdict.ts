@@ -26,7 +26,7 @@ export function classify(v: VerdictInput): Classification {
   if (v.actors.some(isScannerLike)) return 'automated-scan';
   // Organic needs a spike with no isolated source AND nothing returned: content returned to
   // unattributed traffic is not shown to be organic.
-  if (v.spikes.some((s) => s.isSpike) && v.actors.length === 0 && v.responses.returnedContent.length === 0) return 'organic';
+  if (v.spikes.some((s) => s.isSpike) && v.actors.length === 0 && v.responses.returnedContent.length === 0 && notAssessedReasons(v).length === 0) return 'organic';
   return 'indeterminate';
 }
 
@@ -49,6 +49,7 @@ export function notAssessedReasons(v: VerdictInput): string[] {
       ? `none of the ${dataAccessCalls} data-access calls could be joined to a reply size`
       : `only ${dataAccessJoined} of ${dataAccessCalls} data-access calls could be joined to a reply size`);
   }
+  if (v.outcomes.sharedEgressLogins > 0) out.push(`${v.outcomes.sharedEgressLogins} successful logins from shared actor IPs could not be attributed`);
   if (!v.spikes.every((s) => s.baselineMedian !== null)) out.push('no baseline day was collected, so wave-day volume could not be compared');
   return out;
 }
@@ -60,7 +61,11 @@ export function notAssessedReasons(v: VerdictInput): string[] {
  */
 export function decisiveReturned(v: VerdictInput): ResponseSummary['returnedContent'] {
   const all = v.responses.returnedContent;
-  return v.actors.length > 0 ? all.filter((x) => x.actorId !== '') : all;
+  if (v.actors.length === 0) return all;
+  // An attacker can read from addresses outside its block. Non-actor content is only context
+  // when its action is ordinary traffic: seen on baseline days from blocks absent on the wave days.
+  const normal = new Set(v.responses.baselineActions);
+  return all.filter((x) => x.actorId !== '' || !normal.has(x.action));
 }
 
 /** Precedence: access-gained > content-returned > not-assessed > no-evidence. */

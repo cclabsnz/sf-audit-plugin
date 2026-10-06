@@ -19,3 +19,11 @@ describe('replaceInsensitive', () => {
     expect(replaceInsensitive('nothing here', 'zzz', 'X')).toBe('nothing here');
   });
 });
+
+describe('characters whose lowercase form is longer (I1)', () => {
+  it('does not drift offsets after a dotted capital I', () => {
+    expect(replaceInsensitive('İstanbul office: Jane Doe confirmed', 'Jane Doe', 'U1')).toBe('İstanbul office: U1 confirmed');
+    expect(replaceInsensitive('Contact İİİİ Jane Doe', 'jane doe', 'U1')).toBe('Contact İİİİ U1');
+    expect(containsWord('İİ Site A changed', 'Site A')).toBe(true);
+  });
+});
