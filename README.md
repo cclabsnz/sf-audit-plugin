@@ -15,8 +15,8 @@
 
 A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audit against any Salesforce org, risk-scores it with an A–F grade, and turns the result into a report your security team (or your client's) can act on.
 
-- **93 read-only checks** across identity, access, data, code, integrations, monitoring, and Agentforce / GenAI
-- **Attack-chain correlation:** links individual findings into named, multi-step attack scenarios — sixteen modelled chains, plus an emergent pass for combinations nobody has named yet (see [Attack chains](#attack-chains))
+- **95 read-only checks** across identity, access, data, code, integrations, monitoring, and Agentforce / GenAI
+- **Attack-chain correlation:** links individual findings into named, multi-step attack scenarios — seventeen modelled chains, plus an emergent pass for combinations nobody has named yet (see [Attack chains](#attack-chains))
 - **Compliance mapping:** every finding mapped to **source-verified** controls across 10 frameworks (OWASP, OWASP LLM Top 10, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029, NZISM, HIPAA Security Rule, GDPR)
 - **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
 - **History & diff:** archives each run and shows security-posture drift over time
@@ -45,7 +45,7 @@ guarantees here are checkable rather than asserted — see [Trust & verification
 sf audit security --target-org <orgAlias>
 ```
 
-Runs all 93 checks and writes an HTML report to the current directory. `sf audit list` prints every
+Runs all 95 checks and writes an HTML report to the current directory. `sf audit list` prints every
 check id.
 
 | Flag | Default | |
@@ -101,7 +101,7 @@ All twelve flags, more examples, and what the executive report contains:
 
 ## What It Checks
 
-**93 read-only checks** across ten domains. Every finding is risk-rated CRITICAL → INFO, mapped to
+**95 read-only checks** across ten domains. Every finding is risk-rated CRITICAL → INFO, mapped to
 compliance controls, and correlated into [attack chains](#attack-chains).
 
 | Domain | Checks |
@@ -113,7 +113,7 @@ compliance controls, and correlated into [attack chains](#attack-chains).
 | Integrations, Connected Apps & Deployments | 11 |
 | Monitoring & Threat Detection | 10 |
 | Apex & Code Security | 10 |
-| AI & Agents (Agentforce / GenAI) | 6 |
+| AI & Agents (Agentforce / GenAI) | 8 |
 | Org Health & Configuration | 5 |
 | Secrets & Credential Storage | 2 |
 
@@ -150,7 +150,7 @@ A list of findings is not a risk assessment. Three MEDIUM findings that combine 
 unauthenticated path to bulk data matter more than a lone HIGH that leads nowhere, and reading a
 report severity-by-severity hides exactly that.
 
-So every audit correlates its findings into attack chains. **Sixteen named chains** are hand-modelled
+So every audit correlates its findings into attack chains. **Seventeen named chains** are hand-modelled
 scenarios — each with its own narrative and remediation, several naming the concrete request path an
 attacker would use. Where no named chain explains a combination, an emergent pass reports the
 remaining entry-point → outcome pairs as lower-confidence "potential attack paths", so a novel
@@ -159,7 +159,7 @@ combination is still surfaced.
 Every chain lists the findings forming its steps, and remediating **any one step breaks the chain**.
 A chain is reported only when every ingredient is present: a clean org produces none.
 
-All eleven with severities and trigger conditions: **[docs/ATTACK-CHAINS.md](docs/ATTACK-CHAINS.md)**.
+All seventeen with severities and trigger conditions: **[docs/ATTACK-CHAINS.md](docs/ATTACK-CHAINS.md)**.
 
 ## Scope & Liability
 

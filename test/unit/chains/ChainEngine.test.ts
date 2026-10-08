@@ -119,6 +119,35 @@ describe('ChainEngine', () => {
       const chains = engine.correlate([flAgents(), flStale()]);
       expect(chains.some((c) => c.id === 'forcedleak-pattern')).toBe(false);
     });
+
+    // SalesBleed pattern: open-ended query reach + an outbound action with no confirmation.
+    const sbReach = () => f('agent-query-reach-SalesAgent');
+    const sbUnconfirmed = () => f('agent-outbound-actions-unconfirmed');
+    const sbUnverified = () => f('agent-outbound-actions-unverified', { riskLevel: 'MEDIUM' });
+
+    it('fires salesbleed-pattern with query reach and an unconfirmed outbound action', () => {
+      const chains = engine.correlate([sbReach(), sbUnconfirmed()]);
+      const chain = chains.find((c) => c.id === 'salesbleed-pattern');
+      expect(chain).toBeDefined();
+      expect(chain!.confidence).toBe('named');
+      expect(chain!.severity).toBe('HIGH');
+      expect(chain!.steps).toHaveLength(2);
+    });
+
+    it('fires salesbleed-pattern with the unverified outbound variant', () => {
+      const chains = engine.correlate([sbReach(), sbUnverified()]);
+      expect(chains.some((c) => c.id === 'salesbleed-pattern')).toBe(true);
+    });
+
+    it('does not fire salesbleed-pattern without query reach', () => {
+      const chains = engine.correlate([sbUnconfirmed()]);
+      expect(chains.some((c) => c.id === 'salesbleed-pattern')).toBe(false);
+    });
+
+    it('does not fire salesbleed-pattern without an outbound action', () => {
+      const chains = engine.correlate([sbReach()]);
+      expect(chains.some((c) => c.id === 'salesbleed-pattern')).toBe(false);
+    });
   });
 
   it('sorts named chains before potential, and by descending severity', () => {

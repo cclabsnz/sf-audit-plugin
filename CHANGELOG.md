@@ -11,6 +11,15 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+### Added
+
+- `agent-query-reach` (AI & Agents): flags agents carrying the standard General CRM topic or a
+  Query Records action, the open-ended query SalesBleed used to read Account data from a poisoned lead.
+- `agent-outbound-actions` (AI & Agents): flags Slack, email, external-service and MCP actions that
+  send data out of the org without user confirmation (HIGH), and standard Slack/email actions whose
+  confirmation setting is not readable (MEDIUM).
+- `salesbleed-pattern` named attack chain (HIGH): open-ended query reach plus an unconfirmed outbound action.
+
 ## [v1.15.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.15.1) — 2026-10-06
 
 The executive and incident reports now say which tool produced them. No change to any check, flag or finding.

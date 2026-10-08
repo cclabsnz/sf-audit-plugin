@@ -1,6 +1,6 @@
 # What it checks
 
-The audit runs **93 read-only checks**. The [README](../README.md#what-it-checks) summarises them by domain; this is the full inventory. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into ten domains below.
+The audit runs **95 read-only checks**. The [README](../README.md#what-it-checks) summarises them by domain; this is the full inventory. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into ten domains below.
 
 ## Org Health & Configuration
 | Check | What it looks for |
@@ -134,10 +134,12 @@ The audit runs **93 read-only checks**. The [README](../README.md#what-it-checks
 | Agentforce Channel Exposure | Correlates active agents with the channels that reach them (Experience Cloud sites, embedded deployments, messaging channels); flags guest-reachable exposure |
 | Agentforce Monitoring Coverage | Active agents running with no Event Monitoring capture and no Transaction Security policy (the monitoring gap in the ForcedLeak pattern); points at `sf audit events pull` |
 | Trusted URL Hygiene | Reviews the CSP trusted-sites allowlist for non-Salesforce domains that could be repurposed as exfiltration channels; with `--resolve-domains`, DNS-checks each for unresolvable or parked entries |
+| Agent Query Reach | Agents carrying the standard General CRM topic or a Query Records action: open-ended querying an injected prompt can point at any object the run-as user can read (the SalesBleed read path) |
+| Agent Outbound Actions | Agent actions that send data out of the org (Slack messages, email, external services, MCP tools) without user confirmation; standard Slack/email actions whose confirmation setting is not readable are reported separately |
 
-Two of the named [attack chains](#attack-chains) correlate these findings specifically: **Prompt injection blast radius** (guest-reachable channel + over-privileged agent user + write-capable actions) and **ForcedLeak pattern** (active agents + a stale/unresolvable trusted URL + no event capture).
+Three of the named [attack chains](#attack-chains) correlate these findings specifically: **Prompt injection blast radius** (guest-reachable channel + over-privileged agent user + write-capable actions), **ForcedLeak pattern** (active agents + a stale/unresolvable trusted URL + no event capture) and **SalesBleed pattern** (open-ended query reach + an unconfirmed outbound action).
 
-The five agent-specific checks stay silent in orgs where Agentforce is not enabled (the GenAI objects do not exist, so the inventory records `not-enabled` and the dependent checks return nothing). Trusted URL Hygiene runs everywhere, since the CSP allowlist is an org-wide exfiltration surface regardless of Agentforce.
+The seven agent-specific checks stay silent in orgs where Agentforce is not enabled (the GenAI objects do not exist, so the inventory records `not-enabled` and the dependent checks return nothing). Trusted URL Hygiene runs everywhere, since the CSP allowlist is an org-wide exfiltration surface regardless of Agentforce.
 
 ## Known limitations (advisory-only checks)
 

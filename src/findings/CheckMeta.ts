@@ -98,6 +98,8 @@ export const CHECK_META: Record<string, CheckMeta> = {
   'agent-action-surface':    { effort: 'moderate', impact: 'Write-capable agent actions (Apex/Flow that create, update, or delete) let an injected prompt take state-changing operations, not just read data — the difference between a leak and active tampering on an exposed agent.' },
   'agent-channel-exposure':  { effort: 'moderate', impact: 'An agent bound to a guest-reachable channel lets any unauthenticated visitor send prompt-injection input to an agent that executes with its run-as user\'s data access: the public-input half of the ForcedLeak pattern.' },
   'agent-monitoring-coverage':{ effort: 'moderate', impact: 'Active agents with no Event Monitoring capture and no Transaction Security policy leave prompt injection, mass reads, and exfiltration with no auditable trail and no automated response.' },
+  'agent-query-reach':       { effort: 'moderate', impact: 'The General CRM topic and Query Records action let an injected prompt choose which object to query, so one poisoned lead or case can read any object the run-as user can see: the SalesBleed read path.' },
+  'agent-outbound-actions':  { effort: 'quick',    impact: 'Slack, email and external-service actions with no user confirmation give an injected prompt a ready way to send data out of the org: the PipeLeak and SalesBleed exit path.' },
   'trusted-url-hygiene':     { effort: 'quick',    impact: 'A non-Salesforce CSP-trusted domain that has lapsed or been parked is an allowlisted exfiltration channel: whoever re-registers it can receive prompt-injected data from Lightning and Agentforce output — the exact ForcedLeak exfil vector.' },
 };
 
