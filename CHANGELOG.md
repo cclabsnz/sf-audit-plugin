@@ -11,6 +11,10 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+## [v1.16.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.16.0) — 2026-10-09
+
+The AI & Agents checks now run on real orgs: since 1.6.0 they had been silent everywhere, because the agent inventory asked the Tooling API for objects only the data API serves. This release fixes that, and adds two checks and a named chain for the SalesBleed and PipeLeak pattern, all verified against a live Agentforce agent.
+
 ### Added
 
 - `agent-query-reach` (AI & Agents): flags agents carrying the standard General CRM topic or a
