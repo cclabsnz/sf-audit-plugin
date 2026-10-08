@@ -1,0 +1,371 @@
+{
+ "planners": [
+  {
+   "Id": "16j000000000000001",
+   "DeveloperName": "CRM_Agent_v1",
+   "MasterLabel": "CRM Agent"
+  },
+  {
+   "Id": "16j000000000000002",
+   "DeveloperName": "CRM_Agent_v2",
+   "MasterLabel": "CRM Agent"
+  }
+ ],
+ "plannerTopics": [
+  {
+   "PlannerId": "16j000000000000001",
+   "Plugin": "179000000000000003"
+  },
+  {
+   "PlannerId": "16j000000000000001",
+   "Plugin": "179000000000000004"
+  },
+  {
+   "PlannerId": "16j000000000000001",
+   "Plugin": "179000000000000005"
+  },
+  {
+   "PlannerId": "16j000000000000001",
+   "Plugin": "179000000000000006"
+  },
+  {
+   "PlannerId": "16j000000000000002",
+   "Plugin": "179000000000000007"
+  },
+  {
+   "PlannerId": "16j000000000000002",
+   "Plugin": "179000000000000008"
+  },
+  {
+   "PlannerId": "16j000000000000002",
+   "Plugin": "179000000000000009"
+  },
+  {
+   "PlannerId": "16j000000000000002",
+   "Plugin": "179000000000000010"
+  },
+  {
+   "PlannerId": "16j000000000000002",
+   "Plugin": "179000000000000011"
+  }
+ ],
+ "plugins": [
+  {
+   "Id": "179000000000000006",
+   "DeveloperName": "GeneralFAQ_16j000000000001",
+   "MasterLabel": "General FAQ",
+   "Source": null,
+   "PlannerId": "16j000000000000001"
+  },
+  {
+   "Id": "179000000000000004",
+   "DeveloperName": "off_topic_16j000000000001",
+   "MasterLabel": "Off Topic",
+   "Source": null,
+   "PlannerId": "16j000000000000001"
+  },
+  {
+   "Id": "179000000000000005",
+   "DeveloperName": "ambiguous_question_16j000000000001",
+   "MasterLabel": "Ambiguous Question",
+   "Source": null,
+   "PlannerId": "16j000000000000001"
+  },
+  {
+   "Id": "179000000000000003",
+   "DeveloperName": "agent_router_16j000000000001",
+   "MasterLabel": "Agent Router",
+   "Source": null,
+   "PlannerId": "16j000000000000001"
+  },
+  {
+   "Id": "179000000000000009",
+   "DeveloperName": "ambiguous_question_16j000000000002",
+   "MasterLabel": "Ambiguous Question",
+   "Source": null,
+   "PlannerId": "16j000000000000002"
+  },
+  {
+   "Id": "179000000000000007",
+   "DeveloperName": "off_topic_16j000000000002",
+   "MasterLabel": "Off Topic",
+   "Source": null,
+   "PlannerId": "16j000000000000002"
+  },
+  {
+   "Id": "179000000000000011",
+   "DeveloperName": "GeneralCRM_16j000000000002",
+   "MasterLabel": "General CRM",
+   "Source": null,
+   "PlannerId": "16j000000000000002"
+  },
+  {
+   "Id": "179000000000000010",
+   "DeveloperName": "GeneralFAQ_16j000000000002",
+   "MasterLabel": "General FAQ",
+   "Source": null,
+   "PlannerId": "16j000000000000002"
+  },
+  {
+   "Id": "179000000000000008",
+   "DeveloperName": "agent_router_16j000000000002",
+   "MasterLabel": "Agent Router",
+   "Source": null,
+   "PlannerId": "16j000000000000002"
+  }
+ ],
+ "pluginActions": [
+  {
+   "PluginId": "179000000000000006",
+   "Function": "172000000000000012"
+  },
+  {
+   "PluginId": "179000000000000011",
+   "Function": "172000000000000013"
+  },
+  {
+   "PluginId": "179000000000000011",
+   "Function": "172000000000000014"
+  },
+  {
+   "PluginId": "179000000000000010",
+   "Function": "172000000000000015"
+  },
+  {
+   "PluginId": "179000000000000011",
+   "Function": "172000000000000016"
+  },
+  {
+   "PluginId": "179000000000000011",
+   "Function": "172000000000000017"
+  },
+  {
+   "PluginId": "179000000000000011",
+   "Function": "172000000000000018"
+  },
+  {
+   "PluginId": "179000000000000011",
+   "Function": "172000000000000019"
+  },
+  {
+   "PluginId": "179000000000000011",
+   "Function": "172000000000000020"
+  },
+  {
+   "PluginId": "179000000000000011",
+   "Function": "172000000000000021"
+  },
+  {
+   "PluginId": "179000000000000011",
+   "Function": "172000000000000022"
+  },
+  {
+   "PluginId": "179000000000000011",
+   "Function": "172000000000000023"
+  },
+  {
+   "PluginId": "179000000000000011",
+   "Function": "172000000000000024"
+  },
+  {
+   "PluginId": "179000000000000011",
+   "Function": "172000000000000025"
+  }
+ ],
+ "functions": [
+  {
+   "Id": "172000000000000012",
+   "DeveloperName": "AnswerQuestionsWithKnowledge_179000000000003",
+   "MasterLabel": "Answer Questions with Knowledge",
+   "Source": "EmployeeCopilot__AnswerQuestionsWithKnowledge",
+   "PlannerId": null,
+   "PluginId": "179000000000000006",
+   "InvocationTargetType": "standardInvocableAction",
+   "InvocationTarget": "streamKnowledgeSearch",
+   "IsConfirmationRequired": false
+  },
+  {
+   "Id": "172000000000000017",
+   "DeveloperName": "QueryRecords_179000000000004",
+   "MasterLabel": "Query Records",
+   "Source": "EmployeeCopilot__QueryRecords",
+   "PlannerId": null,
+   "PluginId": "179000000000000011",
+   "InvocationTargetType": "standardInvocableAction",
+   "InvocationTarget": "queryRecords",
+   "IsConfirmationRequired": false
+  },
+  {
+   "Id": "172000000000000014",
+   "DeveloperName": "ExtractFieldsAndValuesFromUserInput_179000000000004",
+   "MasterLabel": "Extract Fields And Values From User Input",
+   "Source": "EmployeeCopilot__ExtractFieldsAndValuesFromUserInput",
+   "PlannerId": null,
+   "PluginId": "179000000000000011",
+   "InvocationTargetType": "standardInvocableAction",
+   "InvocationTarget": "getRecordFieldsAndValues",
+   "IsConfirmationRequired": false
+  },
+  {
+   "Id": "172000000000000019",
+   "DeveloperName": "IdentifyRecordByName_179000000000004",
+   "MasterLabel": "Identify Record by Name",
+   "Source": "EmployeeCopilot__IdentifyRecordByName",
+   "PlannerId": null,
+   "PluginId": "179000000000000011",
+   "InvocationTargetType": "standardInvocableAction",
+   "InvocationTarget": "identifyRecordByName",
+   "IsConfirmationRequired": false
+  },
+  {
+   "Id": "172000000000000016",
+   "DeveloperName": "IdentifyObjectByName_179000000000004",
+   "MasterLabel": "Identify Object by Name",
+   "Source": "EmployeeCopilot__IdentifyObjectByName",
+   "PlannerId": null,
+   "PluginId": "179000000000000011",
+   "InvocationTargetType": "standardInvocableAction",
+   "InvocationTarget": "identifyObject",
+   "IsConfirmationRequired": false
+  },
+  {
+   "Id": "172000000000000023",
+   "DeveloperName": "QueryRecordsWithAggregate_179000000000004",
+   "MasterLabel": "Query Records with Aggregate",
+   "Source": "EmployeeCopilot__QueryRecordsWithAggregate",
+   "PlannerId": null,
+   "PluginId": "179000000000000011",
+   "InvocationTargetType": "standardInvocableAction",
+   "InvocationTarget": "queryRecordsWithAggregate",
+   "IsConfirmationRequired": false
+  },
+  {
+   "Id": "172000000000000022",
+   "DeveloperName": "AnswerQuestionsWithKnowledge_179000000000004",
+   "MasterLabel": "Answer Questions with Knowledge",
+   "Source": "EmployeeCopilot__AnswerQuestionsWithKnowledge",
+   "PlannerId": null,
+   "PluginId": "179000000000000011",
+   "InvocationTargetType": "standardInvocableAction",
+   "InvocationTarget": "streamKnowledgeSearch",
+   "IsConfirmationRequired": false
+  },
+  {
+   "Id": "172000000000000020",
+   "DeveloperName": "GetActivityDetails_179000000000004",
+   "MasterLabel": "Get Activity Details",
+   "Source": "EmployeeCopilot__GetActivityDetails",
+   "PlannerId": null,
+   "PluginId": "179000000000000011",
+   "InvocationTargetType": "standardInvocableAction",
+   "InvocationTarget": "getActivityDetails",
+   "IsConfirmationRequired": false
+  },
+  {
+   "Id": "172000000000000025",
+   "DeveloperName": "UpdateRecordFields_179000000000004",
+   "MasterLabel": "Update Record",
+   "Source": "EmployeeCopilot__UpdateRecordFields",
+   "PlannerId": null,
+   "PluginId": "179000000000000011",
+   "InvocationTargetType": "standardInvocableAction",
+   "InvocationTarget": "einsteinCopilotUpdateRecord",
+   "IsConfirmationRequired": true
+  },
+  {
+   "Id": "172000000000000015",
+   "DeveloperName": "AnswerQuestionsWithKnowledge_179000000000005",
+   "MasterLabel": "Answer Questions with Knowledge",
+   "Source": "EmployeeCopilot__AnswerQuestionsWithKnowledge",
+   "PlannerId": null,
+   "PluginId": "179000000000000010",
+   "InvocationTargetType": "standardInvocableAction",
+   "InvocationTarget": "streamKnowledgeSearch",
+   "IsConfirmationRequired": false
+  },
+  {
+   "Id": "172000000000000021",
+   "DeveloperName": "DraftOrReviseEmail_179000000000004",
+   "MasterLabel": "Draft or Revise Email",
+   "Source": "EmployeeCopilot__DraftOrReviseEmail",
+   "PlannerId": null,
+   "PluginId": "179000000000000011",
+   "InvocationTargetType": "standardInvocableAction",
+   "InvocationTarget": "getDraftOrReviseEmailPrompt",
+   "IsConfirmationRequired": false
+  },
+  {
+   "Id": "172000000000000013",
+   "DeveloperName": "GetActivitiesTimeline_179000000000004",
+   "MasterLabel": "Get Activities Timeline",
+   "Source": "EmployeeCopilot__GetActivitiesTimeline",
+   "PlannerId": null,
+   "PluginId": "179000000000000011",
+   "InvocationTargetType": "standardInvocableAction",
+   "InvocationTarget": "getActivitiesTimeline",
+   "IsConfirmationRequired": false
+  },
+  {
+   "Id": "172000000000000018",
+   "DeveloperName": "Notify_Lead_By_Email_179000000000004",
+   "MasterLabel": "Notify Lead By Email",
+   "Source": null,
+   "PlannerId": null,
+   "PluginId": "179000000000000011",
+   "InvocationTargetType": "flow",
+   "InvocationTarget": "300000000000000026",
+   "IsConfirmationRequired": false
+  },
+  {
+   "Id": "172000000000000024",
+   "DeveloperName": "GetRecordDetails_179000000000004",
+   "MasterLabel": "Get Record Details",
+   "Source": "EmployeeCopilot__GetRecordDetails",
+   "PlannerId": null,
+   "PluginId": "179000000000000011",
+   "InvocationTargetType": "standardInvocableAction",
+   "InvocationTarget": "getDataForGrounding",
+   "IsConfirmationRequired": false
+  }
+ ],
+ "botsSoql": [
+  {
+   "Id": "0Xx000000000000027",
+   "DeveloperName": "CRM_Agent",
+   "MasterLabel": "CRM Agent",
+   "Type": "InternalCopilot",
+   "BotUserId": null
+  }
+ ],
+ "botVersionsSoql": [
+  {
+   "Id": "0X9000000000000028",
+   "BotDefinitionId": "0Xx000000000000027",
+   "Status": "Active",
+   "VersionNumber": 2
+  }
+ ],
+ "flowdef": [
+  {
+   "Id": "300000000000000026",
+   "DeveloperName": "Send_Lead_Email",
+   "NamespacePrefix": "examplens",
+   "ActiveVersionId": "301000000000000029",
+   "LatestVersionId": "301000000000000029"
+  }
+ ],
+ "flowVersions": [
+  {
+   "Id": "301000000000000029",
+   "Metadata": {
+    "actionCalls": [
+     {
+      "actionType": "emailSimple",
+      "actionName": "emailSimple"
+     }
+    ]
+   }
+  }
+ ],
+ "_source": "Captured read-only from a v67.0 Developer Edition org with one active Agentforce Employee Agent (General CRM topic, plus a custom Flow action whose flow sends email, confirmation off), 2026-10-09. Record Ids replaced with fakes that keep each key prefix; namespace replaced."
+}
