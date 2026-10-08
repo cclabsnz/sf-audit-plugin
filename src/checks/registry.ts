@@ -99,6 +99,8 @@ import { AgentUserPrivilegeCheck } from './impl/AgentUserPrivilegeCheck.js';
 import { AgentActionSurfaceCheck } from './impl/AgentActionSurfaceCheck.js';
 import { AgentChannelExposureCheck } from './impl/AgentChannelExposureCheck.js';
 import { AgentMonitoringCoverageCheck } from './impl/AgentMonitoringCoverageCheck.js';
+import { AgentQueryReachCheck } from './impl/AgentQueryReachCheck.js';
+import { AgentOutboundActionsCheck } from './impl/AgentOutboundActionsCheck.js';
 import { TrustedUrlHygieneCheck } from './impl/TrustedUrlHygieneCheck.js';
 
 // Order matters: a check's dependsOnCache must be satisfied by a preceding check's populatesCache.
@@ -205,5 +207,7 @@ export const CHECKS: SecurityCheck[] = [
   new AgentActionSurfaceCheck(),      // reads agentInventory, agentAccess
   new AgentChannelExposureCheck(),    // reads agentInventory, agentAccess
   new AgentMonitoringCoverageCheck(), // reads agentInventory, agentAccess, eventLogSummary
+  new AgentQueryReachCheck(),         // reads agentInventory, agentAccess
+  new AgentOutboundActionsCheck(),    // reads agentInventory, agentAccess
   new TrustedUrlHygieneCheck(),       // reads cspTrustedSites (runs even without Agentforce)
 ];

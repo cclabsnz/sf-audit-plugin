@@ -212,6 +212,26 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     },
   },
   {
+    id: 'salesbleed-pattern',
+    title: 'SalesBleed pattern',
+    severity: 'HIGH',
+    narrative:
+      'An active agent can run open-ended record queries (the General CRM topic or Query Records action) and ' +
+      'the org has agent actions that send data out (Slack, email, external services) without user confirmation. ' +
+      'That is two of the three ingredients in SalesBleed (Zenity Labs, Sept 2026) and PipeLeak (Capsule ' +
+      'Security, Apr 2026); the third, text an outsider wrote, arrives through Web-to-Lead, Web-to-Case, email or ' +
+      'chat in almost every org. One injected instruction in a lead can query Accounts and send the result out.',
+    remediation:
+      'Break any one link: remove open-ended querying from agents that read untrusted records, require user ' +
+      'confirmation on every outbound action, or keep the agent that queries separate from the agent that sends.',
+    match(_present, active) {
+      const reach = byPrefixes(active, ['agent-query-reach-']);
+      const outbound = byIds(active, ['agent-outbound-actions-unconfirmed', 'agent-outbound-actions-unverified']);
+      if (reach.length === 0 || outbound.length === 0) return null;
+      return [...reach, ...outbound];
+    },
+  },
+  {
     id: 'sandbox-pii-exposure',
     title: 'Unmasked production PII in a weakly-controlled sandbox',
     severity: 'HIGH',

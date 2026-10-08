@@ -6,16 +6,25 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 // (or per-object errors) without depending on call order.
 type Handler = (soql: string) => Promise<unknown[]>;
 
+// Bot objects live in the data API: a real org answers INVALID_TYPE for BotDefinition and
+// BotVersion over Tooling, even with active agents. The context mirrors that: fixtures still
+// supply Bot* rows through `tooling`, but they are only reachable over SOQL.
+const BOT_OBJECT = /FROM Bot(Definition|Version)\b/i;
+
 function makeCtx(opts: { tooling: Handler; soql?: Handler }): AuditContext {
   return {
     soql: {
       query: jest.fn(),
       queryAll: (jest.fn() as any).mockImplementation((soql: string) =>
-        opts.soql ? opts.soql(soql) : Promise.resolve([]),
+        BOT_OBJECT.test(soql) ? opts.tooling(soql) : opts.soql ? opts.soql(soql) : Promise.resolve([]),
       ),
     } as any,
     tooling: {
-      query: (jest.fn() as any).mockImplementation((soql: string) => opts.tooling(soql)),
+      query: (jest.fn() as any).mockImplementation((soql: string) =>
+        BOT_OBJECT.test(soql)
+          ? Promise.reject(Object.assign(new Error("sObject type is not supported."), { errorCode: 'INVALID_TYPE', statusCode: 400 }))
+          : opts.tooling(soql),
+      ),
       getRecord: jest.fn(),
     } as any,
     rest: {} as any,

@@ -107,7 +107,8 @@ export class AgentInventoryCheck implements SecurityCheck {
     let versions: BotVersionRecord[];
     let agentUsers: AgentUser[];
     try {
-      versions = await ctx.tooling.query<BotVersionRecord>(
+      // BotVersion, like BotDefinition, is a data API object: Tooling answers INVALID_TYPE.
+      versions = await ctx.soql.queryAll<BotVersionRecord>(
         `SELECT Id, BotDefinitionId, Status, VersionNumber FROM BotVersion WHERE Status = 'Active'`,
       );
       // GenAiPlannerDefinition is queried for completeness of the agent picture (Phase 2
@@ -233,14 +234,18 @@ export class AgentInventoryCheck implements SecurityCheck {
   // BotDefinition query with a defensive fallback: if Type/BotUserId are not queryable in
   // this org/release (MALFORMED_QUERY on the field), retry with the minimal field set rather
   // than throw. A genuinely missing object still throws and is handled by the caller.
+  //
+  // BotDefinition is a data API object. The Tooling API answers INVALID_TYPE for it even in
+  // orgs with active agents (verified 2026-10-09 on a v67.0 org), which the caller reads as
+  // "Agentforce not enabled" — so querying it through Tooling silenced every AI & Agents check.
   private async queryBotDefinitions(ctx: AuditContext): Promise<BotDefinitionRecord[]> {
     try {
-      return await ctx.tooling.query<BotDefinitionRecord>(
+      return await ctx.soql.queryAll<BotDefinitionRecord>(
         `SELECT Id, DeveloperName, MasterLabel, Type, BotUserId FROM BotDefinition`,
       );
     } catch (e) {
       if (isApiError(e) && /MALFORMED_QUERY|INVALID_FIELD/i.test(e.errorCode)) {
-        return ctx.tooling.query<BotDefinitionRecord>(
+        return ctx.soql.queryAll<BotDefinitionRecord>(
           `SELECT Id, DeveloperName, MasterLabel FROM BotDefinition`,
         );
       }

@@ -110,6 +110,11 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'agent-channel-exposure':  ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.8.3', 'LLM01'],
   'agent-monitoring-coverage':['OWASP-A09', 'SOC2-CC7.2', 'ISO-A.8.15', 'LLM02'],
   'trusted-url-hygiene':     ['OWASP-A05', 'OWASP-A10', 'SOC2-CC6.6', 'ISO-A.8.26', 'LLM01', 'LLM05'],
+  // agent-query-reach: open-ended querying is excess agency, and it is what an injection reads
+  // through (LLM02). agent-outbound-actions: an unconfirmed send is the output channel an
+  // injected payload leaves by (LLM05) and an action taken without human approval (LLM06).
+  'agent-query-reach':       ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.8.3', 'LLM06', 'LLM02'],
+  'agent-outbound-actions':  ['OWASP-A01', 'SOC2-CC6.6', 'ISO-A.8.3', 'LLM05', 'LLM06'],
 };
 
 // Domain groupings. Each check belongs to exactly one domain, and a domain's control ids are
@@ -143,7 +148,7 @@ const DOMAIN = {
   // have no chapter that fits); HIPAA and GDPR do, because an over-privileged agent user reading
   // PHI or personal data is squarely an access-control and security-of-processing question.
   aiAgents: ['agent-inventory', 'agent-user-privilege', 'agent-action-surface', 'agent-channel-exposure',
-             'agent-monitoring-coverage', 'trusted-url-hygiene'],
+             'agent-monitoring-coverage', 'trusted-url-hygiene', 'agent-query-reach', 'agent-outbound-actions'],
 } as const;
 
 // NZ pack crosswalk — HISO/NZISM are domain/chapter-level; Privacy Act IPPs are statute-level.
@@ -216,6 +221,8 @@ const REGULATORY_PRECISE: Record<string, string[]> = {
   'agent-channel-exposure':     ['HIPAA-164.312(a)(1)', 'GDPR-Art25', 'GDPR-Art5(1)(f)'],
   'agent-monitoring-coverage':  ['HIPAA-164.312(b)', 'HIPAA-164.308(a)(1)(ii)(D)', 'GDPR-Art33'],
   'trusted-url-hygiene':        ['HIPAA-164.312(e)(1)', 'GDPR-Art44'],
+  'agent-query-reach':          ['HIPAA-164.312(a)(1)', 'HIPAA-164.308(a)(4)', 'GDPR-Art25', 'GDPR-Art5(1)(f)'],
+  'agent-outbound-actions':     ['HIPAA-164.312(e)(1)', 'GDPR-Art25', 'GDPR-Art32(1)(b)'],
 };
 
 function buildCheckControlMap(): Record<string, string[]> {

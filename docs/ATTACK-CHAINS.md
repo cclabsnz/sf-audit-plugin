@@ -13,7 +13,7 @@ novel combination is still surfaced rather than missed. Every chain lists the fi
 steps, and remediating **any one step breaks the chain** — which is what makes this actionable
 rather than alarming.
 
-The sixteen named chains:
+The seventeen named chains:
 
 | Chain | Severity | Fires when |
 |-------|----------|-----------|
@@ -23,6 +23,7 @@ The sixteen named chains:
 | Credential theft to external pivot | CRITICAL | Exposed secrets (hardcoded credentials, credentials in Custom Labels, debug logs, broad CORS) combine with an egress path — a named credential, remote site, or a self-provisioned connected app |
 | Prompt injection blast radius | CRITICAL | A guest-reachable Agentforce channel, an over-privileged agent run-as user, and write-capable agent actions are all present, so one injected prompt can read, alter, or destroy data across the agent's reach. Reached over the messaging host (`*.my.salesforce-scrt.com`, `/iamessage/api/v2/…`), **not** the site's Aura endpoint — the API's unauthenticated access-token flow needs only the org id and the deployment's `esDeveloperName`, both public in the widget's bootstrap |
 | ForcedLeak pattern | CRITICAL | Active agents + a stale or unresolvable CSP-trusted domain + no Event Monitoring capture. The Noma Security chain (Sept 2025): re-register the lapsed domain, inject an agent into sending data to it, and nothing records it |
+| SalesBleed pattern | HIGH | An agent with open-ended record queries (General CRM topic or Query Records) + an outbound action (Slack, email, external service) with no user confirmation. The Zenity Labs chain (Sept 2026) and PipeLeak (Capsule Security, Apr 2026): a poisoned lead makes the agent query Accounts and send the result out |
 | SOQL injection to mass read | HIGH | Injectable dynamic SOQL combines with a bulk-readable data sink (broad sharing, unencrypted sensitive fields, public report folders, View All Data) |
 | MFA bypass to privileged compromise | HIGH | Weak MFA enforcement or trusted-IP MFA bypass coincides with highly-privileged accounts, so phishing or credential stuffing reaches an admin without a second factor |
 | Unmasked production PII in a weakly-controlled sandbox | HIGH | A sandbox holds populated PII fields — unmasked production data — while running weaker authentication or broader sharing than the org it was refreshed from. The data is real; only the protection is not |

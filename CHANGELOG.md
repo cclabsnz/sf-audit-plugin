@@ -11,6 +11,27 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+### Added
+
+- `agent-query-reach` (AI & Agents): flags agents carrying the standard General CRM topic or a
+  Query Records action, the open-ended query SalesBleed used to read Account data from a poisoned lead.
+- `agent-outbound-actions` (AI & Agents): flags Slack, email, external-service and MCP actions that
+  send data out of the org without user confirmation (HIGH), and standard Slack/email actions whose
+  confirmation setting is not readable (MEDIUM).
+- `salesbleed-pattern` named attack chain (HIGH): open-ended query reach plus an unconfirmed outbound action.
+
+### Fixed
+
+- **AI & Agents checks never ran on a real org.** `agent-inventory` read `BotDefinition` and
+  `BotVersion` through the Tooling API, which answers `INVALID_TYPE` for both even in orgs with
+  active agents, so every org was classed as "Agentforce not enabled" and all AI & Agents checks
+  stayed silent since 1.6.0. Both are now read through SOQL. Verified against a live agent;
+  `test/fixtures/agentforce/live-agent-v67.json` replays it so the shape cannot regress.
+- Agent checks now follow the platform's real shapes: one planner per agent version (only the
+  active version is reported), topic and action links that hold record Ids rather than names, and
+  Flow actions judged by what the active flow version does (Send Email, email alerts, external
+  services).
+
 ## [v1.15.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.15.1) — 2026-10-06
 
 The executive and incident reports now say which tool produced them. No change to any check, flag or finding.
