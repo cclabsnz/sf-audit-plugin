@@ -15,6 +15,7 @@ import { resolveFrameworks } from '../../compliance/resolve.js';
 import { buildAuditContext, resolveOrgInfo } from '../../lib/wire.js';
 import { loadScoringConfig } from '../../findings/loadScoringConfig.js';
 import { HistoryStore } from '../../history/HistoryStore.js';
+import { isCiEnvironment, shouldArchiveHistory } from '../../history/archivePolicy.js';
 import { EXIT_FINDINGS, EXIT_INCONCLUSIVE, resolveExitCode, violationsFor } from '../../findings/exitCode.js';
 import { buildDigest, type AuditDigest } from '../../findings/digest.js';
 
@@ -92,6 +93,17 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
         'Make outbound DNS queries from this machine to verify CSP trusted domains resolve. Off by default; default runs contact only the target org.',
       default: false,
     }),
+    // Named as a positive flag, not `history` with allowNo: archiving is on by default
+    // locally but off by default in CI, so a single tri-state boolean would hide which
+    // default applied. oclif matches the literal flag name before trying negation.
+    'no-history': Flags.boolean({
+      summary: 'Do not archive this run to ~/.sf/audit-history/. Implied in CI unless --keep-history is set.',
+      default: false,
+    }),
+    'keep-history': Flags.boolean({
+      summary: 'Archive this run to ~/.sf/audit-history/ even in CI. Overrides --no-history.',
+      default: false,
+    }),
   };
 
   public async run(): Promise<AuditResult | AuditDigest> {
@@ -151,9 +163,12 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
       this.log(`\nReport written: ${outputPath}`);
     }
 
-    // Auto-archive: silently save a copy for history tracking
-    const store = new HistoryStore();
-    store.archive(result);
+    // Auto-archive a copy for history tracking, except in CI or when suppressed.
+    if (shouldArchiveHistory(flags)) {
+      new HistoryStore().archive(result);
+    } else if (!flags['no-history'] && isCiEnvironment()) {
+      this.log('\nHistory archive skipped: CI detected. Pass --keep-history to archive this run.');
+    }
 
     this.log('');
     this.printSummary(result);
