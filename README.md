@@ -21,7 +21,7 @@ A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audi
 - **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
 - **History & diff:** archives each run and shows security-posture drift over time
 - **Free event baseline:** `sf audit events pull` captures the org's free daily `EventLogFile` logs to local disk before the 1-day retention window drops them — no Event Monitoring / Shield add-on needed
-- **Connected-app least-privilege:** `sf audit apps` reads the `RestApi` EventLogFile to see which objects each connected app actually uses, compares that against what its run-as user is granted, and reports the over-grant per object and read/write bit — plus a suggested least-privilege permission set
+- **Connected-app least-privilege:** `sf audit apps` reads the `RestApi`, `BulkApi2`, `GraphQlQueryExecution` and `AuraRequest` EventLogFiles to see which objects each connected app actually uses, compares that against what its run-as user is granted (permission sets and profile), and reports the over-grant per object and read/write bit — plus a suggested least-privilege permission set, which `--emit-permset <dir>` writes as local `.permissionset-meta.xml` files (never deployed)
 - **Guest User Anomaly investigation:** `sf audit incident collect` saves the guest user's evidence for each anomaly wave, and `sf audit incident report` analyses it offline into a cited verdict: who it was, whether content came back, and whether anyone logged in ([walkthrough](https://www.softwareinsights.dev/posts/salesforce-guest-user-anomaly-investigation-sf-audit-incident/))
 - Strictly read-only (SOQL/Tooling/REST GETs + Metadata API reads); see [PERMISSIONS.md](PERMISSIONS.md) for the least-privilege access it needs
 
@@ -254,7 +254,7 @@ Beyond the audit itself, the plugin ships five commands. Each is documented in
 | `sf audit events pull` | Capture the org's **free** daily `EventLogFile` logs to local disk before the ~1-day retention window drops them — no Event Monitoring / Shield add-on needed. Idempotent, safe to cron |
 | `sf audit timeline` | Reconstruct one actor's activity across every captured event type, entirely offline. Refuses to expand a shared identity or join on a blank field, and always reports capture coverage first |
 | `sf audit preflight` | Read the running user's effective permissions in one query and report which checks will produce a verdict and which will return inconclusive — **before** an audit is run |
-| `sf audit apps` | Read the `RestApi` event log to compare what each connected app actually *uses* against what its run-as user is *granted*, and emit a suggested least-privilege permission set |
+| `sf audit apps` | Read the API event logs to compare what each connected app actually *uses* against what its run-as user is *granted*, and suggest a least-privilege permission set. `--emit-permset <dir>` writes it as local `.permissionset-meta.xml` files for review; nothing is deployed |
 
 To triage captured logs for abuse patterns, pair `events pull` with the companion CLI
 **[sfelf-triage](https://github.com/cclabsnz/sfelf-triage)**, which reads this plugin's

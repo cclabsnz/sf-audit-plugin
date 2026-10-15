@@ -30,6 +30,18 @@ Merged to `main`, not yet released.
   It appears in the attack-path cards of the HTML report (dark) and in the Attack Scenarios of
   the executive report (light). The diagram is self-contained inline SVG, so it works under the
   executive report's no-script CSP and prints to PDF; long chains wrap onto rows of four.
+- `sf audit apps --emit-permset <dir>` writes each app's suggested least-privilege permission set as
+  a local `.permissionset-meta.xml` for review. Nothing is deployed. Apps whose recommendation is
+  held back (soak window, many interactive users, incomplete logs) get no file, and generated names
+  are unique, valid metadata API names.
+- `sf audit apps` now reads `BulkApi2`, `GraphQlQueryExecution` and `AuraRequest` logs as well as
+  `RestApi`, resolves External Client Apps, and counts profile object permissions as granted access.
+
+### Fixed
+
+- `sf audit apps` no longer reports an empty, clean-looking result when `EventLogFile` cannot be
+  read: a failed listing is an error, and partly failed downloads mark the output incomplete and
+  suppress revoke recommendations.
 
 ### Security
 

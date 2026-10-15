@@ -444,13 +444,23 @@ object access than the app ever touches. The static checks (`connected-apps`, `c
 sf audit apps --target-org myOrg --since 7
 ```
 
-It reads the `RestApi` `EventLogFile` to see which objects each connected app touched, compares that
+It reads the `RestApi`, `BulkApi2`, `GraphQlQueryExecution` and `AuraRequest` `EventLogFile`s to see
+which objects each connected app touched, compares that
 against the objects its run-as user can reach, and reports the over-grant per object and read/write
 bit — plus a generated least-privilege permission set granting exactly what was observed. App IDs are
-resolved to human-readable names (`AppMenuItem` / `ConnectedApplication` / a bundled standard-app
-catalog / `LoginHistory` correlation), and anything unresolved is flagged loudly rather than hidden.
+resolved to human-readable names (`AppMenuItem` / `ConnectedApplication` / `ExternalClientApplication` /
+a bundled standard-app catalog / `LoginHistory` correlation). Granted access includes the run-as user's
+profile as well as assigned permission sets, and anything unresolved is flagged loudly rather than hidden.
 
 It is **read-only**: the suggested permission set is emitted as data, never deployed.
+`--emit-permset <dir>` writes it as one `<App>_LeastPrivilege.permissionset-meta.xml` per app into a
+local directory, for you to review and deploy yourself. Apps whose recommendation is held back (below
+the soak window, many interactive users, or incomplete logs) get no file. Names that would collide are
+suffixed `_2`, `_3`, and every name is a valid metadata API name.
+
+If `EventLogFile` cannot be listed the command stops with an error rather than report an empty,
+clean-looking result. If only some log files fail to download, the output is marked **INCOMPLETE**
+and revoke recommendations are suppressed.
 
 **Honest bounds.** `RestApi` attributes roughly half of API traffic to a connected app (the rest is
 UI-API / session traffic), so *used* is a lower bound. Findings carry the observation window and
@@ -463,10 +473,11 @@ one `events pull` uses).
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--target-org` | Org alias or username | required |
-| `--since` | Days of `RestApi` log to analyze | `7` |
-| `--from` | Read `RestApi` CSVs from a local `events pull` baseline dir instead of downloading | *(download)* |
+| `--since` | Days of API logs to analyze | `7` |
+| `--from` | Read API log CSVs from a local `events pull` baseline dir instead of downloading | *(download)* |
 | `--soak` | Minimum window (days) before asserting revoke recommendations | `7` |
 | `--format` | `table` / `json` / `md` | `table` |
+| `--emit-permset` | Write a least-privilege `.permissionset-meta.xml` per app into this local directory (not deployed) | *(off)* |
 
 ```bash
 # Reuse an events-pull baseline instead of downloading again
@@ -474,4 +485,7 @@ sf audit apps --target-org myOrg --from ~/.sf/event-baseline/00Dxxx
 
 # Machine-readable output
 sf audit apps --target-org myOrg --format json
+
+# Write reviewable permission-set metadata into an SFDX project
+sf audit apps --target-org myOrg --emit-permset ./force-app/main/default/permissionsets
 ```

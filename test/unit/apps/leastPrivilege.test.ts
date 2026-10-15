@@ -29,4 +29,18 @@ describe('buildFinding', () => {
     expect(f.notes.some((n: string) => /soak/i.test(n))).toBe(true);
     expect(f.overGrant.unusedObjects).toEqual([]); // not asserted on thin data
   });
+
+  it('marks the recommendation as asserted only when the delta was asserted', () => {
+    expect(buildFinding(app, used, granted, { since: 30, attributionRatePct: 90 }, 7).recommendation.asserted).toBe(true);
+    expect(buildFinding(app, used, granted, { since: 3, attributionRatePct: 90 }, 7).recommendation.asserted).toBe(false);
+  });
+
+  it('suppresses revoke recommendations when usage data is incomplete', () => {
+    const f = buildFinding(app, used, granted, { since: 30, attributionRatePct: 90 }, 7, '1 of 3 API log file(s) could not be downloaded');
+    expect(f.overGrant.unusedObjects).toEqual([]);
+    expect(f.overGrant.unusedVerbs).toEqual([]);
+    expect(f.overGrant.scopeDowngrade).toBeNull();
+    expect(f.recommendation.asserted).toBe(false);
+    expect(f.notes.some((n: string) => /incomplete/i.test(n))).toBe(true);
+  });
 });

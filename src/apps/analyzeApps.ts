@@ -5,12 +5,28 @@ import { resolveApps } from './appResolver.js';
 import { computeGranted } from './grantedAccess.js';
 import { buildFinding } from './leastPrivilege.js';
 
+export interface AnalyzeAppsOptions {
+  since: number;
+  soakDays: number;
+  soapApiCsv?: string;
+  bulkApi2Csv?: string;
+  graphQlCsv?: string;
+  auraCsv?: string;
+  /** Why usage is known to be incomplete (e.g. some log files failed to download); suppresses revoke advice. */
+  incompleteUsage?: string;
+}
+
 export async function analyzeApps(
   restApiCsv: string,
   soql: SoqlClient,
-  opts: { since: number; soakDays: number; soapApiCsv?: string },
+  opts: AnalyzeAppsOptions,
 ): Promise<AppFinding[]> {
-  const usage = collectUsage(restApiCsv, opts.soapApiCsv);
+  const usage = collectUsage(restApiCsv, {
+    soapApiCsv: opts.soapApiCsv,
+    bulkApi2Csv: opts.bulkApi2Csv,
+    graphQlCsv: opts.graphQlCsv,
+    auraCsv: opts.auraCsv,
+  });
   const appIds = usage.usage.map((u) => u.appId);
   const allUsers = [...new Set(usage.usage.flatMap((u) => u.userIds))];
   const resolved = await resolveApps(appIds, soql, allUsers);
@@ -21,7 +37,7 @@ export async function analyzeApps(
     const app = resolvedById.get(u.appId)!;
     const granted = await computeGranted(u.appId, u.userIds, soql, null);
     findings.push(
-      buildFinding(app, u, granted, { since: opts.since, attributionRatePct: usage.attributionRatePct }, opts.soakDays),
+      buildFinding(app, u, granted, { since: opts.since, attributionRatePct: usage.attributionRatePct }, opts.soakDays, opts.incompleteUsage),
     );
   }
   return findings;

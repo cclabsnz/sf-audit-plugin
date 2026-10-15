@@ -49,6 +49,12 @@ export interface AppFinding {
     dormant: boolean;
   };
   recommendation: {
+    /**
+     * False when the delta was not asserted (window below the soak threshold, many interactive run-as
+     * users, or incomplete log data): the permission set below then reflects partial observation only
+     * and must not be emitted as a deployable least-privilege grant.
+     */
+    asserted: boolean;
     permissionSet: {
       objectPermissions: { object: string; read: boolean; create: boolean; edit: boolean; delete: boolean }[];
     };

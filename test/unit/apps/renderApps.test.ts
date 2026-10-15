@@ -7,7 +7,7 @@ const f: AppFinding[] = [{
   used: { appId: '0H4app1', objects: [{ object: 'Account', verbs: ['read'] }], requests: 100, rowsProcessed: 500, userIds: ['005U1'], soapOnly: false },
   granted: { appId: '0H4app1', scope: 'full', objects: [], runAsUsers: ['005U1'], multiUserInteractive: false },
   overGrant: { unusedObjects: ['Case'], unusedVerbs: [], scopeDowngrade: 'full -> api', dormant: false },
-  recommendation: { permissionSet: { objectPermissions: [{ object: 'Account', read: true, create: false, edit: false, delete: false }] } },
+  recommendation: { asserted: true, permissionSet: { objectPermissions: [{ object: 'Account', read: true, create: false, edit: false, delete: false }] } },
   notes: ['note'],
 }];
 

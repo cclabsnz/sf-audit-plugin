@@ -36,4 +36,42 @@ describe('resolveApps', () => {
     expect(r.category).toBe('Unidentified');
     expect(r.confidence).toBe('unidentified');
   });
+
+  it('resolves via ExternalClientApplication', async () => {
+    const soql = {
+      query: async () => ({ totalSize: 0, done: true, records: [] }),
+      queryAll: async (soql: string) => {
+        if (soql.includes('ExternalClientApplication')) {
+          return [{ Id: '0Cl000000000001', DeveloperName: 'My_ECA', MasterLabel: 'My External Client App' }];
+        }
+        return [];
+      },
+    } as any;
+    const [r] = await resolveApps(['0Cl000000000001'], soql, []);
+    expect(r.name).toBe('My External Client App');
+    expect(r.confidence).toBe('resolved');
+    expect(r.category).toBe('Org-custom');
+  });
+
+  it('resolves via LoginHistory ClientVersion when Application is generic or null', async () => {
+    const soql = soqlReturning({ login: [{ Application: null, ClientVersion: 'CrowdStrike Falcon', UserId: '005U1' }] });
+    const [r] = await resolveApps(['888xUNKNOWN0000'], soql, ['005U1']);
+    expect(r.name).toBe('CrowdStrike Falcon');
+    expect(r.confidence).toBe('inferred');
+    expect(r.category).toBe('Security-vendor');
+  });
+
+  it('does not let a version-string ClientVersion break single-name inference', async () => {
+    const soql = soqlReturning({ login: [{ Application: 'Vendor Sync', ClientVersion: '58.0', UserId: '005U1' }] });
+    const [r] = await resolveApps(['888xUNKNOWN0000'], soql, ['005U1']);
+    expect(r.name).toBe('Vendor Sync');
+    expect(r.confidence).toBe('inferred');
+  });
+
+  it('ignores ClientVersion when Application already names the app', async () => {
+    const soql = soqlReturning({ login: [{ Application: 'Vendor Sync', ClientVersion: 'Vendor Sync Agent', UserId: '005U1' }] });
+    const [r] = await resolveApps(['888xUNKNOWN0000'], soql, ['005U1']);
+    expect(r.name).toBe('Vendor Sync');
+  });
 });
+

@@ -33,4 +33,33 @@ describe('computeGranted', () => {
     const g = await computeGranted('0H4app0000001', ['a', 'b', 'c', 'd', 'e'], soql, null);
     expect(g.multiUserInteractive).toBe(true);
   });
+
+  it('unifies Profile-level permissions with assigned permission sets', async () => {
+    const mockSoql = {
+      query: async () => ({ totalSize: 0, done: true, records: [] }),
+      queryAll: async (soql: string) => {
+        if (soql.includes('PermissionSetAssignment')) {
+          return [{ AssigneeId: '005U1', PermissionSetId: '0PS_Regular' }];
+        }
+        if (soql.includes('FROM User WHERE Id')) {
+          return [{ Id: '005U1', ProfileId: '00eProfile1' }];
+        }
+        if (soql.includes('FROM PermissionSet WHERE IsOwnedByProfile = true')) {
+          return [{ Id: '0PS_Profile', ProfileId: '00eProfile1' }];
+        }
+        if (soql.includes('ObjectPermissions')) {
+          return [
+            { ParentId: '0PS_Regular', SobjectType: 'Account', PermissionsRead: true, PermissionsCreate: false, PermissionsEdit: false, PermissionsDelete: false },
+            { ParentId: '0PS_Profile', SobjectType: 'Contact', PermissionsRead: true, PermissionsCreate: true, PermissionsEdit: false, PermissionsDelete: false },
+          ];
+        }
+        return [];
+      },
+    } as any;
+
+    const g = await computeGranted('0H4app0000001', ['005U1'], mockSoql, 'full');
+    expect(g.objects.map((o) => o.object).sort()).toEqual(['Account', 'Contact']);
+    const contact = g.objects.find((o) => o.object === 'Contact')!;
+    expect(contact.verbs.sort()).toEqual(['read', 'write']);
+  });
 });
