@@ -43,6 +43,15 @@ Merged to `main`, not yet released.
   escaped or coerced, so a tampered history file cannot inject markup or script.
 - Requires `@cclabsnz/sf-core` 0.10.0.
 
+### Changed
+
+- `--scoring-config` is now checked strictly. An unknown or misspelled key (`gradeTresholds`,
+  `minscore`) is an error instead of being silently ignored, `minScore` must be 0–100, and grade
+  thresholds must be ordered after merging with the defaults (A at least as strict as B, and so
+  on). Errors name the offending path. A JSON Schema for editors ships as
+  `schemas/scoring-config.schema.json`, and `config/scoring.sample.json` now lists every
+  registered check.
+
 ## [v1.16.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.16.0) — 2026-10-09
 
 The AI & Agents checks now run on real orgs: since 1.6.0 they had been silent everywhere, because the agent inventory asked the Tooling API for objects only the data API serves. This release fixes that, and adds two checks and a named chain for the SalesBleed and PipeLeak pattern, all verified against a live Agentforce agent.

@@ -104,4 +104,11 @@ describe('check counts stay in sync with the registry', () => {
     }
     expect(mismatches).toEqual([]);
   });
+
+  it('config/scoring.sample.json checkWeights lists all N registered checks', () => {
+    // docs/SCORING.md points readers at the sample for "the full list of valid checkWeights keys".
+    const scoringSample = JSON.parse(readFileSync(join(ROOT, 'config/scoring.sample.json'), 'utf8'));
+    const sampleKeys = Object.keys(scoringSample.checkWeights).filter((k) => k !== '_comment');
+    expect(sampleKeys.length).toBe(N);
+  });
 });

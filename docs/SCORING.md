@@ -62,6 +62,8 @@ cp config/scoring.sample.json my-scoring.json
 
 The full list of valid `checkWeights` keys (one per check) is in [`config/scoring.sample.json`](../config/scoring.sample.json).
 
+The config is validated strictly: an unknown or misspelled key is an error, not a silent no-op, and grade thresholds must stay ordered (A at least as strict as B, B as C, C as D) once merged with the defaults. Remove the `_comment` key inside `checkWeights` before use; it is there so the sample cannot be applied unedited. For editor completion, add `"$schema": "https://raw.githubusercontent.com/cclabsnz/sf-audit-plugin/main/schemas/scoring-config.schema.json"`.
+
 **Step 3:** Pass it when running the audit:
 
 ```bash
