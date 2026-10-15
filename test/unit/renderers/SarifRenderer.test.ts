@@ -201,4 +201,11 @@ describe('SarifRenderer', () => {
     expect(new Set(ids).size).toBe(ids.length);
     for (const r of run.results) expect(ids).toContain(r.ruleId);
   });
+
+  it('gives each org its own code-scanning category so uploads for two orgs do not close each other\'s alerts', () => {
+    const a = JSON.parse(new SarifRenderer().render({ ...makeResult([]), orgId: '00Dxx0000000001EAA' }));
+    const b = JSON.parse(new SarifRenderer().render({ ...makeResult([]), orgId: '00Dxx0000000002EAA' }));
+    expect(a.runs[0].automationDetails.id).toBe('sf-audit/00Dxx0000000001EAA/');
+    expect(b.runs[0].automationDetails.id).not.toBe(a.runs[0].automationDetails.id);
+  });
 });

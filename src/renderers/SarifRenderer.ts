@@ -196,6 +196,9 @@ export class SarifRenderer implements AuditRenderer {
               rules: Array.from(rules.values(), (a) => a.rule),
             },
           },
+          // One category per org. GitHub code scanning closes any alert of a category that a new
+          // upload no longer contains, so two orgs sharing a category would close each other's.
+          automationDetails: { id: `sf-audit/${result.orgId}/` },
           results,
           invocations: [
             {
