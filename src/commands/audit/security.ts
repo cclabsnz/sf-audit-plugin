@@ -18,6 +18,8 @@ import { HistoryStore } from '../../history/HistoryStore.js';
 import { EXIT_FINDINGS, EXIT_INCONCLUSIVE, resolveExitCode, violationsFor } from '../../findings/exitCode.js';
 import { buildDigest, type AuditDigest } from '../../findings/digest.js';
 
+import { WaiverLoader, DEFAULT_WAIVER_FILE } from '../../waivers/WaiverLoader.js';
+
 const RENDERERS: Record<string, AuditRenderer> = {
   html: new HtmlRenderer(),
   md: new MarkdownRenderer(),
@@ -45,6 +47,10 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
       char: 'o',
       summary: 'Directory to write the report. Defaults to current directory.',
       default: '.',
+    }),
+    waivers: Flags.string({
+      summary: `Accepted-risk waivers file. Defaults to ${DEFAULT_WAIVER_FILE} in the working directory when present.`,
+      helpValue: `./${DEFAULT_WAIVER_FILE}`,
     }),
     'fail-on': Flags.string({
       summary: 'Exit with code 1 if any finding is at or above this severity.',
@@ -110,10 +116,25 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
       (msg) => this.warn(msg),
     );
 
+    let waiverLoader: WaiverLoader;
+    try {
+      waiverLoader = WaiverLoader.load(flags.waivers);
+    } catch (err) {
+      this.error(err instanceof Error ? err.message : String(err), { exit: 2 });
+    }
+    if (waiverLoader.source) {
+      this.log(
+        `Waivers: ${waiverLoader.activeWaivers.length} active, ${waiverLoader.expiredWaivers.length} expired, from ${waiverLoader.source}`,
+      );
+      if (waiverLoader.expiredWaivers.length > 0) {
+        this.warn(`${waiverLoader.expiredWaivers.length} waiver(s) have expired; the findings they covered count again.`);
+      }
+    }
+
     this.log(`Auditing org: ${orgInfo.name} (${orgInfo.id})`);
     if (flags.checks) this.log(`Running ${checksToRun.length} of ${CHECKS.length} checks`);
 
-    const engine = new CheckEngine(checksToRun, ctx, scoringConfig);
+    const engine = new CheckEngine(checksToRun, ctx, scoringConfig, waiverLoader);
     const result = await engine.run((current, total, checkName) => {
       this.log(`[${String(current).padStart(2)}/${total}] ${checkName}`);
     });
@@ -196,7 +217,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
   private printSummary(result: AuditResult): void {
     const levels: RiskLevel[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
     const counts = Object.fromEntries(
-      levels.map((l) => [l, result.findings.filter((f) => f.riskLevel === l).length]),
+      levels.map((l) => [l, result.findings.filter((f) => f.riskLevel === l && !f.waived).length]),
     ) as Record<RiskLevel, number>;
 
     this.log('─────────────────────────────');
@@ -207,6 +228,11 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
     }
     this.log('─────────────────────────────');
     this.log(`  Score: ${result.healthScore}/100   Grade: ${result.grade}`);
+    if (result.waivedFindings && result.waivedFindings.length > 0) {
+      this.log('─────────────────────────────');
+      this.log(`  Waived (accepted risk): ${result.waivedFindings.length} finding(s)`);
+      for (const wf of result.waivedFindings) this.log(`    [WAIVED] ${wf.title}`);
+    }
     this.log('─────────────────────────────');
   }
 

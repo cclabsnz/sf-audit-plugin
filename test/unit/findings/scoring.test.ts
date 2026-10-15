@@ -2,6 +2,7 @@ import { buildAuditResult } from '../../../src/findings/scoring.js';
 import type { Finding } from '../../../src/findings/Finding.js';
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { AttackChain } from '../../../src/chains/AttackChain.js';
+import { DEFAULT_SCORING_CONFIG } from '../../../src/findings/ScoringConfig.js';
 
 function makeCtx(): AuditContext {
   return {
@@ -174,5 +175,26 @@ describe('buildAuditResult', () => {
       const result = buildAuditResult(mkCtx(), [cleanFinding('a')], {});
       expect(result.attackChains).toEqual([]);
     });
+  });
+
+  it('a waived finding carries no penalty and does not count toward the grade gates', () => {
+    const open = buildAuditResult(makeCtx(), [finding('CRITICAL')], {});
+    const waived = buildAuditResult(makeCtx(), [{ ...finding('CRITICAL'), waived: true }], {});
+    expect(waived.healthScore).toBeGreaterThan(open.healthScore);
+    expect(waived.grade).not.toBe(open.grade);
+    expect(waived.waivedFindings).toHaveLength(1);
+    // With the only finding waived, the run grades as if it were clean: no CRITICAL gate applies.
+    const passing = buildAuditResult(makeCtx(), [{ ...finding('CRITICAL'), passed: true }], {});
+    expect(waived.grade).toBe(passing.grade);
+  });
+
+  it.each(['CRITICAL', 'HIGH', 'MEDIUM'] as const)('a waived %s finding does not trip its grade gate', (level) => {
+    // Gates on every count, with no score floor, so only the counts decide the grade.
+    const config = {
+      ...DEFAULT_SCORING_CONFIG,
+      gradeThresholds: { A: { maxCritical: 0, maxHigh: 0, maxMedium: 0 }, B: {}, C: {}, D: {}, F: {} },
+    };
+    const result = buildAuditResult(makeCtx(), [{ ...finding(level), waived: true }], {}, config);
+    expect(result.grade).toBe('A');
   });
 });

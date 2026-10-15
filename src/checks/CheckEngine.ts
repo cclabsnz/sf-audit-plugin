@@ -8,6 +8,8 @@ import type { ScoringConfig } from '../findings/ScoringConfig.js';
 import { buildAuditResult } from '../findings/scoring.js';
 import { getComplianceTags } from '../compliance/resolve.js';
 import { ChainEngine } from '../chains/ChainEngine.js';
+import type { WaiverLoader } from '../waivers/WaiverLoader.js';
+import { applyWaivers } from '../waivers/applyWaivers.js';
 
 const PERMISSION_ERROR_CODES = new Set([
   'INSUFFICIENT_ACCESS_RIGHTS',
@@ -54,6 +56,7 @@ export class CheckEngine {
     private readonly checks: SecurityCheck[],
     private readonly ctx: AuditContext,
     private readonly scoringConfig?: ScoringConfig,
+    private readonly waiverLoader?: WaiverLoader,
   ) {
     this.validateCacheOrdering();
   }
@@ -80,8 +83,11 @@ export class CheckEngine {
       }
     }
 
-    const attackChains = new ChainEngine().correlate(findings);
-    return buildAuditResult(this.ctx, findings, metrics, this.scoringConfig, attackChains);
+    // Waivers apply before correlation but do not remove findings from it: an accepted weakness
+    // still forms attack paths with the others.
+    const finalFindings = this.waiverLoader ? applyWaivers(findings, this.waiverLoader).findings : findings;
+    const attackChains = new ChainEngine().correlate(finalFindings);
+    return buildAuditResult(this.ctx, finalFindings, metrics, this.scoringConfig, attackChains);
   }
 
   private validateCacheOrdering(): void {

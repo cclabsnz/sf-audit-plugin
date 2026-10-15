@@ -30,11 +30,11 @@ export function buildAuditResult(
   config: ScoringConfig = DEFAULT_SCORING_CONFIG,
   attackChains: AttackChain[] = [],
 ): AuditResult {
-  // Passed and inconclusive findings carry no penalty — exclude from numerator.
+  // Passed, inconclusive and waived findings carry no penalty — exclude from numerator.
   // They remain in maxPossible so a broad passing audit still dilutes real failures.
   const totalScore = findings.reduce(
     (sum, f) => {
-      if (f.passed || f.inconclusive) return sum;
+      if (f.passed || f.inconclusive || f.waived) return sum;
       return sum + (f.checkId !== undefined ? (config.checkWeights[f.checkId] ?? config.riskScores[f.riskLevel]) : config.riskScores[f.riskLevel]);
     },
     0,
@@ -50,9 +50,9 @@ export function buildAuditResult(
   const chainCrit = attackChains.filter((c) => c.severity === 'CRITICAL').length;
   const chainHigh = attackChains.filter((c) => c.severity === 'HIGH').length;
   const chainMed = attackChains.filter((c) => c.severity === 'MEDIUM').length;
-  const criticalCount = findings.filter((f) => f.riskLevel === 'CRITICAL').length + chainCrit;
-  const highCount = findings.filter((f) => f.riskLevel === 'HIGH').length + chainHigh;
-  const mediumCount = findings.filter((f) => f.riskLevel === 'MEDIUM').length + chainMed;
+  const criticalCount = findings.filter((f) => f.riskLevel === 'CRITICAL' && !f.waived).length + chainCrit;
+  const highCount = findings.filter((f) => f.riskLevel === 'HIGH' && !f.waived).length + chainHigh;
+  const mediumCount = findings.filter((f) => f.riskLevel === 'MEDIUM' && !f.waived).length + chainMed;
 
   const grades: Grade[] = ['A', 'B', 'C', 'D'];
   let grade: Grade = 'F';
@@ -62,6 +62,8 @@ export function buildAuditResult(
       break;
     }
   }
+
+  const waivedFindings = findings.filter((f) => f.waived);
 
   return {
     generatedAt: new Date(),
@@ -76,5 +78,6 @@ export function buildAuditResult(
     healthScore,
     grade,
     attackChains,
+    waivedFindings: waivedFindings.length > 0 ? waivedFindings : undefined,
   };
 }

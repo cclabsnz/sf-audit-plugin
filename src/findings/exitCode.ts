@@ -31,7 +31,7 @@ export function violationsFor(findings: Finding[], failOn: RiskLevel): Finding[]
   const threshold = ORDER.indexOf(failOn);
   if (threshold < 0) return [];
   return findings.filter((f) => {
-    if (f.passed === true || f.inconclusive === true) return false;
+    if (f.passed === true || f.inconclusive === true || f.waived === true) return false;
     const rank = ORDER.indexOf(f.riskLevel);
     return rank >= 0 && rank <= threshold;
   });

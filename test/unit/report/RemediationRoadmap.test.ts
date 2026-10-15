@@ -27,4 +27,10 @@ describe('buildRoadmap', () => {
     expect(r.quick.concat(r.moderate, r.project).map((x) => x.id)).toEqual(['u']);
     expect(r.moderate.map((x) => x.id)).toEqual(['u']);
   });
+
+  it('leaves waived findings out of the roadmap', () => {
+    const r = buildRoadmap([f({ id: 'kept', riskLevel: 'HIGH' }), f({ id: 'accepted', riskLevel: 'HIGH', waived: true })]);
+    const ids = [...r.quick, ...r.moderate, ...r.project].map((x) => x.id);
+    expect(ids).toEqual(['kept']);
+  });
 });

@@ -152,7 +152,12 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
       progressBar(m.healthCheckScore, 100, healthChkColor)),
   ]);
 
+  const waivedBanner = result.waivedFindings?.length
+    ? `<div class="waived-banner" style="background:#0f291e;border:1px solid #16a34a;border-radius:8px;padding:12px 16px;margin-bottom:20px;color:#dcfce7;font-size:13px;"><strong>Accepted risks:</strong> ${result.waivedFindings.length} finding(s) waived under an approved waiver and excluded from the score.</div>`
+    : '';
+
   return `
+  ${waivedBanner}
   <div class="dashboard">
     <div class="dash-top">
       <div class="dash-score-panel">

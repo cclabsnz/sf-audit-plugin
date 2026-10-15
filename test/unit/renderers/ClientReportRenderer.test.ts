@@ -70,4 +70,20 @@ describe('ClientReportRenderer', () => {
     res.findings[0].title = '<script>x</script>';
     expect(r.render(res)).not.toContain('<script>x</script>');
   });
+
+  it('lists waived findings as accepted risks, escapes the approval text, ', () => {
+    const result = makeResult();
+    result.findings[1] = {
+      ...result.findings[1],
+      waived: true,
+      affectedItems: [{ label: 'Account', note: '[WAIVED: <img src=x onerror=alert(1)> (approved by sec, expires 2027-01-31)]' }],
+    };
+    result.waivedFindings = [result.findings[1]];
+    const html = r.render(result);
+
+    expect(html).toContain('Accepted Risks');
+    expect(html).toContain('with 1 waived as accepted risk');
+    expect(html).not.toContain('<img src=x');
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+  });
 });
