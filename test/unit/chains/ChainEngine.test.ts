@@ -139,6 +139,36 @@ describe('ChainEngine', () => {
       expect(chains.some((c) => c.id === 'salesbleed-pattern')).toBe(true);
     });
 
+    it('fires salesbleed-pattern when the egress is a parked or unresolvable CSP Trusted URL', () => {
+      for (const egress of ['trusted-url-hygiene-parked-old-cdn.example', 'trusted-url-hygiene-unresolvable-gone.example']) {
+        const chain = engine.correlate([sbReach(), f(egress)]).find((c) => c.id === 'salesbleed-pattern');
+        expect(chain?.steps.map((s) => s.findingId)).toEqual(['agent-query-reach-SalesAgent', egress]);
+        expect(chain?.narrative).toContain('CSP Trusted URL');
+        expect(chain?.remediation).toContain('CSP Trusted URLs');
+      }
+    });
+
+    it('does not treat a trusted URL that only needs review as an egress path', () => {
+      const chains = engine.correlate([sbReach(), f('trusted-url-hygiene-review-partner.example'), f('trusted-url-hygiene-unverified-x.example')]);
+      expect(chains.find((c) => c.id === 'salesbleed-pattern')).toBeUndefined();
+    });
+
+    it('puts the outsider-text entry point first when the org shows one, without requiring it', () => {
+      const chain = engine
+        .correlate([f('guest-user-write-access'), sbReach(), sbUnconfirmed()])
+        .find((c) => c.id === 'salesbleed-pattern');
+      expect(chain?.steps.map((s) => s.findingId)).toEqual([
+        'guest-user-write-access',
+        'agent-query-reach-SalesAgent',
+        'agent-outbound-actions-unconfirmed',
+      ]);
+    });
+
+    it('does not fire on outsider text and egress without an agent that can query', () => {
+      const chains = engine.correlate([f('guest-user-write-access'), f('trusted-url-hygiene-parked-old-cdn.example')]);
+      expect(chains.find((c) => c.id === 'salesbleed-pattern')).toBeUndefined();
+    });
+
     it('does not fire salesbleed-pattern without query reach', () => {
       const chains = engine.correlate([sbUnconfirmed()]);
       expect(chains.some((c) => c.id === 'salesbleed-pattern')).toBe(false);
