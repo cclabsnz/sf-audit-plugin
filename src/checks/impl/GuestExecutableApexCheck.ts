@@ -2,15 +2,24 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 import { ApexRepository } from '@cclabsnz/sf-core';
-import { sharingKeyword, usesSystemMode } from '../support/apexAccess.js';
+import { declaresWithoutSharing, sharingKeyword, usesSystemMode } from '../support/apexAccess.js';
 
 interface GuestUser { Id: string; ProfileId: string; Username: string; }
 interface SetupAccess { SetupEntityId: string; ParentId: string; }
 
-/** The classes a class calls, as its compiled SymbolTable records them. */
+/**
+ * The org-local classes a class calls, as its compiled SymbolTable records them. A reference with a
+ * namespace is to packaged code, which the audit does not read, so it never resolves to a local
+ * class that happens to share its name.
+ */
 function referencedClasses(symbolTable: unknown): string[] {
-  const refs = (symbolTable as { externalReferences?: Array<{ name?: unknown }> } | null | undefined)?.externalReferences;
-  return Array.isArray(refs) ? refs.map((r) => r?.name).filter((n): n is string => typeof n === 'string' && n !== '') : [];
+  const refs = (symbolTable as { externalReferences?: Array<{ name?: unknown; namespace?: unknown }> } | null | undefined)
+    ?.externalReferences;
+  if (!Array.isArray(refs)) return [];
+  return refs
+    .filter((r) => !(typeof r?.namespace === 'string' && r.namespace !== ''))
+    .map((r) => r?.name)
+    .filter((n): n is string => typeof n === 'string' && n !== '');
 }
 
 export class GuestExecutableApexCheck implements SecurityCheck {
@@ -70,23 +79,49 @@ export class GuestExecutableApexCheck implements SecurityCheck {
     const nameById = await new ApexRepository(ctx.tooling).namesByIds(classIds);
 
     const bodies = ctx.cache.apexBodies ?? [];
-    const byName = new Map(bodies.map((b) => [b.name, b]));
+    // Apex names are case-insensitive, and a SymbolTable may spell one differently from its declaration.
+    const byName = new Map(bodies.map((b) => [b.name.toLowerCase(), b]));
+
+    /**
+     * Everything reachable from `start` through SymbolTable references: whichever class is declared
+     * without sharing, at any depth, runs its own code without sharing (spec RULE-004), and SYSTEM_MODE
+     * anywhere on the path lifts CRUD/FLS for the guest (RULE-003).
+     */
+    const reach = (start: string): { withoutSharing?: string; systemMode?: string } => {
+      const seen = new Set([start.toLowerCase()]);
+      const queue = referencedClasses(byName.get(start.toLowerCase())?.symbolTable);
+      let systemModeAt: string | undefined;
+      while (queue.length > 0) {
+        const ref = queue.shift()!;
+        if (seen.has(ref.toLowerCase())) continue;
+        seen.add(ref.toLowerCase());
+        const helper = byName.get(ref.toLowerCase());
+        if (!helper?.body) continue;
+        if (declaresWithoutSharing(helper.body)) return { withoutSharing: helper.name };
+        if (!systemModeAt && usesSystemMode(helper.body)) systemModeAt = helper.name;
+        queue.push(...referencedClasses(helper.symbolTable));
+      }
+      return { systemMode: systemModeAt };
+    };
 
     // spec/apex-access-mode.md. A guest call is an entry point: no keyword means without sharing,
     // and inherited sharing means with sharing. SYSTEM_MODE bypasses CRUD/FLS only (RULE-003); a
     // helper declared without sharing bypasses sharing for whatever it does (RULE-004).
     const unprotected: { name: string; note: string }[] = [];
-    const systemMode: string[] = [];
+    const systemMode: { name: string; via?: string }[] = [];
     const exposed: string[] = [];
 
     for (const id of classIds) {
       const name = nameById.get(id) ?? id;
-      const entry = byName.get(name);
+      const entry = byName.get(name.toLowerCase());
       const body = entry?.body;
       const keyword = body ? sharingKeyword(name, body) : null;
 
-      if (keyword === 'without') {
-        unprotected.push({ name, note: 'Declared "without sharing": fix immediately' });
+      if (keyword === 'without' || (keyword !== null && body && declaresWithoutSharing(body))) {
+        unprotected.push({
+          name,
+          note: keyword === 'without' ? 'Declared "without sharing": fix immediately' : 'Contains an inner class declared "without sharing"',
+        });
         continue;
       }
       if (keyword === 'none') {
@@ -99,14 +134,11 @@ export class GuestExecutableApexCheck implements SecurityCheck {
         continue;
       }
 
-      const helper = referencedClasses(entry?.symbolTable).find((ref) => {
-        const helperBody = byName.get(ref)?.body;
-        return helperBody !== undefined && sharingKeyword(ref, helperBody) === 'without';
-      });
-      if (helper) {
-        unprotected.push({ name, note: `Calls "${helper}", which is declared "without sharing"` });
-      } else if (usesSystemMode(body)) {
-        systemMode.push(name);
+      const path = reach(name);
+      if (path.withoutSharing) {
+        unprotected.push({ name, note: `Reaches "${path.withoutSharing}", which is declared "without sharing"` });
+      } else if (usesSystemMode(body) || path.systemMode) {
+        systemMode.push({ name, via: usesSystemMode(body) ? undefined : path.systemMode });
       } else {
         exposed.push(name);
       }
@@ -143,7 +175,11 @@ export class GuestExecutableApexCheck implements SecurityCheck {
           'a guest can read or change fields the guest profile is denied on any record shared with guests.',
         remediation:
           'Replace SYSTEM_MODE with USER_MODE in guest-reachable code, or strip fields with Security.stripInaccessible() before returning results. Remove guest access where unnecessary.',
-        affectedItems: systemMode.map((n) => ({ label: n, url: apexUrl, note: 'SYSTEM_MODE: guest CRUD/FLS not enforced' })),
+        affectedItems: systemMode.map(({ name, via }) => ({
+          label: name,
+          url: apexUrl,
+          note: via ? `Calls "${via}", which uses SYSTEM_MODE: guest CRUD/FLS not enforced` : 'SYSTEM_MODE: guest CRUD/FLS not enforced',
+        })),
       });
     }
 

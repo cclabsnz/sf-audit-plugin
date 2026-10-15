@@ -1,19 +1,20 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import { testApexPattern } from '@cclabsnz/sf-core';
+import { apexCode, DML_AS_USER, usesSystemMode } from '../support/apexAccess.js';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
 // Patterns that indicate DML or inline SOQL is being performed
 const HAS_DML = /\b(?:insert|update|delete|upsert|merge)\s+\w+|Database\.(?:insert|update|delete|upsert|merge)\s*\(/i;
-const HAS_SOQL = /\[\s*SELECT\b|Database\.(?:query|queryWithBinds|countQuery)\s*\(/i;
+const HAS_SOQL = /\[\s*SELECT\b|Database\.(?:query|queryWithBinds|countQuery|countQueryWithBinds|getQueryLocator|getQueryLocatorWithBinds)\s*\(/i;
 
 // Patterns that indicate FLS/CRUD is being checked or enforced
 // USER_MODE enforces CRUD/FLS (and sharing) on the query or DML it is attached to.
 const HAS_FLS = /(?:\.isAccessible\(\)|\.isCreateable\(\)|\.isUpdateable\(\)|\.isDeletable\(\)|Security\.stripInaccessible|SObjectAccessDecision|Schema\.describeSObjects|Schema\.sObjectType\.\w+\.fields|\bWITH\s+USER_MODE\b|\bAccessLevel\s*\.\s*USER_MODE\b)/i;
 
-// SYSTEM_MODE switches CRUD/FLS off for that operation (sharing still follows the class keyword).
-// It is never enforcement, whatever else the class does (spec RULE-002).
-const SYSTEM_MODE = /\bWITH\s+SYSTEM_MODE\b|\bAccessLevel\s*\.\s*SYSTEM_MODE\b/i;
+// SYSTEM_MODE (WITH SYSTEM_MODE, AccessLevel.SYSTEM_MODE, `insert as system`) switches CRUD/FLS
+// off for that operation; sharing still follows the class keyword. It is never enforcement,
+// whatever else the class does, and batch or scheduled classes are no exception (spec RULE-002).
 
 // Classes that are exempt from CRUD/FLS enforcement by design:
 // batch, scheduled, and trigger handlers run in a system context
@@ -53,19 +54,23 @@ export class ApexCrudFLSCheck implements SecurityCheck {
     // apexBodies is pre-filtered by HardcodedCredentialsCheck, which excludes @IsTest classes
     // before populating the cache. There is deliberately no second guard here: a cache miss
     // yields an empty array, not unfiltered bodies, so there is nothing for one to catch.
-    for (const { name, body } of apexBodies) {
-      if (!body || testApexPattern(body, IS_BATCH_OR_SCHEDULED)) continue;
+    for (const { name, body: raw } of apexBodies) {
+      if (!raw) continue;
+      // Patterns are matched against code only: "WITH USER_MODE" in a comment enforces nothing.
+      const body = apexCode(raw);
 
       const hasDml = testApexPattern(body, HAS_DML);
       const hasSoql = testApexPattern(body, HAS_SOQL);
       if (!hasDml && !hasSoql) continue;
 
-      if (testApexPattern(body, SYSTEM_MODE)) {
+      if (usesSystemMode(raw)) {
         systemMode.push({ name, withoutSharing: testApexPattern(body, WITHOUT_SHARING) });
         continue;
       }
 
-      const hasFls = testApexPattern(body, HAS_FLS);
+      if (testApexPattern(body, IS_BATCH_OR_SCHEDULED)) continue;
+
+      const hasFls = testApexPattern(body, HAS_FLS) || testApexPattern(body, DML_AS_USER);
       if (hasFls) continue;
 
       if (testApexPattern(body, WITHOUT_SHARING)) {

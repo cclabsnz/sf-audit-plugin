@@ -8,9 +8,10 @@ cites: INT-001, MN-001, MN-003
 
 ## RULE-002 SYSTEM_MODE never counts as CRUD/FLS enforcement
 cites: INT-001, MN-003
-- When a class with SOQL or DML uses `WITH SYSTEM_MODE` or `AccessLevel.SYSTEM_MODE`
+- When a class with SOQL or DML uses `WITH SYSTEM_MODE`, `AccessLevel.SYSTEM_MODE` or `as system` DML (`insert as system rows;`), including a batch or scheduled class
 - then `apex-crud-fls` lists it in `apex-crud-fls-system-mode`, even if the class also contains a CRUD/FLS check or USER_MODE elsewhere
-- and `WITH USER_MODE` / `AccessLevel.USER_MODE` alone count as enforcement
+- and `WITH USER_MODE`, `AccessLevel.USER_MODE` and `as user` DML count as enforcement, alongside explicit CRUD/FLS checks
+- and only code counts: these words in a comment neither enforce nor bypass anything
 
 ## RULE-003 Guest-callable SYSTEM_MODE under `with sharing` is HIGH, not CRITICAL
 cites: INT-001, MN-001, MN-003
