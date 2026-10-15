@@ -55,6 +55,7 @@ export class ClientReportRenderer implements AuditRenderer {
       this.summary(result, num()),
       this.prioritiesSection(priorities, chainIds, num()),
       chains.length ? this.scenarios(chains, num()) : '',
+      result.waivedFindings?.length ? this.waiversSection(result.waivedFindings, num()) : '',
       this.roadmapSection(roadmap, num()),
       matrix.length ? this.matrixSection(matrix, num()) : '',
       this.findingsAppendix(result, num()),
@@ -155,9 +156,11 @@ ${this.footer(b)}
 
   private summary(r: AuditResult, numStr: string): string {
     const incon = r.findings.filter((f) => f.inconclusive).length;
-    const active = r.findings.filter((f) => !f.passed && !f.inconclusive).length;
+    const active = r.findings.filter((f) => !f.passed && !f.inconclusive && !f.waived).length;
+    const waived = r.findings.filter((f) => f.waived).length;
+    const waivedNote = waived ? `, with ${waived} waived as accepted risk` : '';
     return `${this.sectionHead(numStr, 'Executive Summary')}
-<p>This audit assessed the org’s security configuration and scored it <strong>${r.healthScore}/100 (Grade ${esc(r.grade)})</strong> across ${active} active finding${active === 1 ? '' : 's'}${incon ? `, with ${incon} inconclusive (insufficient access)` : ''}. The priorities below are the highest-impact items to address first; the remediation roadmap groups every fix by effort. See Scope &amp; Liability for the basis and limits of this assessment.</p>`;
+<p>This audit assessed the org’s security configuration and scored it <strong>${r.healthScore}/100 (Grade ${esc(r.grade)})</strong> across ${active} active finding${active === 1 ? '' : 's'}${incon ? `, with ${incon} inconclusive (insufficient access)` : ''}${waivedNote}. The priorities below are the highest-impact items to address first; the remediation roadmap groups every fix by effort. See Scope &amp; Liability for the basis and limits of this assessment.</p>`;
   }
 
   private prioritiesSection(priorities: Finding[], chainIds: Set<string>, numStr: string): string {
@@ -172,6 +175,19 @@ ${this.footer(b)}
 ${impact}${chained}<p><strong>Fix:</strong> ${esc(f.remediation)}</p></div>`;
     }).join('');
     return `${head}<p class="muted">Focus areas, highest impact first.</p>${items}`;
+  }
+
+  private waiversSection(waived: Finding[], numStr: string): string {
+    const items = waived
+      .map((f) => {
+        // The approval (reason, approver, expiry) is on each item's note, or on the detail when the finding has no items.
+        const scope = f.affectedItems?.length ? f.affectedItems.map((i) => (i.note ? `${i.label} ${i.note}` : i.label)).join('; ') : f.id;
+        return `<div class="card" style="--c:#16a34a">
+<div class="row"><h3>${esc(f.title)}</h3>${this.chip('INFO', 'WAIVED')}</div>
+<p><strong>Scope:</strong> ${esc(scope)}</p><p>${esc(f.detail)}</p></div>`;
+      })
+      .join('');
+    return `${this.sectionHead(numStr, 'Accepted Risks')}<p class="muted">Findings covered by an approved, unexpired waiver. They are excluded from the score and from the priorities above, and still count toward the attack scenarios.</p>${items}`;
   }
 
   private scenarios(chains: NonNullable<AuditResult['attackChains']>, numStr: string): string {

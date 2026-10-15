@@ -34,4 +34,9 @@ describe('selectPriorities', () => {
     const out = selectPriorities(findings, new Set(['chained']), 5);
     expect(out[0].id).toBe('chained');
   });
+
+  it('leaves waived findings out of the priorities', () => {
+    const top = selectPriorities([f({ id: 'kept', riskLevel: 'HIGH' }), f({ id: 'accepted', riskLevel: 'CRITICAL', waived: true })], new Set(), 5);
+    expect(top.map((x) => x.id)).toEqual(['kept']);
+  });
 });

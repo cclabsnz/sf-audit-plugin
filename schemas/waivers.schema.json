@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cclabsnz/sf-audit-plugin/main/schemas/waivers.schema.json",
+  "title": "WaiversConfig",
+  "description": "Schema for accepted risk waivers (.sfaudit-waivers.json or --waivers) in @cclabsnz/sf-audit.",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "_comment": { "type": "string" },
+    "waivers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["checkId", "entity", "reason", "approvedBy", "expiresAt"],
+        "properties": {
+          "checkId": { "type": "string", "minLength": 1 },
+          "findingId": { "type": "string", "minLength": 1, "description": "Limit the waiver to one finding id of the check." },
+          "entity": { "type": "string", "minLength": 1, "description": "Exact affected-item label (case-insensitive), or the finding id for a finding with no affected items. No wildcards." },
+          "reason": { "type": "string", "minLength": 5 },
+          "approvedBy": { "type": "string", "minLength": 3 },
+          "expiresAt": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}(T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:\\d{2}))?$",
+            "description": "ISO 8601 date or timestamp, at most 365 days after the audit runs."
+          },
+          "acknowledgeCritical": {
+            "type": "boolean",
+            "description": "Required (true) to waive a CRITICAL finding."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["waivers"],
+  "additionalProperties": false
+}

@@ -10,7 +10,7 @@ const RANK: Record<RiskLevel, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 
  */
 export function selectPriorities(findings: Finding[], chainFindingIds: Set<string>, topN: number): Finding[] {
   return findings
-    .filter((f) => !f.passed && !f.inconclusive)
+    .filter((f) => !f.passed && !f.inconclusive && !f.waived)
     .slice()
     .sort((a, b) => {
       if (RANK[a.riskLevel] !== RANK[b.riskLevel]) return RANK[a.riskLevel] - RANK[b.riskLevel];

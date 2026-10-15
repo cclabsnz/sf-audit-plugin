@@ -15,4 +15,6 @@ export interface AuditResult {
   healthScore: number;  // 0–100
   grade: 'A' | 'B' | 'C' | 'D' | 'F';
   attackChains?: AttackChain[];
+  /** Findings covered by an approved waiver, also present in `findings` with `waived: true`. */
+  waivedFindings?: Finding[];
 }

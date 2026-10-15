@@ -43,4 +43,6 @@ export interface Finding {
    * entry for this finding id. Only honoured for active (non-passed, non-inconclusive) findings.
    */
   capabilities?: { grants?: Capability[]; requires?: Capability[] };
+  /** Covered by an approved, unexpired waiver: excluded from the score and from --fail-on. */
+  waived?: boolean;
 }

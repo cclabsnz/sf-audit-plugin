@@ -14,7 +14,7 @@ export interface Roadmap {
 export function buildRoadmap(findings: Finding[]): Roadmap {
   const out: Roadmap = { quick: [], moderate: [], project: [] };
   for (const f of findings) {
-    if (f.passed || f.inconclusive) continue;
+    if (f.passed || f.inconclusive || f.waived) continue;
     const effort = (f.checkId && getCheckMeta(f.checkId)?.effort) || 'moderate';
     out[effort].push(f);
   }

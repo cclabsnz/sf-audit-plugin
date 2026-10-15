@@ -11,6 +11,13 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+### Added
+
+- Accepted-risk waivers (`--waivers`, or `.sfaudit-waivers.json` in the working directory). A
+  waived finding leaves the score, `--fail-on` and the executive priorities and roadmap, and is
+  listed under Accepted Risks. Matching is exact, waivers run at most 365 days, and a CRITICAL
+  finding needs `acknowledgeCritical`. The loaded file's path is always printed.
+
 ### Security
 
 - Local stores that hold org data (`~/.sf/audit-history`, incident bundles, evidence CSVs,

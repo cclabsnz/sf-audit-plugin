@@ -6,3 +6,5 @@ export type { OrgMetrics } from '@cclabsnz/sf-core';
 export type { AuditDiff, FindingChange, FindingChangeType, MetricDelta } from './history/AuditDiff.js';
 export { HistoryStore } from './history/HistoryStore.js';
 export { computeDiff } from './history/DiffEngine.js';
+export { WaiverLoader } from './waivers/WaiverLoader.js';
+export { applyWaivers } from './waivers/applyWaivers.js';

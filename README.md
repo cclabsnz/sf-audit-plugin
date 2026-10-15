@@ -53,6 +53,7 @@ check id.
 | `--format` / `-f` | `html` | `html`, `md`, `json`, `executive` — comma-separated |
 | `--fail-on` | (none) | Exit 1 if any finding is at or above `CRITICAL`/`HIGH`/`MEDIUM`/`LOW`. For CI |
 | `--fail-on-inconclusive` | `false` | Exit 3 if any check could not gather evidence. For CI |
+| `--waivers` | `.sfaudit-waivers.json` if present | Accepted-risk waivers. See [Accepting a risk](#accepting-a-risk) |
 | `--digest` | `false` | Compact result for programmatic callers — no passing checks, no prose, capped lists |
 | `--checks` | *(all)* | Run only these check ids |
 | `--frameworks` | `universal` | Compliance matrix scope for the executive report |
@@ -207,6 +208,36 @@ which lists every valid `checkWeights` key; your config is deep-merged with the 
 only what you want to change.
 
 Grade bands, the full config shape and worked examples: **[docs/SCORING.md](docs/SCORING.md)**.
+
+### Accepting a risk
+
+A finding you have reviewed and accepted can be waived, which takes it out of the score and out of
+`--fail-on` until the waiver expires. Waivers live in a JSON file passed with `--waivers`, or in
+`.sfaudit-waivers.json` in the working directory; the command always prints which file it loaded.
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/cclabsnz/sf-audit-plugin/main/schemas/waivers.schema.json",
+  "waivers": [
+    {
+      "checkId": "flows-without-sharing",
+      "entity": "Order_Processor",
+      "reason": "Integration runs without user context; refactor booked for Q3",
+      "approvedBy": "security-lead",
+      "expiresAt": "2027-03-31"
+    }
+  ]
+}
+```
+
+- `entity` must equal an affected item's label exactly (case-insensitive), or the finding id for a
+  finding with no affected items. There are no wildcards. A finding is waived only when every one
+  of its affected items is covered; otherwise the covered items are annotated and it stays active.
+- `expiresAt` is an ISO 8601 date at most 365 days out. An expired waiver stops applying and the
+  finding counts again.
+- A CRITICAL finding is waived only when the waiver also sets `"acknowledgeCritical": true`.
+- Waived findings are listed under Accepted Risks in the executive report, and still take part in
+  attack-chain correlation: accepting one weakness does not accept the path it forms with others.
 
 ## Other commands
 
