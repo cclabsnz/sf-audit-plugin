@@ -1,6 +1,6 @@
 # What it checks
 
-The audit runs **95 read-only checks**. The [README](../README.md#what-it-checks) summarises them by domain; this is the full inventory. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into ten domains below.
+The audit runs **109 read-only checks**. The [README](../README.md#what-it-checks) summarises them by domain; this is the full inventory. Every finding is risk-rated (CRITICAL → INFO) and mapped to controls across the compliance frameworks (see [Compliance frameworks](#compliance-frameworks)). The checks are grouped into ten domains below.
 
 ## Org Health & Configuration
 | Check | What it looks for |
@@ -27,6 +27,9 @@ The audit runs **95 read-only checks**. The [README](../README.md#what-it-checks
 | Certificate Expiry | Installed certificates nearing expiry (30 / 90 / 180-day thresholds) |
 | Auth Providers & External IdPs | External Auth Providers and SAML SSO configs; flags social/JIT providers that can federate in or auto-provision users |
 | Session & Clickjack Hardening | Clickjack, CSRF, XSS, and content-sniffing settings read authoritatively from SecuritySettings (Health Check cache fallback) with per-setting remediation |
+| OAuth Device & Password Flows | OAuth 2.0 Device Flow and Username-Password Flow enabled in org settings or connected apps; phishable device code flows and SSO/MFA bypass paths |
+| Delegated Authentication Exposure | Delegated Authentication enabled over unencrypted/non-mTLS endpoints or assigned to System Administrator profiles |
+| Auth.Provider Registration Handler Security | Auth.Provider RegistrationHandler running as System Administrator with email-based user account linking vulnerable to pre-auth takeover |
 
 ## Users, Permissions & Privilege
 | Check | What it looks for |
@@ -43,6 +46,7 @@ The audit runs **95 read-only checks**. The [README](../README.md#what-it-checks
 | Integration Account Least Privilege | Permissions an integration or service account holds and is not using — escalation-grade permissions (Author Apex, Customize Application, Manage Users), bulk-data permissions, dormant accounts, and object write grants with no record ever written. Read grants are not observable from SOQL and the finding says so |
 | Inactive Users | Active licensed users with no login in 90+ days |
 | Login-As & Delegated Administration | Delegated-admin groups (SOQL) and the "log in as any user" policy read from SecuritySettings — user-impersonation and scoped-escalation paths |
+| Delegated Administration Groups | Delegated administration groups granting shadow-admin capabilities (user management, login-as, permission set assignment) invisible to standard permission set queries |
 | Mass Data Export Access | Profiles/permission sets with Weekly Data Export, or API access combined with View/Modify All Data (bulk-exfil capability) |
 
 ## Data Access & Sharing
@@ -59,6 +63,9 @@ The audit runs **95 read-only checks**. The [README](../README.md#what-it-checks
 | Flows Without Sharing | Active flows running in system context without sharing enforcement |
 | Content Distribution Links | Public file links missing expiry or passwords, and stale records |
 | Public Static Resources & Documents | Documents marked externally available (anonymous URL access) and static resources cached publicly |
+| Data Cloud Data Space Isolation | Default Data Space over-sharing to external integrations, partner users, or agent users, and unconstrained Data Share Targets |
+| Restriction Rules Integrity & Conflict Detection | Inactive Restriction Rules silently exposing records, and multiple conflicting active rules on the same entity |
+| Shield Platform Encryption Tenant Secret Lifecycle | Shield TenantSecret rotation frequency exceeding 365 days and unrotated key lifecycle compliance |
 
 ## Guest & External-Facing Access
 | Check | What it looks for |
@@ -75,6 +82,7 @@ The audit runs **95 read-only checks**. The [README](../README.md#what-it-checks
 | Experience Cloud CSP & Lightning Web Security | Advises verifying Strict CSP and Lightning Web Security on live sites (not reliably API-readable) |
 | CORS Allowlist | Wildcard or overly broad CORS allowlist origins |
 | CSP Trusted Sites | Content Security Policy trusted sites with insecure HTTP (mixed-content) endpoints |
+| External Account Hierarchy & Partner Super User Exposure | Partner Super User access (IsPrmSuperUser) and External Account Hierarchies that bypass external OWD and broaden portal record reach |
 
 ## Apex & Code Security
 | Check | What it looks for |
@@ -89,6 +97,8 @@ The audit runs **95 read-only checks**. The [README](../README.md#what-it-checks
 | Scheduled & Batch Apex | Active scheduled and batch Apex jobs |
 | Anonymous Apex Audit | Anonymous Apex executed in the last 90 days (via SetupAuditTrail) |
 | Apex Logging Framework | Persistent logging usage and sensitive data exposed in Apex logs |
+| Platform Event Subscriber Context & Privilege Escalation | Platform Event subscribers executing in system context or as Admin while low-trust or guest users hold Publish permissions |
+| Flow HTTP Callout Credential Bypass | Declarative Flow HTTP callout actions or formulas containing embedded API tokens or bypassing modern Named Credentials |
 
 ## Integrations, Connected Apps & Deployments
 | Check | What it looks for |
@@ -102,7 +112,10 @@ The audit runs **95 read-only checks**. The [README](../README.md#what-it-checks
 | Remote Site Settings | Remote sites with protocol security disabled |
 | Outbound Messages | Workflow outbound messages that include a session ID or post to cleartext (http://) endpoints |
 | Email Security & Spoofing | Inbound email services accepting mail from any sender / running Apex unauthenticated, and org-wide send-as addresses open to all profiles |
+| Inbound Email Handler Unauthenticated Execution | Inbound email services accepting messages without sender filtering or executing Apex as an unauthenticated external foothold |
+| Org-Wide Email Spoofing & DKIM Coverage | Org-Wide Email Addresses available to all profiles without SPF/DKIM verification alignment |
 | Installed Packages | Managed/unmanaged package inventory; unmanaged or beta packages in production |
+| Package Post-Install Supply Chain Risk | Installed packages with active PostInstallScript handlers running in privileged context and unmonitored updates |
 | Deployment Identity | Designated deployment identity and uncontrolled deployment activity |
 
 ## Secrets & Credential Storage
@@ -136,10 +149,11 @@ The audit runs **95 read-only checks**. The [README](../README.md#what-it-checks
 | Trusted URL Hygiene | Reviews the CSP trusted-sites allowlist for non-Salesforce domains that could be repurposed as exfiltration channels; with `--resolve-domains`, DNS-checks each for unresolvable or parked entries |
 | Agent Query Reach | Agents carrying the standard General CRM topic or a Query Records action: open-ended querying an injected prompt can point at any object the run-as user can read (the SalesBleed read path) |
 | Agent Outbound Actions | Agent actions that send data out of the org (Slack messages, email, external services, MCP tools) without user confirmation; standard Slack/email actions whose confirmation setting is not readable are reported separately |
+| GenAI Prompt Template Grounding & Context | Active Prompt Templates grounded on system-mode flows or unshared Apex, or interpolating untrusted external fields alongside sensitive CRM data |
 
 Three of the named [attack chains](#attack-chains) correlate these findings specifically: **Prompt injection blast radius** (guest-reachable channel + over-privileged agent user + write-capable actions), **ForcedLeak pattern** (active agents + a stale/unresolvable trusted URL + no event capture) and **SalesBleed pattern** (open-ended query reach + an unconfirmed outbound action).
 
-The seven agent-specific checks stay silent in orgs where Agentforce is not enabled (the GenAI objects do not exist, so the inventory records `not-enabled` and the dependent checks return nothing). Trusted URL Hygiene runs everywhere, since the CSP allowlist is an org-wide exfiltration surface regardless of Agentforce.
+The eight agent-specific checks stay silent in orgs where Agentforce is not enabled (the GenAI objects do not exist, so the inventory records `not-enabled` and the dependent checks return nothing). Trusted URL Hygiene runs everywhere, since the CSP allowlist is an org-wide exfiltration surface regardless of Agentforce.
 
 ## Known limitations (advisory-only checks)
 

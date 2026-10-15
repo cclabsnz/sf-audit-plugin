@@ -102,6 +102,21 @@ import { AgentMonitoringCoverageCheck } from './impl/AgentMonitoringCoverageChec
 import { AgentQueryReachCheck } from './impl/AgentQueryReachCheck.js';
 import { AgentOutboundActionsCheck } from './impl/AgentOutboundActionsCheck.js';
 import { TrustedUrlHygieneCheck } from './impl/TrustedUrlHygieneCheck.js';
+// 14 New Checks & Attack Chains
+import { GenAiPromptTemplateGroundingCheck } from './impl/GenAiPromptTemplateGroundingCheck.js';
+import { DataCloudDataSpaceIsolationCheck } from './impl/DataCloudDataSpaceIsolationCheck.js';
+import { PlatformEventSubscriberContextCheck } from './impl/PlatformEventSubscriberContextCheck.js';
+import { FlowHttpCalloutCredentialBypassCheck } from './impl/FlowHttpCalloutCredentialBypassCheck.js';
+import { OauthDeviceAndAssetTokenFlowsCheck } from './impl/OauthDeviceAndAssetTokenFlowsCheck.js';
+import { DelegatedAuthenticationExposureCheck } from './impl/DelegatedAuthenticationExposureCheck.js';
+import { DelegatedAdministrationGroupsCheck } from './impl/DelegatedAdministrationGroupsCheck.js';
+import { AuthProviderRegistrationHandlerCheck } from './impl/AuthProviderRegistrationHandlerCheck.js';
+import { InboundEmailHandlerExposureCheck } from './impl/InboundEmailHandlerExposureCheck.js';
+import { OrgWideEmailSpoofingCheck } from './impl/OrgWideEmailSpoofingCheck.js';
+import { ExternalAccountHierarchyExposureCheck } from './impl/ExternalAccountHierarchyExposureCheck.js';
+import { RestrictionRulesIntegrityCheck } from './impl/RestrictionRulesIntegrityCheck.js';
+import { PackagePostInstallSupplyChainCheck } from './impl/PackagePostInstallSupplyChainCheck.js';
+import { ShieldTenantSecretLifecycleCheck } from './impl/ShieldTenantSecretLifecycleCheck.js';
 
 // Order matters: a check's dependsOnCache must be satisfied by a preceding check's populatesCache.
 // CheckEngine.validateCacheOrdering() enforces this at startup.
@@ -180,6 +195,21 @@ export const CHECKS: SecurityCheck[] = [
   new ExperienceCspCheck(),               // Experience Cloud CSP / Lightning Web Security advisory
   new SandboxDataMaskingCheck(),          // sandbox with populated (likely unmasked) PII
   new PrivilegedAccessCheck(),            // writes: effectivePermissions; shadow-admin detection
+  // 14 New Checks across 5 Salesforce surfaces
+  new GenAiPromptTemplateGroundingCheck(), // Tooling: GenAiPromptTemplate (AI & Agents)
+  new DataCloudDataSpaceIsolationCheck(),   // SOQL: DataSpace, DataShareTarget (Data Access & Sharing)
+  new PlatformEventSubscriberContextCheck(), // Tooling: PlatformEventSubscriberConfig (Apex & Code Security)
+  new FlowHttpCalloutCredentialBypassCheck(), // Tooling: Flow, ExternalServiceRegistration (Apex & Code Security)
+  new OauthDeviceAndAssetTokenFlowsCheck(), // Metadata: OauthOidcSettings (Identity & Authentication)
+  new DelegatedAuthenticationExposureCheck(), // Metadata: SecuritySettings (Identity & Authentication)
+  new DelegatedAdministrationGroupsCheck(), // SOQL: DelegateGroup (Users, Permissions & Privilege)
+  new AuthProviderRegistrationHandlerCheck(), // SOQL: AuthProvider, ApexClass (Identity & Authentication)
+  new InboundEmailHandlerExposureCheck(),   // SOQL: EmailServicesFunction (Integrations)
+  new OrgWideEmailSpoofingCheck(),          // SOQL: OrgWideEmailAddress, DkimKey (Integrations)
+  new ExternalAccountHierarchyExposureCheck(), // SOQL: User.IsPrmSuperUser (Guest & External-Facing Access)
+  new RestrictionRulesIntegrityCheck(),     // Tooling: RestrictionRule (Data Access & Sharing)
+  new PackagePostInstallSupplyChainCheck(), // Tooling: InstalledSubscriberPackage (Integrations)
+  new ShieldTenantSecretLifecycleCheck(),   // SOQL: TenantSecret (Data Access & Sharing)
   // AI & Agents block (v1.5) — Agentforce / GenAI. AgentInventoryCheck writes agentInventory,
   // agentUsers, agentAccess; the Phase 2 dependent checks are registered after it.
   new AgentInventoryCheck(),              // writes: agentInventory, agentUsers, agentAccess

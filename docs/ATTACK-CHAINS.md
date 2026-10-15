@@ -13,7 +13,7 @@ novel combination is still surfaced rather than missed. Every chain lists the fi
 steps, and remediating **any one step breaks the chain** — which is what makes this actionable
 rather than alarming.
 
-The seventeen named chains:
+The nineteen named chains:
 
 | Chain | Severity | Fires when |
 |-------|----------|-----------|
@@ -34,6 +34,8 @@ The seventeen named chains:
 | Org files served to anonymous callers, with no record of what left | HIGH | Public Documents or static resources, content links with no expiry or password, or guest file access on a site — **and** no classification or monitoring to establish what the files held or who took them. Files are the blind spot in a sharing model: OWD, sharing rules and FLS govern records, none of them govern a static resource served from a URL. Claims no pivot into org data, because there is none |
 | Visualforce XSS pattern reaching a privileged session | HIGH | Markup renders data unencoded (`escape="false"`, a merge field in a `<script>` block without JSENCODE, or one in an `href`/`src`/`action` attribute), the browser-side protections that would blunt an injected script are weakened, **and** privileged accounts exist to target. Does not claim the XSS is exploitable — markup cannot show whether an attacker controls the rendered value. A prioritisation of which pages to read first |
 | Exploitable access with no detection coverage | MEDIUM | A real capability (unauthenticated foothold, privilege escalation, org takeover) exists while two or more of threat detection, Event Monitoring, Transaction Security and SIEM forwarding are absent. Adds no exposure — reports that existing exposure would go unobserved |
+| Unauthenticated inbound email to privileged code execution | CRITICAL | An open inbound email service address with no sender allowlist and no SPF/DKIM verification accepts messages from any sender, triggering Apex execution or DML under a privileged user or in a class running without sharing |
+| Guest or low-trust platform event publish to automated process escalation | CRITICAL | A guest or portal user publishes a custom Platform Event that triggers an Apex trigger or Flow subscriber executing as Automated Process or an Admin user, bypassing user permissions and sharing |
 
 Chains appear in the technical report and drive the executive report's priorities and remediation
 roadmap. A chain is only reported when **every** one of its ingredients is actually present: a clean

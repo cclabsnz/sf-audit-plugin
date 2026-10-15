@@ -57,6 +57,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
         // analogue of portal-exposed Apex running without sharing.
         'guest-record-access-policy-not-enforced',
         'flows-autolaunched-without-sharing', 'flows-screen-without-sharing',
+        'data-cloud-data-space-default-overshared', 'restriction-rules-inactive',
       ]);
       return steps.length >= 2 ? steps : null;
     },
@@ -111,6 +112,10 @@ export const NAMED_CHAINS: NamedChainDef[] = [
         'privileged-access-shadow-admins',
         'separation-of-duties-self-escalation', 'separation-of-duties-identity-takeover',
         'separation-of-duties-grant-self-data',
+        // Delegated administration, registration handler, and platform event escalation paths
+        'delegated-administration-groups-active',
+        'auth-provider-registration-handler-admin-exec', 'auth-provider-registration-handler-unverified-email-linking',
+        'delegated-authentication-admin-assigned', 'platform-event-subscriber-escalation',
         // An integration account holding Author Apex, Customize Application or user-management
         // permissions it does not use has the same escalation reach as users-author-apex above.
         'integration-least-privilege-escalation-permissions',
@@ -133,6 +138,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
         'hardcoded-credentials-found', 'custom-labels-credential-value-match', 'custom-labels-credential-name-match',
         'debug-log-active-traces', 'cors-wildcard-origin', 'cors-broad-origin',
         'named-credentials-inventory', 'named-credentials-http-endpoint', 'remote-sites-inventory',
+        'flow-http-callout-hardcoded-secret', 'oauth-device-flow-enabled', 'oauth-password-flow-enabled',
         // A user who can stand up connected apps and bypass API access control has provisioned
         // their own egress path.
         'separation-of-duties-external-exfil-channel',
@@ -430,6 +436,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
         'portal-exposed-apex-without-sharing',
         'flows-autolaunched-without-sharing', 'flows-screen-without-sharing',
         'apex-rest-without-sharing',
+        'external-account-hierarchy-super-users', 'external-account-hierarchy-active',
       ]);
       if (reach.length === 0) return null;
       // Social sign-on is a second way in rather than a requirement, so it joins as evidence when
@@ -568,6 +575,56 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       ]);
       if (targets.length === 0) return null;
       return [...vector, ...weakened, ...targets];
+    },
+  },
+  {
+    id: 'inbound-email-rce',
+    title: 'Unauthenticated inbound email to privileged code execution',
+    severity: 'CRITICAL',
+    narrative:
+      'An unauthenticated inbound email service address with no sender allowlist and no SPF/DKIM verification ' +
+      'accepts messages from any internet sender, executing Apex logic under a privileged running user or in a class ' +
+      'that bypasses CRUD/FLS and sharing. Attackers can trigger unattended data manipulation or code execution without credentials.',
+    remediation:
+      'Populate AuthorizedSenders on each email service address, set AuthenticationFailureAction to reject spoofed email, ' +
+      'and ensure email handler Apex classes enforce sharing, validate input, and execute as a dedicated least-privilege user.',
+    match(present, active) {
+      if (!has(present, 'unauth-foothold', 'code-exec')) return null;
+      const vector = byIds(active, ['inbound-email-handler-unauthenticated-execution']);
+      if (vector.length === 0) return null;
+      const followOn = byIds(active, [
+        'apex-crud-fls-without-sharing', 'soql-injection-risk', 'portal-exposed-apex-without-sharing',
+        'flows-autolaunched-without-sharing', 'users-modify-all-data', 'users-super-admin-combo',
+        'privileged-access-shadow-admins',
+      ]);
+      return followOn.length > 0 ? [...vector, ...followOn] : null;
+    },
+  },
+  {
+    id: 'platform-event-priv-esc',
+    title: 'Guest or low-trust platform event publish to automated process escalation',
+    severity: 'CRITICAL',
+    narrative:
+      'A guest or portal user publishes a custom Platform Event that triggers an Apex trigger or Flow subscriber ' +
+      'executing as the Automated Process system user or an administrator. This bypasses normal user sharing, CRUD, and FLS, ' +
+      'providing an unauthenticated or low-trust path to system-context privilege escalation and state tampering.',
+    remediation:
+      'Revoke Create permissions on Platform Events from guest and Experience Cloud profiles. Configure ' +
+      'PlatformEventSubscriberConfig to run event triggers as a dedicated least-privilege user rather than Automated Process or an admin.',
+    match(present, active) {
+      if (!hasAny(present, 'unauth-foothold', 'low-trust-authenticated')) return null;
+      if (!hasAny(present, 'priv-esc', 'data-write')) return null;
+      const escalation = byIds(active, ['platform-event-subscriber-escalation']);
+      if (escalation.length === 0) return null;
+      const foothold = byIds(active, [
+        'guest-user-read-access', 'guest-user-write-access', 'guest-user-sharing-exposure', 'guest-user-baseline',
+        'sharing-model-external-read', 'sharing-model-external-write', 'experience-cloud-site-self-registration',
+      ]);
+      if (foothold.length === 0) return null;
+      const targets = byIds(active, [
+        'users-super-admin-combo', 'users-modify-all-data', 'privileged-access-shadow-admins',
+      ]);
+      return [...foothold, ...escalation, ...targets];
     },
   },
 ];

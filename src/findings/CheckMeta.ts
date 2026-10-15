@@ -101,6 +101,21 @@ export const CHECK_META: Record<string, CheckMeta> = {
   'agent-query-reach':       { effort: 'moderate', impact: 'The General CRM topic and Query Records action let an injected prompt choose which object to query, so one poisoned lead or case can read any object the run-as user can see: the SalesBleed read path.' },
   'agent-outbound-actions':  { effort: 'quick',    impact: 'Slack, email and external-service actions with no user confirmation give an injected prompt a ready way to send data out of the org: the PipeLeak and SalesBleed exit path.' },
   'trusted-url-hygiene':     { effort: 'quick',    impact: 'A non-Salesforce CSP-trusted domain that has lapsed or been parked is an allowlisted exfiltration channel: whoever re-registers it can receive prompt-injected data from Lightning and Agentforce output — the exact ForcedLeak exfil vector.' },
+  // 14 New Checks
+  'genai-prompt-template-grounding': { effort: 'moderate', impact: 'Prompt templates grounded in system-mode Flows or without-sharing Apex bypass user sharing, allowing low-privilege users to extract restricted records through AI prompts.' },
+  'data-cloud-data-space-isolation': { effort: 'moderate', impact: 'Default Data Space over-sharing flattens Salesforce OWD record security, exposing sensitive customer data across integrations and partner users.' },
+  'platform-event-subscriber-context': { effort: 'moderate', impact: 'Platform events published by low-trust or guest users trigger subscriber Apex running as Automated Process or Admin, creating a direct privilege escalation bridge.' },
+  'flow-http-callout-credential-bypass': { effort: 'quick',    impact: 'Declarative Flow HTTP callouts storing API keys or bearer tokens in formulas bypass Named Credentials and leak secrets in outbound integrations.' },
+  'oauth-device-and-asset-token-flows': { effort: 'quick',    impact: 'Global OAuth Device Flow and password flows remain open to device-code phishing and credential replay, circumventing SSO and MFA protections.' },
+  'delegated-authentication-exposure': { effort: 'moderate', impact: 'Delegated Authentication over insecure endpoints or assigned to admins allows attackers who compromise the gateway to authenticate as any admin user.' },
+  'delegated-administration-groups': { effort: 'moderate', impact: 'Delegated Admin groups grant shadow-admin capabilities (user management, login-as, permission set assignment) completely invisible to standard permission set queries.' },
+  'auth-provider-registration-handler': { effort: 'moderate', impact: 'Auth Provider registration handlers running as Admin that match users solely on unverified email addresses allow pre-authentication account takeover.' },
+  'inbound-email-handler-exposure': { effort: 'quick',    impact: 'Inbound email handlers accepting unauthenticated messages without SPF/DKIM verification execute Apex under privileged users from anonymous incoming email.' },
+  'org-wide-email-spoofing':         { effort: 'quick',    impact: 'Org-wide email addresses open to all profiles without active DKIM keys allow unauthorized internal users or flows to send spoofed emails directly from Salesforce.' },
+  'external-account-hierarchy-exposure': { effort: 'moderate', impact: 'Partner Super User access and external account hierarchies bypass private external OWD, exposing horizontal and upward record visibility to portal users.' },
+  'restriction-rules-integrity':     { effort: 'quick',    impact: 'Inactive or conflicting Restriction Rules silently expose underlying records on public objects and create non-deterministic security evaluation.' },
+  'package-post-install-supply-chain': { effort: 'moderate', impact: 'Managed packages with post-install scripts execute unattended arbitrary Apex with full privileges during push upgrades, introducing supply-chain risks.' },
+  'shield-tenant-secret-lifecycle':   { effort: 'quick',    impact: 'Unrotated Shield tenant encryption secrets exceed annual lifecycle standards, leaving data-at-rest vulnerable to compliance and cryptographic audit findings.' },
 };
 
 export function getCheckMeta(id: string): CheckMeta | undefined {
