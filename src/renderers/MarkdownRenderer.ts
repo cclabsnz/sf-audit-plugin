@@ -1,5 +1,6 @@
 import type { AuditResult } from '../findings/AuditResult.js';
 import type { AuditRenderer } from './AuditRenderer.js';
+import { coverageSummary } from '../findings/coverage.js';
 
 function escapeMdCell(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
@@ -16,6 +17,11 @@ export class MarkdownRenderer implements AuditRenderer {
     lines.push(`**Generated:** ${result.generatedAt.toISOString()}`);
     lines.push(`**Instance:** ${result.instance} | **Type:** ${result.orgType}${result.isSandbox ? ' (Sandbox)' : ''}`);
     lines.push(`**Health Score:** ${result.healthScore}/100 | **Grade:** ${result.grade}`);
+    if (result.coverage) {
+      lines.push('');
+      lines.push(`**${coverageSummary(result.coverage)}**`);
+      if (result.coverage.notAssessed.length > 0) lines.push(`Not assessed: ${result.coverage.notAssessed.map((id) => `\`${id}\``).join(', ')}`);
+    }
     lines.push('');
     if (result.attackChains && result.attackChains.length > 0) {
       lines.push(`## Attack Paths (${result.attackChains.length})`);

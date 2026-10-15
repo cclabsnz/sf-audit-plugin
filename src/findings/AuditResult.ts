@@ -1,6 +1,7 @@
 import type { Finding } from './Finding.js';
 import type { OrgMetrics } from '@cclabsnz/sf-core';
 import type { AttackChain } from '../chains/AttackChain.js';
+import type { EvidenceCoverage } from './coverage.js';
 
 export interface AuditResult {
   generatedAt: Date;
@@ -17,4 +18,9 @@ export interface AuditResult {
   attackChains?: AttackChain[];
   /** Findings covered by an approved waiver, also present in `findings` with `waived: true`. */
   waivedFindings?: Finding[];
+  /** How much of the audit gathered evidence, and whether that capped the grade. */
+  coverage?: EvidenceCoverage & {
+    /** True when coverage fell below the bar and the grade was lowered from A to B. */
+    gradeCapped: boolean;
+  };
 }

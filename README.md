@@ -206,6 +206,11 @@ Each finding carries a risk weight (CRITICAL 10, HIGH 7, MEDIUM 4, LOW 1, INFO 0
 `100 - (total weight / max possible weight) * 100`, capped at 0, and maps to an A–F grade — A needs
 ≥ 85 with no HIGH findings; any CRITICAL is an F.
 
+Every report also states its **evidence coverage**: how many checks gathered evidence, out of how
+many ran. A check the audit user could not run (missing permission, or an error) is listed by id
+as not assessed. Its area is unknown, not clean. A run below 90% coverage cannot be graded A: it is
+capped at B, and the report says so. Grades below A are never changed by coverage.
+
 All weights and grade thresholds are configurable without recompiling, via
 `--scoring-config ./my-scoring.json`. Start from [`config/scoring.sample.json`](config/scoring.sample.json),
 which lists every valid `checkWeights` key; your config is deep-merged with the defaults, so include

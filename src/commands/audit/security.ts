@@ -21,6 +21,7 @@ import { EXIT_FINDINGS, EXIT_INCONCLUSIVE, resolveExitCode, violationsFor } from
 import { buildDigest, type AuditDigest } from '../../findings/digest.js';
 
 import { WaiverLoader, DEFAULT_WAIVER_FILE } from '../../waivers/WaiverLoader.js';
+import { coverageSummary } from '../../findings/coverage.js';
 
 const RENDERERS: Record<string, AuditRenderer> = {
   html: new HtmlRenderer(),
@@ -246,6 +247,10 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
     }
     this.log('─────────────────────────────');
     this.log(`  Score: ${result.healthScore}/100   Grade: ${result.grade}`);
+    if (result.coverage) {
+      this.log(`  ${coverageSummary(result.coverage)}`);
+      if (result.coverage.notAssessed.length > 0) this.log(`  Not assessed: ${result.coverage.notAssessed.join(', ')}`);
+    }
     if (result.waivedFindings && result.waivedFindings.length > 0) {
       this.log('─────────────────────────────');
       this.log(`  Waived (accepted risk): ${result.waivedFindings.length} finding(s)`);

@@ -118,6 +118,8 @@ describe('CheckEngine', () => {
       expect(errorFinding!.riskLevel).toBe('INFO');
       expect(errorFinding!.detail).toContain('SOQL error');
       expect(errorFinding!.checkId).toBe('bad');
+      expect(errorFinding!.notAssessed).toBe(true);
+      expect(result.coverage).toMatchObject({ checksRun: 2, checksAssessed: 1, notAssessed: ['bad'] });
     });
 
     it('merges metrics from all checks', async () => {

@@ -48,6 +48,8 @@ function buildErrorFinding(check: SecurityCheck, err: unknown): Finding {
       ? 'Grant the audit user the permissions listed in the tool documentation, then re-run the audit.'
       : 'Review the error message and verify the running user has the required permissions.',
     inconclusive: inconclusive || undefined,
+    // A check that threw gathered no evidence, whatever the cause.
+    notAssessed: true,
   };
 }
 
