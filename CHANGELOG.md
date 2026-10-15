@@ -13,6 +13,12 @@ Merged to `main`, not yet released.
 
 ### Added
 
+- Every report states its evidence coverage: the share of checks that gathered evidence, and the
+  ids of those that could not. Below 90% a would-be A is capped at B, and the report says why.
+  `grade` stays a plain A–F letter; the detail is in the new `coverage` field of the JSON output.
+
+### Added
+
 - Accepted-risk waivers (`--waivers`, or `.sfaudit-waivers.json` in the working directory). A
   waived finding leaves the score, `--fail-on` and the executive priorities and roadmap, and is
   listed under Accepted Risks. Matching is exact, waivers run at most 365 days, and a CRITICAL

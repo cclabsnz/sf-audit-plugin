@@ -45,4 +45,6 @@ export interface Finding {
   capabilities?: { grants?: Capability[]; requires?: Capability[] };
   /** Covered by an approved, unexpired waiver: excluded from the score and from --fail-on. */
   waived?: boolean;
+  /** The check that produced this finding could not run or gather any evidence. */
+  notAssessed?: boolean;
 }

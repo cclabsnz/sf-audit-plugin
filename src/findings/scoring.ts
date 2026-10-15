@@ -6,6 +6,7 @@ import { EMPTY_METRICS } from '@cclabsnz/sf-core';
 import { DEFAULT_SCORING_CONFIG } from './ScoringConfig.js';
 import type { ScoringConfig } from './ScoringConfig.js';
 import type { AttackChain } from '../chains/AttackChain.js';
+import { evidenceCoverage, MIN_COVERAGE_FOR_A } from './coverage.js';
 
 type Grade = AuditResult['grade'];
 
@@ -65,6 +66,11 @@ export function buildAuditResult(
 
   const waivedFindings = findings.filter((f) => f.waived);
 
+  // A run that could not see enough of the org is never graded A. Coverage is reported either way.
+  const coverage = evidenceCoverage(findings);
+  const gradeCapped = grade === 'A' && coverage.percent < MIN_COVERAGE_FOR_A;
+  if (gradeCapped) grade = 'B';
+
   return {
     generatedAt: new Date(),
     orgId: ctx.orgInfo.id,
@@ -79,5 +85,6 @@ export function buildAuditResult(
     grade,
     attackChains,
     waivedFindings: waivedFindings.length > 0 ? waivedFindings : undefined,
+    coverage: { ...coverage, gradeCapped },
   };
 }

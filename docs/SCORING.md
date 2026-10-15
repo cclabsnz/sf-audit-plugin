@@ -71,3 +71,16 @@ sf audit security --target-org myOrg --scoring-config ./my-scoring.json
 ```
 
 Your config is deep-merged with the defaults, so you only need to include the values you want to change.
+
+## Evidence coverage and the grade cap
+
+A clean result only means something if the audit could see the org. Every result carries
+`coverage`: `checksRun`, `checksAssessed`, `percent` (rounded down) and the ids of the checks
+that gathered no evidence (`notAssessed`). A check is not assessed when every finding it produced
+is inconclusive, or when it threw. A check with some evidence and some gaps is assessed; its gaps
+show as its own inconclusive findings.
+
+Below 90% coverage a would-be A becomes a B, and `coverage.gradeCapped` is `true`. B, C, D and F
+are never changed by coverage. `grade` stays a plain letter, so history, diffs and JSON consumers
+are unaffected. To fail a pipeline on any gap, use `--fail-on-inconclusive`.
+
