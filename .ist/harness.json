@@ -1,0 +1,7 @@
+{
+  "$comment": "ist-harness mod + ist-link-check config. visibleDirs = where your existing tests live; riskPaths = substrings that need a spec link before edit.",
+  "visibleDirs": ["test", "src"],
+  "hiddenDir": "tests/hidden",
+  "hiddenPaths": ["tests/hidden/"],
+  "riskPaths": [ "/auth/", "/permissions/", "/permission/", "/guest", "/connectedApps/", "/namedCredentials/"]
+}
