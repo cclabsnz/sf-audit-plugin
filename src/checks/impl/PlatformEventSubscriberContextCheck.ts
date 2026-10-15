@@ -1,15 +1,15 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { isApiError } from '@cclabsnz/sf-core';
 
-interface SubscriberConfigRecord {
+interface EntityDefinitionRecord {
+  DurableId: string;
+  QualifiedApiName: string;
+}
+
+interface PermissionSetRecord {
   Id: string;
-  DeveloperName: string;
-  MasterLabel: string;
-  PlatformEventConsumerId?: string | null;
-  BatchSize?: number | null;
-  UserId?: string | null;
+  ProfileId: string;
 }
 
 interface ApexTriggerRecord {
@@ -39,20 +39,6 @@ interface ProfileRecord {
   UserType: string;
 }
 
-function isMissingObjectError(err: unknown): boolean {
-  if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    if (err.statusCode === 404) return true;
-  }
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes('not supported') ||
-    msg.includes('invalid type') ||
-    msg.includes('is not supported') ||
-    msg.includes('sobject type')
-  );
-}
-
 export class PlatformEventSubscriberContextCheck implements SecurityCheck {
   readonly id = 'platform-event-subscriber-context';
   readonly name = 'Platform Event Subscriber Context & Privilege Escalation';
@@ -64,38 +50,24 @@ export class PlatformEventSubscriberContextCheck implements SecurityCheck {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
 
-    // 1. Query active Apex Triggers on custom Platform Events (__e)
-    let triggers: ApexTriggerRecord[] = [];
-    try {
-      triggers = await ctx.tooling.query<ApexTriggerRecord>(
-        "SELECT Id, Name, TableEnumOrId, Status FROM ApexTrigger WHERE Status = 'Active'",
-      );
-    } catch (err) {
-      if (isMissingObjectError(err)) {
-        findings.push({
-          id: 'platform-event-subscriber-context-ok',
-          category: this.category,
-          riskLevel: 'LOW',
-          passed: true,
-          title: 'No Platform Event triggers found or Tooling API not accessible',
-          detail: 'ApexTrigger tooling object returned no records.',
-          remediation: 'No action required.',
-        });
-        return { findings };
-      }
-      findings.push({
-        id: 'platform-event-subscriber-context-inaccessible',
-        category: this.category,
-        riskLevel: 'INFO',
-        inconclusive: true,
-        title: 'Platform Event Triggers could not be inspected',
-        detail: `Failed to query ApexTrigger: ${err instanceof Error ? err.message : String(err)}`,
-        remediation: 'Grant the audit user "View Setup and Configuration" and Tooling API access.',
-      });
-      return { findings };
-    }
+    // ApexTrigger exists in every org, so a failure here is never "feature absent". It propagates
+    // and CheckEngine reports the check as inconclusive.
+    const triggers = await ctx.tooling.query<ApexTriggerRecord>(
+      "SELECT Id, Name, TableEnumOrId, Status FROM ApexTrigger WHERE Status = 'Active'",
+    );
 
-    const eventTriggers = triggers.filter((t) => t.TableEnumOrId.endsWith('__e'));
+    // TableEnumOrId holds a standard object's name, but a custom object's (and so every custom
+    // platform event's) 01I Id. Resolve Ids to API names before testing for the __e suffix.
+    const ids = [...new Set(triggers.map((t) => t.TableEnumOrId).filter((v) => !v.includes('_') && v.startsWith('01I')))];
+    const nameById = new Map<string, string>();
+    if (ids.length > 0) {
+      const defs = await ctx.tooling.query<EntityDefinitionRecord>(
+        `SELECT DurableId, QualifiedApiName FROM EntityDefinition WHERE DurableId IN (${ids.map((i) => `'${i.slice(0, 15)}'`).join(', ')})`,
+      );
+      for (const d of defs) nameById.set(d.DurableId.slice(0, 15), d.QualifiedApiName);
+    }
+    const objectName = (t: ApexTriggerRecord): string => nameById.get(t.TableEnumOrId.slice(0, 15)) ?? t.TableEnumOrId;
+    const eventTriggers = triggers.filter((t) => objectName(t).endsWith('__e'));
 
     if (eventTriggers.length === 0) {
       findings.push({
@@ -110,51 +82,29 @@ export class PlatformEventSubscriberContextCheck implements SecurityCheck {
       return { findings };
     }
 
-    // 2. Query PlatformEventSubscriberConfig to see which run as custom users vs Automated Process
-    let subscriberConfigs: SubscriberConfigRecord[] = [];
-    try {
-      subscriberConfigs = await ctx.tooling.query<SubscriberConfigRecord>(
-        'SELECT Id, DeveloperName, MasterLabel, PlatformEventConsumerId, BatchSize, UserId FROM PlatformEventSubscriberConfig',
-      );
-    } catch {
-      // Degrade gracefully if PlatformEventSubscriberConfig is empty/not configured
-    }
-
-    const configByConsumer = new Map<string, SubscriberConfigRecord>();
-    for (const cfg of subscriberConfigs) {
-      if (cfg.PlatformEventConsumerId) {
-        configByConsumer.set(cfg.PlatformEventConsumerId, cfg);
-      }
-      configByConsumer.set(cfg.DeveloperName.toLowerCase(), cfg);
-    }
-
-    // 3. Query ObjectPermissions for Create permissions on the event objects
-    const eventObjectNames = [...new Set(eventTriggers.map((t) => t.TableEnumOrId))];
-    let lowTrustProfilesWithCreate: string[] = [];
-
-    try {
-      // Get low-trust profiles (Guest, Portal, Experience Cloud)
-      const profiles = await ctx.soql.queryAll<ProfileRecord>(
-        "SELECT Id, Name, UserType FROM Profile WHERE UserType IN ('Guest', 'CspLitePortal', 'PowerPartner', 'CustomerSuccess', 'PowerCustomerSuccess')",
-      );
-      const lowTrustProfileIds = new Set(profiles.map((p) => p.Id));
+    // Low-trust profiles (guest, portal, Experience Cloud) holding Create on a subscribed event.
+    // ObjectPermissions.ParentId is a PermissionSet Id, so each profile is reached through the
+    // permission set it owns.
+    const eventObjectNames = new Set(eventTriggers.map(objectName));
+    const lowTrustProfilesWithCreate: string[] = [];
+    const profiles = await ctx.soql.queryAll<ProfileRecord>(
+      "SELECT Id, Name, UserType FROM Profile WHERE UserType IN ('Guest', 'CspLitePortal', 'PowerPartner', 'CustomerSuccess', 'PowerCustomerSuccess')",
+    );
+    if (profiles.length > 0) {
       const profileNameById = new Map(profiles.map((p) => [p.Id, p.Name]));
-
+      const owned = await ctx.soql.queryAll<PermissionSetRecord>(
+        `SELECT Id, ProfileId FROM PermissionSet WHERE IsOwnedByProfile = true AND ProfileId IN (${profiles.map((p) => `'${p.Id}'`).join(', ')})`,
+      );
+      const profileByPermSet = new Map(owned.map((ps) => [ps.Id, ps.ProfileId]));
       const objectPerms = await ctx.soql.queryAll<ObjectPermissionRecord>(
         "SELECT Id, ParentId, SobjectType, PermissionsCreate FROM ObjectPermissions WHERE PermissionsCreate = true AND SobjectType LIKE '%__e'",
       );
-
       for (const op of objectPerms) {
-        if (eventObjectNames.includes(op.SobjectType)) {
-          // Check if parent matches a low-trust profile
-          if (lowTrustProfileIds.has(op.ParentId)) {
-            const profName = profileNameById.get(op.ParentId) ?? op.ParentId;
-            lowTrustProfilesWithCreate.push(`${op.SobjectType} (${profName})`);
-          }
+        const profileId = profileByPermSet.get(op.ParentId);
+        if (profileId && eventObjectNames.has(op.SobjectType)) {
+          lowTrustProfilesWithCreate.push(`${op.SobjectType} (${profileNameById.get(profileId) ?? profileId})`);
         }
       }
-    } catch {
-      // Degrade gracefully if ObjectPermissions query fails
     }
 
     // If low-trust profiles have Create permission on any custom platform event subscribed to by Apex:

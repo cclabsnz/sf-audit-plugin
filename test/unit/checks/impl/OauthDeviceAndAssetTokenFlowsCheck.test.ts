@@ -51,14 +51,37 @@ describe('OauthDeviceAndAssetTokenFlowsCheck', () => {
     expect(f?.riskLevel).toBe('HIGH');
   });
 
-  it('flags when Connected Application has Device Flow enabled', async () => {
-    const ctx = makeCtx(
-      null,
-      [{ Id: '0CA1', Name: 'CLI App', OptionsIsDeviceFlowEnabled: true }]
-    );
+  it('does not pass when the settings read throws', async () => {
+    const ctx = makeCtx(null);
+    (ctx.metadata as any).read = (jest.fn() as any).mockRejectedValue(new Error('INSUFFICIENT_ACCESS'));
     const r = await check.run(ctx);
-    const f = r.findings.find((x) => x.id === 'oauth-device-flow-enabled');
-    expect(f).toBeDefined();
-    expect(f?.riskLevel).toBe('HIGH');
+    expect(r.findings.some((f) => f.passed)).toBe(false);
+    expect(r.findings.map((f) => f.id)).toEqual(['oauth-device-and-asset-flows-advisory']);
+  });
+
+  it('does not pass when there is no Metadata client', async () => {
+    const ctx = makeCtx(null);
+    (ctx as any).metadata = undefined;
+    const r = await check.run(ctx);
+    expect(r.findings.some((f) => f.passed)).toBe(false);
+    expect(r.findings[0].id).toBe('oauth-device-and-asset-flows-advisory');
+  });
+
+  it('treats a field missing from the settings as unknown, not disabled', async () => {
+    const ctx = makeCtx({ isDeviceFlowEnabled: false });
+    const r = await check.run(ctx);
+    expect(r.findings.some((f) => f.passed)).toBe(false);
+    const f = r.findings.find((x) => x.id === 'oauth-device-and-asset-flows-advisory');
+    expect(f?.title).toContain('Username-Password Flow');
+    expect(f?.title).not.toContain('Device Flow and');
+  });
+
+  it('still reports an enabled flow when the other setting is unreadable', async () => {
+    const ctx = makeCtx({ isPasswordFlowEnabled: true });
+    const r = await check.run(ctx);
+    expect(r.findings.map((f) => f.id).sort()).toEqual([
+      'oauth-device-and-asset-flows-advisory',
+      'oauth-password-flow-enabled',
+    ]);
   });
 });

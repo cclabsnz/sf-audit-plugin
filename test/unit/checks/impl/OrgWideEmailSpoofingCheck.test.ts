@@ -67,7 +67,7 @@ describe('OrgWideEmailSpoofingCheck', () => {
         {
           Id: '0Dk1',
           Domain: 'company.com',
-          Status: 'Active',
+          IsActive: true,
         },
       ],
     });
@@ -75,5 +75,34 @@ describe('OrgWideEmailSpoofingCheck', () => {
     expect(r.findings).toHaveLength(1);
     expect(r.findings[0].id).toBe('org-wide-email-spoofing-ok');
     expect(r.findings[0].passed).toBe(true);
+  });
+
+  it('is inconclusive, never passed, when DkimKey cannot be read', async () => {
+    const ctx = makeCtx({
+      OrgWideEmailAddress: [{ Id: '0D23', Address: 'a@company.com', DisplayName: 'A', IsAllowAllProfiles: false }],
+      DkimKey: new Error('INSUFFICIENT_ACCESS: DkimKey'),
+    });
+    const r = await check.run(ctx);
+    expect(r.findings.some((f) => f.passed)).toBe(false);
+    expect(r.findings.map((f) => f.id)).toEqual(['org-wide-email-spoofing-dkim-inaccessible']);
+  });
+
+  it('does not report both inconclusive and passed when OrgWideEmailAddress cannot be read', async () => {
+    const ctx = makeCtx({
+      OrgWideEmailAddress: new Error('INSUFFICIENT_ACCESS: OrgWideEmailAddress'),
+      DkimKey: [{ Id: '0Dk2', Domain: 'company.com', IsActive: true }],
+    });
+    const r = await check.run(ctx);
+    expect(r.findings.some((f) => f.passed)).toBe(false);
+    expect(r.findings.map((f) => f.id)).toEqual(['org-wide-email-spoofing-inaccessible']);
+  });
+
+  it('treats a key that is not active as no DKIM', async () => {
+    const ctx = makeCtx({
+      OrgWideEmailAddress: [],
+      DkimKey: [{ Id: '0Dk3', Domain: 'company.com', IsActive: false }],
+    });
+    const r = await check.run(ctx);
+    expect(r.findings.map((f) => f.id)).toEqual(['org-wide-email-spoofing-no-dkim']);
   });
 });

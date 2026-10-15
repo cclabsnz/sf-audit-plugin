@@ -1,7 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { isApiError } from '@cclabsnz/sf-core';
+import { queryIfPresent } from '../support/missingObject.js';
 
 interface UserRecord {
   Id: string;
@@ -19,18 +19,9 @@ interface ExternalAccountHierarchyRecord {
   HierarchyLevel?: number;
 }
 
-function isMissingObjectError(err: unknown): boolean {
-  if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    if (err.statusCode === 404) return true;
-  }
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes('not supported') ||
-    msg.includes('invalid type') ||
-    msg.includes('is not supported') ||
-    msg.includes('sobject type')
-  );
+function isMissingPrmField(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /No such column 'IsPrmSuperUser'/i.test(msg);
 }
 
 export class ExternalAccountHierarchyExposureCheck implements SecurityCheck {
@@ -45,14 +36,17 @@ export class ExternalAccountHierarchyExposureCheck implements SecurityCheck {
     const baseUrl = ctx.orgInfo.instanceUrl;
     const usersUrl = `${baseUrl}/lightning/setup/ManageUsers/home`;
 
-    // 1. Query users with IsPrmSuperUser = true
-    let superUsers: UserRecord[] = [];
+    // 1. Active users with Partner Super User access. User.IsPrmSuperUser only exists in orgs
+    // with a partner (PRM) licence; there its absence means no super users. Any other error
+    // propagates so the check reports inconclusive rather than clean.
+    let superUsers: UserRecord[];
     try {
       superUsers = await ctx.soql.queryAll<UserRecord>(
         'SELECT Id, Username, IsActive, IsPrmSuperUser FROM User WHERE IsPrmSuperUser = true AND IsActive = true',
       );
-    } catch {
-      // IsPrmSuperUser might not be enabled in orgs without PRM licenses
+    } catch (err) {
+      if (!isMissingPrmField(err)) throw err;
+      superUsers = [];
     }
 
     if (superUsers.length > 0) {
@@ -74,16 +68,9 @@ export class ExternalAccountHierarchyExposureCheck implements SecurityCheck {
     }
 
     // 2. Query ExternalAccountHierarchy records
-    let hierarchies: ExternalAccountHierarchyRecord[] = [];
-    try {
-      hierarchies = await ctx.soql.queryAll<ExternalAccountHierarchyRecord>(
-        'SELECT Id, MasterLabel FROM ExternalAccountHierarchy',
-      );
-    } catch (err) {
-      if (!isMissingObjectError(err)) {
-        // Degrade gracefully
-      }
-    }
+    const hierarchies = await queryIfPresent(() =>
+      ctx.soql.queryAll<ExternalAccountHierarchyRecord>('SELECT Id, MasterLabel FROM ExternalAccountHierarchy'),
+    );
 
     if (hierarchies.length > 0) {
       findings.push({

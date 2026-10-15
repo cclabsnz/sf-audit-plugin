@@ -72,4 +72,23 @@ describe('ExternalAccountHierarchyExposureCheck', () => {
     expect(f).toBeDefined();
     expect(f?.riskLevel).toBe('HIGH');
   });
+
+  it('treats a missing IsPrmSuperUser column (no PRM licence) as no super users', async () => {
+    const ctx = makeCtx({
+      'FROM User': new Error("No such column 'IsPrmSuperUser' on entity 'User'."),
+      'FROM ExternalAccountHierarchy': [],
+    });
+    const r = await check.run(ctx);
+    expect(r.findings.map((f) => f.id)).toEqual(['external-account-hierarchy-ok']);
+  });
+
+  it('propagates a permission error on super users instead of passing', async () => {
+    const ctx = makeCtx({ 'FROM User': new Error('INSUFFICIENT_ACCESS: User') });
+    await expect(check.run(ctx)).rejects.toThrow('INSUFFICIENT_ACCESS');
+  });
+
+  it('propagates a permission error on ExternalAccountHierarchy instead of passing', async () => {
+    const ctx = makeCtx({ 'FROM User': [], 'FROM ExternalAccountHierarchy': new Error('INSUFFICIENT_ACCESS') });
+    await expect(check.run(ctx)).rejects.toThrow('INSUFFICIENT_ACCESS');
+  });
 });

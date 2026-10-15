@@ -1,7 +1,6 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { isApiError } from '@cclabsnz/sf-core';
 
 interface EmailServicesFunctionRecord {
   Id: string;
@@ -33,20 +32,6 @@ interface ApexClassRecord {
   Body?: string | null;
 }
 
-function isMissingObjectError(err: unknown): boolean {
-  if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    if (err.statusCode === 404) return true;
-  }
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes('not supported') ||
-    msg.includes('invalid type') ||
-    msg.includes('is not supported') ||
-    msg.includes('sobject type')
-  );
-}
-
 export class InboundEmailHandlerExposureCheck implements SecurityCheck {
   readonly id = 'inbound-email-handler-exposure';
   readonly name = 'Inbound Email Handler Unauthenticated Execution';
@@ -65,18 +50,7 @@ export class InboundEmailHandlerExposureCheck implements SecurityCheck {
         'SELECT Id, FunctionName, IsActive, RunAsUserId, ApexClassId, AuthenticationFailureAction FROM EmailServicesFunction WHERE IsActive = true',
       );
     } catch (err) {
-      if (isMissingObjectError(err)) {
-        findings.push({
-          id: 'inbound-email-handler-exposure-ok',
-          category: this.category,
-          riskLevel: 'LOW',
-          passed: true,
-          title: 'No active Email Services Functions found in org',
-          detail: 'EmailServicesFunction object is not active or accessible.',
-          remediation: 'No action required.',
-        });
-        return { findings };
-      }
+      // This object exists in every org, so a failure is lack of access, never an absent feature.
       findings.push({
         id: 'inbound-email-handler-exposure-inaccessible',
         category: this.category,
@@ -104,13 +78,9 @@ export class InboundEmailHandlerExposureCheck implements SecurityCheck {
 
     // Query active EmailServicesAddress records
     let addresses: EmailServicesAddressRecord[] = [];
-    try {
-      addresses = await ctx.soql.queryAll<EmailServicesAddressRecord>(
-        'SELECT Id, FunctionId, LocalPart, EmailDomainName, IsActive, AuthorizedSenders FROM EmailServicesAddress WHERE IsActive = true',
-      );
-    } catch {
-      // Degrade gracefully
-    }
+    addresses = await ctx.soql.queryAll<EmailServicesAddressRecord>(
+      'SELECT Id, FunctionId, LocalPart, EmailDomainName, IsActive, AuthorizedSenders FROM EmailServicesAddress WHERE IsActive = true',
+    );
 
     const addressesByFunction = new Map<string, EmailServicesAddressRecord[]>();
     for (const a of addresses) {
@@ -126,19 +96,15 @@ export class InboundEmailHandlerExposureCheck implements SecurityCheck {
     let adminUsers = new Set<string>();
     let userDetails = new Map<string, string>();
     if (runAsUserIds.length > 0) {
-      try {
-        const users = await ctx.soql.queryAll<UserRecord>(
-          `SELECT Id, Username, Profile.Name FROM User WHERE Id IN ('${runAsUserIds.join("','")}')`,
-        );
-        for (const u of users) {
-          const prof = u.Profile?.Name ?? '';
-          userDetails.set(u.Id, `${u.Username} (${prof})`);
-          if (prof === 'System Administrator' || prof.toLowerCase().includes('admin')) {
-            adminUsers.add(u.Id);
-          }
+      const users = await ctx.soql.queryAll<UserRecord>(
+        `SELECT Id, Username, Profile.Name FROM User WHERE Id IN ('${runAsUserIds.join("','")}')`,
+      );
+      for (const u of users) {
+        const prof = u.Profile?.Name ?? '';
+        userDetails.set(u.Id, `${u.Username} (${prof})`);
+        if (prof === 'System Administrator' || prof.toLowerCase().includes('admin')) {
+          adminUsers.add(u.Id);
         }
-      } catch {
-        // Degrade gracefully
       }
     }
 
@@ -149,16 +115,12 @@ export class InboundEmailHandlerExposureCheck implements SecurityCheck {
     let classBodies = new Map<string, string>();
     let classNames = new Map<string, string>();
     if (apexClassIds.length > 0) {
-      try {
-        const classes = await ctx.soql.queryAll<ApexClassRecord>(
-          `SELECT Id, Name, Body FROM ApexClass WHERE Id IN ('${apexClassIds.join("','")}')`,
-        );
-        for (const c of classes) {
-          classNames.set(c.Id, c.Name);
-          classBodies.set(c.Id, c.Body ?? '');
-        }
-      } catch {
-        // Degrade gracefully
+      const classes = await ctx.soql.queryAll<ApexClassRecord>(
+        `SELECT Id, Name, Body FROM ApexClass WHERE Id IN ('${apexClassIds.join("','")}')`,
+      );
+      for (const c of classes) {
+        classNames.set(c.Id, c.Name);
+        classBodies.set(c.Id, c.Body ?? '');
       }
     }
 

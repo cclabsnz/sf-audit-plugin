@@ -7,68 +7,32 @@ interface OauthOidcSettingsMeta {
   isPasswordFlowEnabled?: boolean;
 }
 
-interface ConnectedAppRecord {
-  Id: string;
-  Name?: string;
-  OptionsIsDeviceFlowEnabled?: boolean;
-  OptionsIsPasswordFlowEnabled?: boolean;
-}
-
 export class OauthDeviceAndAssetTokenFlowsCheck implements SecurityCheck {
   readonly id = 'oauth-device-and-asset-token-flows';
   readonly name = 'OAuth Device & Password Flows';
   readonly category = 'Identity & Access';
   readonly description =
-    'Flags OAuth 2.0 Device Flow and Username-Password Flow enabled in org settings or connected apps.';
+    'Flags OAuth 2.0 Device Flow and Username-Password Flow enabled in OAuth and OpenID Connect Settings.';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
-    const baseUrl = ctx.orgInfo.instanceUrl;
-    const oauthUrl = `${baseUrl}/lightning/setup/OauthOidcSettings/home`;
+    const oauthUrl = `${ctx.orgInfo.instanceUrl}/lightning/setup/OauthOidcSettings/home`;
 
-    let deviceFlowEnabled = false;
-    let passwordFlowEnabled = false;
-    let metadataReadSucceeded = false;
-
-    // 1. Read OauthOidcSettings via Metadata API
+    // Org settings are the only evidence read. A flag counts only when the read returned it as
+    // a boolean: a failed read, an absent Metadata client or a missing field is not "disabled".
+    let settings: OauthOidcSettingsMeta | null = null;
     if (ctx.metadata) {
       try {
-        const settings = await ctx.metadata.read<OauthOidcSettingsMeta>(
-          'OauthOidcSettings',
-          'OauthOidc',
-        );
-        if (settings) {
-          metadataReadSucceeded = true;
-          if (settings.isDeviceFlowEnabled === true) {
-            deviceFlowEnabled = true;
-          }
-          if (settings.isPasswordFlowEnabled === true) {
-            passwordFlowEnabled = true;
-          }
-        }
+        settings = await ctx.metadata.read<OauthOidcSettingsMeta>('OauthOidcSettings', 'OauthOidc');
       } catch {
-        // Fall back to Tooling / Connected Apps inspect
+        settings = null;
       }
     }
+    const device = typeof settings?.isDeviceFlowEnabled === 'boolean' ? settings.isDeviceFlowEnabled : undefined;
+    const password =
+      typeof settings?.isPasswordFlowEnabled === 'boolean' ? settings.isPasswordFlowEnabled : undefined;
 
-    // 2. Also inspect ConnectedApplication records via Tooling API
-    try {
-      const apps = await ctx.tooling.query<ConnectedAppRecord>(
-        'SELECT Id, Name FROM ConnectedApplication',
-      );
-      for (const app of apps) {
-        if (app.OptionsIsDeviceFlowEnabled === true) {
-          deviceFlowEnabled = true;
-        }
-        if (app.OptionsIsPasswordFlowEnabled === true) {
-          passwordFlowEnabled = true;
-        }
-      }
-    } catch {
-      // Degrade gracefully if ConnectedApplication is unavailable
-    }
-
-    if (deviceFlowEnabled) {
+    if (device === true) {
       findings.push({
         id: 'oauth-device-flow-enabled',
         category: this.category,
@@ -88,7 +52,7 @@ export class OauthDeviceAndAssetTokenFlowsCheck implements SecurityCheck {
       });
     }
 
-    if (passwordFlowEnabled) {
+    if (password === true) {
       findings.push({
         id: 'oauth-password-flow-enabled',
         category: this.category,
@@ -108,29 +72,31 @@ export class OauthDeviceAndAssetTokenFlowsCheck implements SecurityCheck {
       });
     }
 
-    if (!deviceFlowEnabled && !passwordFlowEnabled) {
-      if (metadataReadSucceeded || ctx.metadata) {
-        findings.push({
-          id: 'oauth-device-and-asset-flows-ok',
-          category: this.category,
-          riskLevel: 'LOW',
-          passed: true,
-          title: 'Phishable OAuth Device Flow and Username-Password Flow are disabled',
-          detail:
-            'Org settings confirm both OAuth 2.0 Device Flow and Username-Password Flow are disabled, eliminating secondary token-issuance backdoors.',
-          remediation: 'Keep Device Flow and Password Flow disabled org-wide.',
-        });
-      } else {
-        findings.push({
-          id: 'oauth-device-and-asset-flows-ok',
-          category: this.category,
-          riskLevel: 'LOW',
-          passed: true,
-          title: 'No enabled Device or Password Flows detected',
-          detail: 'No connected applications or org settings enabling Device Flow or Password Flow were identified.',
-          remediation: 'Verify Setup → OAuth and OpenID Connect Settings manually.',
-        });
-      }
+    if (device === false && password === false) {
+      findings.push({
+        id: 'oauth-device-and-asset-flows-ok',
+        category: this.category,
+        riskLevel: 'LOW',
+        passed: true,
+        title: 'Phishable OAuth Device Flow and Username-Password Flow are disabled',
+        detail:
+          'Org settings confirm both OAuth 2.0 Device Flow and Username-Password Flow are disabled, eliminating secondary token-issuance backdoors.',
+        remediation: 'Keep Device Flow and Password Flow disabled org-wide.',
+      });
+    } else if (device === undefined || password === undefined) {
+      const unread = [device === undefined && 'Device Flow', password === undefined && 'Username-Password Flow']
+        .filter(Boolean)
+        .join(' and ');
+      findings.push({
+        id: 'oauth-device-and-asset-flows-advisory',
+        category: this.category,
+        riskLevel: 'INFO',
+        title: `Verify the OAuth ${unread} setting manually`,
+        detail: `This run could not read the ${unread} setting from OAuth and OpenID Connect Settings, so whether it is enabled is unknown. Both flows let a token be issued outside the browser sign-in, bypassing MFA and conditional access.`,
+        remediation:
+          'In Setup → OAuth and OpenID Connect Settings, confirm "Allow OAuth Device Flow" and "Allow OAuth Username-Password Flows" are off unless a documented integration needs them.',
+        affectedItems: [{ label: 'OAuth and OpenID Connect Settings', url: oauthUrl }],
+      });
     }
 
     return { findings };

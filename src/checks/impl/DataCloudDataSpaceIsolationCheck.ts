@@ -1,15 +1,12 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { isApiError } from '@cclabsnz/sf-core';
+import { isMissingObjectError, queryIfPresent } from '../support/missingObject.js';
 
 interface DataSpaceRecord {
   Id: string;
   Name?: string | null;
-  DeveloperName?: string | null;
-  MasterLabel?: string | null;
   Description?: string | null;
-  IsDefault?: boolean | null;
 }
 
 interface DataShareTargetRecord {
@@ -33,18 +30,10 @@ interface PermissionAssignmentRecord {
   };
 }
 
-function isMissingObjectError(err: unknown): boolean {
-  if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    if (err.statusCode === 404) return true;
-  }
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes('not supported') ||
-    msg.includes('invalid type') ||
-    msg.includes('is not supported') ||
-    msg.includes('sobject type')
-  );
+const EXTERNAL_USER_TYPES = new Set(['PowerPartner', 'CustomerSuccess', 'PowerCustomerSuccess', 'CspLitePortal', 'Guest']);
+
+function isDataCloudPermSet(ps: PermissionAssignmentRecord['PermissionSet']): boolean {
+  return /datacloud|dataspace|cdp/i.test(`${ps?.Name ?? ''} ${ps?.Label ?? ''}`);
 }
 
 export class DataCloudDataSpaceIsolationCheck implements SecurityCheck {
@@ -101,41 +90,29 @@ export class DataCloudDataSpaceIsolationCheck implements SecurityCheck {
       return { findings };
     }
 
-    // Check for default Data Space over-sharing
-    const defaultDataSpace = dataSpaces.find(
-      (ds) =>
-        ds.IsDefault === true ||
-        (ds.Name ?? '').toLowerCase() === 'default' ||
-        (ds.DeveloperName ?? '').toLowerCase() === 'default',
-    );
+    // Data Cloud names its default data space "default". Only Name is selected, so only Name is read.
+    const defaultDataSpace = dataSpaces.find((ds) => (ds.Name ?? '').toLowerCase() === 'default');
 
-    // Query assignments to external/partner/agent users with Data Cloud permissions
-    let oversharedUsers: PermissionAssignmentRecord[] = [];
-    try {
-      const assignments = await ctx.soql.queryAll<PermissionAssignmentRecord>(
-        "SELECT Id, AssigneeId, Assignee.Username, Assignee.UserType, Assignee.Profile.Name, PermissionSet.Name FROM PermissionSetAssignment WHERE Assignee.IsActive = true AND (Assignee.UserType IN ('PowerPartner', 'CustomerSuccess', 'CspLitePortal', 'Guest') OR Assignee.Username LIKE '%agent%' OR PermissionSet.Name LIKE '%DataCloud%' OR PermissionSet.Name LIKE '%DataSpace%')",
-      );
-      oversharedUsers = assignments.filter((a) => {
-        const uType = a.Assignee?.UserType ?? '';
-        const uname = (a.Assignee?.Username ?? '').toLowerCase();
-        return (
-          uType === 'PowerPartner' ||
-          uType === 'CustomerSuccess' ||
-          uType === 'Guest' ||
-          uname.includes('agent') ||
-          uname.includes('integration')
-        );
-      });
-    } catch {
-      // Degrade gracefully if assignment query fails
+    // External, guest or agent users holding a Data Cloud permission set they were assigned
+    // directly. A profile's own permission set, or an unrelated one, grants no data space access.
+    const assignments = await ctx.soql.queryAll<PermissionAssignmentRecord>(
+      "SELECT Id, AssigneeId, Assignee.Username, Assignee.UserType, Assignee.Profile.Name, PermissionSet.Name, PermissionSet.Label FROM PermissionSetAssignment WHERE Assignee.IsActive = true AND PermissionSet.IsOwnedByProfile = false AND (PermissionSet.Name LIKE '%DataCloud%' OR PermissionSet.Name LIKE '%DataSpace%' OR PermissionSet.Name LIKE '%CDP%')",
+    );
+    const byUser = new Map<string, PermissionAssignmentRecord>();
+    for (const a of assignments) {
+      const uType = a.Assignee?.UserType ?? '';
+      const uname = (a.Assignee?.Username ?? '').toLowerCase();
+      const lowTrust = EXTERNAL_USER_TYPES.has(uType) || uname.includes('agent');
+      if (lowTrust && isDataCloudPermSet(a.PermissionSet) && !byUser.has(a.AssigneeId)) byUser.set(a.AssigneeId, a);
     }
+    const oversharedUsers = [...byUser.values()];
 
     if (defaultDataSpace && oversharedUsers.length > 0) {
       findings.push({
         id: 'data-cloud-data-space-default-overshared',
         category: this.category,
         riskLevel: 'HIGH',
-        title: `${oversharedUsers.length} external, partner, or agent account(s) mapped to default Data Space`,
+        title: `${oversharedUsers.length} external, partner, or agent user(s) hold Data Cloud access while the default Data Space is in use`,
         detail:
           'Data Cloud default Data Space flattens standard Salesforce OWD record-level sharing. Exposing the default Data Space to external partner, integration, or agent accounts grants bulk visibility across data lake objects (DLOs) and data model objects (DMOs).',
         remediation:
@@ -143,20 +120,15 @@ export class DataCloudDataSpaceIsolationCheck implements SecurityCheck {
         affectedItems: oversharedUsers.map((u) => ({
           label: u.Assignee?.Username ?? u.AssigneeId,
           url: `${baseUrl}/lightning/setup/DataCloudDataSpace/home`,
-          note: `UserType: ${u.Assignee?.UserType ?? 'Unknown'} assigned to unsegmented data`,
+          note: `UserType: ${u.Assignee?.UserType ?? 'Unknown'}; permission set ${u.PermissionSet?.Label ?? u.PermissionSet?.Name ?? 'unknown'}`,
         })),
       });
     }
 
     // Query DataShareTarget for unconstrained external data sharing
-    let shareTargets: DataShareTargetRecord[] = [];
-    try {
-      shareTargets = await ctx.soql.queryAll<DataShareTargetRecord>(
-        'SELECT Id, Name, TargetType, Status FROM DataShareTarget',
-      );
-    } catch {
-      // DataShareTarget may not be enabled
-    }
+    const shareTargets = await queryIfPresent(() =>
+      ctx.soql.queryAll<DataShareTargetRecord>('SELECT Id, Name, TargetType, Status FROM DataShareTarget'),
+    );
 
     const unconstrainedTargets = shareTargets.filter(
       (t) => (t.Status ?? '').toLowerCase() === 'active',

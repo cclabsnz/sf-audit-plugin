@@ -1,7 +1,6 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { isApiError } from '@cclabsnz/sf-core';
 
 interface DelegateGroupRecord {
   Id: string;
@@ -23,20 +22,6 @@ interface UserRecord {
   IsActive?: boolean;
 }
 
-function isMissingObjectError(err: unknown): boolean {
-  if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    if (err.statusCode === 404) return true;
-  }
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes('not supported') ||
-    msg.includes('invalid type') ||
-    msg.includes('is not supported') ||
-    msg.includes('sobject type')
-  );
-}
-
 export class DelegatedAdministrationGroupsCheck implements SecurityCheck {
   readonly id = 'delegated-administration-groups';
   readonly name = 'Delegated Administration Groups';
@@ -55,18 +40,7 @@ export class DelegatedAdministrationGroupsCheck implements SecurityCheck {
         'SELECT Id, DeveloperName FROM DelegateGroup',
       );
     } catch (err) {
-      if (isMissingObjectError(err)) {
-        findings.push({
-          id: 'delegated-administration-groups-ok',
-          category: this.category,
-          riskLevel: 'LOW',
-          passed: true,
-          title: 'Delegated Administration is not enabled or no groups configured',
-          detail: 'DelegateGroup object is not accessible or not in use.',
-          remediation: 'No action required.',
-        });
-        return { findings };
-      }
+      // This object exists in every org, so a failure is lack of access, never an absent feature.
       findings.push({
         id: 'delegated-administration-groups-inaccessible',
         category: this.category,
@@ -94,13 +68,9 @@ export class DelegatedAdministrationGroupsCheck implements SecurityCheck {
 
     // Query members of delegated admin groups
     let members: DelegateGroupMemberRecord[] = [];
-    try {
-      members = await ctx.soql.queryAll<DelegateGroupMemberRecord>(
-        'SELECT Id, DelegateGroupId, UserOrGroupId FROM DelegateGroupMember',
-      );
-    } catch {
-      // Degrade gracefully if member query is restricted
-    }
+    members = await ctx.soql.queryAll<DelegateGroupMemberRecord>(
+      'SELECT Id, DelegateGroupId, UserOrGroupId FROM DelegateGroupMember',
+    );
 
     // Collect user names if members exist
     const userIds = members
@@ -108,15 +78,11 @@ export class DelegatedAdministrationGroupsCheck implements SecurityCheck {
       .filter((id): id is string => Boolean(id && id.startsWith('005')));
     let userMap = new Map<string, string>();
     if (userIds.length > 0) {
-      try {
-        const users = await ctx.soql.queryAll<UserRecord>(
-          `SELECT Id, Username, Profile.Name FROM User WHERE Id IN ('${userIds.join("','")}')`,
-        );
-        for (const u of users) {
-          userMap.set(u.Id, `${u.Username} (${u.Profile?.Name ?? 'Unknown Profile'})`);
-        }
-      } catch {
-        // Degrade gracefully
+      const users = await ctx.soql.queryAll<UserRecord>(
+        `SELECT Id, Username, Profile.Name FROM User WHERE Id IN ('${userIds.join("','")}')`,
+      );
+      for (const u of users) {
+        userMap.set(u.Id, `${u.Username} (${u.Profile?.Name ?? 'Unknown Profile'})`);
       }
     }
 

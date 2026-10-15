@@ -1,7 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { isApiError } from '@cclabsnz/sf-core';
+import { isMissingObjectError } from '../support/missingObject.js';
 
 interface RestrictionRuleRecord {
   Id: string;
@@ -12,20 +12,6 @@ interface RestrictionRuleRecord {
   Active: boolean;
   RecordFilter?: string;
   UserCriteria?: string;
-}
-
-function isMissingObjectError(err: unknown): boolean {
-  if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    if (err.statusCode === 404) return true;
-  }
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes('not supported') ||
-    msg.includes('invalid type') ||
-    msg.includes('is not supported') ||
-    msg.includes('sobject type')
-  );
 }
 
 export class RestrictionRulesIntegrityCheck implements SecurityCheck {

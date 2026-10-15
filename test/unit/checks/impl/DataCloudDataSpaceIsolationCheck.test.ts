@@ -2,14 +2,12 @@ import { jest } from '@jest/globals';
 import { DataCloudDataSpaceIsolationCheck } from '../../../../src/checks/impl/DataCloudDataSpaceIsolationCheck.js';
 import type { AuditContext } from '@cclabsnz/sf-core';
 
-function makeCtx(soqlResponses: Record<string, unknown[] | Error>): AuditContext {
+function makeCtx(soql: Record<string, unknown[] | Error>): AuditContext {
   return {
     soql: {
       queryAll: (jest.fn() as any).mockImplementation((q: string) => {
-        for (const [key, res] of Object.entries(soqlResponses)) {
-          if (new RegExp(`\\bFROM\\s+${key}\\b`, 'i').test(q)) {
-            return res instanceof Error ? Promise.reject(res) : Promise.resolve(res);
-          }
+        for (const [key, res] of Object.entries(soql)) {
+          if (q.includes(key)) return res instanceof Error ? Promise.reject(res) : Promise.resolve(res);
         }
         return Promise.resolve([]);
       }),
@@ -28,72 +26,76 @@ function makeCtx(soqlResponses: Record<string, unknown[] | Error>): AuditContext
   } as any;
 }
 
+const psa = (userId: string, userType: string, username: string, psName: string) => ({
+  Id: `0Pa${userId}${psName}`,
+  AssigneeId: userId,
+  Assignee: { Username: username, UserType: userType },
+  PermissionSet: { Name: psName, Label: psName },
+});
+const defaultSpace = [{ Id: '0vS1', Name: 'default' }];
+
 describe('DataCloudDataSpaceIsolationCheck', () => {
   const check = new DataCloudDataSpaceIsolationCheck();
 
-  it('passes when DataSpace is not enabled (sObject not supported)', async () => {
-    const err = new Error("sObject type 'DataSpace' is not supported.");
-    const ctx = makeCtx({ DataSpace: err });
-    const r = await check.run(ctx);
-    expect(r.findings).toHaveLength(1);
-    expect(r.findings[0].id).toBe('data-cloud-data-space-not-enabled');
-    expect(r.findings[0].passed).toBe(true);
+  it('passes when Data Cloud is not enabled', async () => {
+    const r = await check.run(makeCtx({ 'FROM DataSpace': new Error("sObject type 'DataSpace' is not supported.") }));
+    expect(r.findings.map((f) => f.id)).toEqual(['data-cloud-data-space-not-enabled']);
   });
 
-  it('reports inconclusive when DataSpace query errors', async () => {
-    const ctx = makeCtx({ DataSpace: new Error('ACCESS_DENIED') });
-    const r = await check.run(ctx);
-    expect(r.findings).toHaveLength(1);
-    expect(r.findings[0].id).toBe('data-cloud-data-space-inaccessible');
-    expect(r.findings[0].inconclusive).toBe(true);
-  });
-
-  it('passes when no DataSpace records exist', async () => {
-    const ctx = makeCtx({ DataSpace: [] });
-    const r = await check.run(ctx);
-    expect(r.findings).toHaveLength(1);
-    expect(r.findings[0].id).toBe('data-cloud-data-space-ok');
-    expect(r.findings[0].passed).toBe(true);
-  });
-
-  it('flags default DataSpace oversharing to partner or agent accounts', async () => {
-    const ctx = makeCtx({
-      DataSpace: [{ Id: '0ds1', Name: 'default', IsDefault: true }],
-      PermissionSetAssignment: [
-        {
-          Id: '0pa1',
-          AssigneeId: '005p1',
-          Assignee: { Username: 'partner@portal.com', UserType: 'PowerPartner' },
-          PermissionSet: { Name: 'DataCloudUser' },
-        },
-      ],
-    });
-    const r = await check.run(ctx);
+  it('flags a partner user holding a Data Cloud permission set, counted once', async () => {
+    const r = await check.run(
+      makeCtx({
+        'FROM DataSpace': defaultSpace,
+        'FROM PermissionSetAssignment': [
+          psa('005A', 'PowerPartner', 'p1@partner.example', 'DataCloudUser'),
+          psa('005A', 'PowerPartner', 'p1@partner.example', 'DataSpace_Default'),
+        ],
+      }),
+    );
     const f = r.findings.find((x) => x.id === 'data-cloud-data-space-default-overshared');
-    expect(f).toBeDefined();
-    expect(f?.riskLevel).toBe('HIGH');
+    expect(f?.affectedItems).toHaveLength(1);
+    expect(f?.title).toMatch(/^1 /);
   });
 
-  it('flags active unconstrained DataShareTarget records', async () => {
-    const ctx = makeCtx({
-      DataSpace: [{ Id: '0ds2', Name: 'SegmentA', IsDefault: false }],
-      DataShareTarget: [{ Id: '0st1', Name: 'SnowflakeTarget', TargetType: 'Snowflake', Status: 'Active' }],
-    });
-    const r = await check.run(ctx);
-    const f = r.findings.find((x) => x.id === 'data-cloud-data-share-target-unconstrained');
-    expect(f).toBeDefined();
-    expect(f?.riskLevel).toBe('HIGH');
+  it('ignores external users whose permission sets have nothing to do with Data Cloud', async () => {
+    const r = await check.run(
+      makeCtx({
+        'FROM DataSpace': defaultSpace,
+        'FROM PermissionSetAssignment': [psa('005B', 'PowerPartner', 'p2@partner.example', 'Partner_Community_Extras')],
+      }),
+    );
+    expect(r.findings.map((f) => f.id)).toEqual(['data-cloud-data-space-ok']);
   });
 
-  it('passes when data spaces are segmented and targets are inactive', async () => {
-    const ctx = makeCtx({
-      DataSpace: [{ Id: '0ds2', Name: 'SegmentA', IsDefault: false }],
-      PermissionSetAssignment: [],
-      DataShareTarget: [{ Id: '0st1', Name: 'SnowflakeTarget', TargetType: 'Snowflake', Status: 'Inactive' }],
-    });
-    const r = await check.run(ctx);
-    expect(r.findings).toHaveLength(1);
-    expect(r.findings[0].id).toBe('data-cloud-data-space-ok');
-    expect(r.findings[0].passed).toBe(true);
+  it('ignores internal users with Data Cloud access', async () => {
+    const r = await check.run(
+      makeCtx({
+        'FROM DataSpace': defaultSpace,
+        'FROM PermissionSetAssignment': [psa('005C', 'Standard', 'analyst@corp.example', 'DataCloudUser')],
+      }),
+    );
+    expect(r.findings.map((f) => f.id)).toEqual(['data-cloud-data-space-ok']);
+  });
+
+  it('does not flag when there is no default data space', async () => {
+    const r = await check.run(
+      makeCtx({
+        'FROM DataSpace': [{ Id: '0vS2', Name: 'Partners' }],
+        'FROM PermissionSetAssignment': [psa('005D', 'PowerPartner', 'p3@partner.example', 'DataCloudUser')],
+      }),
+    );
+    expect(r.findings.some((f) => f.id === 'data-cloud-data-space-default-overshared')).toBe(false);
+  });
+
+  it('propagates a permission error on PermissionSetAssignment instead of passing', async () => {
+    await expect(
+      check.run(makeCtx({ 'FROM DataSpace': defaultSpace, 'FROM PermissionSetAssignment': new Error('INSUFFICIENT_ACCESS') })),
+    ).rejects.toThrow('INSUFFICIENT_ACCESS');
+  });
+
+  it('propagates a permission error on DataShareTarget instead of passing', async () => {
+    await expect(
+      check.run(makeCtx({ 'FROM DataSpace': defaultSpace, 'FROM DataShareTarget': new Error('INSUFFICIENT_ACCESS') })),
+    ).rejects.toThrow('INSUFFICIENT_ACCESS');
   });
 });
