@@ -11,6 +11,22 @@ interface ConnectedAppRecord {
   SessionTimeout: number | null;
 }
 
+interface ExternalClientAppRecord {
+  Id: string;
+  DeveloperName: string;
+  MasterLabel: string | null;
+}
+
+/**
+ * External Client Apps are absent from orgs that predate them, where the query answers with
+ * INVALID_TYPE. That, and only that, means "none"; any other failure is reported as inconclusive.
+ */
+function isExternalClientAppUnsupported(err: unknown): boolean {
+  const code = (err as { errorCode?: string } | null)?.errorCode ?? '';
+  const msg = err instanceof Error ? err.message : String(err);
+  return code === 'INVALID_TYPE' || /sObject type 'ExternalClientApplication' is not supported/i.test(msg);
+}
+
 export class ConnectedAppsCheck implements SecurityCheck {
   readonly id = 'connected-apps';
   readonly name = 'Connected Apps';
@@ -31,7 +47,32 @@ export class ConnectedAppsCheck implements SecurityCheck {
 
     const count = connectedApps.length;
 
-    // Cache app names for DeploymentIdentityCheck and SiemIntegrationCheck — no extra query
+    // External Client Apps are the successor to connected apps. Their policies (permitted users,
+    // session timeout) are not exposed on the objects this check can read reliably, so they are
+    // inventoried and listed for manual review rather than judged on guessed fields.
+    let externalApps: ExternalClientAppRecord[] = [];
+    try {
+      externalApps = await ctx.soql.queryAll<ExternalClientAppRecord>(
+        'SELECT Id, DeveloperName, MasterLabel FROM ExternalClientApplication',
+      );
+    } catch (err) {
+      if (!isExternalClientAppUnsupported(err)) {
+        findings.push({
+          id: 'external-client-apps-inconclusive',
+          category: this.category,
+          riskLevel: 'INFO',
+          inconclusive: true,
+          title: 'External Client Apps could not be listed',
+          detail: `The connected-app results below stand, but External Client Apps were not checked: ${err instanceof Error ? err.message : String(err)}`,
+          remediation: 'Grant the audit user View Setup and Configuration, then re-run. Meanwhile review Setup → External Client App Manager manually.',
+        });
+      }
+    }
+
+    // Cache app names for DeploymentIdentityCheck and SiemIntegrationCheck — no extra query.
+    // Connected apps only: ConnectedAppInactivityCheck matches these names against LoginHistory,
+    // and how External Client App logins are labelled there is unverified, so adding them could
+    // report every External Client App as inactive.
     ctx.cache.connectedAppNames = connectedApps.map((a) => a.Name);
 
     // Check for apps with unrestricted user access
@@ -102,6 +143,23 @@ export class ConnectedAppsCheck implements SecurityCheck {
         title: 'All connected apps enforce session timeouts of 15 minutes or less',
         detail: `All ${count} connected app(s) have SessionTimeout ≤ 15 minutes, meeting the SBS-DEP-006 requirement.`,
         remediation: 'Continue monitoring as new connected apps are added.',
+      });
+    }
+
+    if (externalApps.length > 0) {
+      findings.push({
+        id: 'external-client-apps-review',
+        category: this.category,
+        riskLevel: 'INFO',
+        title: `${externalApps.length} External Client App(s) need their OAuth policies reviewed manually`,
+        detail:
+          'External Client Apps carry the same risks as connected apps: who may authorise them, and how long their sessions and refresh tokens last. This audit lists them but does not evaluate their policies, so the connected-app results above do not cover them.',
+        remediation:
+          'In Setup → External Client App Manager, open each app\'s OAuth policies: set Permitted Users to admin-approved users, an access-token timeout of 15 minutes or less for CLI and CI/CD apps, and a bounded refresh-token validity.',
+        affectedItems: externalApps.map((app) => ({
+          label: app.MasterLabel || app.DeveloperName,
+          url: `${baseUrl}/${app.Id}`,
+        })),
       });
     }
 

@@ -3,11 +3,14 @@ import { ConnectedAppsCheck } from '../../../../src/checks/impl/ConnectedAppsChe
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { CheckResult } from '../../../../src/checks/SecurityCheck.js';
 
-function makeCtx(apps: unknown[] | Error): AuditContext {
+// Routes by object, as the org does: ConnectedApplication rows never come back for an
+// ExternalClientApplication query.
+function makeCtx(apps: unknown[] | Error, externalApps: unknown[] | Error = []): AuditContext {
+  const answer = (rows: unknown[] | Error) => (rows instanceof Error ? Promise.reject(rows) : Promise.resolve(rows));
   return {
     soql: {
-      queryAll: (jest.fn() as any).mockImplementation(() =>
-        apps instanceof Error ? Promise.reject(apps) : Promise.resolve(apps),
+      queryAll: (jest.fn() as any).mockImplementation((q: string) =>
+        q.includes('FROM ExternalClientApplication') ? answer(externalApps) : answer(apps),
       ),
     } as any,
     tooling: {} as any,
@@ -112,5 +115,37 @@ describe('ConnectedAppsCheck', () => {
     await expect(check.run(makeCtx(new Error('INSUFFICIENT_ACCESS')))).rejects.toThrow(
       'INSUFFICIENT_ACCESS',
     );
+  });
+
+  describe('External Client Apps', () => {
+    const eca = (DeveloperName: string, MasterLabel: string | null = DeveloperName) => ({ Id: `0xA${DeveloperName}`, DeveloperName, MasterLabel });
+
+    it('lists them for manual review and never judges them on fields it cannot read', async () => {
+      const r = await check.run(makeCtx([app('Legacy')], [eca('Ci_Deploy', 'CI Deploy'), eca('Mobile', null)]));
+      const f = find(r, 'external-client-apps-review');
+      expect(f?.riskLevel).toBe('INFO');
+      expect(f?.affectedItems?.map((i) => i.label)).toEqual(['CI Deploy', 'Mobile']);
+      expect(find(r, 'unrestricted-connected-apps')).toBeUndefined();
+      expect(find(r, 'connected-apps-long-session-timeout')).toBeUndefined();
+    });
+
+    it('keeps them out of the connected-app name cache that the inactivity check matches against LoginHistory', async () => {
+      const ctx = makeCtx([app('Legacy')], [eca('Ci_Deploy', 'CI Deploy')]);
+      await check.run(ctx);
+      expect(ctx.cache.connectedAppNames).toEqual(['Legacy']);
+    });
+
+    it('treats an org without External Client Apps as having none', async () => {
+      const missing = Object.assign(new Error("sObject type 'ExternalClientApplication' is not supported."), { errorCode: 'INVALID_TYPE' });
+      const r = await check.run(makeCtx([app('Legacy')], missing));
+      expect(r.findings.some((f) => f.id.startsWith('external-client-apps'))).toBe(false);
+    });
+
+    it('reports a permission failure as inconclusive and keeps the connected-app results', async () => {
+      const r = await check.run(makeCtx([app('Open', { restricted: false })], new Error('INSUFFICIENT_ACCESS_OR_READONLY')));
+      expect(find(r, 'external-client-apps-inconclusive')?.inconclusive).toBe(true);
+      expect(find(r, 'unrestricted-connected-apps')).toBeDefined();
+      expect(r.findings.filter((f) => f.passed && f.title.includes('External'))).toHaveLength(0);
+    });
   });
 });
