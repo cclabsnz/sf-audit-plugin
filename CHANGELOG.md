@@ -17,6 +17,10 @@ Merged to `main`, not yet released.
   waived finding leaves the score, `--fail-on` and the executive priorities and roadmap, and is
   listed under Accepted Risks. Matching is exact, waivers run at most 365 days, and a CRITICAL
   finding needs `acknowledgeCritical`. The loaded file's path is always printed.
+- `sf audit security --no-history` skips the automatic archive to `~/.sf/audit-history`, and the
+  archive is now skipped by default in CI (`CI` set to a truthy value, `GITHUB_ACTIONS`, `TF_BUILD`
+  or `JENKINS_URL`), so ephemeral or shared runners don't keep org data. `--keep-history` archives
+  anyway and wins over `--no-history`.
 
 ### Security
 

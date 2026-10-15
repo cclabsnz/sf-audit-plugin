@@ -57,6 +57,7 @@ check id.
 | `--digest` | `false` | Compact result for programmatic callers — no passing checks, no prose, capped lists |
 | `--checks` | *(all)* | Run only these check ids |
 | `--frameworks` | `universal` | Compliance matrix scope for the executive report |
+| `--no-history` / `--keep-history` | `false` | Skip, or force, the archive to `~/.sf/audit-history`. Skipped in CI (`CI` set, `GITHUB_ACTIONS`, `TF_BUILD`, `JENKINS_URL`) unless `--keep-history` |
 
 ```bash
 # Fail a pipeline on HIGH or worse
@@ -97,7 +98,7 @@ A definite finding outranks unknown coverage: when both apply you get `1`, and t
 inconclusive count is still in the report body. `3` exists so a pipeline can tell
 "this org is fine" apart from "the audit user could not see enough to judge".
 
-All twelve flags, more examples, and what the executive report contains:
+Every flag, more examples, and what the executive report contains:
 **[docs/COMMANDS.md](docs/COMMANDS.md)**.
 
 ## What It Checks
