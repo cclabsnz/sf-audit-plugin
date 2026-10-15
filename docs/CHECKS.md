@@ -103,7 +103,7 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 ## Integrations, Connected Apps & Deployments
 | Check | What it looks for |
 |-------|------------------|
-| Connected Apps | Apps not restricted to admin-approved users |
+| Connected Apps | Apps not restricted to admin-approved users; External Client Apps listed for manual policy review |
 | Connected App OAuth Scopes | Full OAuth-scope grants and infinite refresh-token policies |
 | Inactive Connected Apps | Apps with no OAuth logins in the past 90 days |
 | Standing OAuth Token Inventory | Live OAuth tokens per app, including grants LoginHistory cannot see |

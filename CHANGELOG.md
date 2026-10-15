@@ -42,6 +42,10 @@ Merged to `main`, not yet released.
 - `sf audit apps` no longer reports an empty, clean-looking result when `EventLogFile` cannot be
   read: a failed listing is an error, and partly failed downloads mark the output incomplete and
   suppress revoke recommendations.
+- `connected-apps` lists External Client Apps for manual review of their OAuth policies. Their
+  policies are not evaluated automatically, so no External Client App is reported as
+  unrestricted or as passing. A failure to list them is reported as inconclusive, and the
+  connected-app results still stand.
 
 ### Security
 
