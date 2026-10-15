@@ -48,11 +48,13 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
       Body: c.body ?? '',
       LengthWithoutComments: (c.body ?? '').length,
       NamespacePrefix: c.namespace,
+      SymbolTable: c.symbolTable,
     }));
 
     // Cache apex bodies for downstream checks — exclude test classes and filter null bodies
     const nonTestRecords = records.filter((r) => !IS_TEST_CLASS.test(r.Body ?? ''));
-    ctx.cache.apexBodies = nonTestRecords.map((r) => ({ name: r.Name, body: r.Body ?? '' }));
+    // The SymbolTable travels with the body so GuestExecutableApexCheck can follow calls into helpers.
+    ctx.cache.apexBodies = nonTestRecords.map((r) => ({ name: r.Name, body: r.Body ?? '', symbolTable: r.SymbolTable }));
 
     const namedCredentialEndpoints = (ctx.cache.namedCredentialEndpoints ?? []).filter(Boolean);
     const remoteSiteUrls = (ctx.cache.remoteSiteUrls ?? []).filter(Boolean);

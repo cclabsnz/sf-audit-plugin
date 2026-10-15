@@ -1,4 +1,5 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
+import { testApexPattern } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
@@ -7,7 +8,12 @@ const HAS_DML = /\b(?:insert|update|delete|upsert|merge)\s+\w+|Database\.(?:inse
 const HAS_SOQL = /\[\s*SELECT\b|Database\.(?:query|queryWithBinds|countQuery)\s*\(/i;
 
 // Patterns that indicate FLS/CRUD is being checked or enforced
-const HAS_FLS = /(?:\.isAccessible\(\)|\.isCreateable\(\)|\.isUpdateable\(\)|\.isDeletable\(\)|Security\.stripInaccessible|SObjectAccessDecision|Schema\.describeSObjects|Schema\.sObjectType\.\w+\.fields)/i;
+// USER_MODE enforces CRUD/FLS (and sharing) on the query or DML it is attached to.
+const HAS_FLS = /(?:\.isAccessible\(\)|\.isCreateable\(\)|\.isUpdateable\(\)|\.isDeletable\(\)|Security\.stripInaccessible|SObjectAccessDecision|Schema\.describeSObjects|Schema\.sObjectType\.\w+\.fields|\bWITH\s+USER_MODE\b|\bAccessLevel\s*\.\s*USER_MODE\b)/i;
+
+// SYSTEM_MODE switches CRUD/FLS off for that operation (sharing still follows the class keyword).
+// It is never enforcement, whatever else the class does (spec RULE-002).
+const SYSTEM_MODE = /\bWITH\s+SYSTEM_MODE\b|\bAccessLevel\s*\.\s*SYSTEM_MODE\b/i;
 
 // Classes that are exempt from CRUD/FLS enforcement by design:
 // batch, scheduled, and trigger handlers run in a system context
@@ -42,21 +48,27 @@ export class ApexCrudFLSCheck implements SecurityCheck {
 
     const withoutSharingNoFls: string[] = [];
     const withDmlNoFls: string[] = [];
+    const systemMode: { name: string; withoutSharing: boolean }[] = [];
 
     // apexBodies is pre-filtered by HardcodedCredentialsCheck, which excludes @IsTest classes
     // before populating the cache. There is deliberately no second guard here: a cache miss
     // yields an empty array, not unfiltered bodies, so there is nothing for one to catch.
     for (const { name, body } of apexBodies) {
-      if (!body || IS_BATCH_OR_SCHEDULED.test(body)) continue;
+      if (!body || testApexPattern(body, IS_BATCH_OR_SCHEDULED)) continue;
 
-      const hasDml = HAS_DML.test(body);
-      const hasSoql = HAS_SOQL.test(body);
+      const hasDml = testApexPattern(body, HAS_DML);
+      const hasSoql = testApexPattern(body, HAS_SOQL);
       if (!hasDml && !hasSoql) continue;
 
-      const hasFls = HAS_FLS.test(body);
+      if (testApexPattern(body, SYSTEM_MODE)) {
+        systemMode.push({ name, withoutSharing: testApexPattern(body, WITHOUT_SHARING) });
+        continue;
+      }
+
+      const hasFls = testApexPattern(body, HAS_FLS);
       if (hasFls) continue;
 
-      if (WITHOUT_SHARING.test(body)) {
+      if (testApexPattern(body, WITHOUT_SHARING)) {
         withoutSharingNoFls.push(name);
       } else {
         withDmlNoFls.push(name);
@@ -99,7 +111,25 @@ export class ApexCrudFLSCheck implements SecurityCheck {
       });
     }
 
-    if (withoutSharingNoFls.length === 0 && withDmlNoFls.length === 0) {
+    if (systemMode.length > 0) {
+      findings.push({
+        id: 'apex-crud-fls-system-mode',
+        category: this.category,
+        riskLevel: 'MEDIUM',
+        title: `${systemMode.length} Apex class(es) switch off CRUD/FLS with SYSTEM_MODE`,
+        detail:
+          'WITH SYSTEM_MODE and AccessLevel.SYSTEM_MODE run a query or DML without checking the user\'s object and field permissions. Record sharing still follows the class keyword, so this exposes fields and objects the user cannot otherwise see on records they can reach; in a "without sharing" class it exposes every record too.',
+        remediation:
+          'Use WITH USER_MODE / AccessLevel.USER_MODE wherever the operation serves a user. Where SYSTEM_MODE is genuinely needed, keep it to the narrowest query and strip fields with Security.stripInaccessible() before returning results.',
+        affectedItems: systemMode.slice(0, 30).map(({ name, withoutSharing }) => ({
+          label: name,
+          url: apexClassesUrl,
+          note: withoutSharing ? 'SYSTEM_MODE in a "without sharing" class: no CRUD/FLS and no sharing' : 'SYSTEM_MODE: CRUD/FLS not enforced',
+        })),
+      });
+    }
+
+    if (withoutSharingNoFls.length === 0 && withDmlNoFls.length === 0 && systemMode.length === 0) {
       findings.push({
         id: 'apex-crud-fls-ok',
         category: this.category,
