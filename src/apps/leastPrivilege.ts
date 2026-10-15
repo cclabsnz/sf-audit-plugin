@@ -6,6 +6,8 @@ export function buildFinding(
   granted: GrantedAccess,
   window: { since: number; attributionRatePct: number },
   soakDays: number,
+  /** Set when some API logs in the window could not be read: usage is then known to be incomplete. */
+  incompleteUsage?: string,
 ): AppFinding {
   const usedObjects = new Set(used.objects.map((o) => o.object));
   const usedVerbs = new Map(used.objects.map((o) => [o.object, new Set(o.verbs)]));
@@ -16,10 +18,11 @@ export function buildFinding(
     `Observed over ${window.since} day(s); RestApi attribution ${window.attributionRatePct}% — "used" is a lower bound.`,
   );
   if (belowSoak) notes.push(`Window below the ${soakDays}-day soak threshold: revoke recommendations suppressed.`);
+  if (incompleteUsage) notes.push(`Usage data incomplete (${incompleteUsage}): revoke recommendations suppressed.`);
   if (used.soapOnly) notes.push('SOAP usage present but not app-attributable; not treated as dormant.');
   if (granted.multiUserInteractive) notes.push('Interactive app with many run-as users; object delta not asserted.');
 
-  const assertDelta = !belowSoak && !granted.multiUserInteractive;
+  const assertDelta = !belowSoak && !granted.multiUserInteractive && !incompleteUsage;
 
   const unusedObjects = assertDelta
     ? granted.objects.map((o) => o.object).filter((o) => !usedObjects.has(o)).sort()
@@ -55,7 +58,7 @@ export function buildFinding(
     used,
     granted,
     overGrant: { unusedObjects, unusedVerbs, scopeDowngrade, dormant },
-    recommendation: { permissionSet: { objectPermissions } },
+    recommendation: { asserted: assertDelta, permissionSet: { objectPermissions } },
     notes,
   };
 }

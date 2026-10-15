@@ -23,13 +23,32 @@ export async function computeGranted(
   const psa = await soql
     .queryAll<PsaRow>(`SELECT AssigneeId, PermissionSetId FROM PermissionSetAssignment WHERE AssigneeId IN (${inList(runAsUsers)})`)
     .catch(() => []);
-  const psIds = [...new Set(psa.map((p) => p.PermissionSetId))];
-  if (psIds.length === 0) return { appId, scope, objects: [], runAsUsers, multiUserInteractive };
+  const psIds = new Set(psa.map((p) => p.PermissionSetId));
+
+  // Query Profile-owned permission sets to unify profile-level ObjectPermissions
+  interface UserProfileRow { Id: string; ProfileId: string }
+  const users = await soql
+    .queryAll<UserProfileRow>(`SELECT Id, ProfileId FROM User WHERE Id IN (${inList(runAsUsers)})`)
+    .catch(() => []);
+  const profileIds = [...new Set(users.map((u) => u.ProfileId).filter(Boolean))];
+
+  if (profileIds.length > 0) {
+    interface ProfilePsRow { Id: string; ProfileId: string }
+    const profilePs = await soql
+      .queryAll<ProfilePsRow>(`SELECT Id, ProfileId FROM PermissionSet WHERE IsOwnedByProfile = true AND ProfileId IN (${inList(profileIds)})`)
+      .catch(() => []);
+    for (const p of profilePs) {
+      psIds.add(p.Id);
+    }
+  }
+
+  const allPsIds = [...psIds];
+  if (allPsIds.length === 0) return { appId, scope, objects: [], runAsUsers, multiUserInteractive };
 
   const perms = await soql
     .queryAll<ObjPermRow>(
       `SELECT ParentId, SobjectType, PermissionsRead, PermissionsCreate, PermissionsEdit, PermissionsDelete
-       FROM ObjectPermissions WHERE ParentId IN (${inList(psIds)}) AND PermissionsRead = true`,
+       FROM ObjectPermissions WHERE ParentId IN (${inList(allPsIds)}) AND PermissionsRead = true`,
     )
     .catch(() => []);
 
