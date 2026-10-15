@@ -8,6 +8,7 @@ import { CHECKS } from '../../checks/registry.js';
 import { JsonRenderer } from '../../renderers/JsonRenderer.js';
 import { HtmlRenderer } from '../../renderers/HtmlRenderer.js';
 import { MarkdownRenderer } from '../../renderers/MarkdownRenderer.js';
+import { SarifRenderer } from '../../renderers/SarifRenderer.js';
 import type { AuditRenderer } from '../../renderers/AuditRenderer.js';
 import { ClientReportRenderer } from '../../renderers/ClientReportRenderer.js';
 import { resolveBranding, type BrandingOverrides } from '@cclabsnz/sf-core';
@@ -25,6 +26,7 @@ const RENDERERS: Record<string, AuditRenderer> = {
   html: new HtmlRenderer(),
   md: new MarkdownRenderer(),
   json: new JsonRenderer(),
+  sarif: new SarifRenderer(),
 };
 
 export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditDigest> {
@@ -35,13 +37,14 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
     '<%= config.bin %> <%= command.id %> --target-org myOrg',
     '<%= config.bin %> <%= command.id %> --target-org myOrg --format json --output ./reports',
     '<%= config.bin %> <%= command.id %> --target-org myOrg --fail-on HIGH',
+    '<%= config.bin %> <%= command.id %> --target-org myOrg --format sarif --output ./reports',
   ];
 
   public static flags = {
     'target-org': Flags.requiredOrg(),
     format: Flags.string({
       char: 'f',
-      summary: 'Output format(s), comma-separated: html, md, json, executive',
+      summary: 'Output format(s), comma-separated: html, md, json, executive, sarif',
       default: 'html',
     }),
     output: Flags.string({
@@ -205,7 +208,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
 
   /** Resolve --format to a validated list, erroring on any unknown format. */
   private resolveFormats(raw: string): string[] {
-    const valid = ['html', 'md', 'json', 'executive'];
+    const valid = ['html', 'md', 'json', 'executive', 'sarif'];
     const formats = raw.split(',').map((f) => f.trim()).filter(Boolean);
     const bad = formats.filter((f) => !valid.includes(f));
     if (bad.length > 0 || formats.length === 0) {
