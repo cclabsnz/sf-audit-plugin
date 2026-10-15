@@ -57,9 +57,14 @@ export const NAMED_CHAINS: NamedChainDef[] = [
         // analogue of portal-exposed Apex running without sharing.
         'guest-record-access-policy-not-enforced',
         'flows-autolaunched-without-sharing', 'flows-screen-without-sharing',
-        'data-cloud-data-space-default-overshared', 'restriction-rules-inactive',
+        // An open inbound email handler grants unauth-foothold, so it must appear whenever it
+        // is what opened the gate.
+        'inbound-email-handler-unauthenticated-execution',
       ]);
-      return steps.length >= 2 ? steps : null;
+      if (steps.length < 2) return null;
+      // Internal-only weaknesses that widen what a foothold reaches. They join as evidence but
+      // never count toward the floor: without a guest-side step they describe no unauthenticated path.
+      return [...steps, ...byIds(active, ['data-cloud-data-space-default-overshared', 'restriction-rules-inactive'])];
     },
   },
   {
@@ -112,15 +117,23 @@ export const NAMED_CHAINS: NamedChainDef[] = [
         'privileged-access-shadow-admins',
         'separation-of-duties-self-escalation', 'separation-of-duties-identity-takeover',
         'separation-of-duties-grant-self-data',
-        // Delegated administration, registration handler, and platform event escalation paths
-        'delegated-administration-groups-active',
-        'auth-provider-registration-handler-admin-exec', 'auth-provider-registration-handler-unverified-email-linking',
-        'delegated-authentication-admin-assigned', 'platform-event-subscriber-escalation',
         // An integration account holding Author Apex, Customize Application or user-management
         // permissions it does not use has the same escalation reach as users-author-apex above.
         'integration-least-privilege-escalation-permissions',
+        // Grants unauth-foothold, so it must appear whenever it is what opened the gate.
+        'inbound-email-handler-unauthenticated-execution',
       ]);
-      return steps.length >= 2 ? steps : null;
+      if (steps.length < 2) return null;
+      // Further escalation paths. They join as evidence but never count toward the floor, so two of
+      // them alone, with no low-trust step, cannot claim a standard-user path to takeover.
+      return [
+        ...steps,
+        ...byIds(active, [
+          'delegated-administration-groups-active',
+          'auth-provider-registration-handler-admin-exec', 'auth-provider-registration-handler-unverified-email-linking',
+          'delegated-authentication-admin-assigned', 'platform-event-subscriber-escalation',
+        ]),
+      ];
     },
   },
   {

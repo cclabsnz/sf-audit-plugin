@@ -1,7 +1,6 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { isApiError } from '@cclabsnz/sf-core';
 
 interface AuthProviderRecord {
   Id: string;
@@ -25,20 +24,6 @@ interface ApexClassRecord {
   Body?: string | null;
 }
 
-function isMissingObjectError(err: unknown): boolean {
-  if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    if (err.statusCode === 404) return true;
-  }
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes('not supported') ||
-    msg.includes('invalid type') ||
-    msg.includes('is not supported') ||
-    msg.includes('sobject type')
-  );
-}
-
 export class AuthProviderRegistrationHandlerCheck implements SecurityCheck {
   readonly id = 'auth-provider-registration-handler';
   readonly name = 'Auth.Provider Registration Handler Security';
@@ -57,18 +42,7 @@ export class AuthProviderRegistrationHandlerCheck implements SecurityCheck {
         'SELECT Id, DeveloperName, FriendlyName, ProviderType, ExecutionUserId, RegistrationHandlerId FROM AuthProvider WHERE RegistrationHandlerId != null',
       );
     } catch (err) {
-      if (isMissingObjectError(err)) {
-        findings.push({
-          id: 'auth-provider-registration-handler-ok',
-          category: this.category,
-          riskLevel: 'LOW',
-          passed: true,
-          title: 'No Auth Providers configured with Registration Handlers',
-          detail: 'AuthProvider object is not accessible or no providers configured.',
-          remediation: 'No action required.',
-        });
-        return { findings };
-      }
+      // This object exists in every org, so a failure is lack of access, never an absent feature.
       findings.push({
         id: 'auth-provider-registration-handler-inaccessible',
         category: this.category,
@@ -102,19 +76,15 @@ export class AuthProviderRegistrationHandlerCheck implements SecurityCheck {
     let userDetails = new Map<string, string>();
 
     if (executionUserIds.length > 0) {
-      try {
-        const users = await ctx.soql.queryAll<UserRecord>(
-          `SELECT Id, Username, IsActive, Profile.Name FROM User WHERE Id IN ('${executionUserIds.join("','")}')`,
-        );
-        for (const u of users) {
-          const profName = u.Profile?.Name ?? '';
-          userDetails.set(u.Id, `${u.Username} (${profName})`);
-          if (profName === 'System Administrator' || profName.toLowerCase().includes('admin')) {
-            adminUsers.add(u.Id);
-          }
+      const users = await ctx.soql.queryAll<UserRecord>(
+        `SELECT Id, Username, IsActive, Profile.Name FROM User WHERE Id IN ('${executionUserIds.join("','")}')`,
+      );
+      for (const u of users) {
+        const profName = u.Profile?.Name ?? '';
+        userDetails.set(u.Id, `${u.Username} (${profName})`);
+        if (profName === 'System Administrator' || profName.toLowerCase().includes('admin')) {
+          adminUsers.add(u.Id);
         }
-      } catch {
-        // Degrade gracefully
       }
     }
 
@@ -126,16 +96,12 @@ export class AuthProviderRegistrationHandlerCheck implements SecurityCheck {
     let classNames = new Map<string, string>();
 
     if (handlerIds.length > 0) {
-      try {
-        const classes = await ctx.soql.queryAll<ApexClassRecord>(
-          `SELECT Id, Name, Body FROM ApexClass WHERE Id IN ('${handlerIds.join("','")}')`,
-        );
-        for (const c of classes) {
-          classNames.set(c.Id, c.Name);
-          classBodies.set(c.Id, c.Body ?? '');
-        }
-      } catch {
-        // Degrade gracefully
+      const classes = await ctx.soql.queryAll<ApexClassRecord>(
+        `SELECT Id, Name, Body FROM ApexClass WHERE Id IN ('${handlerIds.join("','")}')`,
+      );
+      for (const c of classes) {
+        classNames.set(c.Id, c.Name);
+        classBodies.set(c.Id, c.Body ?? '');
       }
     }
 

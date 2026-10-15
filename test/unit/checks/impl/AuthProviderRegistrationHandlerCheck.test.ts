@@ -106,4 +106,20 @@ describe('AuthProviderRegistrationHandlerCheck', () => {
     expect(f).toBeDefined();
     expect(f?.riskLevel).toBe('CRITICAL');
   });
+
+  it('propagates a failure reading execution users instead of hiding admin execution', async () => {
+    const ctx = makeCtx({
+      'FROM AuthProvider': [
+        { Id: '0SO2', DeveloperName: 'X', FriendlyName: 'X', ProviderType: 'OpenIdConnect', ExecutionUserId: '005A', RegistrationHandlerId: '01pR' },
+      ],
+      'FROM User': new Error('INSUFFICIENT_ACCESS: User'),
+    });
+    await expect(check.run(ctx)).rejects.toThrow('INSUFFICIENT_ACCESS');
+  });
+
+  it('is inconclusive, not passed, when AuthProvider is not readable', async () => {
+    const ctx = makeCtx({ 'FROM AuthProvider': new Error("sObject type 'AuthProvider' is not supported.") });
+    const r = await check.run(ctx);
+    expect(r.findings.map((f) => f.id)).toEqual(['auth-provider-registration-handler-inaccessible']);
+  });
 });

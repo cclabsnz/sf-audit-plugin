@@ -58,4 +58,18 @@ describe('DelegatedAdministrationGroupsCheck', () => {
     expect(f).toBeDefined();
     expect(f?.riskLevel).toBe('HIGH');
   });
+
+  it('propagates a failure reading group members instead of under-reporting', async () => {
+    const ctx = makeCtx({
+      'FROM DelegateGroupMember': new Error('INSUFFICIENT_ACCESS: DelegateGroupMember'),
+      'FROM DelegateGroup': [{ Id: '00g2', DeveloperName: 'Ops' }],
+    });
+    await expect(check.run(ctx)).rejects.toThrow('INSUFFICIENT_ACCESS');
+  });
+
+  it('is inconclusive, not passed, when DelegateGroup is not readable', async () => {
+    const ctx = makeCtx({ 'FROM DelegateGroup': new Error("sObject type 'DelegateGroup' is not supported.") });
+    const r = await check.run(ctx);
+    expect(r.findings.map((f) => f.id)).toEqual(['delegated-administration-groups-inaccessible']);
+  });
 });

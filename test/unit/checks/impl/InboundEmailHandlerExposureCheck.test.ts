@@ -124,4 +124,21 @@ describe('InboundEmailHandlerExposureCheck', () => {
     expect(r.findings[0].id).toBe('inbound-email-handler-exposure-ok');
     expect(r.findings[0].passed).toBe(true);
   });
+
+  it('propagates a failure reading addresses instead of reporting handlers as restricted', async () => {
+    const ctx = makeCtx({
+      'FROM EmailServicesFunction': [
+        { Id: '01u2', FunctionName: 'H', IsActive: true, RunAsUserId: '005Admin', ApexClassId: '01pC', AuthenticationFailureAction: '0' },
+      ],
+      'FROM EmailServicesAddress': new Error('INSUFFICIENT_ACCESS: EmailServicesAddress'),
+    });
+    await expect(check.run(ctx)).rejects.toThrow('INSUFFICIENT_ACCESS');
+  });
+
+  it('is inconclusive, not passed, when EmailServicesFunction is not readable', async () => {
+    const ctx = makeCtx({ 'FROM EmailServicesFunction': new Error("sObject type 'EmailServicesFunction' is not supported.") });
+    const r = await check.run(ctx);
+    expect(r.findings.map((f) => f.id)).toEqual(['inbound-email-handler-exposure-inaccessible']);
+    expect(r.findings[0].passed).toBeUndefined();
+  });
 });

@@ -172,6 +172,49 @@ describe('NAMED_CHAINS', () => {
   // outrank the emergent "potential path" output. MEDIUM is reserved for a chain that adds no new
   // exposure of its own — `undetected-compromise` reports that exposure already present would go
   // unobserved, which would be overstated as HIGH and is why this is not a CRITICAL/HIGH-only rule.
+  it('unauth-bulk-exfil does NOT fire on an email foothold plus internal-only weaknesses', () => {
+    // The email handler opens the unauth-foothold gate; Data Cloud and restriction rules are
+    // internal weaknesses. Together they describe no unauthenticated bulk-read path.
+    const findings = [
+      f('inbound-email-handler-unauthenticated-execution'),
+      f('data-cloud-data-space-default-overshared'),
+      f('restriction-rules-inactive'),
+    ];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'unauth-bulk-exfil')!;
+    expect(chain.match(present(findings), findings)).toBeNull();
+  });
+
+  it('unauth-bulk-exfil carries internal weaknesses as evidence once guest steps meet the floor', () => {
+    const findings = [
+      f('guest-user-read-access'),
+      f('guest-executable-apex-unprotected'),
+      f('data-cloud-data-space-default-overshared'),
+    ];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'unauth-bulk-exfil')!;
+    const steps = chain.match(present(findings), findings);
+    expect(steps!.map((s) => s.id)).toContain('data-cloud-data-space-default-overshared');
+  });
+
+  it('unauth-bulk-exfil shows the email handler when it is what opened the gate', () => {
+    const findings = [
+      f('inbound-email-handler-unauthenticated-execution'),
+      f('guest-executable-apex-unprotected'),
+    ];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'unauth-bulk-exfil')!;
+    const steps = chain.match(present(findings), findings);
+    expect(steps!.map((s) => s.id)).toContain('inbound-email-handler-unauthenticated-execution');
+  });
+
+  it('standard-to-takeover does NOT fire on an email foothold plus two internal escalation paths', () => {
+    const findings = [
+      f('inbound-email-handler-unauthenticated-execution'),
+      f('delegated-administration-groups-active'),
+      f('delegated-authentication-admin-assigned'),
+    ];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'standard-to-takeover')!;
+    expect(chain.match(present(findings), findings)).toBeNull();
+  });
+
   it('every named chain has at least MEDIUM severity and a non-empty narrative', () => {
     for (const c of NAMED_CHAINS) {
       expect(['CRITICAL', 'HIGH', 'MEDIUM']).toContain(c.severity);

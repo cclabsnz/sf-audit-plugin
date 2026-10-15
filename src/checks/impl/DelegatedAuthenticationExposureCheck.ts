@@ -27,38 +27,30 @@ export class DelegatedAuthenticationExposureCheck implements SecurityCheck {
     const baseUrl = ctx.orgInfo.instanceUrl;
     const ssoUrl = `${baseUrl}/lightning/setup/SingleSignOn/home`;
 
-    let isDelegatedAuthEnabled = false;
+    // Enabled, disabled, or unknown. Only a boolean actually returned by the settings read
+    // decides; a failed read or an absent Metadata client leaves it unknown, never "disabled".
+    let delegatedAuth: boolean | undefined;
     let gatewayUrl = '';
-
     if (ctx.metadata) {
       try {
-        const sec = await ctx.metadata.read<SecuritySettingsMeta>(
-          'SecuritySettings',
-          'Security',
-        );
-        if (sec?.singleSignOnSettings?.isDelegatedAuthEnabled === true) {
-          isDelegatedAuthEnabled = true;
-          gatewayUrl = sec.singleSignOnSettings.delegatedGatewayUrl ?? '';
+        const sec = await ctx.metadata.read<SecuritySettingsMeta>('SecuritySettings', 'Security');
+        const sso = sec?.singleSignOnSettings;
+        if (typeof sso?.isDelegatedAuthEnabled === 'boolean') {
+          delegatedAuth = sso.isDelegatedAuthEnabled;
+          gatewayUrl = sso.delegatedGatewayUrl ?? '';
         }
       } catch {
-        // Degrade gracefully if SecuritySettings read fails
+        delegatedAuth = undefined;
       }
     }
+    const isDelegatedAuthEnabled = delegatedAuth === true;
 
-    // Query profiles with IsSingleSignOnEnabled
-    let adminProfilesWithDelegatedAuth: ProfileRecord[] = [];
-    try {
-      const profiles = await ctx.soql.queryAll<ProfileRecord>(
-        'SELECT Id, Name, PermissionsIsSingleSignOnEnabled FROM Profile WHERE PermissionsIsSingleSignOnEnabled = true',
-      );
-      adminProfilesWithDelegatedAuth = profiles.filter(
-        (p) =>
-          p.Name.toLowerCase().includes('admin') ||
-          p.Name === 'System Administrator',
-      );
-    } catch {
-      // Degrade gracefully if Profile query fails
-    }
+    const profiles = await ctx.soql.queryAll<ProfileRecord>(
+      'SELECT Id, Name, PermissionsIsSingleSignOnEnabled FROM Profile WHERE PermissionsIsSingleSignOnEnabled = true',
+    );
+    const adminProfilesWithDelegatedAuth = profiles.filter(
+      (p) => p.Name.toLowerCase().includes('admin') || p.Name === 'System Administrator',
+    );
 
     if (isDelegatedAuthEnabled) {
       // Check 1: Insecure Gateway URL (non-https or cleartext)
@@ -106,15 +98,29 @@ export class DelegatedAuthenticationExposureCheck implements SecurityCheck {
       }
     }
 
-    if (!isDelegatedAuthEnabled && adminProfilesWithDelegatedAuth.length === 0) {
+    if (delegatedAuth === undefined) {
+      findings.push({
+        id: 'delegated-authentication-advisory',
+        category: this.category,
+        riskLevel: 'INFO',
+        title: 'Verify Delegated Authentication settings manually',
+        detail: `This run could not read SecuritySettings, so whether Delegated Authentication is enabled is unknown. ${adminProfilesWithDelegatedAuth.length} administrator profile(s) hold "Is Single Sign-On Enabled", which routes their sign-in through the delegated gateway if it is on.`,
+        remediation:
+          'In Setup → Single Sign-On Settings, check whether Delegated Authentication is enabled. If it is, the gateway must be HTTPS with mutual TLS, and administrator profiles should not hold "Is Single Sign-On Enabled".',
+        affectedItems: [{ label: 'Single Sign-On Settings', url: ssoUrl }],
+      });
+    } else if (findings.length === 0) {
       findings.push({
         id: 'delegated-authentication-exposure-ok',
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: 'Delegated Authentication is disabled or not assigned to privileged administrators',
-        detail:
-          'Delegated Authentication is not enabled for privileged administrators, preventing external gateway spoofing attacks.',
+        title: isDelegatedAuthEnabled
+          ? 'Delegated Authentication uses an HTTPS gateway and is not assigned to administrators'
+          : 'Delegated Authentication is disabled',
+        detail: isDelegatedAuthEnabled
+          ? 'SecuritySettings shows Delegated Authentication enabled with an HTTPS gateway, and no administrator profile holds "Is Single Sign-On Enabled".'
+          : 'SecuritySettings confirms Delegated Authentication is disabled, so no sign-in is routed through an external gateway.',
         remediation: 'Continue using SAML 2.0 or OpenID Connect with signed assertions for SSO.',
       });
     }

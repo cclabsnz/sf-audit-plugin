@@ -72,4 +72,35 @@ describe('DelegatedAuthenticationExposureCheck', () => {
     expect(f).toBeDefined();
     expect(f?.riskLevel).toBe('CRITICAL');
   });
+
+  it('gives an advisory, not a pass, when there is no Metadata client', async () => {
+    const ctx = makeCtx(null, []);
+    (ctx as any).metadata = undefined;
+    const r = await check.run(ctx);
+    expect(r.findings.some((f) => f.passed)).toBe(false);
+    expect(r.findings.map((f) => f.id)).toEqual(['delegated-authentication-advisory']);
+  });
+
+  it('gives an advisory, not silence, when the settings read fails and admins hold SSO', async () => {
+    const ctx = makeCtx(null, [{ Id: '00eA', Name: 'System Administrator', PermissionsIsSingleSignOnEnabled: true }]);
+    (ctx.metadata as any).read = (jest.fn() as any).mockRejectedValue(new Error('INSUFFICIENT_ACCESS'));
+    const r = await check.run(ctx);
+    expect(r.findings.map((f) => f.id)).toEqual(['delegated-authentication-advisory']);
+    expect(r.findings[0].detail).toContain('1 administrator profile');
+  });
+
+  it('passes, rather than emitting nothing, when enabled over HTTPS with no admin profiles', async () => {
+    const ctx = makeCtx(
+      { singleSignOnSettings: { isDelegatedAuthEnabled: true, delegatedGatewayUrl: 'https://sso.example.com/auth' } },
+      [{ Id: '00eB', Name: 'Standard User', PermissionsIsSingleSignOnEnabled: true }],
+    );
+    const r = await check.run(ctx);
+    expect(r.findings.map((f) => f.id)).toEqual(['delegated-authentication-exposure-ok']);
+  });
+
+  it('propagates a permission error on Profile instead of passing', async () => {
+    const ctx = makeCtx({ singleSignOnSettings: { isDelegatedAuthEnabled: false } });
+    (ctx.soql as any).queryAll = (jest.fn() as any).mockRejectedValue(new Error('INSUFFICIENT_ACCESS'));
+    await expect(check.run(ctx)).rejects.toThrow('INSUFFICIENT_ACCESS');
+  });
 });

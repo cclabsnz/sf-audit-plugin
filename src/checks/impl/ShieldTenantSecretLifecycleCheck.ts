@@ -1,7 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { isApiError } from '@cclabsnz/sf-core';
+import { isMissingObjectError } from '../support/missingObject.js';
 
 interface TenantSecretRecord {
   Id: string;
@@ -10,21 +10,6 @@ interface TenantSecretRecord {
   Version?: number | null;
   CreatedDate: string;
   LastModifiedDate?: string | null;
-}
-
-function isMissingObjectError(err: unknown): boolean {
-  if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    if (err.statusCode === 404) return true;
-  }
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes('not supported') ||
-    msg.includes('invalid type') ||
-    msg.includes('is not supported') ||
-    msg.includes('sobject type') ||
-    msg.includes('tenantsecret')
-  );
 }
 
 export class ShieldTenantSecretLifecycleCheck implements SecurityCheck {

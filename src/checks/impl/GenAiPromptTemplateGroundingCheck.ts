@@ -1,23 +1,13 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
+import { FlowRepository } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { isApiError } from '@cclabsnz/sf-core';
+import { isMissingObjectError } from '../support/missingObject.js';
 
 interface GenAiPromptTemplateRecord {
   Id: string;
   DeveloperName: string;
   MasterLabel: string;
-  TemplateType?: string | null;
-  TemplateContent?: string | null;
-  Description?: string | null;
-}
-
-interface FlowRecord {
-  Id: string;
-  DeveloperName: string;
-  MasterLabel: string;
-  ProcessType: string;
-  RunInMode?: string | null;
 }
 
 interface ApexClassRecord {
@@ -26,19 +16,12 @@ interface ApexClassRecord {
   Body?: string | null;
 }
 
-function isMissingObjectError(err: unknown): boolean {
-  if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    if (err.statusCode === 404) return true;
-  }
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes('not supported') ||
-    msg.includes('invalid type') ||
-    msg.includes('is not supported') ||
-    msg.includes('sobject type')
-  );
-}
+// A template names its grounding sources explicitly: as a data provider definition
+// (flow://Name, apex://Name) or as a merge field ({!$Flow:Name.Prompt}, {!$Apex:Name.Prompt}).
+// Matching on those, rather than on a flow or class name appearing anywhere, keeps a template
+// that merely mentions a common word from being tied to an unrelated flow.
+const FLOW_REF = /(?:flow:\/\/|\$Flow:)([A-Za-z][A-Za-z0-9_]*)/gi;
+const APEX_REF = /(?:apex:\/\/|\$Apex:)([A-Za-z][A-Za-z0-9_]*)/gi;
 
 // Untrusted external text inputs that may carry prompt injections into prompt templates
 const UNTRUSTED_FIELD_PATTERNS = [
@@ -71,37 +54,20 @@ export class GenAiPromptTemplateGroundingCheck implements SecurityCheck {
     let templates: GenAiPromptTemplateRecord[];
     try {
       templates = await ctx.tooling.query<GenAiPromptTemplateRecord>(
-        'SELECT Id, DeveloperName, MasterLabel, TemplateType, Description FROM GenAiPromptTemplate',
+        'SELECT Id, DeveloperName, MasterLabel FROM GenAiPromptTemplate',
       );
     } catch (err) {
-      if (isMissingObjectError(err)) {
-        findings.push({
-          id: 'genai-prompt-template-grounding-not-enabled',
-          category: this.category,
-          riskLevel: 'LOW',
-          passed: true,
-          title: 'GenAI Prompt Templates are not enabled or configured in this org',
-          detail: 'GenAiPromptTemplate object is not available; Prompt Builder / GenAI is not enabled.',
-          remediation: 'No action required if Generative AI Prompt Builder is not deployed.',
-        });
-        return { findings };
-      }
-      try {
-        templates = await ctx.tooling.query<GenAiPromptTemplateRecord>(
-          'SELECT Id, DeveloperName, MasterLabel, TemplateType FROM GenAiPromptTemplate',
-        );
-      } catch (innerErr) {
-        findings.push({
-          id: 'genai-prompt-template-grounding-inaccessible',
-          category: this.category,
-          riskLevel: 'INFO',
-          inconclusive: true,
-          title: 'GenAI Prompt Templates could not be read',
-          detail: `Query to GenAiPromptTemplate failed: ${innerErr instanceof Error ? innerErr.message : String(innerErr)}`,
-          remediation: 'Ensure the audit user has permission to view GenAI and Prompt Builder configuration.',
-        });
-        return { findings };
-      }
+      if (!isMissingObjectError(err)) throw err;
+      findings.push({
+        id: 'genai-prompt-template-grounding-not-enabled',
+        category: this.category,
+        riskLevel: 'LOW',
+        passed: true,
+        title: 'GenAI Prompt Templates are not enabled or configured in this org',
+        detail: 'GenAiPromptTemplate object is not available; Prompt Builder / GenAI is not enabled.',
+        remediation: 'No action required if Generative AI Prompt Builder is not deployed.',
+      });
+      return { findings };
     }
 
     if (templates.length === 0) {
@@ -117,66 +83,69 @@ export class GenAiPromptTemplateGroundingCheck implements SecurityCheck {
       return { findings };
     }
 
-    // Retrieve active Flows and ApexClasses to correlate grounding sources
-    let flows: FlowRecord[] = [];
-    try {
-      flows = await ctx.tooling.query<FlowRecord>(
-        "SELECT Id, DeveloperName, MasterLabel, ProcessType, RunInMode FROM Flow WHERE Status = 'Active'",
+    // The template body, its inputs and its data providers exist only in the Metadata API
+    // definition. Without it nothing below can be judged, so the run says so.
+    const contentByTemplate = new Map<GenAiPromptTemplateRecord, string>();
+    let unread = 0;
+    for (const t of templates) {
+      let meta: unknown = null;
+      if (ctx.metadata) {
+        try {
+          meta = await ctx.metadata.read('GenAiPromptTemplate', t.DeveloperName);
+        } catch {
+          meta = null;
+        }
+      }
+      if (meta) contentByTemplate.set(t, stringsIn(meta).join('\n'));
+      else unread++;
+    }
+
+    const flowRefs = new Map<GenAiPromptTemplateRecord, string[]>();
+    const apexRefs = new Map<GenAiPromptTemplateRecord, string[]>();
+    for (const [t, content] of contentByTemplate) {
+      flowRefs.set(t, refs(content, FLOW_REF));
+      apexRefs.set(t, refs(content, APEX_REF));
+    }
+
+    // Run mode of each referenced active flow, keyed by API name (lower-cased).
+    const flowRunMode = new Map<string, string | null>();
+    if ([...flowRefs.values()].some((r) => r.length > 0)) {
+      const repo = new FlowRepository(ctx.soql, ctx.tooling);
+      const [definitions, active] = await Promise.all([repo.listDefinitions(), repo.listActiveVersions()]);
+      const modeByVersion = new Map(active.map((v) => [v.id, v.runInMode]));
+      for (const d of definitions) {
+        if (d.activeVersionId && modeByVersion.has(d.activeVersionId)) {
+          flowRunMode.set(d.apiName.toLowerCase(), modeByVersion.get(d.activeVersionId) ?? null);
+        }
+      }
+    }
+
+    const referencedClasses = [...new Set([...apexRefs.values()].flat())];
+    const withoutSharingClasses = new Set<string>();
+    if (referencedClasses.length > 0) {
+      const names = referencedClasses.map((n) => `'${n}'`).join(', ');
+      const classes = await ctx.tooling.query<ApexClassRecord>(
+        `SELECT Id, Name, Body FROM ApexClass WHERE Name IN (${names})`,
       );
-    } catch {
-      // Degrade gracefully if Flow query fails
-    }
-
-    let apexClasses: ApexClassRecord[] = [];
-    try {
-      apexClasses = await ctx.tooling.query<ApexClassRecord>(
-        'SELECT Id, Name, Body FROM ApexClass',
-      );
-    } catch {
-      // Degrade gracefully if ApexClass query fails
-    }
-
-    const flowByName = new Map<string, FlowRecord>();
-    for (const fl of flows) {
-      flowByName.set(fl.DeveloperName.toLowerCase(), fl);
-      flowByName.set(fl.MasterLabel.toLowerCase(), fl);
-    }
-
-    const apexByName = new Map<string, ApexClassRecord>();
-    for (const cls of apexClasses) {
-      apexByName.set(cls.Name.toLowerCase(), cls);
+      for (const cls of classes) {
+        const decl = new RegExp(`\\bwithout\\s+sharing\\s+(?:\\w+\\s+)*class\\s+${cls.Name}\\b`, 'i');
+        if (decl.test(cls.Body ?? '')) withoutSharingClasses.add(cls.Name.toLowerCase());
+      }
     }
 
     const systemModeFlowTemplates: GenAiPromptTemplateRecord[] = [];
     const withoutSharingApexTemplates: GenAiPromptTemplateRecord[] = [];
     const untrustedInputTemplates: GenAiPromptTemplateRecord[] = [];
 
-    for (const t of templates) {
-      const content = `${t.TemplateContent ?? ''} ${t.Description ?? ''} ${t.DeveloperName}`;
-
-      // Check Flow grounding
-      for (const [name, fl] of flowByName) {
-        if (content.toLowerCase().includes(name)) {
-          const runInMode = fl.RunInMode ?? '';
-          if (runInMode.toLowerCase().includes('system') || runInMode === 'DefaultMode' || runInMode === '') {
-            systemModeFlowTemplates.push(t);
-            break;
-          }
-        }
+    for (const [t, content] of contentByTemplate) {
+      // Only SystemModeWithoutSharing ignores the running user's record access. DefaultMode and
+      // SystemModeWithSharing both still apply sharing.
+      if ((flowRefs.get(t) ?? []).some((f) => flowRunMode.get(f) === 'SystemModeWithoutSharing')) {
+        systemModeFlowTemplates.push(t);
       }
-
-      // Check Apex grounding
-      for (const [name, cls] of apexByName) {
-        if (content.toLowerCase().includes(name)) {
-          const body = cls.Body ?? '';
-          if (/without\s+sharing/i.test(body)) {
-            withoutSharingApexTemplates.push(t);
-            break;
-          }
-        }
+      if ((apexRefs.get(t) ?? []).some((c) => withoutSharingClasses.has(c))) {
+        withoutSharingApexTemplates.push(t);
       }
-
-      // Check untrusted text input interpolation alongside CRM data
       const hasUntrusted = UNTRUSTED_FIELD_PATTERNS.some((p) => p.test(content));
       const hasPrivileged = PRIVILEGED_DATA_PATTERNS.some((p) => p.test(content));
       if (hasUntrusted && hasPrivileged) {
@@ -238,11 +207,21 @@ export class GenAiPromptTemplateGroundingCheck implements SecurityCheck {
       });
     }
 
-    if (
-      systemModeFlowTemplates.length === 0 &&
-      withoutSharingApexTemplates.length === 0 &&
-      untrustedInputTemplates.length === 0
-    ) {
+    const anyFinding =
+      systemModeFlowTemplates.length > 0 || withoutSharingApexTemplates.length > 0 || untrustedInputTemplates.length > 0;
+
+    if (unread > 0) {
+      findings.push({
+        id: 'genai-prompt-template-grounding-inconclusive',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `${unread} of ${templates.length} Prompt Template definition(s) could not be read`,
+        detail:
+          'A prompt template\'s body, inputs and grounding sources are only in its Metadata API definition. Templates that could not be read were not evaluated for system-mode grounding or untrusted input.',
+        remediation: 'Run the audit with a user that can read Prompt Builder metadata (Customize Application or View Setup and Configuration), then re-run.',
+      });
+    } else if (!anyFinding) {
       findings.push({
         id: 'genai-prompt-template-grounding-ok',
         category: this.category,
@@ -256,4 +235,16 @@ export class GenAiPromptTemplateGroundingCheck implements SecurityCheck {
 
     return { findings };
   }
+}
+
+function refs(content: string, pattern: RegExp): string[] {
+  return [...new Set([...content.matchAll(pattern)].map((m) => m[1].toLowerCase()))];
+}
+
+/** Every string value anywhere in a parsed metadata tree. */
+function stringsIn(node: unknown): string[] {
+  if (typeof node === 'string') return [node];
+  if (Array.isArray(node)) return node.flatMap(stringsIn);
+  if (node && typeof node === 'object') return Object.values(node).flatMap(stringsIn);
+  return [];
 }

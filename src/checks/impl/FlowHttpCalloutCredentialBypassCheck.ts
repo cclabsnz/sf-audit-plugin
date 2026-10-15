@@ -1,53 +1,18 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
+import { FlowRepository } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { isApiError } from '@cclabsnz/sf-core';
+import { queryIfPresent } from '../support/missingObject.js';
 
 interface ExternalServiceRegistrationRecord {
   Id: string;
   DeveloperName: string;
   MasterLabel: string;
   NamedCredentialId?: string | null;
-  SystemVersion?: string | null;
-  ServiceContract?: string | null;
 }
 
-interface FlowRecord {
-  Id: string;
-  DeveloperName: string;
-  MasterLabel: string;
-  ProcessType: string;
-  Description?: string | null;
-  Metadata?: {
-    actionCalls?: Array<{
-      actionName?: string;
-      actionType?: string;
-      inputParameters?: Array<{ name: string; value?: { stringValue?: string } }>;
-    }>;
-    formulas?: Array<{
-      name?: string;
-      expression?: string;
-    }>;
-    constants?: Array<{
-      name?: string;
-      value?: { stringValue?: string };
-    }>;
-  } | null;
-}
-
-function isMissingObjectError(err: unknown): boolean {
-  if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    if (err.statusCode === 404) return true;
-  }
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes('not supported') ||
-    msg.includes('invalid type') ||
-    msg.includes('is not supported') ||
-    msg.includes('sobject type')
-  );
-}
+/** Flow.Metadata is one row per Tooling query, so reads run concurrently but bounded. */
+const METADATA_CONCURRENCY = 8;
 
 // Patterns for hardcoded credentials / tokens in Flow formulas, headers, or parameters
 const SECRET_PATTERNS = [
@@ -68,85 +33,34 @@ export class FlowHttpCalloutCredentialBypassCheck implements SecurityCheck {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
 
-    // 1. Query ExternalServiceRegistration records (Tooling API)
-    let externalServices: ExternalServiceRegistrationRecord[] = [];
-    try {
-      externalServices = await ctx.tooling.query<ExternalServiceRegistrationRecord>(
-        'SELECT Id, DeveloperName, MasterLabel, NamedCredentialId, SystemVersion FROM ExternalServiceRegistration',
-      );
-    } catch (err) {
-      if (isMissingObjectError(err)) {
-        // ExternalServiceRegistration not present in org
-      }
-    }
-
+    const externalServices = await queryIfPresent(() =>
+      ctx.tooling.query<ExternalServiceRegistrationRecord>(
+        'SELECT Id, DeveloperName, MasterLabel, NamedCredentialId FROM ExternalServiceRegistration',
+      ),
+    );
     const uncredentialedServices = externalServices.filter(
       (s) => !s.NamedCredentialId || s.NamedCredentialId.trim() === '',
     );
 
-    // 2. Query active Flows with Tooling API to inspect actions and formulas
-    let flows: FlowRecord[] = [];
-    try {
-      flows = await ctx.tooling.query<FlowRecord>(
-        "SELECT Id, DeveloperName, MasterLabel, ProcessType, Description FROM Flow WHERE Status = 'Active'",
-      );
-    } catch (err) {
-      if (isMissingObjectError(err)) {
-        // Flow tooling query failed
+    // Credentials live in the flow definition (formulas, constants, text templates, action
+    // inputs), which only Flow.Metadata carries. Every string in it is scanned.
+    const repo = new FlowRepository(ctx.soql, ctx.tooling);
+    const { versions } = FlowRepository.selectVersions(await repo.listDefinitions());
+    const hardcodedSecretFlows: Array<{ id: string; apiName: string }> = [];
+    let unread = 0;
+    await mapWithConcurrency(versions, METADATA_CONCURRENCY, async (v) => {
+      let metadata: unknown;
+      try {
+        metadata = await repo.fetchMetadata(v.id);
+      } catch {
+        unread++;
+        return;
       }
-    }
-
-    const hardcodedSecretFlows: FlowRecord[] = [];
-
-    for (const fl of flows) {
-      // Check flow description and metadata if available for embedded credentials
-      const textToScan = `${fl.Description ?? ''} ${fl.DeveloperName} ${fl.MasterLabel}`;
-      if (SECRET_PATTERNS.some((p) => p.test(textToScan))) {
-        hardcodedSecretFlows.push(fl);
+      if (stringsIn(metadata).some((str) => SECRET_PATTERNS.some((p) => p.test(str)))) {
+        hardcodedSecretFlows.push(v);
       }
-
-      // Check Flow metadata actionCalls, formulas, constants
-      if (fl.Metadata) {
-        const meta = fl.Metadata;
-        let foundSecret = false;
-
-        if (meta.formulas) {
-          for (const form of meta.formulas) {
-            const expr = form.expression ?? '';
-            if (SECRET_PATTERNS.some((p) => p.test(expr))) {
-              foundSecret = true;
-              break;
-            }
-          }
-        }
-
-        if (!foundSecret && meta.constants) {
-          for (const c of meta.constants) {
-            const val = c.value?.stringValue ?? '';
-            if (SECRET_PATTERNS.some((p) => p.test(val))) {
-              foundSecret = true;
-              break;
-            }
-          }
-        }
-
-        if (!foundSecret && meta.actionCalls) {
-          for (const act of meta.actionCalls) {
-            for (const param of act.inputParameters ?? []) {
-              const val = param.value?.stringValue ?? '';
-              if (SECRET_PATTERNS.some((p) => p.test(val))) {
-                foundSecret = true;
-                break;
-              }
-            }
-          }
-        }
-
-        if (foundSecret && !hardcodedSecretFlows.includes(fl)) {
-          hardcodedSecretFlows.push(fl);
-        }
-      }
-    }
+    });
+    hardcodedSecretFlows.sort((x, y) => x.apiName.localeCompare(y.apiName));
 
     if (hardcodedSecretFlows.length > 0) {
       findings.push({
@@ -159,8 +73,8 @@ export class FlowHttpCalloutCredentialBypassCheck implements SecurityCheck {
         remediation:
           'Replace all hardcoded secrets in Flow formulas and HTTP Callout headers with modern Named Credentials and External Credentials with encrypted auth headers.',
         affectedItems: hardcodedSecretFlows.map((fl) => ({
-          label: fl.MasterLabel || fl.DeveloperName,
-          url: `${baseUrl}/builder_platform_interaction/flowBuilder.app?flowId=${fl.Id}`,
+          label: fl.apiName,
+          url: `${baseUrl}/builder_platform_interaction/flowBuilder.app?flowId=${fl.id}`,
           note: 'Contains embedded credential or API token',
         })),
       });
@@ -184,7 +98,18 @@ export class FlowHttpCalloutCredentialBypassCheck implements SecurityCheck {
       });
     }
 
-    if (hardcodedSecretFlows.length === 0 && uncredentialedServices.length === 0) {
+    if (unread > 0 && hardcodedSecretFlows.length === 0) {
+      findings.push({
+        id: 'flow-http-callout-inconclusive',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `${unread} of ${versions.length} active Flow definition(s) could not be read`,
+        detail:
+          'Flow metadata could not be retrieved for some active flows, so they were not scanned for embedded credentials. The flows that were read contained none.',
+        remediation: 'Grant the audit user View Setup and Configuration and access to Flow metadata, then re-run.',
+      });
+    } else if (hardcodedSecretFlows.length === 0 && uncredentialedServices.length === 0) {
       findings.push({
         id: 'flow-http-callout-ok',
         category: this.category,
@@ -198,4 +123,20 @@ export class FlowHttpCalloutCredentialBypassCheck implements SecurityCheck {
 
     return { findings };
   }
+}
+
+/** Every string value anywhere in a parsed metadata tree. */
+function stringsIn(node: unknown): string[] {
+  if (typeof node === 'string') return [node];
+  if (Array.isArray(node)) return node.flatMap(stringsIn);
+  if (node && typeof node === 'object') return Object.values(node).flatMap(stringsIn);
+  return [];
+}
+
+async function mapWithConcurrency<T>(items: readonly T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < items.length) await fn(items[next++]);
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
 }

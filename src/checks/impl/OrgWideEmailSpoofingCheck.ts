@@ -1,7 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { isApiError } from '@cclabsnz/sf-core';
+import { isMissingObjectError } from '../support/missingObject.js';
 
 interface OrgWideEmailAddressRecord {
   Id: string;
@@ -14,23 +14,7 @@ interface OrgWideEmailAddressRecord {
 interface DkimKeyRecord {
   Id: string;
   Domain?: string | null;
-  DomainMatch?: string | null;
-  Status?: string | null;
   IsActive?: boolean;
-}
-
-function isMissingObjectError(err: unknown): boolean {
-  if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    if (err.statusCode === 404) return true;
-  }
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes('not supported') ||
-    msg.includes('invalid type') ||
-    msg.includes('is not supported') ||
-    msg.includes('sobject type')
-  );
 }
 
 export class OrgWideEmailSpoofingCheck implements SecurityCheck {
@@ -48,6 +32,7 @@ export class OrgWideEmailSpoofingCheck implements SecurityCheck {
 
     // 1. Query OrgWideEmailAddress
     let owaRecords: OrgWideEmailAddressRecord[] = [];
+    let owaInaccessible = false;
     try {
       owaRecords = await ctx.soql.queryAll<OrgWideEmailAddressRecord>(
         'SELECT Id, Address, DisplayName, IsAllowAllProfiles FROM OrgWideEmailAddress',
@@ -56,6 +41,7 @@ export class OrgWideEmailSpoofingCheck implements SecurityCheck {
       if (isMissingObjectError(err)) {
         // Continue to DKIM check
       } else {
+        owaInaccessible = true;
         findings.push({
           id: 'org-wide-email-spoofing-inaccessible',
           category: this.category,
@@ -93,7 +79,7 @@ export class OrgWideEmailSpoofingCheck implements SecurityCheck {
     let dkimInaccessible = false;
     try {
       dkimKeys = await ctx.soql.queryAll<DkimKeyRecord>(
-        'SELECT Id, Domain, Status FROM DkimKey',
+        'SELECT Id, Domain, IsActive FROM DkimKey',
       );
     } catch (err) {
       if (!isMissingObjectError(err)) {
@@ -101,9 +87,20 @@ export class OrgWideEmailSpoofingCheck implements SecurityCheck {
       }
     }
 
-    const activeDkimKeys = dkimKeys.filter(
-      (k) => (k.Status ?? '').toLowerCase() === 'active' || k.IsActive === true,
-    );
+    const activeDkimKeys = dkimKeys.filter((k) => k.IsActive === true);
+
+    if (dkimInaccessible) {
+      findings.push({
+        id: 'org-wide-email-spoofing-dkim-inaccessible',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'DKIM keys could not be queried',
+        detail: 'DkimKey was not readable, so whether outbound Salesforce email is DKIM-signed is unknown.',
+        remediation: 'Grant the audit user "View Setup and Configuration", then re-run. Meanwhile check Setup → DKIM Keys manually.',
+        affectedItems: [{ label: 'DKIM Keys Configuration', url: dkimUrl }],
+      });
+    }
 
     if (!dkimInaccessible && activeDkimKeys.length === 0) {
       findings.push({
@@ -125,7 +122,7 @@ export class OrgWideEmailSpoofingCheck implements SecurityCheck {
       });
     }
 
-    if (openOwaRecords.length === 0 && (activeDkimKeys.length > 0 || dkimInaccessible)) {
+    if (!owaInaccessible && !dkimInaccessible && openOwaRecords.length === 0 && activeDkimKeys.length > 0) {
       findings.push({
         id: 'org-wide-email-spoofing-ok',
         category: this.category,

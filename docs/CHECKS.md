@@ -27,7 +27,7 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 | Certificate Expiry | Installed certificates nearing expiry (30 / 90 / 180-day thresholds) |
 | Auth Providers & External IdPs | External Auth Providers and SAML SSO configs; flags social/JIT providers that can federate in or auto-provision users |
 | Session & Clickjack Hardening | Clickjack, CSRF, XSS, and content-sniffing settings read authoritatively from SecuritySettings (Health Check cache fallback) with per-setting remediation |
-| OAuth Device & Password Flows | OAuth 2.0 Device Flow and Username-Password Flow enabled in org settings or connected apps; phishable device code flows and SSO/MFA bypass paths |
+| OAuth Device & Password Flows | OAuth 2.0 Device Flow and Username-Password Flow enabled in OAuth and OpenID Connect Settings, with an advisory when the settings cannot be read; phishable device code flows and SSO/MFA bypass paths |
 | Delegated Authentication Exposure | Delegated Authentication enabled over unencrypted/non-mTLS endpoints or assigned to System Administrator profiles |
 | Auth.Provider Registration Handler Security | Auth.Provider RegistrationHandler running as System Administrator with email-based user account linking vulnerable to pre-auth takeover |
 
@@ -115,7 +115,7 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 | Inbound Email Handler Unauthenticated Execution | Inbound email services accepting messages without sender filtering or executing Apex as an unauthenticated external foothold |
 | Org-Wide Email Spoofing & DKIM Coverage | Org-Wide Email Addresses available to all profiles without SPF/DKIM verification alignment |
 | Installed Packages | Managed/unmanaged package inventory; unmanaged or beta packages in production |
-| Package Post-Install Supply Chain Risk | Installed packages with active PostInstallScript handlers running in privileged context and unmonitored updates |
+| Package Post-Install Supply Chain Risk | Packaged Apex implementing InstallHandler, which runs in system context on every install and push upgrade; managed namespaces whose source is hidden are listed as an advisory |
 | Deployment Identity | Designated deployment identity and uncontrolled deployment activity |
 
 ## Secrets & Credential Storage

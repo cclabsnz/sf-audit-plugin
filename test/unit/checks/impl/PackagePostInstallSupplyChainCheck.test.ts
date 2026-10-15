@@ -2,24 +2,15 @@ import { jest } from '@jest/globals';
 import { PackagePostInstallSupplyChainCheck } from '../../../../src/checks/impl/PackagePostInstallSupplyChainCheck.js';
 import type { AuditContext } from '@cclabsnz/sf-core';
 
-function makeCtx(toolingData: Record<string, unknown[] | Error>, soqlData: Record<string, unknown[] | Error>): AuditContext {
+// Managed-package Apex comes back with Body = '(hidden)'; only unlocked/unmanaged namespaced
+// code is readable. Mocks follow that, so a test cannot pass on source the org would never return.
+function makeCtx(tooling: Record<string, unknown[] | Error>): AuditContext {
   return {
-    soql: {
-      queryAll: (jest.fn() as any).mockImplementation((q: string) => {
-        for (const [key, res] of Object.entries(soqlData)) {
-          if (q.includes(key)) {
-            return res instanceof Error ? Promise.reject(res) : Promise.resolve(res);
-          }
-        }
-        return Promise.resolve([]);
-      }),
-    } as any,
+    soql: { queryAll: (jest.fn() as any).mockResolvedValue([]) } as any,
     tooling: {
       query: (jest.fn() as any).mockImplementation((q: string) => {
-        for (const [key, res] of Object.entries(toolingData)) {
-          if (q.includes(key)) {
-            return res instanceof Error ? Promise.reject(res) : Promise.resolve(res);
-          }
+        for (const [key, res] of Object.entries(tooling)) {
+          if (q.includes(key)) return res instanceof Error ? Promise.reject(res) : Promise.resolve(res);
         }
         return Promise.resolve([]);
       }),
@@ -37,35 +28,64 @@ function makeCtx(toolingData: Record<string, unknown[] | Error>, soqlData: Recor
   } as any;
 }
 
+const pkg = [{ Id: '0A3a', SubscriberPackageId: '033a' }];
+
 describe('PackagePostInstallSupplyChainCheck', () => {
   const check = new PackagePostInstallSupplyChainCheck();
 
-  it('passes when no installed packages exist', async () => {
-    const ctx = makeCtx({ InstalledSubscriberPackage: [] }, {});
-    const r = await check.run(ctx);
-    expect(r.findings).toHaveLength(1);
-    expect(r.findings[0].id).toBe('package-post-install-ok');
-    expect(r.findings[0].passed).toBe(true);
+  it('passes when no packages are installed', async () => {
+    const r = await check.run(makeCtx({ InstalledSubscriberPackage: [] }));
+    expect(r.findings.map((f) => f.id)).toEqual(['package-post-install-ok']);
   });
 
-  it('flags managed packages with namespaced classes and external callouts', async () => {
-    const ctx = makeCtx(
-      {
-        InstalledSubscriberPackage: [{ Id: '0331', SubscriberPackageId: '04t1' }],
-        ApexClass: [{ Id: '01pPkgClass', Name: 'PostInstall', NamespacePrefix: 'vendor_ns' }],
-      },
-      {
-        RemoteProxy: [{ Id: '0rp1', EndpointUrl: 'https://api.vendor.com' }],
-        CspTrustedSite: [{ Id: '0cs1', EndpointUrl: 'https://cdn.vendor.com' }],
-      }
+  it('does not report post-install scripts for readable package code that has none', async () => {
+    const r = await check.run(
+      makeCtx({
+        InstalledSubscriberPackage: pkg,
+        ApexClass: [{ Id: '01p1', Name: 'Util', NamespacePrefix: 'acme', Body: 'public class Util { }' }],
+      }),
     );
-    const r = await check.run(ctx);
-    const scriptFinding = r.findings.find((x) => x.id === 'package-post-install-system-script');
-    expect(scriptFinding).toBeDefined();
-    expect(scriptFinding?.riskLevel).toBe('MEDIUM');
+    expect(r.findings.map((f) => f.id)).toEqual(['package-post-install-ok']);
+  });
 
-    const calloutFinding = r.findings.find((x) => x.id === 'package-post-install-callout-registered');
-    expect(calloutFinding).toBeDefined();
-    expect(calloutFinding?.riskLevel).toBe('MEDIUM');
+  it('flags a readable class that implements InstallHandler', async () => {
+    const r = await check.run(
+      makeCtx({
+        InstalledSubscriberPackage: pkg,
+        ApexClass: [
+          { Id: '01p2', Name: 'PostInstall', NamespacePrefix: 'acme', Body: 'global class PostInstall implements Database.Batchable<SObject>, InstallHandler {' },
+          { Id: '01p3', Name: 'Other', NamespacePrefix: 'acme', Body: 'public class Other { InstallHandler h; }' },
+        ],
+      }),
+    );
+    const f = r.findings.find((x) => x.id === 'package-post-install-system-script');
+    expect(f?.affectedItems?.map((i) => i.label)).toEqual(['acme.PostInstall']);
+  });
+
+  it('reports hidden managed code as an unverifiable advisory, never as a post-install script', async () => {
+    const r = await check.run(
+      makeCtx({
+        InstalledSubscriberPackage: pkg,
+        ApexClass: [
+          { Id: '01p4', Name: 'A', NamespacePrefix: 'vend', Body: '(hidden)' },
+          { Id: '01p5', Name: 'B', NamespacePrefix: 'vend', Body: '(hidden)' },
+        ],
+      }),
+    );
+    expect(r.findings.map((f) => f.id)).toEqual(['package-post-install-unverifiable']);
+    expect(r.findings[0].riskLevel).toBe('INFO');
+    expect(r.findings[0].affectedItems).toHaveLength(1);
+  });
+
+  it('propagates a permission error on ApexClass instead of passing', async () => {
+    await expect(
+      check.run(makeCtx({ InstalledSubscriberPackage: pkg, ApexClass: new Error('INSUFFICIENT_ACCESS') })),
+    ).rejects.toThrow('INSUFFICIENT_ACCESS');
+  });
+
+  it('propagates a permission error on InstalledSubscriberPackage instead of passing', async () => {
+    await expect(check.run(makeCtx({ InstalledSubscriberPackage: new Error('INSUFFICIENT_ACCESS') }))).rejects.toThrow(
+      'INSUFFICIENT_ACCESS',
+    );
   });
 });
