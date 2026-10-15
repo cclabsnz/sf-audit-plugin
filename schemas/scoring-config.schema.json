@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cclabsnz/sf-audit-plugin/main/schemas/scoring-config.schema.json",
+  "title": "ScoringConfig",
+  "description": "Configuration schema for custom check weights, risk scores, and grade thresholds in @cclabsnz/sf-audit.",
+  "$comment": "Mirrors scoringConfigSchema in src/findings/ScoringConfig.ts (a unit test keeps them in agreement). The loader also requires grade thresholds to be ordered after merging with defaults (A at least as strict as B, and so on), which JSON Schema cannot express.",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "_comment": { "type": "string" },
+    "riskScores": {
+      "type": "object",
+      "required": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"],
+      "additionalProperties": false,
+      "properties": {
+        "CRITICAL": { "type": "integer", "minimum": 0 },
+        "HIGH": { "type": "integer", "minimum": 0 },
+        "MEDIUM": { "type": "integer", "minimum": 0 },
+        "LOW": { "type": "integer", "minimum": 0 },
+        "INFO": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "checkWeights": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "gradeThresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "A": { "$ref": "#/$defs/gradeConditions" },
+        "B": { "$ref": "#/$defs/gradeConditions" },
+        "C": { "$ref": "#/$defs/gradeConditions" },
+        "D": { "$ref": "#/$defs/gradeConditions" },
+        "F": { "$ref": "#/$defs/gradeConditions" }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "gradeConditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "maxCritical": { "type": "integer", "minimum": 0 },
+        "maxHigh": { "type": "integer", "minimum": 0 },
+        "maxMedium": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
