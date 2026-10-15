@@ -1,6 +1,6 @@
 // src/incident/render/evidence.ts
-import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { secureFs } from '@cclabsnz/sf-core';
 import { csvLine } from '../csv.js';
 import type { IncidentResult } from '../analyse/index.js';
 import { NOT_COLLECTED, auraCollectedDays, coveredDays } from './labels.js';
@@ -48,10 +48,10 @@ export function buildEvidence(r: IncidentResult): { tables: EvidenceTable[]; ref
 const neutralise = (c: string): string => (/^[=+\-@\t\r]/.test(c) ? `'${c}` : c);
 
 export function writeEvidence(dir: string, tables: EvidenceTable[]): string[] {
-  mkdirSync(join(dir, 'evidence'), { recursive: true });
+  secureFs.mkdirSync(join(dir, 'evidence'), { recursive: true });
   return tables.map((t) => {
     const p = join(dir, 'evidence', `${t.id}.csv`);
-    writeFileSync(p, csvLine(t.columns.map(neutralise)) + t.rows.map((row) => csvLine(row.map(neutralise))).join(''));
+    secureFs.writeFileSync(p, csvLine(t.columns.map(neutralise)) + t.rows.map((row) => csvLine(row.map(neutralise))).join(''));
     return p;
   });
 }

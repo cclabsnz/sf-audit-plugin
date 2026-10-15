@@ -1,7 +1,7 @@
 import type { AuditResult } from '../findings/AuditResult.js';
 import type { OrgMetrics } from '@cclabsnz/sf-core';
 import type { AuditRenderer } from './AuditRenderer.js';
-import { esc, firaFontFaceCss } from '@cclabsnz/sf-core';
+import { esc, firaFontFaceCss, INTERACTIVE_CSP_META } from '@cclabsnz/sf-core';
 
 const RISK_COLORS: Record<string, string> = {
   CRITICAL: '#dc2626',
@@ -193,19 +193,17 @@ export class HtmlRenderer implements AuditRenderer {
 
   private renderAttackPaths(result: AuditResult): string {
     if (!result.attackChains || result.attackChains.length === 0) return '';
-    const escStr = (s: string): string =>
-      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const cards = result.attackChains
       .map((c) => {
         const conf = c.confidence === 'named' ? '' : ' (potential)';
         const steps = c.steps
-          .map((s) => `<li><strong>${escStr(s.title ?? s.findingId)}</strong> (${escStr(s.severity ?? '—')}): grants <code>${escStr(s.capability)}</code></li>`)
+          .map((s) => `<li><strong>${esc(s.title ?? s.findingId)}</strong> (${esc(s.severity ?? '—')}): grants <code>${esc(s.capability)}</code></li>`)
           .join('');
         return `<div class="attack-chain severity-${c.severity.toLowerCase()}">
-  <h3>[${escStr(c.severity)}] ${escStr(c.title)}${conf}</h3>
-  <p>${escStr(c.narrative)}</p>
+  <h3>[${esc(c.severity)}] ${esc(c.title)}${conf}</h3>
+  <p>${esc(c.narrative)}</p>
   <ol>${steps}</ol>
-  <p class="remediation"><strong>Remediation:</strong> ${escStr(c.remediation)}</p>
+  <p class="remediation"><strong>Remediation:</strong> ${esc(c.remediation)}</p>
 </div>`;
       })
       .join('\n');
@@ -283,6 +281,7 @@ export class HtmlRenderer implements AuditRenderer {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+${INTERACTIVE_CSP_META}
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SF Security Audit: ${esc(result.orgName)}</title>
 <style>

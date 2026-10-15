@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
-import { createReadStream, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, renameSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { secureFs } from '@cclabsnz/sf-core';
 import { readCsvRecords } from './csv.js';
 import type { AnomalyEvent, AuditRow, BundleManifest, FollowUp, LoginDayCount, LogType } from './model.js';
 
@@ -23,9 +24,9 @@ export async function sha256File(path: string): Promise<string> {
 }
 
 export function writeJsonAtomic(path: string, value: unknown): void {
-  mkdirSync(dirname(path), { recursive: true });
+  secureFs.mkdirSync(dirname(path), { recursive: true });
   const part = `${path}.part`;
-  writeFileSync(part, JSON.stringify(value, null, 2));
+  secureFs.writeFileSync(part, JSON.stringify(value, null, 2));
   renameSync(part, path);
 }
 

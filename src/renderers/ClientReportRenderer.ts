@@ -3,7 +3,7 @@ import type { Finding } from '../findings/Finding.js';
 import type { RiskLevel } from '@cclabsnz/sf-core';
 import type { AuditRenderer } from './AuditRenderer.js';
 import type { Branding } from '@cclabsnz/sf-core';
-import { esc } from '@cclabsnz/sf-core';
+import { esc, STRICT_CSP_META } from '@cclabsnz/sf-core';
 import { fontFaceCss } from '@cclabsnz/sf-core';
 import { getCheckMeta } from '../findings/CheckMeta.js';
 import { toolCreditHtml } from './toolCredit.js';
@@ -61,7 +61,7 @@ export class ClientReportRenderer implements AuditRenderer {
     ].join('\n');
 
     return `<!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><title>Security Audit: ${esc(result.orgName)}</title>
+<html lang="en"><head><meta charset="utf-8">${STRICT_CSP_META}<title>Security Audit: ${esc(result.orgName)}</title>
 <style>${fontFaceCss()}
 :root{--ink:${b.ink};--bg:${b.bg};--bgalt:${b.bgAlt};--muted:${b.muted};--border:${b.border};--primary:${b.primary};
 --display:'${b.fontDisplay}',Georgia,serif;--body:'${b.fontBody}',system-ui,sans-serif;--mono:ui-monospace,'SF Mono',Menlo,monospace;}

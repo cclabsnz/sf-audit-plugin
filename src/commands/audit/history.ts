@@ -60,8 +60,8 @@ export default class AuditHistoryCommand extends SfCommand<AuditResult[]> {
 
     const filename   = `sf-audit-history-${orgId}-${Date.now()}.html`;
     const outputPath = path.join(flags.output, filename);
-    fs.mkdirSync(flags.output, { recursive: true });
-    fs.writeFileSync(outputPath, renderer.renderHtml(results), 'utf-8');
+    fs.mkdirSync(flags.output, { recursive: true }); // invariant:allow — user-facing report output destination
+    fs.writeFileSync(outputPath, renderer.renderHtml(results), 'utf-8'); // invariant:allow — user-facing report output destination
     this.log(`\nHistory report written: ${outputPath}`);
 
     return results;

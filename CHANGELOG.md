@@ -11,6 +11,18 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 Merged to `main`, not yet released.
 
+### Security
+
+- Local stores that hold org data (`~/.sf/audit-history`, incident bundles, evidence CSVs,
+  guest-log staging) are now created owner-only: directories 0700, files 0600, through
+  `secureFs` from `@cclabsnz/sf-core`. An existing history root is tightened on first use.
+  Report files written to a user-chosen `--output` directory keep that directory's permissions.
+- Every HTML report now carries a Content-Security-Policy that forbids all network requests:
+  the executive report allows no script at all, and the interactive reports allow inline script
+  only. Values in the history report that are read back from disk (grade, score, dates) are
+  escaped or coerced, so a tampered history file cannot inject markup or script.
+- Requires `@cclabsnz/sf-core` 0.10.0.
+
 ## [v1.16.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.16.0) — 2026-10-09
 
 The AI & Agents checks now run on real orgs: since 1.6.0 they had been silent everywhere, because the agent inventory asked the Tooling API for objects only the data API serves. This release fixes that, and adds two checks and a named chain for the SalesBleed and PipeLeak pattern, all verified against a live Agentforce agent.

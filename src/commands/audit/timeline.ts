@@ -167,14 +167,15 @@ export default class AuditTimelineCommand extends SfCommand<TimelineResult> {
     };
 
     const formats = new Set(flags.format.split(',').map((f) => f.trim().toLowerCase()).filter(Boolean));
-    fs.mkdirSync(flags.output, { recursive: true });
+    fs.mkdirSync(flags.output, { recursive: true }); // invariant:allow — user-facing report output destination
 
     const written: string[] = [];
     const write = (name: string, body: string): void => {
       const target = path.join(flags.output, name);
-      fs.writeFileSync(target, body, 'utf-8');
+      fs.writeFileSync(target, body, 'utf-8'); // invariant:allow — user-facing report output destination
       written.push(target);
     };
+
 
     if (formats.has('csv')) write('timeline.csv', renderCsv(output));
     if (formats.has('json')) write('timeline.json', renderJson(output));

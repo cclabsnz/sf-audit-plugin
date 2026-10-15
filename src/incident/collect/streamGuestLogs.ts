@@ -1,7 +1,7 @@
 // src/incident/collect/streamGuestLogs.ts
-import { mkdirSync, rmSync, renameSync, statfsSync } from 'node:fs';
+import { rmSync, renameSync, statfsSync } from 'node:fs';
 import { join } from 'node:path';
-import type { RestClient, SoqlClient } from '@cclabsnz/sf-core';
+import { secureFs, type RestClient, type SoqlClient } from '@cclabsnz/sf-core';
 import { degrades } from './orgErrors.js';
 import { filterLogFile, MissingColumnsError } from '../csv.js';
 import { logPath } from '../bundleIo.js';
@@ -60,7 +60,7 @@ export async function streamGuestLogs(
   const tmp = join(bundleDir, '.tmp');
   // A killed earlier run can leave raw, unfiltered logs here, which contain non-guest data.
   rmSync(tmp, { recursive: true, force: true });
-  mkdirSync(tmp, { recursive: true });
+  secureFs.mkdirSync(tmp, { recursive: true });
   for (const day of days) {
     for (const type of LOG_TYPES) {
       const prior = reuse(type, day);

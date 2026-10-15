@@ -118,7 +118,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
       this.log(`[${String(current).padStart(2)}/${total}] ${checkName}`);
     });
 
-    fs.mkdirSync(flags.output, { recursive: true });
+    fs.mkdirSync(flags.output, { recursive: true }); // invariant:allow — user-facing report output destination
     for (const format of formats) {
       const renderer = this.rendererFor(format, flags);
       if (!renderer) continue; // unreachable: formats validated up front
@@ -126,7 +126,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
       const prefix = renderer.filenamePrefix ?? 'sf-audit';
       const filename = `${prefix}-${orgInfo.id}-${Date.now()}${renderer.fileExtension}`;
       const outputPath = path.join(flags.output, filename);
-      fs.writeFileSync(outputPath, output, 'utf-8');
+      fs.writeFileSync(outputPath, output, 'utf-8'); // invariant:allow — user-facing report output destination
       this.log(`\nReport written: ${outputPath}`);
     }
 

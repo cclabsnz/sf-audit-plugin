@@ -64,15 +64,16 @@ export default class AuditDiffCommand extends SfCommand<AuditDiff> {
     const baseTs  = baseline.generatedAt.getTime();
     const curTs   = current.generatedAt.getTime();
 
-    fs.mkdirSync(flags.output, { recursive: true });
+    fs.mkdirSync(flags.output, { recursive: true }); // invariant:allow — user-facing report output destination
     for (const format of formats) {
       const renderer = DIFF_RENDERERS[format];
       if (!renderer) continue; // unreachable: validated above
       const filename   = `sf-audit-diff-${baseline.orgId}-${baseTs}-vs-${curTs}${renderer.fileExtension}`;
       const outputPath = path.join(flags.output, filename);
-      fs.writeFileSync(outputPath, renderer.render(diff), 'utf-8');
+      fs.writeFileSync(outputPath, renderer.render(diff), 'utf-8'); // invariant:allow — user-facing report output destination
       this.log(`Diff report written: ${outputPath}`);
     }
+
 
     const scoreDeltaStr  = diff.scoreDelta >= 0 ? `+${diff.scoreDelta}` : `${diff.scoreDelta}`;
     const newCount       = diff.findingChanges.filter((c) => c.type === 'new').length;

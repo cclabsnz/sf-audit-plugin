@@ -1,5 +1,4 @@
-// src/incident/render/html.ts
-import { esc, fontFaceCss, type Branding } from '@cclabsnz/sf-core';
+import { esc, fontFaceCss, INTERACTIVE_CSP_META, type Branding } from '@cclabsnz/sf-core';
 import { chartJsScript } from '../../renderers/chartAsset.js';
 import { toolCreditHtml } from '../../renderers/toolCredit.js';
 import type { IncidentResult } from '../analyse/index.js';
@@ -66,7 +65,7 @@ export function renderHtml(r: IncidentResult, ev: Ev, b: Branding): string {
   const sec = (num: string, title: string): string => `<div class="sh"><span class="sec-num">${num} /</span><h2>${title}</h2></div>`;
 
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Guest-access incident report: ${esc(r.orgName)}</title>
+<html lang="en"><head><meta charset="utf-8">${INTERACTIVE_CSP_META}<meta name="viewport" content="width=device-width,initial-scale=1"><title>Guest-access incident report: ${esc(r.orgName)}</title>
 <style>${fontFaceCss()}
 :root{--ink:${b.ink};--bg:${b.bg};--bgalt:${b.bgAlt};--muted:${b.muted};--border:${b.border};--primary:${b.primary};
 --display:'${b.fontDisplay}',Georgia,serif;--body:'${b.fontBody}',system-ui,sans-serif;--mono:ui-monospace,'SF Mono',Menlo,monospace;
