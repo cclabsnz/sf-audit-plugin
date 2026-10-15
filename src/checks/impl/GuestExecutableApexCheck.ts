@@ -2,7 +2,7 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 import { ApexRepository } from '@cclabsnz/sf-core';
-import { declaresWithoutSharing, sharingKeyword, usesSystemMode } from '../support/apexAccess.js';
+import { declaresWithoutSharing, effectiveSharing, parentClass, usesSystemMode } from '../support/apexAccess.js';
 
 interface GuestUser { Id: string; ProfileId: string; Username: string; }
 interface SetupAccess { SetupEntityId: string; ParentId: string; }
@@ -19,7 +19,9 @@ function referencedClasses(symbolTable: unknown): string[] {
   return refs
     .filter((r) => !(typeof r?.namespace === 'string' && r.namespace !== ''))
     .map((r) => r?.name)
-    .filter((n): n is string => typeof n === 'string' && n !== '');
+    .filter((n): n is string => typeof n === 'string' && n !== '')
+    // An inner class is referenced as Outer.Inner; its code lives in the outer class's body.
+    .map((n) => n.split('.')[0]);
 }
 
 export class GuestExecutableApexCheck implements SecurityCheck {
@@ -87,9 +89,17 @@ export class GuestExecutableApexCheck implements SecurityCheck {
      * without sharing, at any depth, runs its own code without sharing (spec RULE-004), and SYSTEM_MODE
      * anywhere on the path lifts CRUD/FLS for the guest (RULE-003).
      */
+    const bodyOf = (n: string) => byName.get(n.toLowerCase())?.body;
+    // A class reaches what its SymbolTable references, and the class it extends: inherited methods
+    // run with the parent's own sharing.
+    const neighbours = (n: string): string[] => {
+      const entry = byName.get(n.toLowerCase());
+      const parent = entry?.body ? parentClass(n, entry.body) : undefined;
+      return [...referencedClasses(entry?.symbolTable), ...(parent ? [parent] : [])];
+    };
     const reach = (start: string): { withoutSharing?: string; systemMode?: string } => {
       const seen = new Set([start.toLowerCase()]);
-      const queue = referencedClasses(byName.get(start.toLowerCase())?.symbolTable);
+      const queue = neighbours(start);
       let systemModeAt: string | undefined;
       while (queue.length > 0) {
         const ref = queue.shift()!;
@@ -99,7 +109,7 @@ export class GuestExecutableApexCheck implements SecurityCheck {
         if (!helper?.body) continue;
         if (declaresWithoutSharing(helper.body)) return { withoutSharing: helper.name };
         if (!systemModeAt && usesSystemMode(helper.body)) systemModeAt = helper.name;
-        queue.push(...referencedClasses(helper.symbolTable));
+        queue.push(...neighbours(helper.name));
       }
       return { systemMode: systemModeAt };
     };
@@ -115,7 +125,8 @@ export class GuestExecutableApexCheck implements SecurityCheck {
       const name = nameById.get(id) ?? id;
       const entry = byName.get(name.toLowerCase());
       const body = entry?.body;
-      const keyword = body ? sharingKeyword(name, body) : null;
+      // A class with no keyword takes the sharing of the class it extends (spec MN-001).
+      const keyword = body ? effectiveSharing(name, body, bodyOf) : null;
 
       if (keyword === 'without' || (keyword !== null && body && declaresWithoutSharing(body))) {
         unprotected.push({

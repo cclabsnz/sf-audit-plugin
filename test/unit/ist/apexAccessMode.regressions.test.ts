@@ -150,4 +150,69 @@ describe('verifier regressions', () => {
     expect(lists(r, 'apex-crud-fls-missing', 'A')).toBe(true);
     expect(lists(r, 'apex-crud-fls-system-mode', 'B')).toBe(false);
   });
+
+  describe('round 2', () => {
+    it.each([
+      ['inline SOSL', "public with sharing class S { void go() { List<List<SObject>> r = [FIND 'x' IN ALL FIELDS RETURNING Account WITH SYSTEM_MODE]; } }"],
+      ['Search.query', "public with sharing class S { void go(String q) { Search.query(q, AccessLevel.SYSTEM_MODE); } }"],
+      ['undelete as system', 'public with sharing class S { void go(List<Account> a) { undelete as system a; } }'],
+      ['Database.getCursor', "public with sharing class S { void go(String q) { Database.getCursor(q, AccessLevel.SYSTEM_MODE); } }"],
+    ])('RULE-002: SYSTEM_MODE via %s is listed', async (_label, body) => {
+      expect(lists(await crud.run(bodiesCtx([{ name: 'S', body }])), 'apex-crud-fls-system-mode', 'S')).toBe(true);
+    });
+
+    it('RULE-002: a class requesting SYSTEM_MODE from its own selector is listed though it holds no SOQL itself', async () => {
+      const body = 'public with sharing class Svc { List<Account> go(Set<Id> ids) { return AccountSelector.byIds(ids, AccessLevel.SYSTEM_MODE); } }';
+      expect(lists(await crud.run(bodiesCtx([{ name: 'Svc', body }])), 'apex-crud-fls-system-mode', 'Svc')).toBe(true);
+    });
+
+    it('RULE-002: USER_MODE inside a string literal enforces nothing', async () => {
+      const body = "public with sharing class Dbg { List<Account> go() { System.debug('remember WITH USER_MODE'); return [SELECT Id FROM Account]; } }";
+      expect(lists(await crud.run(bodiesCtx([{ name: 'Dbg', body }])), 'apex-crud-fls-missing', 'Dbg')).toBe(true);
+    });
+
+    it('RULE-001: a keywordless class extending a with-sharing base is not a sharing bypass', async () => {
+      const r = await sharing.run(bodiesCtx([
+        { name: 'Base', body: 'public virtual with sharing class Base { }' },
+        { name: 'Child', body: 'public class Child extends Base {\n  @AuraEnabled public static void go() {}\n}' },
+      ]));
+      expect(lists(r, 'portal-exposed-apex-without-sharing', 'Child')).toBe(false);
+      const g = await guest.run(guestCtx(['Child'], [
+        { name: 'Base', body: 'public virtual with sharing class Base { }' },
+        { name: 'Child', body: 'public class Child extends Base { }' },
+      ]));
+      expect(lists(g, 'guest-executable-apex-unprotected', 'Child')).toBe(false);
+    });
+
+    it('RULE-001: a keywordless class extending a without-sharing base is still a sharing bypass', async () => {
+      const g = await guest.run(guestCtx(['Child'], [
+        { name: 'Base', body: 'public virtual without sharing class Base { }' },
+        { name: 'Child', body: 'public class Child extends Base { }' },
+      ]));
+      expect(lists(g, 'guest-executable-apex-unprotected', 'Child')).toBe(true);
+    });
+
+    it('RULE-004: a with-sharing guest class extending a without-sharing base is unprotected', async () => {
+      const g = await guest.run(guestCtx(['Child'], [
+        { name: 'Base', body: 'public virtual without sharing class Base { }' },
+        { name: 'Child', body: 'public with sharing class Child extends Base { }' },
+      ]));
+      expect(textOf(byId(g, 'guest-executable-apex-unprotected'))).toContain('Base');
+    });
+
+    it('RULE-004: a reference to Outer.Inner resolves to the outer class body', async () => {
+      const g = await guest.run(guestCtx(['Facade'], [
+        { name: 'Facade', body: 'public with sharing class Facade { }', symbolTable: { externalReferences: [ref('Outer.Worker')] } },
+        { name: 'Outer', body: 'public with sharing class Outer {\n  public without sharing class Worker { }\n}' },
+      ]));
+      expect(lists(g, 'guest-executable-apex-unprotected', 'Facade')).toBe(true);
+    });
+
+    it('stays fast on a long run of words with no class declaration', () => {
+      const body = 'public with sharing class Big {\n' + 'word '.repeat(80_000) + '\n}';
+      const t = Date.now();
+      return sharing.run(bodiesCtx([{ name: 'Big', body }])).then(() => expect(Date.now() - t).toBeLessThan(2_000));
+    });
+  });
 });
+

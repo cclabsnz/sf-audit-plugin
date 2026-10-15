@@ -1,12 +1,13 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import { testApexPattern } from '@cclabsnz/sf-core';
-import { apexCode, DML_AS_USER, usesSystemMode } from '../support/apexAccess.js';
+import { apexCode, codeWithoutStrings, DML_AS_USER, usesSystemMode } from '../support/apexAccess.js';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
 // Patterns that indicate DML or inline SOQL is being performed
-const HAS_DML = /\b(?:insert|update|delete|upsert|merge)\s+\w+|Database\.(?:insert|update|delete|upsert|merge)\s*\(/i;
-const HAS_SOQL = /\[\s*SELECT\b|Database\.(?:query|queryWithBinds|countQuery|countQueryWithBinds|getQueryLocator|getQueryLocatorWithBinds)\s*\(/i;
+const HAS_DML = /\b(?:insert|update|delete|upsert|undelete|merge)\s+\w+|Database\.(?:insert|update|delete|upsert|undelete|merge)\w*\s*\(/i;
+// SOQL and SOSL, inline or dynamic.
+const HAS_SOQL = /\[\s*(?:SELECT|FIND)\b|Database\.(?:query|queryWithBinds|countQuery|countQueryWithBinds|getQueryLocator|getQueryLocatorWithBinds|getCursor|getCursorWithBinds)\s*\(|\bSearch\.(?:query|find)\s*\(/i;
 
 // Patterns that indicate FLS/CRUD is being checked or enforced
 // USER_MODE enforces CRUD/FLS (and sharing) on the query or DML it is attached to.
@@ -59,18 +60,22 @@ export class ApexCrudFLSCheck implements SecurityCheck {
       // Patterns are matched against code only: "WITH USER_MODE" in a comment enforces nothing.
       const body = apexCode(raw);
 
-      const hasDml = testApexPattern(body, HAS_DML);
-      const hasSoql = testApexPattern(body, HAS_SOQL);
-      if (!hasDml && !hasSoql) continue;
-
+      // SYSTEM_MODE only ever qualifies a query or DML, so it is reported before, and regardless
+      // of, the pattern gate below: a form that gate does not know must not slip through (RULE-002).
       if (usesSystemMode(raw)) {
         systemMode.push({ name, withoutSharing: testApexPattern(body, WITHOUT_SHARING) });
         continue;
       }
 
+      const hasDml = testApexPattern(body, HAS_DML);
+      const hasSoql = testApexPattern(body, HAS_SOQL);
+      if (!hasDml && !hasSoql) continue;
+
       if (testApexPattern(body, IS_BATCH_OR_SCHEDULED)) continue;
 
-      const hasFls = testApexPattern(body, HAS_FLS) || testApexPattern(body, DML_AS_USER);
+      // Enforcement must be code, not text: 'WITH USER_MODE' inside a debug string enforces nothing.
+      const enforcementCode = codeWithoutStrings(raw);
+      const hasFls = testApexPattern(enforcementCode, HAS_FLS) || testApexPattern(enforcementCode, DML_AS_USER);
       if (hasFls) continue;
 
       if (testApexPattern(body, WITHOUT_SHARING)) {

@@ -42,12 +42,46 @@ export function apexCode(body: string): string {
   return out;
 }
 
-/** The code with string literals blanked, for matching declarations that must not hide in text. */
-function codeWithoutStrings(body: string): string {
+/** The code with string literals blanked, for matching declarations and enforcement that must not hide in text. */
+export function codeWithoutStrings(body: string): string {
   return apexCode(body).replace(/'(?:[^'\\\n]|\\.)*'/g, "''");
 }
 
-const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+interface ClassDeclaration {
+  name: string;
+  /** The modifiers before `class`, from the previous statement or block boundary. */
+  modifiers: string;
+  /** The parent class named by `extends`, if any. */
+  parent?: string;
+}
+
+/**
+ * Every class declared in the body, outer and inner, found with literal patterns in one linear
+ * pass (a regex built around the name backtracked badly on long runs of words).
+ */
+export function classDeclarations(body: string): ClassDeclaration[] {
+  const code = codeWithoutStrings(body);
+  const out: ClassDeclaration[] = [];
+  const decl = /\bclass\s+(\w+)/gi;
+  for (let m = decl.exec(code); m !== null; m = decl.exec(code)) {
+    const start = Math.max(code.lastIndexOf(';', m.index), code.lastIndexOf('{', m.index), code.lastIndexOf('}', m.index)) + 1;
+    const end = code.indexOf('{', m.index);
+    const header = code.slice(m.index, end === -1 ? code.length : end);
+    out.push({
+      name: m[1],
+      modifiers: code.slice(start, m.index).toLowerCase(),
+      parent: /\bextends\s+([\w.]+)/i.exec(header)?.[1],
+    });
+  }
+  return out;
+}
+
+function keywordOf(modifiers: string): SharingKeyword {
+  if (/\bwithout\s+sharing\b/.test(modifiers)) return 'without';
+  if (/\binherited\s+sharing\b/.test(modifiers)) return 'inherited';
+  if (/\bwith\s+sharing\b/.test(modifiers)) return 'with';
+  return 'none';
+}
 
 /**
  * The sharing keyword on the declaration of `className` itself, or null when the body declares no
@@ -55,15 +89,38 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
  * keyword (`public virtual without sharing class`, `global with sharing virtual class`).
  */
 export function sharingKeyword(className: string, body: string): SharingKeyword | null {
-  const code = codeWithoutStrings(body);
-  const decl = new RegExp(`((?:\\b\\w+\\s+)*?)class\\s+${escapeRe(className)}\\b`, 'i');
-  const m = decl.exec(code);
-  if (!m) return null;
-  const modifiers = m[1].toLowerCase();
-  if (/\bwithout\s+sharing\b/.test(modifiers)) return 'without';
-  if (/\binherited\s+sharing\b/.test(modifiers)) return 'inherited';
-  if (/\bwith\s+sharing\b/.test(modifiers)) return 'with';
-  return 'none';
+  const target = className.toLowerCase();
+  const own = classDeclarations(body).find((d) => d.name.toLowerCase() === target);
+  return own ? keywordOf(own.modifiers) : null;
+}
+
+/** The class `className` extends, as written in its declaration (namespace and outer class stripped). */
+export function parentClass(className: string, body: string): string | undefined {
+  const target = className.toLowerCase();
+  const parent = classDeclarations(body).find((d) => d.name.toLowerCase() === target)?.parent;
+  return parent?.split('.').pop();
+}
+
+/**
+ * The sharing a class actually runs with. A class with no keyword takes its parent's when it
+ * extends one: Apex classes inherit the sharing setting of the class they extend (spec MN-001).
+ * `lookup` returns a class body by name; unknown parents leave the keyword as declared.
+ */
+export function effectiveSharing(className: string, body: string, lookup: (name: string) => string | undefined): SharingKeyword | null {
+  let name = className;
+  let current = body;
+  const seen = new Set<string>();
+  for (;;) {
+    const keyword = sharingKeyword(name, current);
+    if (keyword !== 'none') return keyword;
+    const parent = parentClass(name, current);
+    if (!parent || seen.has(parent.toLowerCase())) return keyword;
+    seen.add(parent.toLowerCase());
+    const parentBody = lookup(parent);
+    if (parentBody === undefined) return keyword;
+    name = parent;
+    current = parentBody;
+  }
 }
 
 /** Whether the class's code (not its comments) uses SYSTEM_MODE anywhere. */
@@ -78,7 +135,7 @@ export function usesSystemMode(body: string): boolean {
  * one (spec MN-002).
  */
 export function declaresWithoutSharing(body: string): boolean {
-  return /\bwithout\s+sharing\s+(?:\w+\s+)*?class\b/i.test(codeWithoutStrings(body));
+  return classDeclarations(body).some((d) => keywordOf(d.modifiers) === 'without');
 }
 
 // Data-model access modes on DML: `insert as system rows;` / `update as user rows;`.

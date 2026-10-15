@@ -199,4 +199,20 @@ describe('HardcodedCredentialsCheck', () => {
     expect(q).toMatch(/FROM ApexClass/i);
     expect(q).toMatch(/NamespacePrefix\s*=\s*null/i);
   });
+
+  it('keeps a production class that only mentions @IsTest in a comment in the apexBodies cache (spec MN-002)', async () => {
+    const ctx = makeCtx([
+      apexClass('Helper', 'public without sharing class Helper { // covered by @IsTest HelperTest\n }'),
+      apexClass('HelperTest', '@IsTest private class HelperTest { }'),
+    ]);
+    await check.run(ctx);
+    expect(ctx.cache.apexBodies?.map((b) => b.name)).toEqual(['Helper']);
+  });
+
+  it('carries each class\'s SymbolTable into the apexBodies cache', async () => {
+    const ctx = makeCtx([{ ...(apexClass('Caller', 'public class Caller { }') as object), SymbolTable: { externalReferences: [{ name: 'Helper' }] } }]);
+    await check.run(ctx);
+    expect(ctx.cache.apexBodies?.[0].symbolTable).toEqual({ externalReferences: [{ name: 'Helper' }] });
+  });
 });
+

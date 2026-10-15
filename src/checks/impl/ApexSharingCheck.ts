@@ -2,7 +2,7 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 import { ApexRepository, testApexPattern } from '@cclabsnz/sf-core';
-import { apexCode, sharingKeyword } from '../support/apexAccess.js';
+import { apexCode, effectiveSharing } from '../support/apexAccess.js';
 
 const IS_TEST_CLASS = /@IsTest\b/i;
 // SBS-CPORTAL-001: @AuraEnabled and @RemoteAction expose a class to portal and community users;
@@ -38,6 +38,7 @@ export class ApexSharingCheck implements SecurityCheck {
     const portalExposedWithoutSharing: string[] = [];
     const portalExposedNoDeclaration: string[] = [];
 
+    const bodyByName = new Map(apexBodies.map((b) => [b.name.toLowerCase(), b.body ?? '']));
     for (const apexClass of apexBodies) {
       const body = apexClass.body ?? '';
 
@@ -47,7 +48,8 @@ export class ApexSharingCheck implements SecurityCheck {
 
       // Read from the class's own declaration, not any mention in the body (spec MN-002).
       // SYSTEM_MODE does not enter into it: it bypasses CRUD/FLS, not sharing (spec RULE-001).
-      const declaration = sharingKeyword(apexClass.name, body);
+      // A class with no keyword takes the sharing of the class it extends (spec MN-001).
+      const declaration = effectiveSharing(apexClass.name, body, (n) => bodyByName.get(n.toLowerCase()));
 
       if (declaration === null) continue; // Not a class definition
 
