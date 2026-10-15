@@ -128,8 +128,7 @@ export class GenAiPromptTemplateGroundingCheck implements SecurityCheck {
         `SELECT Id, Name, Body FROM ApexClass WHERE Name IN (${names})`,
       );
       for (const cls of classes) {
-        const decl = new RegExp(`\\bwithout\\s+sharing\\s+(?:\\w+\\s+)*class\\s+${cls.Name}\\b`, 'i');
-        if (decl.test(cls.Body ?? '')) withoutSharingClasses.add(cls.Name.toLowerCase());
+        if (declaredWithoutSharing(cls.Name, cls.Body ?? '')) withoutSharingClasses.add(cls.Name.toLowerCase());
       }
     }
 
@@ -248,3 +247,20 @@ function stringsIn(node: unknown): string[] {
   if (node && typeof node === 'object') return Object.values(node).flatMap(stringsIn);
   return [];
 }
+
+/**
+ * Whether the declaration of `className` in `body` carries `without sharing`. Literal patterns
+ * only, in one linear pass: the name comes from the org, so it never becomes part of a regex.
+ */
+function declaredWithoutSharing(className: string, body: string): boolean {
+  const target = className.toLowerCase();
+  const declaration = /\bclass\s+(\w+)/gi;
+  for (let m = declaration.exec(body); m !== null; m = declaration.exec(body)) {
+    if (m[1].toLowerCase() !== target) continue;
+    // The modifiers sit between the previous statement or block boundary and `class`.
+    const start = Math.max(body.lastIndexOf(';', m.index), body.lastIndexOf('{', m.index), body.lastIndexOf('}', m.index)) + 1;
+    return /\bwithout\s+sharing\b/i.test(body.slice(start, m.index));
+  }
+  return false;
+}
+
