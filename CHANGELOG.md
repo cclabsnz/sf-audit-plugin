@@ -73,6 +73,14 @@ Merged to `main`, not yet released.
   on). Errors name the offending path. A JSON Schema for editors ships as
   `schemas/scoring-config.schema.json`, and `config/scoring.sample.json` now lists every
   registered check.
+### Changed
+
+- `salesbleed-pattern` also fires when the way out is a CSP Trusted URL whose domain is parked
+  or no longer resolves: whoever registers it receives anything an agent puts in a link or image.
+  When the org shows where outsider text enters (an open email handler, guest write access), that
+  finding leads the chain as evidence.
+- The npm description states the current check count, and a test keeps it in step.
+- README documents unattended CI installs and how to check a release's provenance.
 
 ## [v1.16.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.16.0) — 2026-10-09
 

@@ -17,7 +17,7 @@ A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audi
 
 - **109 read-only checks** across identity, access, data, code, integrations, monitoring, and Agentforce / GenAI
 - **Attack-chain correlation:** links individual findings into named, multi-step attack scenarios — nineteen modelled chains, plus an emergent pass for combinations nobody has named yet (see [Attack chains](#attack-chains))
-- **Compliance mapping:** every finding mapped to **source-verified** controls across 10 frameworks (OWASP, OWASP LLM Top 10, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act, HISO 10029, NZISM, HIPAA Security Rule, GDPR)
+- **Compliance mapping:** every finding mapped to **source-verified** controls across 10 frameworks: 8 general baseline frameworks (OWASP Top 10, OWASP LLM Top 10, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act 2020, HISO 10029, NZISM) plus 2 specialized jurisdictional packs (HIPAA Security Rule, GDPR)
 - **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
 - **History & diff:** archives each run and shows security-posture drift over time
 - **Free event baseline:** `sf audit events pull` captures the org's free daily `EventLogFile` logs to local disk before the 1-day retention window drops them — no Event Monitoring / Shield add-on needed
@@ -33,8 +33,37 @@ sf plugins install @cclabsnz/sf-audit
 
 You will be warned that the plugin is not digitally signed. That is expected and says nothing about
 this plugin: Salesforce only accepts signing keys served from `developer.salesforce.com`, so no
-third-party plugin can satisfy it. Answer `y`. For unattended installs, allowlisting and local
-development setup are in **[docs/INSTALL.md](docs/INSTALL.md)**.
+third-party plugin can satisfy it. Answer `y`.
+
+### Unattended installs (CI/CD)
+
+To install in CI/CD without the interactive prompt, add the plugin to the CLI allowlist first (the merge step needs `jq`):
+
+```bash
+mkdir -p ~/.config/sf
+if [ -f ~/.config/sf/unsignedPluginAllowList.json ]; then
+  jq '. + ["@cclabsnz/sf-audit"] | unique' ~/.config/sf/unsignedPluginAllowList.json > ~/.config/sf/unsignedPluginAllowList.json.tmp && mv ~/.config/sf/unsignedPluginAllowList.json.tmp ~/.config/sf/unsignedPluginAllowList.json
+else
+  echo '["@cclabsnz/sf-audit"]' > ~/.config/sf/unsignedPluginAllowList.json
+fi
+
+sf plugins install @cclabsnz/sf-audit
+```
+
+### Verifying provenance
+
+Every release is published from GitHub Actions with a signed npm provenance attestation that
+links the tarball to the commit and workflow run that built it. To check a version before
+installing it:
+
+```bash
+npm view @cclabsnz/sf-audit@<version> dist.attestations.provenance.predicateType
+# https://slsa.dev/provenance/v1
+```
+
+The package page on npmjs.com shows the same attestation, with a link to the build.
+
+Detailed allowlisting and local development setup are in **[docs/INSTALL.md](docs/INSTALL.md)**.
 
 Since "trust us" is a poor answer from a tool that authenticates against your production org, the
 guarantees here are checkable rather than asserted — see [Trust & verification](#trust--verification).
@@ -130,9 +159,9 @@ advisories are INFO and never inflate the health score.
 
 ## Compliance frameworks
 
-Findings map to controls across ten frameworks: OWASP Top 10, OWASP LLM Top 10, SOC 2, ISO/IEC
-27001:2022, the Security Benchmark for Salesforce, the NZ Privacy Act, HISO 10029, NZISM, the HIPAA
-Security Rule, and GDPR.
+Findings map to controls across 10 frameworks organized into 8 source-verified general baselines and 2 specialized jurisdictional packs:
+- **8 General Baselines:** OWASP Top 10 (2021), OWASP LLM Top 10 (2025), SOC 2 (2017 TSC), ISO/IEC 27001:2022, Security Benchmark for Salesforce (SBS), New Zealand Privacy Act 2020, HISO 10029:2022, and NZISM (v3.8).
+- **2 Jurisdictional Packs:** HIPAA Security Rule (45 CFR Part 164 Subpart C) and GDPR (Regulation (EU) 2016/679).
 
 The mapping is built on a **sourced catalog** — each control carries its framework, pinned version,
 official title and a citation — so a finding ties to an exact, defensible requirement rather than a

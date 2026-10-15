@@ -111,4 +111,10 @@ describe('check counts stay in sync with the registry', () => {
     const sampleKeys = Object.keys(scoringSample.checkWeights).filter((k) => k !== '_comment');
     expect(sampleKeys.length).toBe(N);
   });
+
+  it('package.json description states the registered check count', () => {
+    // The npm listing is the first thing a user reads; it drifted to a stale count once already.
+    const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')) as { description: string };
+    expect(pkg.description).toContain(`${N} checks`);
+  });
 });

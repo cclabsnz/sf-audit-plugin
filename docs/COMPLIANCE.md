@@ -1,6 +1,6 @@
 # Compliance frameworks
 
-Findings are mapped to controls across ten security and privacy frameworks. The mapping is built on a **sourced control catalog** (each control carries its framework, **pinned version**, official title, and a citation) so a finding's compliance reference ties to an exact, defensible requirement rather than a bare tag.
+Findings are mapped to controls across 10 security and privacy frameworks: 8 source-verified general baselines plus 2 specialized jurisdictional packs. The mapping is built on a **sourced control catalog** (each control carries its framework, **pinned version**, official title, and a citation) so a finding's compliance reference ties to an exact, defensible requirement rather than a bare tag.
 
 | Framework | Version | Notes |
 |-----------|---------|-------|
