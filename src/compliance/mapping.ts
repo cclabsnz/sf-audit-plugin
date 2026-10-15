@@ -115,6 +115,21 @@ const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   // injected payload leaves by (LLM05) and an action taken without human approval (LLM06).
   'agent-query-reach':       ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.8.3', 'LLM06', 'LLM02'],
   'agent-outbound-actions':  ['OWASP-A01', 'SOC2-CC6.6', 'ISO-A.8.3', 'LLM05', 'LLM06'],
+  // 14 New Checks
+  'genai-prompt-template-grounding': ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.8.3', 'LLM02', 'LLM06'],
+  'data-cloud-data-space-isolation': ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.8.3'],
+  'platform-event-subscriber-context': ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.8.3'],
+  'flow-http-callout-credential-bypass': ['OWASP-A02', 'OWASP-A10', 'SOC2-CC6.7', 'ISO-A.8.3'],
+  'oauth-device-and-asset-token-flows': ['OWASP-A07', 'SOC2-CC6.1', 'ISO-A.8.3', 'SBS-OAUTH-001'],
+  'delegated-authentication-exposure': ['OWASP-A07', 'SOC2-CC6.1', 'ISO-A.8.3', 'SBS-AUTH-001'],
+  'delegated-administration-groups': ['OWASP-A01', 'SOC2-CC6.3', 'ISO-A.5.18', 'SBS-ACS-004'],
+  'auth-provider-registration-handler': ['OWASP-A01', 'OWASP-A07', 'SOC2-CC6.1', 'ISO-A.8.3'],
+  'inbound-email-handler-exposure': ['OWASP-A01', 'OWASP-A05', 'SOC2-CC6.6', 'ISO-A.5.14'],
+  'org-wide-email-spoofing': ['OWASP-A05', 'SOC2-CC6.6', 'ISO-A.5.14'],
+  'external-account-hierarchy-exposure': ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.8.3', 'SBS-CPORTAL-003'],
+  'restriction-rules-integrity': ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.8.3'],
+  'package-post-install-supply-chain': ['OWASP-A06', 'OWASP-A08', 'SOC2-CC9.2', 'ISO-A.8.25'],
+  'shield-tenant-secret-lifecycle': ['OWASP-A02', 'SOC2-CC6.1', 'ISO-A.8.24'],
 };
 
 // Domain groupings. Each check belongs to exactly one domain, and a domain's control ids are
@@ -129,26 +144,31 @@ const DOMAIN = {
                   'public-content-exposure', 'privileged-access', 'separation-of-duties',
                   'guest-object-exposure', 'guest-site-options', 'guest-record-access-policy',
                   'login-access-policy', 'data-export-access', 'classic-sites', 'guest-api-access',
-                  'guest-user-visibility'],
+                  'guest-user-visibility', 'data-cloud-data-space-isolation', 'platform-event-subscriber-context',
+                  'delegated-administration-groups', 'external-account-hierarchy-exposure', 'restriction-rules-integrity'],
   authentication: ['login-session', 'ip-restrictions', 'password-session-policy', 'sso-enforcement', 'mfa-enforcement',
                    'trusted-ip-ranges', 'my-domain-login-policy', 'high-assurance-session', 'internal-user-mfa',
                    'mfa-registration', 'mfa-method-strength', 'failed-login-detection', 'enhanced-domains',
-                   'auth-providers'],
-  crypto: ['named-credentials', 'hardcoded-credentials', 'custom-settings', 'certificate-expiry', 'custom-labels-credential', 'external-credentials', 'encryption-coverage'],
+                   'auth-providers', 'oauth-device-and-asset-token-flows', 'delegated-authentication-exposure',
+                   'auth-provider-registration-handler'],
+  crypto: ['named-credentials', 'hardcoded-credentials', 'custom-settings', 'certificate-expiry', 'custom-labels-credential', 'external-credentials', 'encryption-coverage',
+           'shield-tenant-secret-lifecycle'],
   logging: ['audit-trail', 'apex-logging', 'event-monitoring', 'siem-integration', 'anonymous-apex-audit',
             'debug-log-access', 'transaction-security-policy', 'threat-detection', 'guest-traffic-anomaly',
             'login-anomaly'],
-  devSecurity: ['code-security', 'visualforce-xss', 'scheduled-apex', 'lightning-message-channel'],
+  devSecurity: ['code-security', 'visualforce-xss', 'scheduled-apex', 'lightning-message-channel', 'flow-http-callout-credential-bypass'],
   network: ['remote-sites', 'csp-trusted-sites', 'connected-apps', 'connected-app-scope', 'connected-app-inactivity', 'oauth-token-inventory', 'cors-allowlist',
-            'email-security', 'outbound-messages', 'experience-csp'],
+            'email-security', 'outbound-messages', 'experience-csp', 'inbound-email-handler-exposure', 'org-wide-email-spoofing'],
   dataGovernance: ['data-classification', 'field-history-tracking', 'sandbox-data-masking'],
-  configGovernance: ['health-check', 'api-limits', 'release-updates', 'legacy-api-version', 'installed-packages', 'deployment-identity', 'session-hardening'],
+  configGovernance: ['health-check', 'api-limits', 'release-updates', 'legacy-api-version', 'installed-packages', 'deployment-identity', 'session-hardening',
+                    'package-post-install-supply-chain'],
   accountLifecycle: ['inactive-users'],
   // Agentforce / GenAI. The NZ pack does not map these (HISO/NZISM predate agentic platforms and
   // have no chapter that fits); HIPAA and GDPR do, because an over-privileged agent user reading
   // PHI or personal data is squarely an access-control and security-of-processing question.
   aiAgents: ['agent-inventory', 'agent-user-privilege', 'agent-action-surface', 'agent-channel-exposure',
-             'agent-monitoring-coverage', 'trusted-url-hygiene', 'agent-query-reach', 'agent-outbound-actions'],
+             'agent-monitoring-coverage', 'trusted-url-hygiene', 'agent-query-reach', 'agent-outbound-actions',
+             'genai-prompt-template-grounding'],
 } as const;
 
 // NZ pack crosswalk — HISO/NZISM are domain/chapter-level; Privacy Act IPPs are statute-level.
@@ -223,6 +243,7 @@ const REGULATORY_PRECISE: Record<string, string[]> = {
   'trusted-url-hygiene':        ['HIPAA-164.312(e)(1)', 'GDPR-Art44'],
   'agent-query-reach':          ['HIPAA-164.312(a)(1)', 'HIPAA-164.308(a)(4)', 'GDPR-Art25', 'GDPR-Art5(1)(f)'],
   'agent-outbound-actions':     ['HIPAA-164.312(e)(1)', 'GDPR-Art25', 'GDPR-Art32(1)(b)'],
+  'genai-prompt-template-grounding': ['HIPAA-164.312(a)(1)', 'HIPAA-164.308(a)(4)', 'GDPR-Art25', 'GDPR-Art5(1)(f)', 'GDPR-Art32(1)(b)'],
 };
 
 function buildCheckControlMap(): Record<string, string[]> {

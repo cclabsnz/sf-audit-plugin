@@ -126,6 +126,48 @@ describe('NAMED_CHAINS', () => {
     expect(chain.match(present(findings), findings)).toBeNull();
   });
 
+  it('inbound-email-rce fires when unauthenticated email execution meets unshared/vulnerable code', () => {
+    const findings = [
+      f('inbound-email-handler-unauthenticated-execution'),
+      f('apex-crud-fls-without-sharing'),
+    ];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'inbound-email-rce')!;
+    const steps = chain.match(present(findings), findings);
+    expect(steps).not.toBeNull();
+    expect(steps!.map((s) => s.id)).toEqual(
+      expect.arrayContaining(['inbound-email-handler-unauthenticated-execution', 'apex-crud-fls-without-sharing']),
+    );
+  });
+
+  it('inbound-email-rce does NOT fire without the email handler entry point', () => {
+    const findings = [f('apex-crud-fls-without-sharing')];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'inbound-email-rce')!;
+    expect(chain.match(present(findings), findings)).toBeNull();
+  });
+
+  it('platform-event-priv-esc fires when a guest foothold combines with event subscriber escalation', () => {
+    const findings = [
+      f('guest-user-baseline'),
+      f('platform-event-subscriber-escalation'),
+      f('users-modify-all-data'),
+    ];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'platform-event-priv-esc')!;
+    const steps = chain.match(present(findings), findings);
+    expect(steps).not.toBeNull();
+    expect(steps!.map((s) => s.id)).toEqual(
+      expect.arrayContaining(['guest-user-baseline', 'platform-event-subscriber-escalation', 'users-modify-all-data']),
+    );
+  });
+
+  it('platform-event-priv-esc does NOT fire without a foothold', () => {
+    const findings = [
+      f('platform-event-subscriber-escalation'),
+      f('users-modify-all-data'),
+    ];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'platform-event-priv-esc')!;
+    expect(chain.match(present(findings), findings)).toBeNull();
+  });
+
   // Named chains carry a floor of MEDIUM: they are correlations someone hand-modelled, so they must
   // outrank the emergent "potential path" output. MEDIUM is reserved for a chain that adds no new
   // exposure of its own — `undetected-compromise` reports that exposure already present would go

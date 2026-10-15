@@ -167,6 +167,30 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // so the model stays correct if that ever becomes an either/or, and because a CRITICAL finding
   // silently granting nothing is precisely the failure this registry exists to prevent.
   'connected-app-full-scope-infinite-token':    { grants: ['data-read-bulk', 'data-write'] },
+
+  // 14 New Checks capability hooks
+  'genai-prompt-template-grounding-flow':        { grants: ['data-read'] },
+  'genai-prompt-template-grounding-apex':        { grants: ['data-read'] },
+  'genai-prompt-template-grounding-untrusted':   { grants: ['data-read'] },
+  'data-cloud-data-space-default-overshared':    { grants: ['data-read-bulk'] },
+  'data-cloud-data-share-target-unconstrained':  { grants: ['data-read-bulk'] },
+  'platform-event-subscriber-escalation':        { grants: ['priv-esc', 'data-write'] },
+  'flow-http-callout-hardcoded-secret':          { grants: ['credential-theft', 'external-egress'] },
+  'flow-http-callout-uncredentialed-endpoint':   { grants: ['external-egress'] },
+  'oauth-device-flow-enabled':                   { grants: ['credential-theft'] },
+  'oauth-password-flow-enabled':                 { grants: ['credential-theft'] },
+  'delegated-authentication-admin-assigned':     { grants: ['org-takeover'] },
+  'delegated-authentication-insecure-gateway':   { grants: ['org-takeover'] },
+  'delegated-administration-groups-active':      { grants: ['priv-esc'] },
+  'auth-provider-registration-handler-admin-exec': { grants: ['priv-esc', 'org-takeover'] },
+  'auth-provider-registration-handler-unverified-email-linking': { grants: ['priv-esc', 'org-takeover'] },
+  'inbound-email-handler-unauthenticated-execution': { grants: ['unauth-foothold', 'code-exec'] },
+  'org-wide-email-spoofing-all-profiles':        { grants: ['external-egress'] },
+  'org-wide-email-spoofing-no-dkim':             { grants: ['external-egress'] },
+  'external-account-hierarchy-super-users':      { grants: ['data-read-bulk'] },
+  'external-account-hierarchy-active':           { grants: ['data-read-bulk'] },
+  'restriction-rules-inactive':                  { grants: ['data-read-bulk'] },
+  'restriction-rules-conflicting':               { grants: ['data-read-bulk'] },
 };
 
 /** Resolve the effective capabilities for a finding (inline overrides registry; passed/inconclusive yield nothing). */
