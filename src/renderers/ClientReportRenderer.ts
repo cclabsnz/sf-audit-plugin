@@ -11,6 +11,7 @@ import { selectPriorities } from '../report/ExecutivePriorities.js';
 import { buildRoadmap, type Roadmap } from '../report/RemediationRoadmap.js';
 import type { Framework } from '../compliance/types.js';
 import { buildComplianceMatrix, type FrameworkMatrix } from '../report/ComplianceMatrix.js';
+import { renderAttackChainDagSvg } from './AttackChainDagRenderer.js';
 
 const SEV_COLOR: Record<string, string> = {
   CRITICAL: '#7d3a3a', HIGH: '#a35a2a', MEDIUM: '#8a6d1f', LOW: '#3a5a82', INFO: '#636770',
@@ -191,9 +192,14 @@ ${impact}${chained}<p><strong>Fix:</strong> ${esc(f.remediation)}</p></div>`;
   }
 
   private scenarios(chains: NonNullable<AuditResult['attackChains']>, numStr: string): string {
-    const items = chains.map((c) => `<div class="card scenario" style="--c:${SEV_COLOR[c.severity]}">
+    const items = chains.map((c) => {
+      const dagSvg = renderAttackChainDagSvg(c, { theme: 'light' });
+      return `<div class="card scenario" style="--c:${SEV_COLOR[c.severity]}">
 <div class="row"><h3>${esc(c.title)}</h3>${this.chip(c.severity, c.severity)}</div>
-<p>${esc(c.narrative)}</p><p><strong>Breaks the chain:</strong> ${esc(c.remediation)}</p></div>`).join('');
+<p>${esc(c.narrative)}</p>
+${dagSvg}
+<p><strong>Breaks the chain:</strong> ${esc(c.remediation)}</p></div>`;
+    }).join('');
     return `${this.sectionHead(numStr, 'Attack Scenarios')}<p class="muted">How findings combine into real attack paths.</p>${items}`;
   }
 

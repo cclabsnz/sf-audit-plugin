@@ -2,6 +2,7 @@ import type { AuditResult } from '../findings/AuditResult.js';
 import type { OrgMetrics } from '@cclabsnz/sf-core';
 import type { AuditRenderer } from './AuditRenderer.js';
 import { esc, firaFontFaceCss, INTERACTIVE_CSP_META } from '@cclabsnz/sf-core';
+import { renderAttackChainDagSvg } from './AttackChainDagRenderer.js';
 
 const RISK_COLORS: Record<string, string> = {
   CRITICAL: '#dc2626',
@@ -201,12 +202,14 @@ export class HtmlRenderer implements AuditRenderer {
     const cards = result.attackChains
       .map((c) => {
         const conf = c.confidence === 'named' ? '' : ' (potential)';
+        const dagSvg = renderAttackChainDagSvg(c, { theme: 'dark' });
         const steps = c.steps
           .map((s) => `<li><strong>${esc(s.title ?? s.findingId)}</strong> (${esc(s.severity ?? '—')}): grants <code>${esc(s.capability)}</code></li>`)
           .join('');
         return `<div class="attack-chain severity-${c.severity.toLowerCase()}">
   <h3>[${esc(c.severity)}] ${esc(c.title)}${conf}</h3>
   <p>${esc(c.narrative)}</p>
+  ${dagSvg}
   <ol>${steps}</ol>
   <p class="remediation"><strong>Remediation:</strong> ${esc(c.remediation)}</p>
 </div>`;

@@ -25,6 +25,11 @@ Merged to `main`, not yet released.
   carry stable fingerprints so a recurring finding keeps one alert, the tool version comes from
   the package, and checks that could not gather evidence are reported as tool notifications
   rather than alerts.
+- Attack chains now render as a diagram: each step is a card (severity, finding, capability
+  granted) joined by arrows, with the step whose fix breaks the chain marked as the cut-point.
+  It appears in the attack-path cards of the HTML report (dark) and in the Attack Scenarios of
+  the executive report (light). The diagram is self-contained inline SVG, so it works under the
+  executive report's no-script CSP and prints to PDF; long chains wrap onto rows of four.
 
 ### Security
 
