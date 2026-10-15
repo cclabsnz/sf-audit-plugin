@@ -50,7 +50,7 @@ check id.
 
 | Flag | Default | |
 |------|---------|---|
-| `--format` / `-f` | `html` | `html`, `md`, `json`, `executive` — comma-separated |
+| `--format` / `-f` | `html` | `html`, `md`, `json`, `executive`, `sarif` — comma-separated |
 | `--fail-on` | (none) | Exit 1 if any finding is at or above `CRITICAL`/`HIGH`/`MEDIUM`/`LOW`. For CI |
 | `--fail-on-inconclusive` | `false` | Exit 3 if any check could not gather evidence. For CI |
 | `--waivers` | `.sfaudit-waivers.json` if present | Accepted-risk waivers. See [Accepting a risk](#accepting-a-risk) |
@@ -77,6 +77,9 @@ sf audit security --target-org myOrg --json
 
 # Compact result for an agent or script
 sf audit security --target-org myOrg --json --digest
+
+# SARIF 2.1.0 for GitHub code scanning or any SARIF viewer
+sf audit security --target-org myOrg --format sarif --output ./reports
 ```
 
 In GitHub Actions, [cclabsnz/sf-audit-action](https://github.com/cclabsnz/sf-audit-action) wraps this:

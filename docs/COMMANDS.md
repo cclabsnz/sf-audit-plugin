@@ -20,7 +20,7 @@ The audit itself. The [README](../README.md#usage) covers the common path; this 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--target-org` | *(required)* | Org alias or username to audit |
-| `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json`, `executive` |
+| `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json`, `executive`, `sarif` (SARIF 2.1.0, for GitHub code scanning) |
 | `--output` / `-o` | `.` | Directory to write the report file |
 | `--fail-on` | (none) | Exit with code 1 if any finding is at or above this severity: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
 | `--checks` | *(all)* | Comma-separated check IDs to run instead of all 88 (e.g. `hardcoded-credentials,apex-sharing`) |
@@ -32,6 +32,21 @@ The audit itself. The [README](../README.md#usage) covers the common path; this 
 | `--resolve-domains` | `false` | Makes **outbound DNS queries from this machine** to verify CSP trusted domains still resolve (flags unresolvable / parked domains as exfiltration channels). Off by default; a default run contacts **only the target org** and never reaches out to any other host. |
 | `--no-history` | `false` | Do not archive this run to `~/.sf/audit-history/`. Implied in CI: `CI` set to anything but `false`/`0`, or `GITHUB_ACTIONS`, `TF_BUILD` or `JENKINS_URL` present |
 | `--keep-history` | `false` | Archive this run even in CI. Overrides `--no-history` |
+
+### SARIF output
+
+`--format sarif` writes a SARIF 2.1.0 log (`sf-audit-<orgId>-<timestamp>.sarif`) that GitHub code
+scanning's `upload-sarif` action, or any SARIF viewer, can ingest.
+
+- An org has no source files, so each result points at a placeholder path, `salesforce-org/<check-id>`,
+  and lists the affected items as logical locations. The placeholder exists only so code scanning will
+  display the alert, and it groups alerts by check.
+- Each result carries a `partialFingerprints` hash of its check and finding id, so a finding that
+  persists across runs updates one alert rather than opening a new one.
+- Passing checks are left out. Checks that could not gather evidence appear as tool execution
+  notifications, not alerts, and set `executionSuccessful` to `false`.
+- Running a subset with `--checks` and uploading under the same code scanning category will close
+  alerts for the checks you left out.
 
 ### Examples
 

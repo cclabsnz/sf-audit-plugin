@@ -21,6 +21,10 @@ Merged to `main`, not yet released.
   archive is now skipped by default in CI (`CI` set to a truthy value, `GITHUB_ACTIONS`, `TF_BUILD`
   or `JENKINS_URL`), so ephemeral or shared runners don't keep org data. `--keep-history` archives
   anyway and wins over `--no-history`.
+- `sf audit security --format sarif` writes a SARIF 2.1.0 log for GitHub code scanning. Results
+  carry stable fingerprints so a recurring finding keeps one alert, the tool version comes from
+  the package, and checks that could not gather evidence are reported as tool notifications
+  rather than alerts.
 
 ### Security
 
