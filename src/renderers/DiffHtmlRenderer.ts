@@ -1,14 +1,6 @@
-// src/renderers/DiffHtmlRenderer.ts
 import type { AuditDiff, FindingChange } from '../history/AuditDiff.js';
 import type { DiffRenderer } from './DiffRenderer.js';
-
-function esc(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+import { esc, INTERACTIVE_CSP_META } from '@cclabsnz/sf-core';
 
 function fmtDate(d: Date): string {
   return d.toISOString().replace('T', ' ').substring(0, 16);
@@ -98,6 +90,7 @@ export class DiffHtmlRenderer implements DiffRenderer {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+${INTERACTIVE_CSP_META}
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SF Audit Diff: ${esc(baseline.orgName)}</title>
 <style>

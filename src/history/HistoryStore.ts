@@ -1,8 +1,9 @@
-// src/history/HistoryStore.ts
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { secureFs } from '@cclabsnz/sf-core';
 import type { AuditResult } from '../findings/AuditResult.js';
+
 
 function parseResult(raw: string): AuditResult {
   const obj = JSON.parse(raw);
@@ -15,6 +16,11 @@ export class HistoryStore {
 
   constructor(root?: string) {
     this.root = root ?? HistoryStore.defaultRoot();
+    try {
+      secureFs.ensureSecureDir(this.root);
+    } catch {
+      // Non-fatal if root cannot be secured immediately
+    }
   }
 
   static defaultRoot(): string {
@@ -24,14 +30,15 @@ export class HistoryStore {
   archive(result: AuditResult): void {
     try {
       const dir = path.join(this.root, result.orgId);
-      fs.mkdirSync(dir, { recursive: true });
+      secureFs.mkdirSync(dir, { recursive: true });
       const suffix = Math.random().toString(36).slice(2, 8);
       const filename = `sf-audit-${result.orgId}-${Date.now()}-${suffix}.json`;
-      fs.writeFileSync(path.join(dir, filename), JSON.stringify(result, null, 2), 'utf-8');
+      secureFs.writeFileSync(path.join(dir, filename), JSON.stringify(result, null, 2), 'utf-8');
     } catch (err) {
       process.stderr.write(`[sf-audit] Warning: could not archive audit result: ${String(err)}\n`);
     }
   }
+
 
   list(orgId: string, dir?: string): AuditResult[] {
     const searchDir = dir ? path.join(dir, orgId) : path.join(this.root, orgId);

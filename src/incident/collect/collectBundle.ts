@@ -1,8 +1,8 @@
 // src/incident/collect/collectBundle.ts
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
-import type { RestClient, SoqlClient } from '@cclabsnz/sf-core';
+import { secureFs, type RestClient, type SoqlClient } from '@cclabsnz/sf-core';
 import { BUNDLE_PATHS, loadBundle, sha256File, writeJsonAtomic } from '../bundleIo.js';
 import type { BundleManifest, LogCoverage, LogType } from '../model.js';
 import { findActors } from '../analyse/actors.js';
@@ -51,7 +51,7 @@ export async function collectBundle(
   opts: CollectOptions,
 ): Promise<{ dir: string; manifest: BundleManifest }> {
   const dir = opts.outputDir;
-  mkdirSync(dir, { recursive: true });
+  secureFs.mkdirSync(dir, { recursive: true });
   const collectedAt = new Date().toISOString();
 
   const anomalies = await readAnomalies(ctx.soql, opts.sinceDays);
@@ -103,7 +103,7 @@ export async function collectBundle(
   for (const [index, f] of opts.ipRangeFiles.entries()) {
     // Indexed, so two files with the same name (aws/ranges.txt, gcp/ranges.txt) cannot overwrite each other.
     const rel = `ip-ranges/${index}-${basename(f)}`;
-    mkdirSync(join(dir, 'ip-ranges'), { recursive: true });
+    secureFs.mkdirSync(join(dir, 'ip-ranges'), { recursive: true });
     copyFileSync(f, join(dir, rel));
     ipRangeFiles.push(rel);
   }

@@ -1,5 +1,5 @@
-import { createReadStream, createWriteStream, rmSync, existsSync, statSync } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
+import { createReadStream, rmSync, existsSync, statSync } from 'node:fs';
+import { secureFs } from '@cclabsnz/sf-core';
 import { dirname } from 'node:path';
 import { finished } from 'node:stream/promises';
 import { id15 } from './model.js';
@@ -87,8 +87,8 @@ export async function filterLogFile(
   guestIds: ReadonlySet<string>,
   opts: { requiredColumns?: (header: string[]) => string[] } = {},
 ): Promise<FilterResult> {
-  await mkdir(dirname(outPath), { recursive: true });
-  const out = createWriteStream(outPath);
+  await secureFs.mkdir(dirname(outPath), { recursive: true });
+  const out = secureFs.createWriteStream(outPath);
   const result: FilterResult = { totalRows: 0, guestRows: 0, guestRowsByUser: {}, malformed: 0 };
   let header: string[] | undefined;
   let userCols: number[] = [];

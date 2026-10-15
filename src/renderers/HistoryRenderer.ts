@@ -1,5 +1,5 @@
-// src/renderers/HistoryRenderer.ts
 import type { AuditResult } from '../findings/AuditResult.js';
+import { esc, INTERACTIVE_CSP_META } from '@cclabsnz/sf-core';
 import { chartJsScript } from './chartAsset.js';
 
 function fmtDate(d: Date): string {
@@ -50,12 +50,14 @@ export class HistoryRenderer {
     const orgName = results[0].orgName;
     const orgId   = results[0].orgId;
 
-    const labels   = JSON.stringify(results.map((r) => fmtDate(r.generatedAt)));
-    const scores   = JSON.stringify(results.map((r) => r.healthScore));
-    const crits    = JSON.stringify(results.map((r) => countBySeverity(r, 'CRITICAL')));
-    const highs    = JSON.stringify(results.map((r) => countBySeverity(r, 'HIGH')));
-    const meds     = JSON.stringify(results.map((r) => countBySeverity(r, 'MEDIUM')));
-    const lows     = JSON.stringify(results.map((r) => countBySeverity(r, 'LOW')));
+    // History is read back from files on disk, so nothing in it is trusted: scores are coerced to
+    // numbers, and JSON embedded in the inline <script> cannot close the script element.
+    const labels   = scriptJson(results.map((r) => fmtDate(r.generatedAt)));
+    const scores   = scriptJson(results.map((r) => Number(r.healthScore)));
+    const crits    = scriptJson(results.map((r) => countBySeverity(r, 'CRITICAL')));
+    const highs    = scriptJson(results.map((r) => countBySeverity(r, 'HIGH')));
+    const meds     = scriptJson(results.map((r) => countBySeverity(r, 'MEDIUM')));
+    const lows     = scriptJson(results.map((r) => countBySeverity(r, 'LOW')));
 
     const tableRows = results.map((r, i) => {
       const prev  = i > 0 ? results[i - 1] : null;
@@ -63,9 +65,9 @@ export class HistoryRenderer {
       const deltaColor = prev ? (r.healthScore >= prev.healthScore ? '#22c55e' : '#dc2626') : '#8b949e';
       return `<tr>
         <td>${i + 1}</td>
-        <td>${fmtDate(r.generatedAt)}</td>
-        <td style="text-align:right;font-weight:700">${r.healthScore}</td>
-        <td style="text-align:center">${r.grade}</td>
+        <td>${esc(fmtDate(r.generatedAt))}</td>
+        <td style="text-align:right;font-weight:700">${Number(r.healthScore)}</td>
+        <td style="text-align:center">${esc(r.grade)}</td>
         <td style="text-align:right;color:#dc2626">${countBySeverity(r, 'CRITICAL')}</td>
         <td style="text-align:right;color:#ea580c">${countBySeverity(r, 'HIGH')}</td>
         <td style="text-align:right;color:#d97706">${countBySeverity(r, 'MEDIUM')}</td>
@@ -78,8 +80,9 @@ export class HistoryRenderer {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+${INTERACTIVE_CSP_META}
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SF Audit History: ${orgName}</title>
+<title>SF Audit History: ${esc(orgName)}</title>
 <script>${chartJsScript()}</script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -99,7 +102,7 @@ export class HistoryRenderer {
 </head>
 <body>
   <h1>Salesforce Audit History</h1>
-  <div class="meta">Org: <strong style="color:#c9d1d9">${orgName}</strong> (${orgId})</div>
+  <div class="meta">Org: <strong style="color:#c9d1d9">${esc(orgName)}</strong> (${esc(orgId)})</div>
 
   <div class="charts">
     <div class="chart-box">
@@ -151,4 +154,9 @@ new Chart(document.getElementById('findingsChart'), {
 </body>
 </html>`;
   }
+}
+
+/** JSON safe to place inside an inline <script>: `<` is escaped so no value can end the element. */
+function scriptJson(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
 }

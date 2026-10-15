@@ -24,9 +24,9 @@ export async function writeReport(bundleDir: string, opts: { formats: string[]; 
   let result = await analyseBundle(bundleDir, { spikeRatio: opts.spikeRatio });
   if (opts.redact) result = redactResult(result);
   const ev = buildEvidence(result);
-  fs.mkdirSync(opts.outputDir, { recursive: true });
+  fs.mkdirSync(opts.outputDir, { recursive: true }); // invariant:allow — user-facing report output destination
   const written: string[] = [];
-  const put = (name: string, body: string) => { const p = path.join(opts.outputDir, name); fs.writeFileSync(p, body); written.push(p); };
+  const put = (name: string, body: string) => { const p = path.join(opts.outputDir, name); fs.writeFileSync(p, body); written.push(p); }; // invariant:allow — user-facing report output destination
   if (opts.formats.includes('html')) put('incident-report.html', renderHtml(result, ev, opts.branding));
   if (opts.formats.includes('md')) put('incident-report.md', renderMarkdown(result, ev));
   if (opts.formats.includes('json')) put('incident-report.json', JSON.stringify(result, null, 2));

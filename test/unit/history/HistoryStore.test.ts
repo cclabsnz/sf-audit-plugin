@@ -46,6 +46,23 @@ describe('HistoryStore', () => {
       expect(files[0]).toMatch(/^sf-audit-00D000000000001-\d+-[a-z0-9]+\.json$/);
     });
 
+    it('creates directories with 0700 and files with 0600 POSIX permissions', () => {
+      const store = new HistoryStore(tmpDir);
+      const result = makeResult();
+      store.archive(result);
+
+      if (process.platform !== 'win32') {
+        const orgDir = path.join(tmpDir, result.orgId);
+        const dirStat = fs.statSync(orgDir);
+        expect(dirStat.mode & 0o777).toBe(0o700);
+
+        const file = path.join(orgDir, fs.readdirSync(orgDir)[0]);
+        const fileStat = fs.statSync(file);
+        expect(fileStat.mode & 0o777).toBe(0o600);
+      }
+    });
+
+
     it('stores valid JSON that round-trips to AuditResult', () => {
       const store = new HistoryStore(tmpDir);
       const result = makeResult({ healthScore: 77, grade: 'C' });
