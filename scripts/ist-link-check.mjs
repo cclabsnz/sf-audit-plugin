@@ -19,7 +19,7 @@
 //   that the PR no longer defines fails.
 //   --local: coverage gaps (rule-without-test, must-never-without-hidden-test) are warnings, not
 //   errors. For the local commit guard only: spec-first work creates them on purpose. CI never passes it.
-import { readdirSync, readFileSync, lstatSync, existsSync, realpathSync } from 'node:fs'
+import { readdirSync, readFileSync, lstatSync, existsSync, realpathSync, openSync, fstatSync, closeSync, readlinkSync, constants as fsConstants } from 'node:fs'
 import { join, relative, isAbsolute, resolve, sep } from 'node:path'
 import { createHash } from 'node:crypto'
 import { homedir } from 'node:os'
@@ -145,19 +145,41 @@ const hidden = cover([hiddenDir], true)
 
 // ---- gates ----
 let errors = [...early]
-// Every file under .ist/ (name, and content hash or "symlink"), so any add/remove/change/link shows.
+// Every entry under .ist/ — file (content hash and exec bit), dir, symlink (and its target) or
+// other — so any add/remove/change/link shows (RULE-007). Entries are JSON-encoded, so no name
+// can forge another entry. Each is opened once, without following links, and a file is hashed only
+// through the handle that was checked; O_NONBLOCK so a FIFO cannot hang the open. Names are handled as raw bytes (listed as
+// Buffers, recorded as latin1, which maps every byte to one char), so a name that is not UTF-8 is
+// neither skipped nor merged with another. Any open error but "is a link", or "missing" for .ist/
+// itself, stops the check: an entry that cannot be read must never compare equal.
+const OPEN_FLAGS = fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK
 function istSnapshot(dir) {
   const out = []
-  const visit = (d, rel) => {
-    if (!existsSync(d) && !isLink(d)) return
-    if (isLink(d)) return void out.push(`L ${rel}`)
-    if (!lstatSync(d).isDirectory()) return void out.push(`F ${rel} ${createHash('sha256').update(readFileSync(d)).digest('hex')}`)
-    for (const name of readdirSync(d).sort()) visit(join(d, name), `${rel}/${name}`)
+  const visit = (d, rel, isRoot = false) => {
+    let fd
+    try {
+      fd = openSync(d, OPEN_FLAGS)
+    } catch (e) {
+      if (e.code === 'ENOENT' && isRoot) return
+      if (e.code === 'ELOOP' || e.code === 'EMLINK') return void out.push(['L', rel, readlinkSync(d, { encoding: 'buffer' }).toString('latin1')])
+      console.error(`ist-link-check: cannot read ${JSON.stringify(rel)} (${e.code}); refusing to compare .ist/`)
+      process.exit(2)
+    }
+    try {
+      const st = fstatSync(fd)
+      if (st.isFile()) return void out.push(['F', rel, st.mode & 0o111 ? 'x' : '-', createHash('sha256').update(readFileSync(fd)).digest('hex')])
+      if (!st.isDirectory()) return void out.push(['X', rel])
+    } finally {
+      closeSync(fd)
+    }
+    out.push(['D', rel])
+    // Node lists by path only; each child is then opened, without following links, on its own.
+    const names = readdirSync(d, { encoding: 'buffer' }).sort(Buffer.compare)
+    for (const name of names) visit(Buffer.concat([d, Buffer.from('/'), name]), `${rel}/${name.toString('latin1')}`)
   }
-  visit(join(dir, '.ist'), '.ist')
-  return out.join('\n')
+  visit(Buffer.from(join(dir, '.ist')), '.ist', true)
+  return JSON.stringify(out)
 }
-function isLink(p) { try { return lstatSync(p).isSymbolicLink() } catch { return false } }
 if (base) {
   if (istSnapshot(base) !== istSnapshot(root)) errors.push({ gate: 'ist-config-changed', id: '.ist', where: '.ist/', fix: 'human review required: the PR changes what the gate counts' })
   for (const [mn, info] of parseIntents(base).mns) {
