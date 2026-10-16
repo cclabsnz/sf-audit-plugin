@@ -42,3 +42,6 @@ orgintel-*.html
 orgintel-*.json
 /coupling-graph.json
 /landscape-manifest.json
+
+# IST: hidden tests live in the private <repo>-hidden repo; only the ist-runner ever places them here
+tests/hidden/
