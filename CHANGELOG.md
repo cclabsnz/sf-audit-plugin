@@ -52,6 +52,21 @@ Merged to `main`, not yet released.
   policies are not evaluated automatically, so no External Client App is reported as
   unrestricted or as passing. A failure to list them is reported as inconclusive, and the
   connected-app results still stand.
+### Changed
+
+- Apex findings now say which control is bypassed (spec INT-001). `WITH SYSTEM_MODE` and
+  `AccessLevel.SYSTEM_MODE` switch off CRUD/FLS, not record sharing, so they are reported as
+  `apex-crud-fls-system-mode` (MEDIUM) and, for guest-callable classes, as the new
+  `guest-executable-apex-system-mode` (HIGH), never as a CRITICAL sharing bypass. `USER_MODE`
+  counts as CRUD/FLS enforcement.
+- A guest-callable class that calls a helper declared `without sharing` is now CRITICAL
+  `guest-executable-apex-unprotected`, naming the helper. A guest-callable `inherited sharing`
+  class is no longer reported CRITICAL: at an entry point it runs with sharing.
+- `@RestResource` classes without sharing are reported alongside `@AuraEnabled` and
+  `@RemoteAction` ones.
+- A class's sharing keyword is read from its own declaration, ignoring comments, so a
+  `without sharing` class mentioning "with sharing" in a comment is no longer read as protected.
+- Requires `@cclabsnz/sf-core` 0.11.0.
 
 ### Security
 

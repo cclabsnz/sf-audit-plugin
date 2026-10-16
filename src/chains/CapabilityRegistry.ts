@@ -48,6 +48,8 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // New checks (Tasks 8–10)
   'guest-executable-apex-unprotected': { grants: ['code-exec', 'data-read-bulk', 'data-write'] },
   'guest-executable-apex-exposed':     { grants: ['code-exec'] },
+  // Sharing still bounds which records a guest reaches; SYSTEM_MODE lifts only CRUD/FLS on them.
+  'guest-executable-apex-system-mode': { grants: ['code-exec', 'data-read'] },
   'cors-wildcard-origin':              { grants: ['credential-theft'] },
   'cors-broad-origin':                 { grants: ['credential-theft'] },
   'escalation-perms-found':            { grants: ['priv-esc'] },
@@ -127,6 +129,7 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'apex-rest-without-sharing':                  { grants: ['code-exec', 'data-read', 'data-write'] },
   'apex-crud-fls-without-sharing':              { grants: ['data-read', 'data-write'] },
   'apex-crud-fls-missing':                      { grants: ['data-read'] },
+  'apex-crud-fls-system-mode':                  { grants: ['data-read'] },
 
   // A live session ID posted to an external endpoint. This is a credential leaving the org through
   // a supported feature rather than a flaw, which is exactly why it is easy to leave in place: the

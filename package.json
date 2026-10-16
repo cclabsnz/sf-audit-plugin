@@ -46,7 +46,7 @@
     "test:jest": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests"
   },
   "dependencies": {
-    "@cclabsnz/sf-core": "^0.10.0",
+    "@cclabsnz/sf-core": "^0.11.0",
     "@oclif/core": "^4",
     "@salesforce/core": "^9.3.0",
     "@salesforce/sf-plugins-core": "^13",

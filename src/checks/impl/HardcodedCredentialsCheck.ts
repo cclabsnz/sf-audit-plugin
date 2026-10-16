@@ -1,6 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { apexCode } from '../support/apexAccess.js';
 import { ApexRepository } from '@cclabsnz/sf-core';
 
 const HIGH_RISK_PATTERNS = [
@@ -48,11 +49,15 @@ export class HardcodedCredentialsCheck implements SecurityCheck {
       Body: c.body ?? '',
       LengthWithoutComments: (c.body ?? '').length,
       NamespacePrefix: c.namespace,
+      SymbolTable: c.symbolTable,
     }));
 
     // Cache apex bodies for downstream checks — exclude test classes and filter null bodies
-    const nonTestRecords = records.filter((r) => !IS_TEST_CLASS.test(r.Body ?? ''));
-    ctx.cache.apexBodies = nonTestRecords.map((r) => ({ name: r.Name, body: r.Body ?? '' }));
+    // @IsTest is read from code only: a production helper mentioning it in a comment must still
+    // reach the cache, or the checks that follow calls into it never see its sharing (spec MN-002).
+    const nonTestRecords = records.filter((r) => !IS_TEST_CLASS.test(apexCode(r.Body ?? '')));
+    // The SymbolTable travels with the body so GuestExecutableApexCheck can follow calls into helpers.
+    ctx.cache.apexBodies = nonTestRecords.map((r) => ({ name: r.Name, body: r.Body ?? '', symbolTable: r.SymbolTable }));
 
     const namedCredentialEndpoints = (ctx.cache.namedCredentialEndpoints ?? []).filter(Boolean);
     const remoteSiteUrls = (ctx.cache.remoteSiteUrls ?? []).filter(Boolean);

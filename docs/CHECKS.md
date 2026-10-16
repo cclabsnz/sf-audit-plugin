@@ -72,7 +72,7 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 |-------|------------------|
 | Guest User Access | Object permissions and sharing rules granted to unauthenticated guests |
 | Guest Object Exposure (Bulk Read via UI API) | Auto-discovers guest-readable objects (incl. records exposed by guest ownership despite a Private OWD), then grades them by actual UI-API reachability: objects the UI API models are CRITICAL (GraphQL-pullable), objects readable only in the sharing model but not UI-API-modelled (Calendar, AuthSession, etc.) are separated as MEDIUM, with UserRecordAccess as ground-truth read confirmation |
-| Guest-Executable Apex | Apex that guest profiles can run, flagging `without sharing` classes |
+| Guest-Executable Apex | Apex that guest profiles can run: CRITICAL when it, or a helper it calls, runs without sharing; HIGH when it switches off CRUD/FLS with SYSTEM_MODE |
 | Experience Cloud Sites | Live sites with self-registration enabled and guest user presence |
 | Experience Cloud Guest Site Options | Guest file access and guest member visibility on Experience Cloud sites |
 | Secure Guest User Record Access | Verifies the "Secure guest user record access" enforcement is activated — the guardrail that stops guest-owned records defeating a Private OWD (complements Guest Object Exposure) |
@@ -87,8 +87,8 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 ## Apex & Code Security
 | Check | What it looks for |
 |-------|------------------|
-| Apex Sharing Declarations | Classes classified by sharing declaration (with / without / inherited / omitted) |
-| Apex CRUD/FLS Enforcement | DML or SOQL performed without CRUD/FLS permission checks |
+| Apex Sharing Declarations | Classes classified by the sharing keyword on their own declaration (with / without / inherited / omitted); @AuraEnabled, @RemoteAction and @RestResource classes without sharing are IDOR risks |
+| Apex CRUD/FLS Enforcement | DML or SOQL performed without CRUD/FLS permission checks; SYSTEM_MODE is reported on its own and never counts as enforcement, USER_MODE does |
 | Apex REST Endpoints | `@RestResource` classes running `without sharing` |
 | Visualforce XSS | `escape="false"` and unencoded merge fields in Visualforce markup |
 | Lightning Message Channels | Channels with `isExposed=true`, readable and writable by components in any namespace |

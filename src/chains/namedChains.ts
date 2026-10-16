@@ -47,7 +47,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       if (!hasAny(present, 'code-exec', 'data-read-bulk', 'data-write')) return null;
       const steps = byIds(active, [
         'guest-user-read-access', 'guest-user-write-access', 'guest-user-sharing-exposure', 'guest-user-baseline',
-        'guest-executable-apex-unprotected', 'guest-executable-apex-exposed',
+        'guest-executable-apex-unprotected', 'guest-executable-apex-exposed', 'guest-executable-apex-system-mode',
         'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
         'guest-api-access-enabled', 'guest-api-hard-delete', 'classic-sites-active',
         'guest-user-visibility-view-all-users', 'guest-user-visibility-owd', 'guest-user-visibility-object-read',
