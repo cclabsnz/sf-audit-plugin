@@ -15,11 +15,12 @@
 
 A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audit against any Salesforce org, risk-scores it with an A–F grade, and turns the result into a report your security team (or your client's) can act on.
 
-- **109 read-only checks** across identity, access, data, code, integrations, monitoring, and Agentforce / GenAI
+- **109 read-only checks** across identity, access, data (including Data Cloud and Shield), code, integrations (including inbound email handlers and package install handlers), monitoring, and Agentforce / GenAI. Apex findings say which control a class bypasses: record sharing, or CRUD/FLS
 - **Attack-chain correlation:** links individual findings into named, multi-step attack scenarios — nineteen modelled chains, plus an emergent pass for combinations nobody has named yet (see [Attack chains](#attack-chains))
 - **Compliance mapping:** every finding mapped to **source-verified** controls across 10 frameworks: 8 general baseline frameworks (OWASP Top 10, OWASP LLM Top 10, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act 2020, HISO 10029, NZISM) plus 2 specialized jurisdictional packs (HIPAA Security Rule, GDPR)
 - **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
-- **History & diff:** archives each run and shows security-posture drift over time
+- **History & diff:** archives each run and shows security-posture drift over time (skipped by default on CI runners, so they keep no org data)
+- **CI-ready:** `--format sarif` for GitHub code scanning, `--fail-on` to gate a pipeline, and [accepted-risk waivers](#accepting-a-risk) that expire
 - **Free event baseline:** `sf audit events pull` captures the org's free daily `EventLogFile` logs to local disk before the 1-day retention window drops them — no Event Monitoring / Shield add-on needed
 - **Connected-app least-privilege:** `sf audit apps` reads the `RestApi`, `BulkApi2`, `GraphQlQueryExecution` and `AuraRequest` EventLogFiles to see which objects each connected app actually uses, compares that against what its run-as user is granted (permission sets and profile), and reports the over-grant per object and read/write bit — plus a suggested least-privilege permission set, which `--emit-permset <dir>` writes as local `.permissionset-meta.xml` files (never deployed)
 - **Guest User Anomaly investigation:** `sf audit incident collect` saves the guest user's evidence for each anomaly wave, and `sf audit incident report` analyses it offline into a cited verdict: who it was, whether content came back, and whether anyone logged in ([walkthrough](https://www.softwareinsights.dev/posts/salesforce-guest-user-anomaly-investigation-sf-audit-incident/))

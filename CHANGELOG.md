@@ -9,16 +9,46 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
-Merged to `main`, not yet released.
+## [v1.17.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.17.0) — 2026-10-17
+
+109 checks (up from 95) and 19 attack chains (up from 17).
 
 ### Added
 
+- Fourteen checks for surfaces the audit did not reach before:
+  - `genai-prompt-template-grounding`: active Prompt Templates grounded on system-mode flows or
+    unshared Apex, or mixing untrusted external fields with sensitive CRM data.
+  - `data-cloud-data-space-isolation`: a default Data Space shared with integrations, partner or
+    agent users, and unconstrained Data Share Targets.
+  - `platform-event-subscriber-context`: Platform Event subscribers running in system context or
+    as an admin while low-trust or guest users can publish the event.
+  - `flow-http-callout-credential-bypass`: Flow HTTP callouts with embedded tokens, or that go
+    around Named Credentials.
+  - `oauth-device-and-asset-token-flows`: the OAuth Device Flow and Username-Password Flow
+    enabled in OAuth and OpenID Connect Settings. An unreadable setting is an advisory, never
+    "disabled".
+  - `delegated-authentication-exposure`: Delegated Authentication over unencrypted or non-mTLS
+    endpoints, or assigned to System Administrator profiles.
+  - `delegated-administration-groups`: delegated admin groups that can manage users, log in as
+    them or assign permission sets, which permission set queries do not show.
+  - `auth-provider-registration-handler`: a RegistrationHandler running as an admin that links
+    accounts by email, open to pre-auth account takeover.
+  - `inbound-email-handler-exposure`: email services that accept any sender and run Apex.
+  - `org-wide-email-spoofing`: Org-Wide Email Addresses open to all profiles without SPF/DKIM
+    alignment.
+  - `external-account-hierarchy-exposure`: Partner Super Users and External Account Hierarchies
+    that widen portal record reach past the external OWD.
+  - `restriction-rules-integrity`: inactive Restriction Rules leaving records exposed, and
+    conflicting active rules on one object.
+  - `package-post-install-supply-chain`: packaged Apex implementing `InstallHandler`, which runs
+    in system context on every install and push upgrade.
+  - `shield-tenant-secret-lifecycle`: Shield tenant secrets not rotated in 365 days.
+- Two attack chains, both CRITICAL: **Unauthenticated inbound email to privileged code
+  execution** (`inbound-email-rce`) and **Guest or low-trust platform event publish to automated
+  process escalation** (`platform-event-priv-esc`).
 - Every report states its evidence coverage: the share of checks that gathered evidence, and the
   ids of those that could not. Below 90% a would-be A is capped at B, and the report says why.
   `grade` stays a plain A–F letter; the detail is in the new `coverage` field of the JSON output.
-
-### Added
-
 - Accepted-risk waivers (`--waivers`, or `.sfaudit-waivers.json` in the working directory). A
   waived finding leaves the score, `--fail-on` and the executive priorities and roadmap, and is
   listed under Accepted Risks. Matching is exact, waivers run at most 365 days, and a CRITICAL
@@ -43,18 +73,9 @@ Merged to `main`, not yet released.
 - `sf audit apps` now reads `BulkApi2`, `GraphQlQueryExecution` and `AuraRequest` logs as well as
   `RestApi`, resolves External Client Apps, and counts profile object permissions as granted access.
 
-### Fixed
-
-- `sf audit apps` no longer reports an empty, clean-looking result when `EventLogFile` cannot be
-  read: a failed listing is an error, and partly failed downloads mark the output incomplete and
-  suppress revoke recommendations.
-- `connected-apps` lists External Client Apps for manual review of their OAuth policies. Their
-  policies are not evaluated automatically, so no External Client App is reported as
-  unrestricted or as passing. A failure to list them is reported as inconclusive, and the
-  connected-app results still stand.
 ### Changed
 
-- Apex findings now say which control is bypassed (spec INT-001). `WITH SYSTEM_MODE` and
+- Apex findings now say which control is bypassed. `WITH SYSTEM_MODE` and
   `AccessLevel.SYSTEM_MODE` switch off CRUD/FLS, not record sharing, so they are reported as
   `apex-crud-fls-system-mode` (MEDIUM) and, for guest-callable classes, as the new
   `guest-executable-apex-system-mode` (HIGH), never as a CRITICAL sharing bypass. `USER_MODE`
@@ -66,7 +87,35 @@ Merged to `main`, not yet released.
   `@RemoteAction` ones.
 - A class's sharing keyword is read from its own declaration, ignoring comments, so a
   `without sharing` class mentioning "with sharing" in a comment is no longer read as protected.
+- `salesbleed-pattern` also fires when the way out is a CSP Trusted URL whose domain is parked
+  or no longer resolves: whoever registers it receives anything an agent puts in a link or image.
+  When the org shows where outsider text enters (an open email handler, guest write access), that
+  finding leads the chain as evidence.
+- `--scoring-config` is now checked strictly. An unknown or misspelled key (`gradeTresholds`,
+  `minscore`) is an error instead of being silently ignored, `minScore` must be 0–100, and grade
+  thresholds must be ordered after merging with the defaults (A at least as strict as B, and so
+  on). Errors name the offending path. A JSON Schema for editors ships as
+  `schemas/scoring-config.schema.json`, and `config/scoring.sample.json` now lists every
+  registered check.
+- The npm description states the current check count, and a test keeps it in step.
+- README documents unattended CI installs and how to check a release's provenance.
 - Requires `@cclabsnz/sf-core` 0.11.0.
+
+### Fixed
+
+- Several of the fourteen new checks could not see their evidence, and some reported a pass
+  when their query failed; their tests passed because the mocks returned fields the real queries
+  never selected. They now read what the org actually returns, and a failed read is inconclusive,
+  never a pass.
+- `genai-prompt-template-grounding` no longer builds a regular expression from a class name the
+  org returns; the declaration is found with literal patterns in one linear pass.
+- `sf audit apps` no longer reports an empty, clean-looking result when `EventLogFile` cannot be
+  read: a failed listing is an error, and partly failed downloads mark the output incomplete and
+  suppress revoke recommendations.
+- `connected-apps` lists External Client Apps for manual review of their OAuth policies. Their
+  policies are not evaluated automatically, so no External Client App is reported as
+  unrestricted or as passing. A failure to list them is reported as inconclusive, and the
+  connected-app results still stand.
 
 ### Security
 
@@ -78,24 +127,6 @@ Merged to `main`, not yet released.
   the executive report allows no script at all, and the interactive reports allow inline script
   only. Values in the history report that are read back from disk (grade, score, dates) are
   escaped or coerced, so a tampered history file cannot inject markup or script.
-- Requires `@cclabsnz/sf-core` 0.10.0.
-
-### Changed
-
-- `--scoring-config` is now checked strictly. An unknown or misspelled key (`gradeTresholds`,
-  `minscore`) is an error instead of being silently ignored, `minScore` must be 0–100, and grade
-  thresholds must be ordered after merging with the defaults (A at least as strict as B, and so
-  on). Errors name the offending path. A JSON Schema for editors ships as
-  `schemas/scoring-config.schema.json`, and `config/scoring.sample.json` now lists every
-  registered check.
-### Changed
-
-- `salesbleed-pattern` also fires when the way out is a CSP Trusted URL whose domain is parked
-  or no longer resolves: whoever registers it receives anything an agent puts in a link or image.
-  When the org shows where outsider text enters (an open email handler, guest write access), that
-  finding leads the chain as evidence.
-- The npm description states the current check count, and a test keeps it in step.
-- README documents unattended CI installs and how to check a release's provenance.
 
 ## [v1.16.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.16.0) — 2026-10-09
 
