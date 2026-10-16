@@ -13,30 +13,78 @@
 //   tests/**      : any file mentioning RULE-xxx / MN-xxx (comments are fine)
 //   tests/hidden/ : same, but CI-only. The agent never reads this folder.
 //
-// Usage: node scripts/ist-link-check.mjs [repoRoot] [--json] [--hidden-dir <path>]
-import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs'
-import { join, relative } from 'node:path'
+// Usage: node scripts/ist-link-check.mjs [repoRoot] [--json] [--hidden-dir <path>] [--local] [--base <dir>]
+//   --base: the runner's mode (INT-001 RULE-007). <dir> is the base branch checkout: visibleDirs and
+//   hiddenDir come from its .ist/harness.json, any change to that file fails, and a must-never on base
+//   that the PR no longer defines fails.
+//   --local: coverage gaps (rule-without-test, must-never-without-hidden-test) are warnings, not
+//   errors. For the local commit guard only: spec-first work creates them on purpose. CI never passes it.
+import { readdirSync, readFileSync, lstatSync, existsSync, realpathSync } from 'node:fs'
+import { join, relative, isAbsolute, resolve, sep } from 'node:path'
+import { createHash } from 'node:crypto'
+import { homedir } from 'node:os'
 
 const args = process.argv.slice(2)
 const json = args.includes('--json')
-const hiddenFlag = args.indexOf('--hidden-dir')
-const hiddenArg = hiddenFlag >= 0 ? args[hiddenFlag + 1] : undefined
-const root = args.find((a, i) => !a.startsWith('--') && !(hiddenFlag >= 0 && i === hiddenFlag + 1)) ?? process.cwd()
+// Flags that take a value; their value slot is never read as a flag or as the root.
+const valueAt = new Set()
+const flagValue = {}
+for (const f of ['--hidden-dir', '--base']) {
+  const i = args.indexOf(f)
+  if (i < 0) continue
+  const v = args[i + 1]
+  if (v === undefined || v.startsWith('-')) {
+    console.error(`ist-link-check: ${f} needs a path, got ${JSON.stringify(v)}`)
+    process.exit(2)
+  }
+  flagValue[f] = v
+  valueAt.add(i + 1)
+}
+const hiddenArg = flagValue['--hidden-dir']
+// Only a flag in its own position counts: `--hidden-dir --local` must not switch local mode on.
+const local = args.some((a, i) => a === '--local' && !valueAt.has(i))
+// Absolute, so every join(root, …) below compares equal to an absolute hiddenDir.
+const root = resolve(args.find((a, i) => !a.startsWith('--') && !valueAt.has(i)) ?? process.cwd())
+const base = flagValue['--base'] ? resolve(flagValue['--base']) : undefined
 // .ist/harness.json may point at an existing test layout (retrofit):
 //   { "visibleDirs": ["src", "tests"], "hiddenDir": "tests/hidden" }
-let cfg = {}
-try { cfg = JSON.parse(readFileSync(join(root, '.ist', 'harness.json'), 'utf8')) } catch { /* none */ }
-const hiddenDir = hiddenArg ?? (cfg.hiddenDir ? join(root, cfg.hiddenDir) : join(root, 'tests', 'hidden'))
-const visibleDirs = (Array.isArray(cfg.visibleDirs) && cfg.visibleDirs.length ? cfg.visibleDirs : ['tests/visible']).map(d => join(root, d))
+const harnessText = dir => (existsSync(join(dir, '.ist', 'harness.json')) ? readFileSync(join(dir, '.ist', 'harness.json'), 'utf8') : null)
+const readCfg = dir => { try { return JSON.parse(harnessText(dir) ?? '{}') } catch { return {} } }
+// With --base, the configuration that decides what counts is base's, never the PR's.
+const cfg = readCfg(base ?? root)
+const expand = p => (p.startsWith('~/') ? join(homedir(), p.slice(2)) : p)
+const abs = p => (isAbsolute(expand(p)) ? resolve(expand(p)) : join(root, p))
+const hiddenRaw = hiddenArg ?? cfg.hiddenDir ?? 'tests/hidden'
+if (typeof hiddenRaw !== 'string' || hiddenRaw === '' || hiddenRaw.startsWith('-')) {
+  console.error(`ist-link-check: invalid hidden-dir ${JSON.stringify(hiddenRaw)} (from ${hiddenArg !== undefined ? '--hidden-dir' : '.ist/harness.json'})`)
+  process.exit(2)
+}
+const hiddenDir = abs(hiddenRaw)
+// Visible dirs must stay inside the repo (lexically and after symlinks); others are refused, not walked.
+const early = []
+const rootReal = realpathSync(root)
+const inside = p => p === rootReal || p.startsWith(rootReal + sep)
+const visibleDirs = []
+for (const d of Array.isArray(cfg.visibleDirs) && cfg.visibleDirs.length ? cfg.visibleDirs : ['tests/visible']) {
+  const p = resolve(root, String(d))
+  const real = existsSync(p) ? realpathSync(p) : resolve(rootReal, String(d))
+  if (!inside(resolve(rootReal, String(d))) || !inside(real)) early.push({ gate: 'visible-dir-outside-root', id: String(d), where: '.ist/harness.json', fix: 'visibleDirs must name folders inside the repo' })
+  else visibleDirs.push(p)
+}
 
 const ID = { int: /\bINT-\d{3,4}\b/g, mn: /\bMN-\d{3,4}\b/g, rule: /\bRULE-\d{3,4}\b/g }
 
-function walk(dir, out = []) {
+// Symlinks are never followed (a link could pull in files from anywhere, or loop). Only the hidden dir
+// itself, which the caller supplies, may be a link.
+function walk(dir, out = [], allowLink = false) {
   if (!existsSync(dir)) return out
+  if (!allowLink && lstatSync(dir).isSymbolicLink()) return out
   for (const name of readdirSync(dir)) {
     if (name === 'node_modules' || name.startsWith('.')) continue
     const p = join(dir, name)
-    if (statSync(p).isDirectory()) { if (p !== hiddenDir) walk(p, out) }
+    const st = lstatSync(p)
+    if (st.isSymbolicLink()) continue
+    if (st.isDirectory()) { if (p !== hiddenDir) walk(p, out) }
     else out.push(p)
   }
   return out
@@ -45,22 +93,25 @@ const read = p => readFileSync(p, 'utf8')
 const uniq = a => [...new Set(a)]
 
 // ---- intents & must-nevers ----
-const intents = new Map() // INT -> { file, mns: Set }
-const mns = new Map()     // MN  -> { intent, file, text }
-for (const f of walk(join(root, 'intent'))) {
-  if (!f.endsWith('.md') || /README\.md$/i.test(f)) continue
-  const text = read(f)
-  let current = null
-  for (const line of text.split('\n')) {
-    const h = line.match(/^#\s+(INT-\d{3,4})\b/)
-    if (h) { current = h[1]; intents.set(current, { file: f, mns: new Set() }); continue }
-    const m = line.match(/^\s*-\s*(MN-\d{3,4})\s*:\s*(.+)$/)
-    if (m) {
-      mns.set(m[1], { intent: current, file: f, text: m[2].trim() })
-      if (current) intents.get(current).mns.add(m[1])
+function parseIntents(dir) {
+  const intents = new Map() // INT -> { file, mns: Set }
+  const mns = new Map()     // MN  -> { intent, file, text }
+  for (const f of walk(join(dir, 'intent'))) {
+    if (!f.endsWith('.md') || /README\.md$/i.test(f)) continue
+    let current = null
+    for (const line of read(f).split('\n')) {
+      const h = line.match(/^#\s+(INT-\d{3,4})\b/)
+      if (h) { current = h[1]; intents.set(current, { file: f, mns: new Set() }); continue }
+      const m = line.match(/^\s*-\s*(MN-\d{3,4})\s*:\s*(.+)$/)
+      if (m) {
+        mns.set(m[1], { intent: current, file: f, text: m[2].trim() })
+        if (current) intents.get(current).mns.add(m[1])
+      }
     }
   }
+  return { intents, mns }
 }
+const { intents, mns } = parseIntents(root)
 
 // ---- rules ----
 const rules = new Map() // RULE -> { file, cites: {int:[], mn:[]} }
@@ -79,9 +130,9 @@ for (const f of walk(join(root, 'spec'))) {
 }
 
 // ---- tests ----
-function cover(dirs) {
+function cover(dirs, allowLink = false) {
   const byRule = new Map(), byMn = new Map()
-  for (const f of dirs.flatMap(d => walk(d))) {
+  for (const f of dirs.flatMap(d => walk(d, [], allowLink))) {
     if (f.endsWith('.md')) continue
     const t = read(f)
     for (const r of uniq(t.match(ID.rule) ?? [])) byRule.set(r, [...(byRule.get(r) ?? []), f])
@@ -90,11 +141,30 @@ function cover(dirs) {
   return { byRule, byMn }
 }
 const visible = cover(visibleDirs)
-const hidden = cover([hiddenDir])
+const hidden = cover([hiddenDir], true)
 
 // ---- gates ----
-const errors = []
-const rel = p => relative(root, p)
+let errors = [...early]
+// Every file under .ist/ (name, and content hash or "symlink"), so any add/remove/change/link shows.
+function istSnapshot(dir) {
+  const out = []
+  const visit = (d, rel) => {
+    if (!existsSync(d) && !isLink(d)) return
+    if (isLink(d)) return void out.push(`L ${rel}`)
+    if (!lstatSync(d).isDirectory()) return void out.push(`F ${rel} ${createHash('sha256').update(readFileSync(d)).digest('hex')}`)
+    for (const name of readdirSync(d).sort()) visit(join(d, name), `${rel}/${name}`)
+  }
+  visit(join(dir, '.ist'), '.ist')
+  return out.join('\n')
+}
+function isLink(p) { try { return lstatSync(p).isSymbolicLink() } catch { return false } }
+if (base) {
+  if (istSnapshot(base) !== istSnapshot(root)) errors.push({ gate: 'ist-config-changed', id: '.ist', where: '.ist/', fix: 'human review required: the PR changes what the gate counts' })
+  for (const [mn, info] of parseIntents(base).mns) {
+    if (!mns.has(mn)) errors.push({ gate: 'must-never-removed', id: mn, where: relative(base, info.file), fix: 'human review required: a must-never on the base branch is gone from the PR' })
+  }
+}
+const rel = p => (p.startsWith(root) ? relative(root, p) : p)
 
 for (const [mn, info] of mns) {
   const owners = [...rules].filter(([, r]) => r.cites.mn.includes(mn)).map(([id]) => id)
@@ -109,10 +179,14 @@ for (const [rule, r] of rules) {
   for (const m of r.cites.mn) if (!mns.has(m)) errors.push({ gate: 'dangling-citation', id: rule, where: rel(r.file), fix: `${m} is not defined in intent/` })
 }
 
+const COVERAGE = new Set(['rule-without-test', 'must-never-without-hidden-test'])
+const warnings = local ? errors.filter(e => COVERAGE.has(e.gate)) : []
+if (local) errors = errors.filter(e => !COVERAGE.has(e.gate))
+
 const summary = {
   intents: intents.size, mustNevers: mns.size, rules: rules.size,
-  visibleTestFiles: visibleDirs.flatMap(d => walk(d)).filter(f => !f.endsWith('.md')).length, hiddenTestFiles: walk(hiddenDir).filter(f => !f.endsWith('.md')).length,
-  errors,
+  visibleTestFiles: visibleDirs.flatMap(d => walk(d)).filter(f => !f.endsWith('.md')).length, hiddenTestFiles: walk(hiddenDir, [], true).filter(f => !f.endsWith('.md')).length,
+  errors, warnings,
 }
 
 if (json) {
@@ -120,6 +194,7 @@ if (json) {
 } else {
   console.log(`ist-link-check · ${summary.intents} intents · ${summary.mustNevers} must-nevers · ${summary.rules} rules · ${summary.visibleTestFiles} visible / ${summary.hiddenTestFiles} hidden test files`)
   for (const e of errors) console.log(`  ✗ ${e.gate.padEnd(30)} ${e.id.padEnd(9)} ${e.where}\n      → ${e.fix}`)
-  console.log(errors.length ? `\n${errors.length} gate failure(s).` : '\nAll links hold.')
+  for (const e of warnings) console.log(`  ! ${e.gate.padEnd(30)} ${e.id.padEnd(9)} ${e.where}\n      → ${e.fix}`)
+  console.log(errors.length ? `\n${errors.length} gate failure(s).` : warnings.length ? `\nNo blocking gaps; ${warnings.length} coverage warning(s) CI will fail on.` : '\nAll links hold.')
 }
 process.exit(errors.length ? 1 : 0)
