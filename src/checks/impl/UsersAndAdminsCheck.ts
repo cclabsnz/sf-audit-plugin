@@ -128,9 +128,25 @@ export class UsersAndAdminsCheck implements SecurityCheck {
     const unknownDetail = (perm: string) => partial
       ? `No ${perm} holder was found, but ${readNote}, so holders may be in the rows not read.`
       : `No active user was found holding ${perm}, yet every org with an active System Administrator has at least one. The audit user most likely cannot see PermissionSetAssignment rows, so this is unknown, not clean.`;
-    const unknownRemediation = partial
-      ? 'Raise the query row limit (sf config set org-max-query-limit, or SF_ORG_MAX_QUERY_LIMIT) above the assignment count and re-run.'
-      : 'Re-run as a user with View Setup and Configuration (or View All Users) so permission set assignments are visible.';
+    const RAISE_LIMIT = 'Raise the query row limit (sf config set org-max-query-limit, or SF_ORG_MAX_QUERY_LIMIT) above the assignment count and re-run.';
+    const SEE_ROWS = 'Re-run as a user with View Setup and Configuration (or View All Users) so permission set assignments are visible.';
+    // A capped read needs a higher limit; a failed COUNT says nothing about the limit, so the
+    // visibility advice applies too.
+    const unknownRemediation = !partial ? SEE_ROWS : psaTotal === undefined ? `${SEE_ROWS} ${RAISE_LIMIT}` : RAISE_LIMIT;
+    // On a partial read, a count can also fall under its reporting threshold and not appear at all.
+    // This finding is the machine-readable signal for every count from the read (INT-004).
+    if (partial) {
+      findings.push({
+        id: 'users-and-admins-read-incomplete',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `Permission assignments were not fully read: ${readNote}`,
+        detail:
+          'Counts of Modify All Data, View All Data, super-admin, Customize Application and Author Apex holders are lower bounds. A count under its reporting threshold, or a super-admin whose permissions fell in the rows not read, may not be reported at all.',
+        remediation: unknownRemediation,
+      });
+    }
     const modifyRisk = modifyAllCount > 5 ? 'CRITICAL' : modifyAllCount > 3 ? 'HIGH' : 'LOW';
     findings.push({
       id: 'users-modify-all-data',
@@ -142,7 +158,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
         : `${count(modifyAllCount)} user(s) have Modify All Data permission`,
       detail: modifyUnknown
         ? unknownDetail('Modify All Data')
-        : 'Modify All Data grants unrestricted write access across all objects. This is one of the most powerful permissions in Salesforce.',
+        : 'Modify All Data grants unrestricted write access across all objects. This is one of the most powerful permissions in Salesforce.' + (partial ? ` This is a lower bound: ${readNote}.` : ''),
       remediation: modifyUnknown
         ? unknownRemediation
         : 'Limit Modify All Data to essential system administrators only. Review each user and remove the permission from any non-essential accounts.',
@@ -160,7 +176,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
         : `${count(viewAllCount)} user(s) have View All Data permission`,
       detail: viewUnknown
         ? unknownDetail('View All Data')
-        : 'View All Data grants unrestricted read access across all objects, bypassing sharing rules and record-level security.',
+        : 'View All Data grants unrestricted read access across all objects, bypassing sharing rules and record-level security.' + (partial ? ` This is a lower bound: ${readNote}.` : ''),
       remediation: viewUnknown
         ? unknownRemediation
         : 'Limit View All Data to essential users. Consider using permission sets scoped to specific objects instead.',

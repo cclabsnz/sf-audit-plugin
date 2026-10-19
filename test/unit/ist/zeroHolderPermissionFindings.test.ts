@@ -218,6 +218,28 @@ describe('RULE-042: a partial read gives lower bounds, not passes', () => {
     expect(finding.remediation).toMatch(/org-max-query-limit/);
   });
 
+  it('a partial read adds one inconclusive read-incomplete finding; a complete read does not', async () => {
+    const partial = (await runCheck({ rows: both(2), psaTotal: 12000 })).findings;
+    const note = byId(partial, 'users-and-admins-read-incomplete')!;
+    expect(note.inconclusive).toBe(true);
+    expect(note.riskLevel).toBe('INFO');
+    expect(note.title).toMatch(/read 2 of 12000 assignments$/);
+    expect(violationsFor(partial, 'LOW').map((x) => x.id)).not.toContain('users-and-admins-read-incomplete');
+    // The capped LOW count carries the read in its detail, not only its title.
+    expect(byId(partial, 'users-modify-all-data')!.detail).toMatch(/lower bound: read 2 of 12000 assignments/);
+    const complete = (await runCheck({ rows: both(2) })).findings;
+    expect(byId(complete, 'users-and-admins-read-incomplete')).toBeUndefined();
+    expect(byId(complete, 'users-modify-all-data')!.detail).not.toMatch(/lower bound/);
+  });
+
+  it('a failed COUNT gives both visibility and row-limit advice', async () => {
+    const { findings } = await runCheck({ rows: [], countThrows: true });
+    const r = byId(findings, 'users-modify-all-data')!.remediation;
+    expect(r).toMatch(/View Setup and Configuration/);
+    expect(r).toMatch(/org-max-query-limit/);
+    expect(byId(findings, 'users-and-admins-read-incomplete')!.title).toMatch(/could not be confirmed$/);
+  });
+
   it.each([
     ['one more than read', 2, true],
     ['equal to read', 1, false],
@@ -297,6 +319,14 @@ describe('RULE-043: an unknown count is never shown as a number', () => {
     expect(skipped.metrics.modifyAllDataUsersCount).toBe(0);
     expect(computeDiff(known, skipped).metricDeltas.map((m) => m.key)).not.toContain('modifyAllDataUsersCount');
     expect(new HtmlRenderer().render(skipped)).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#8b949e;font-weight:700">unknown/);
+  });
+
+  it('an exact count of 10 or 20 is known, not mistaken for a "0 user(s)" archive', async () => {
+    const holders = (n: number) => Array.from({ length: n }, (_, i) => row(`u${i}`, { ModifyAllData: true }));
+    const ten = await result({ rows: holders(10) });
+    const twenty = await result({ rows: holders(20) });
+    expect(byId(ten.findings, 'users-modify-all-data')!.title).toMatch(/^10 user\(s\)/);
+    expect(computeDiff(ten, twenty).metricDeltas.map((m) => m.key)).toContain('modifyAllDataUsersCount');
   });
 
   it('the history diff still reports a change between two known counts', async () => {

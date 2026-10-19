@@ -24,9 +24,10 @@ cites: INT-004, MN-011
 - When the org returns its permission set assignments in more than one batch
 - then the check counts holders across every batch, not only the first
 - and when fewer rows come back than a COUNT() of the same query reports (the client's row limit), or the COUNT fails, the read is partial
-- and on a partial read a non-zero count is a definite lower bound: the finding stays active at that bound's severity, titled "At least N user(s) …", as do the super-admin, Customize Application and Author Apex findings
+- and a partial read always adds the inconclusive finding `users-and-admins-read-incomplete`, saying how much was read, because counts under a reporting threshold (super-admin, Customize Application > 5, Author Apex > 3) may then not appear at all
+- and on a partial read a non-zero Modify All / View All count is a definite lower bound: the finding stays active at that bound's severity, titled "At least N user(s) …", with the read noted in its detail; super-admin, Customize Application and Author Apex findings that are reported carry the same title
 - and on a partial read a zero count is inconclusive and says how much was read
-- and a failed COUNT never fails the rest of the check
+- and a failed COUNT never fails the rest of the check, and its advice covers both visibility and the row limit
 
 ## RULE-043 An unknown count is never shown or compared as a number on the dashboard or in a diff
 cites: INT-004, MN-011
