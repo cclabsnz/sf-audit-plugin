@@ -4,6 +4,7 @@ import type { Finding } from '../findings/Finding.js';
 import type { OrgMetrics } from '@cclabsnz/sf-core';
 import type { AuditDiff, FindingChange, MetricDelta } from './AuditDiff.js';
 import { METRIC_META, metricDirection } from './metricMeta.js';
+import { unknownMetrics } from '../findings/unknownMetrics.js';
 
 function detailChanged(a: Finding, b: Finding): boolean {
   return (
@@ -40,9 +41,12 @@ export function computeDiff(baseline: AuditResult, current: AuditResult): AuditD
     }
   }
 
-  // Metric deltas — only emit when before !== after
+  // Metric deltas — only emit when before !== after, and only between two known values: an
+  // unreadable count is stored as 0, and a drop to it is not an improvement.
+  const unknown = new Set([...unknownMetrics(baseline.findings), ...unknownMetrics(current.findings)]);
   const metricDeltas: MetricDelta[] = [];
   for (const key of Object.keys(METRIC_META) as Array<keyof OrgMetrics>) {
+    if (unknown.has(key)) continue;
     const before = baseline.metrics[key];
     const after  = current.metrics[key];
     if (before === after) continue;

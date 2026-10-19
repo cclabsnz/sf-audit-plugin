@@ -9,6 +9,22 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Fixed
+
+- **Attack chains no longer fire on "0 user(s) have View All / Modify All Data".** Those two findings were always active, even with no holders, so `insider-bulk-exfil`, `mfa-bypass-admin`, `xss-to-privileged-session`, `soql-injection-read` and `inbound-email-rce` could be reported for orgs where nobody visible held either permission; `platform-event-priv-esc` and emergent paths could list them as steps. Every org with an active System Administrator has holders, so zero now reads as "Could not confirm who holds …" and is inconclusive.
+- `users-and-admins` reads every batch of permission set assignments, and checks the read against a `COUNT()` of the same query. When the client's row limit (default 10,000, or `org-max-query-limit`) cuts the read short, counts are reported as lower bounds ("At least 8 user(s) …") at that bound's severity, and a zero is inconclusive. A failed `COUNT()` is treated the same way and no longer fails the check.
+- An unknown or lower-bound Modify All / View All count is shown as "unknown" on the HTML dashboard, not a number, and the history diff does not compare it, including an archived "0 user(s)" from earlier versions. JSON output still carries 0 for these metrics.
+
+### Changed
+
+These follow from treating an unreadable count as unknown. They affect CI gates when the audit user cannot see permission set assignments:
+
+- `--fail-on LOW` no longer fails on the zero-holder finding, which used to be an active LOW.
+- `--fail-on-inconclusive` now exits 3 for those runs.
+- `users-and-admins` counts as not assessed in evidence coverage, which can cap the grade at B.
+- In SARIF, `executionSuccessful` is false and the finding moves to `toolExecutionNotifications`, so GitHub code scanning may close the earlier alert.
+- The health score and `audit diff` treat the move from a counted finding to an inconclusive one like any other inconclusive finding: the score rises and the diff shows a severity change.
+
 ## [v1.17.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.17.0) — 2026-10-17
 
 109 checks (up from 95) and 19 attack chains (up from 17).
