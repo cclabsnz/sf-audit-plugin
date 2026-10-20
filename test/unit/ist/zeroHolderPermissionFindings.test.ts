@@ -172,7 +172,7 @@ describe('RULE-042: a partial read gives lower bounds, not passes', () => {
   it('the COUNT runs over exactly the row query\'s FROM and WHERE', async () => {
     const seen: string[] = [];
     await runCheck({ rows: [], seen });
-    const rowQuery = seen.find((q) => /^SELECT Assignee\.Id/.test(q.trim()))!;
+    const rowQuery = seen.find((q) => q.trim().startsWith('SELECT Assignee.Id'))!;
     const countQuery = seen.find((q) => /COUNT\(\) FROM PermissionSetAssignment/i.test(q))!;
     const tail = (q: string) => q.slice(q.indexOf('FROM PermissionSetAssignment')).replace(/\s+/g, ' ').trim();
     expect(tail(countQuery)).toBe(tail(rowQuery));
