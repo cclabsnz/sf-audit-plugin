@@ -9,6 +9,12 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Fixed
+
+- `engines.node` now says `>=22.0.0`, not `>=18.0.0`. `@salesforce/core` 9 and
+  `@salesforce/sf-plugins-core` 13 already require Node 22, so the plugin never ran on 18 or 20.
+  The README's requirements say Node.js 22+ to match.
+
 ## [v1.17.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.17.0) — 2026-10-17
 
 109 checks (up from 95) and 19 attack chains (up from 17).
