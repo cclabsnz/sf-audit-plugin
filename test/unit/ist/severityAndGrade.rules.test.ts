@@ -8,6 +8,7 @@ import { UsersAndAdminsCheck } from '../../../src/checks/impl/UsersAndAdminsChec
 import { CertificateExpiryCheck } from '../../../src/checks/impl/CertificateExpiryCheck.js';
 import { ApexSharingCheck } from '../../../src/checks/impl/ApexSharingCheck.js';
 import { MarkdownRenderer } from '../../../src/renderers/MarkdownRenderer.js';
+import { HtmlRenderer } from '../../../src/renderers/HtmlRenderer.js';
 
 const ORG = { id: 'o', name: 'n', type: 'Enterprise Edition', isSandbox: false, instance: 'NA1', instanceUrl: 'https://x.my.salesforce.com' };
 
@@ -314,5 +315,32 @@ describe('RULE-078 a defence-in-depth gap is at most MEDIUM', () => {
     const rows = [row('a')];
     const r = await new C().run(ctx({ soql: { queryAll: jest.fn(), query: (jest.fn() as any).mockImplementation((s: string) => Promise.resolve(/COUNT\(\)/i.test(s) ? { totalSize: 5, records: [] } : { totalSize: 1, records: rows })) } as any }, true));
     expect(r.findings.find((x) => x.id === 'users-super-admin-combo')!.detail).not.toMatch(/sandbox/i);
+  });
+});
+
+describe('RULE-079 the HTML dashboard counts the findings the grade counts (MN-055)', () => {
+  const findings = [
+    f('LOW', 'open-low'),
+    f('LOW', 'passed-low', { passed: true }),
+    f('LOW', 'blind-low', { inconclusive: true }),
+    f('LOW', 'waived-low', { waived: true }),
+    f('HIGH', 'open-high'),
+    f('HIGH', 'passed-high', { passed: true }),
+  ];
+  const html = new HtmlRenderer().render(buildAuditResult(ctx(), findings, {}));
+  const kpi = (level: string) =>
+    new RegExp(`<div class="kpi-value"[^>]*>(\\d+)</div>\\s*<div class="kpi-label">${level}</div>`).exec(html)?.[1];
+
+  it('KPI cards leave out passed, inconclusive and waived findings', () => {
+    expect(kpi('LOW')).toBe('1');
+    expect(kpi('HIGH')).toBe('1');
+  });
+
+  it('the donut total is the open-finding total', () => {
+    expect(html).toMatch(/>2<\/text>\s*<text[^>]*>open findings</);
+  });
+
+  it('the grade reason sits below the gauge, not beside it', () => {
+    expect(html).toMatch(/\.dash-score-panel \{ flex-direction: column;/);
   });
 });

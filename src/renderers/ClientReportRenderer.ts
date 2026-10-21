@@ -137,7 +137,7 @@ ${this.footer(b)}
     const meta = [r.orgName, r.orgType, r.orgId, r.generatedAt.toISOString().slice(0, 10)]
       .map((s) => esc(String(s))).join(' · ');
     const counts = SEV_ORDER
-      .map((l) => ({ l, n: r.findings.filter((f) => f.riskLevel === l && !f.passed && !f.inconclusive).length }))
+      .map((l) => ({ l, n: r.findings.filter((f) => f.riskLevel === l && !f.passed && !f.inconclusive && !f.waived).length }))
       .filter((c) => c.n > 0)
       .map((c) => this.chip(c.l, `${c.n} ${c.l}`)).join('');
     const prepared = b.preparedFor ? ` for ${esc(b.preparedFor)}` : '';

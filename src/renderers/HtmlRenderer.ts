@@ -90,8 +90,16 @@ function buildDonutSvg(counts: Record<string, number>): string {
     <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#21262d" stroke-width="14" />
     ${arcs.join('')}
     <text x="${cx}" y="${cy - 5}" text-anchor="middle" fill="#f0f6fc" font-size="20" font-weight="700" font-family="system-ui,sans-serif">${total}</text>
-    <text x="${cx}" y="${cy + 14}" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui,sans-serif">findings</text>
+    <text x="${cx}" y="${cy + 14}" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui,sans-serif">open findings</text>
   </svg>`;
+}
+
+/** Open findings per severity: what the score and the executive report count (RULE-079). */
+function openCounts(result: AuditResult): Record<string, number> {
+  const open = result.findings.filter((f) => !f.passed && !f.inconclusive && !f.notAssessed && !f.waived);
+  return Object.fromEntries(
+    (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((l) => [l, open.filter((f) => f.riskLevel === l).length]),
+  );
 }
 
 function buildDashboard(result: AuditResult, counts: Record<string, number>): string {
@@ -339,6 +347,8 @@ ${firaFontFaceCss()}
     align-items: center;
     justify-content: center;
   }
+  /* The grade reason and coverage note sit under the gauge, not squeezed beside it. */
+  .dash-score-panel { flex-direction: column; text-align: center; }
 
   /* Score ring */
   .gauge-wrap { display: flex; align-items: center; justify-content: center; }
@@ -595,7 +605,7 @@ ${firaFontFaceCss()}
     </div>
   </div>
 
-  ${buildDashboard(result, counts)}
+  ${buildDashboard(result, openCounts(result))}
 
   ${attackPathsHtml}
 

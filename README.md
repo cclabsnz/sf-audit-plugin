@@ -38,18 +38,14 @@ third-party plugin can satisfy it. Answer `y`.
 
 ### Unattended installs (CI/CD)
 
-To install in CI/CD without the interactive prompt, add the plugin to the CLI allowlist first (the merge step needs `jq`):
+To install in CI/CD without the interactive prompt, allowlist the plugin first (sf CLI 2.135.0 or later):
 
 ```bash
-mkdir -p ~/.config/sf
-if [ -f ~/.config/sf/unsignedPluginAllowList.json ]; then
-  jq '. + ["@cclabsnz/sf-audit"] | unique' ~/.config/sf/unsignedPluginAllowList.json > ~/.config/sf/unsignedPluginAllowList.json.tmp && mv ~/.config/sf/unsignedPluginAllowList.json.tmp ~/.config/sf/unsignedPluginAllowList.json
-else
-  echo '["@cclabsnz/sf-audit"]' > ~/.config/sf/unsignedPluginAllowList.json
-fi
-
+sf plugins trust allowlist add --name @cclabsnz/sf-audit
 sf plugins install @cclabsnz/sf-audit
 ```
+
+Older CLIs have no `allowlist` command; [docs/INSTALL.md](docs/INSTALL.md) shows the file to write instead.
 
 ### Verifying provenance
 
