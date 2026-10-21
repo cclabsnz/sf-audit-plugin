@@ -9,6 +9,19 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Fixed
+
+- The HTML report's dashboard counted passed and inconclusive findings, so it showed 66 LOW where
+  the executive report showed 2. The donut and severity cards now count open findings only, and
+  the executive report's severity chips no longer count waived findings.
+- The grade reason and coverage note in the HTML report were squeezed into a narrow column beside
+  the score gauge. They now sit below it.
+
+### Changed
+
+- Unattended installs use `sf plugins trust allowlist add` (sf CLI 2.135.0 or later) in place of
+  the `jq` script.
+
 ## [v1.18.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.18.0) — 2026-10-21
 
 Evidence coverage on a live org rises from about 58% to 96–97%, and grades and attack chains now

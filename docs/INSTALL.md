@@ -14,7 +14,13 @@ npm audit signatures   # reports "verified attestations" for @cclabsnz/sf-audit
 
 See [Trust & verification](../README.md#trust--verification) for the full list, including the no-network-egress guard and the independent scans.
 
-For CI or any unattended install, where an interactive prompt would hang the job, allowlist the package on the machine doing the installing:
+For CI or any unattended install, where an interactive prompt would hang the job, allowlist the package on the machine doing the installing. On sf CLI 2.135.0 or later:
+
+```bash
+sf plugins trust allowlist add --name @cclabsnz/sf-audit
+```
+
+On an older CLI, write the allowlist file yourself:
 
 ```jsonc
 // macOS and Linux: ~/.config/sf/unsignedPluginAllowList.json

@@ -74,3 +74,10 @@ cites: INT-011, INT-012, MN-052, MN-056
 cites: INT-011
 - When a finding reports a missing second layer rather than an exposure: no explicit MFA permission while Salesforce enforces MFA for UI logins at org level (`internal-user-mfa-gaps`), or no field history on sensitive objects (`field-history-tracking-missing`)
 - then it is MEDIUM when it is widespread and LOW otherwise, and its title says it is a second layer
+
+## RULE-079 The HTML dashboard counts the findings the grade counts
+cites: INT-011, MN-055
+- When the HTML report draws its severity donut and KPI cards
+- then each severity counts open findings only: passed, inconclusive, not-assessed and waived findings are left out, as the score and the executive report's severity chips do
+- and the donut is captioned "open findings"
+- and the grade reason and coverage note sit below the score gauge, at the panel's full width
