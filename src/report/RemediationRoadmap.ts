@@ -10,11 +10,15 @@ export interface Roadmap {
   project: Finding[];
 }
 
-/** Group active findings into effort tiers, risk-sorted within each. Unknown checkId → moderate. */
+/**
+ * Group the findings that ask for a change into effort tiers, risk-sorted within each. Unknown
+ * checkId → moderate. INFO findings (inventories, advisories) and not-assessed ones (a check that
+ * failed or saw nothing) ask for no change, so they stay in the appendix and the coverage line.
+ */
 export function buildRoadmap(findings: Finding[]): Roadmap {
   const out: Roadmap = { quick: [], moderate: [], project: [] };
   for (const f of findings) {
-    if (f.passed || f.inconclusive || f.waived) continue;
+    if (f.passed || f.inconclusive || f.waived || f.notAssessed || f.riskLevel === 'INFO') continue;
     const effort = (f.checkId && getCheckMeta(f.checkId)?.effort) || 'moderate';
     out[effort].push(f);
   }

@@ -2,7 +2,7 @@ import { jest } from '@jest/globals';
 import { ExternalAccountHierarchyExposureCheck } from '../../../../src/checks/impl/ExternalAccountHierarchyExposureCheck.js';
 import type { AuditContext } from '@cclabsnz/sf-core';
 
-function makeCtx(soqlResponses: Record<string, unknown[] | Error>): AuditContext {
+function makeCtx(soqlResponses: Record<string, unknown[] | Error>, userFields = ['Id', 'Username', 'IsActive', 'IsPrmSuperUser']): AuditContext {
   return {
     soql: {
       queryAll: (jest.fn() as any).mockImplementation((q: string) => {
@@ -15,7 +15,9 @@ function makeCtx(soqlResponses: Record<string, unknown[] | Error>): AuditContext
       }),
     } as any,
     tooling: {} as any,
-    rest: {} as any,
+    rest: {
+      get: (jest.fn() as any).mockImplementation(() => Promise.resolve({ fields: userFields.map((name) => ({ name })) })),
+    } as any,
     orgInfo: {
       id: '00D000000000001',
       name: 'Test Org',
@@ -73,13 +75,12 @@ describe('ExternalAccountHierarchyExposureCheck', () => {
     expect(f?.riskLevel).toBe('HIGH');
   });
 
-  it('treats a missing IsPrmSuperUser column (no PRM licence) as no super users', async () => {
-    const ctx = makeCtx({
-      'FROM User': new Error("No such column 'IsPrmSuperUser' on entity 'User'."),
-      'FROM ExternalAccountHierarchy': [],
-    });
+  it('treats an absent IsPrmSuperUser field (no PRM licence) as no super users, without querying it', async () => {
+    const ctx = makeCtx({ 'FROM ExternalAccountHierarchy': [] }, ['Id', 'Username', 'IsActive']);
     const r = await check.run(ctx);
     expect(r.findings.map((f) => f.id)).toEqual(['external-account-hierarchy-ok']);
+    const queries = (ctx.soql.queryAll as any).mock.calls.map((c: string[]) => c[0]);
+    expect(queries.some((q: string) => q.includes('IsPrmSuperUser'))).toBe(false);
   });
 
   it('propagates a permission error on super users instead of passing', async () => {

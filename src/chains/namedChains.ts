@@ -23,6 +23,36 @@ const byIds = (active: Finding[], ids: string[]): Finding[] =>
 const byPrefixes = (active: Finding[], prefixes: string[]): Finding[] =>
   active.filter((f) => prefixes.some((p) => f.id === p || f.id.startsWith(p)));
 
+// Findings that show an unauthenticated visitor can actually read, write or run something. A guest
+// user existing (`guest-user-baseline`) or a site being live (`classic-sites-active`) is a surface,
+// not an exposure: every org with a site has one. RULE-071.
+const GUEST_EXPOSURE = [
+  'guest-user-read-access', 'guest-user-write-access', 'guest-user-sharing-exposure',
+  'guest-executable-apex-unprotected', 'guest-executable-apex-exposed', 'guest-executable-apex-system-mode',
+  'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
+  'guest-api-access-enabled', 'guest-api-hard-delete',
+  'guest-user-visibility-view-all-users', 'guest-user-visibility-owd', 'guest-user-visibility-object-read',
+  'guest-record-access-policy-not-enforced',
+  'inbound-email-handler-unauthenticated-execution',
+];
+
+// Ways in for a low-trust principal: external users with public sharing, social sign-on,
+// self-registration, or a confirmed guest exposure. RULE-072.
+const LOW_TRUST_ENTRY = [
+  'sharing-model-external-read', 'sharing-model-external-write',
+  'auth-providers-social', 'experience-cloud-site-self-registration',
+  ...GUEST_EXPOSURE,
+];
+
+// Escalations a non-admin can use. Admins holding admin permissions (`users-super-admin-combo`,
+// `users-author-apex`) are not an escalation: they already have the access. RULE-072.
+const NON_ADMIN_ESCALATION = [
+  'escalation-perms-found', 'privileged-access-shadow-admins',
+  'separation-of-duties-self-escalation', 'separation-of-duties-identity-takeover', 'separation-of-duties-grant-self-data',
+  'login-access-policy-delegated-admins',
+  'integration-least-privilege-escalation-permissions',
+];
+
 export const NAMED_CHAINS: NamedChainDef[] = [
   {
     id: 'unauth-bulk-exfil',
@@ -45,6 +75,9 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     match(present, active) {
       if (!has(present, 'unauth-foothold')) return null;
       if (!hasAny(present, 'code-exec', 'data-read-bulk', 'data-write')) return null;
+      // A surface and internal weaknesses are not a path: an unauthenticated visitor must be shown
+      // to reach something.
+      if (byIds(active, GUEST_EXPOSURE).length === 0) return null;
       const steps = byIds(active, [
         'guest-user-read-access', 'guest-user-write-access', 'guest-user-sharing-exposure', 'guest-user-baseline',
         'guest-executable-apex-unprotected', 'guest-executable-apex-exposed', 'guest-executable-apex-system-mode',
@@ -105,30 +138,19 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       '(assign permission sets, manage users, author apex, modify metadata) to reach full org control.',
     remediation:
       'Remove escalation permissions from non-admin profiles/permission sets and review who holds them.',
-    match(present, active) {
-      if (!hasAny(present, 'low-trust-authenticated', 'unauth-foothold')) return null;
-      if (!hasAny(present, 'priv-esc', 'org-takeover')) return null;
-      const steps = byIds(active, [
-        'sharing-model-external-read', 'sharing-model-external-write', 'guest-user-baseline',
-        'escalation-perms-found', 'users-author-apex', 'users-super-admin-combo',
-        'login-access-policy-delegated-admins', 'login-access-policy-login-as-enabled',
-        // Admin-equivalent users off the System Administrator profile, and the toxic combinations
-        // that let one user grant themselves access, are escalation steps in their own right.
-        'privileged-access-shadow-admins',
-        'separation-of-duties-self-escalation', 'separation-of-duties-identity-takeover',
-        'separation-of-duties-grant-self-data',
-        // An integration account holding Author Apex, Customize Application or user-management
-        // permissions it does not use has the same escalation reach as users-author-apex above.
-        'integration-least-privilege-escalation-permissions',
-        // Grants unauth-foothold, so it must appear whenever it is what opened the gate.
-        'inbound-email-handler-unauthenticated-execution',
-      ]);
-      if (steps.length < 2) return null;
-      // Further escalation paths. They join as evidence but never count toward the floor, so two of
-      // them alone, with no low-trust step, cannot claim a standard-user path to takeover.
+    match(_present, active) {
+      // Both ends must be present: a way in for a low-trust principal, and an escalation that
+      // principal could use. Admin-held power and a guest user merely existing join only as evidence.
+      const entry = byIds(active, LOW_TRUST_ENTRY);
+      const escalation = byIds(active, NON_ADMIN_ESCALATION);
+      if (entry.length === 0 || escalation.length === 0) return null;
       return [
-        ...steps,
+        ...entry,
+        ...escalation,
         ...byIds(active, [
+          // Admin powers: they widen what a takeover reaches but are not themselves the escalation.
+          'users-super-admin-combo', 'users-author-apex', 'guest-user-baseline', 'login-access-policy-login-as-enabled',
+          'separation-of-duties-code-and-data',
           'delegated-administration-groups-active',
           'auth-provider-registration-handler-admin-exec', 'auth-provider-registration-handler-unverified-email-linking',
           'delegated-authentication-admin-assigned', 'platform-event-subscriber-escalation',

@@ -6,7 +6,11 @@ function makeCtx(opts: { classified?: unknown[]; classifiedThrow?: boolean; desc
   const toolingQuery = jest.fn() as any;
   toolingQuery.mockImplementation(async () => {
     if (opts.classifiedThrow) throw new Error('no tooling');
-    return opts.classified ?? [];
+    // FieldDefinition rows carry the object as a nested EntityDefinition.
+    return ((opts.classified ?? []) as Array<{ obj: string; field: string }>).map((c) => ({
+      EntityDefinition: { QualifiedApiName: c.obj },
+      QualifiedApiName: c.field,
+    }));
   });
   const get = jest.fn() as any;
   get.mockImplementation(async (path: string) => {

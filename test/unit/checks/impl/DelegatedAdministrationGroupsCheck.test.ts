@@ -3,18 +3,22 @@ import { DelegatedAdministrationGroupsCheck } from '../../../../src/checks/impl/
 import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(soqlResponses: Record<string, unknown[] | Error>): AuditContext {
+  const route = (q: string) => {
+    for (const [key, res] of Object.entries(soqlResponses)) {
+      if (q.includes(key)) {
+        return res instanceof Error ? Promise.reject(res) : Promise.resolve(res);
+      }
+    }
+    return Promise.resolve([]);
+  };
   return {
     soql: {
-      queryAll: (jest.fn() as any).mockImplementation((q: string) => {
-        for (const [key, res] of Object.entries(soqlResponses)) {
-          if (q.includes(key)) {
-            return res instanceof Error ? Promise.reject(res) : Promise.resolve(res);
-          }
-        }
-        return Promise.resolve([]);
-      }),
+      queryAll: (jest.fn() as any).mockImplementation((q: string) =>
+        /FROM DelegateGroup/.test(q) ? Promise.reject(new Error(`sObject type 'DelegateGroup' is not supported.`)) : route(q),
+      ),
     } as any,
-    tooling: {} as any,
+    // DelegateGroup and DelegateGroupMember are Tooling-only.
+    tooling: { query: (jest.fn() as any).mockImplementation(route) } as any,
     rest: {} as any,
     orgInfo: {
       id: '00D000000000001',

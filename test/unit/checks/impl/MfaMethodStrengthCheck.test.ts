@@ -35,9 +35,13 @@ describe('MfaMethodStrengthCheck', () => {
     expect(r.findings[0].passed).toBeUndefined();
   });
 
-  it('treats an empty registration list the same as missing data', async () => {
+  // An empty list means nobody registered (mfa-registration reports that); only an unset cache
+  // means the data was never gathered.
+  it('treats an empty registration list as nothing to grade, not as missing data', async () => {
     const r = await check.run(makeCtx([]));
-    expect(r.findings[0].id).toBe('mfa-no-data');
+    expect(r.findings[0].id).toBe('mfa-method-strength-none-registered');
+    expect(r.findings[0].passed).toBe(true);
+    expect(r.findings[0].inconclusive).toBeUndefined();
   });
 
   // Classification follows NIST/Salesforce guidance: phishing-resistant beats TOTP beats

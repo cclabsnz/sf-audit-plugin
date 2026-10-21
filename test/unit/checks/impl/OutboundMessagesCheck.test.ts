@@ -2,14 +2,27 @@ import { jest } from '@jest/globals';
 import { OutboundMessagesCheck } from '../../../../src/checks/impl/OutboundMessagesCheck.js';
 import type { AuditContext } from '@cclabsnz/sf-core';
 
-function makeCtx(records: unknown[], throws = false): AuditContext {
+type Msg = { Id: string; Name: string; EndpointUrl?: string; IncludeSessionId?: boolean };
+
+// The Tooling API lists messages (Id, Name) and returns endpoint and session-ID flag only in the
+// Metadata of a single record, fetched by id. A message without EndpointUrl reads as unreadable.
+function makeCtx(records: Msg[], throws = false): AuditContext {
+  const byId = new Map(records.map((r) => [r.Id, r]));
   return {
     soql: {} as any,
     tooling: {
       query: throws
         ? (jest.fn() as any).mockRejectedValue(Object.assign(new Error('not accessible'), { errorCode: 'ENTITY_IS_INACCESSIBLE' }))
-        : (jest.fn() as any).mockResolvedValue(records),
-      getRecord: jest.fn(),
+        : (jest.fn() as any).mockImplementation((q: string) =>
+            /EndpointUrl|IncludeSessionId/.test(q)
+              ? Promise.reject(new Error("No such column 'EndpointUrl' on entity 'WorkflowOutboundMessage'"))
+              : Promise.resolve(records.map(({ Id, Name }) => ({ Id, Name }))),
+          ),
+      getRecord: (jest.fn() as any).mockImplementation((type: string, id: string) => {
+        const r = byId.get(id);
+        if (type !== 'WorkflowOutboundMessage' || !r || r.EndpointUrl === undefined) return Promise.reject(new Error('not found'));
+        return Promise.resolve({ Id: id, Metadata: { endpointUrl: r.EndpointUrl, includeSessionId: r.IncludeSessionId ?? false } });
+      }),
     } as any,
     rest: {} as any,
     orgInfo: { id: 'o', name: 'n', type: 'DE', isSandbox: false, instance: 'NA1', instanceUrl: 'https://x' },
@@ -53,5 +66,15 @@ describe('OutboundMessagesCheck', () => {
     const ctx = makeCtx([], true);
     const result = await check.run(ctx);
     expect(result.findings.some((f) => f.inconclusive)).toBe(true);
+  });
+
+  it('reports a message it cannot read as unassessed, and does not pass the inventory (MN-051)', async () => {
+    const ctx = makeCtx([
+      { Id: '1', Name: 'Readable', EndpointUrl: 'https://ok.example.com', IncludeSessionId: false },
+      { Id: '2', Name: 'Hidden' },
+    ]);
+    const result = await check.run(ctx);
+    expect(result.findings.find((x) => x.id === 'outbound-messages-unread')?.affectedItems?.map((i) => i.label)).toEqual(['Hidden']);
+    expect(result.findings.find((x) => x.id === 'outbound-messages-inventory')?.passed).toBeUndefined();
   });
 });

@@ -6,6 +6,7 @@ interface LoginRec {
   UserId: string;
   SourceIp: string | null;
   LoginTime: string;
+  Status?: string;
 }
 
 // A single account authenticating successfully from this many distinct source IPs
@@ -32,25 +33,29 @@ export class LoginAnomalyCheck implements SecurityCheck {
     const findings: Finding[] = [];
     const setupUrl = `${ctx.orgInfo.instanceUrl}/lightning/setup/OrgLoginHistory/home`;
 
-    let rows: LoginRec[];
+    let fetched: LoginRec[];
     try {
-      rows = await ctx.soql.queryAll<LoginRec>(
-        `SELECT UserId, SourceIp, LoginTime FROM LoginHistory
-         WHERE Status = 'Success' AND LoginTime = LAST_N_DAYS:7
+      // Status cannot be filtered in SOQL, so successful logins are selected in code.
+      fetched = await ctx.soql.queryAll<LoginRec>(
+        `SELECT UserId, SourceIp, LoginTime, Status FROM LoginHistory
+         WHERE LoginTime = LAST_N_DAYS:7
          ORDER BY LoginTime DESC LIMIT ${MAX_ROWS}`,
       );
-    } catch {
+    } catch (err) {
       findings.push({
         id: 'login-anomaly-inconclusive',
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
         title: 'LoginHistory could not be queried — anomalous-login analysis skipped',
-        detail: 'LoginHistory was not accessible. This may indicate the audit user lacks "View All Users"/"Manage Users" or the org restricts login history.',
+        detail:
+          `The LoginHistory query failed: ${err instanceof Error ? err.message : String(err)}. ` +
+          'If the org denied access, the audit user may lack "View All Users".',
         remediation: 'Grant the audit user access to LoginHistory and re-run.',
       });
       return { findings };
     }
+    const rows = fetched.filter((r) => r.Status === undefined || r.Status === 'Success');
 
     if (rows.length === 0) {
       findings.push({
@@ -74,13 +79,13 @@ export class LoginAnomalyCheck implements SecurityCheck {
     }
 
     const anomalous = [...ipsByUser.entries()].filter(([, ips]) => ips.size >= DISTINCT_IP_THRESHOLD);
-    if (rows.length >= MAX_ROWS) {
+    if (fetched.length >= MAX_ROWS) {
       findings.push({
         id: 'login-anomaly-truncated',
         category: this.category,
         riskLevel: 'INFO',
         title: `Login history truncated at ${MAX_ROWS} rows — analysis is partial`,
-        detail: `The last-7-day successful-login volume exceeded ${MAX_ROWS} rows, so this analysis covers only the most recent window. Some per-user IP spread may be undercounted.`,
+        detail: `The last-7-day login volume exceeded ${MAX_ROWS} rows, so this analysis covers only the most recent window. Some per-user IP spread may be undercounted.`,
         remediation: 'Forward LoginHistory to a SIEM for complete, continuous analysis rather than point-in-time sampling.',
       });
     }

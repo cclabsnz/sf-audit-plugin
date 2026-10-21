@@ -1,6 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { hasField } from '../support/schema.js';
 
 /**
  * Winter '27 release update: "Assign Use Any API Auth Permission for SOAP login()".
@@ -96,7 +97,23 @@ export class SoapLoginApiAuthCheck implements SecurityCheck {
     // grant paths, because a profile's own permissions live on a PermissionSet with
     // IsOwnedByProfile = true. Orgs on a release without the field will throw here.
     let holders: PsaRecord[] = [];
+    const notYet: Finding = {
+      id: 'soap-login-api-auth-inconclusive-field',
+      category: this.category,
+      riskLevel: 'INFO',
+      inconclusive: true,
+      title: '"Use Any API Auth" permission is not queryable in this org yet',
+      detail:
+        'The PermissionsUseAnyApiAuth field is not available. That is expected on orgs not yet upgraded to a release that carries it, and it means readiness for the Winter \'27 SOAP login() change cannot be assessed here. Note this permission is not the same as "Use Any API Client", which is covered separately by the api-client-permission check.',
+      remediation:
+        `Re-run this audit after the org takes Winter '27, or check Setup → Permission Sets for "Use Any API Auth" directly: ${permSetUrl}`,
+    };
     try {
+      // Describe first: on a release without the field, filtering on it is rejected outright.
+      if (!(await hasField(ctx, 'PermissionSet', 'PermissionsUseAnyApiAuth'))) {
+        findings.push(notYet);
+        return { findings };
+      }
       const result = await ctx.soql.query<PsaRecord>(
         `SELECT Assignee.Id, Assignee.Username, Assignee.Profile.Name,
                 PermissionSet.Name, PermissionSet.IsOwnedByProfile
@@ -105,17 +122,13 @@ export class SoapLoginApiAuthCheck implements SecurityCheck {
            AND Assignee.IsActive = true`
       );
       holders = result.records;
-    } catch {
+    } catch (err) {
       findings.push({
-        id: 'soap-login-api-auth-inconclusive-field',
-        category: this.category,
-        riskLevel: 'INFO',
-        inconclusive: true,
-        title: '"Use Any API Auth" permission is not queryable in this org yet',
-        detail:
-          'The PermissionsUseAnyApiAuth field was not available. That is expected on orgs not yet upgraded to a release that carries it, and it means readiness for the Winter \'27 SOAP login() change cannot be assessed here. Note this permission is not the same as "Use Any API Client", which is covered separately by the api-client-permission check.',
+        ...notYet,
+        title: '"Use Any API Auth" holders could not be read',
+        detail: `Who holds "Use Any API Auth" could not be read, so readiness for the Winter '27 SOAP login() change is unassessed. The org said: ${err instanceof Error ? err.message : String(err)}`,
         remediation:
-          `Re-run this audit after the org takes Winter '27, or check Setup → Permission Sets for "Use Any API Auth" directly: ${permSetUrl}`,
+          'Check the error above. If it is an access error, confirm the audit user can read PermissionSetAssignment (View Setup and Configuration), then re-run.',
       });
       return { findings };
     }

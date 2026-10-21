@@ -9,7 +9,7 @@ interface RestrictionRuleRecord {
   MasterLabel?: string;
   TargetEntity: string;
   EnforcementType?: string;
-  Active: boolean;
+  IsActive: boolean;
   RecordFilter?: string;
   UserCriteria?: string;
 }
@@ -29,7 +29,7 @@ export class RestrictionRulesIntegrityCheck implements SecurityCheck {
     let rules: RestrictionRuleRecord[] = [];
     try {
       rules = await ctx.tooling.query<RestrictionRuleRecord>(
-        'SELECT Id, TargetEntity, Active, EnforcementType FROM RestrictionRule',
+        'SELECT Id, MasterLabel, TargetEntity, IsActive, EnforcementType FROM RestrictionRule',
       );
     } catch (err) {
       if (isMissingObjectError(err)) {
@@ -70,7 +70,7 @@ export class RestrictionRulesIntegrityCheck implements SecurityCheck {
     }
 
     // 1. Check for inactive restriction rules
-    const inactiveRules = rules.filter((r) => r.Active === false);
+    const inactiveRules = rules.filter((r) => r.IsActive === false);
 
     if (inactiveRules.length > 0) {
       findings.push({
@@ -92,7 +92,7 @@ export class RestrictionRulesIntegrityCheck implements SecurityCheck {
 
     // 2. Check for multiple active rules on the same TargetEntity (Salesforce anti-pattern)
     const activeRulesByEntity = new Map<string, RestrictionRuleRecord[]>();
-    for (const r of rules.filter((r) => r.Active === true)) {
+    for (const r of rules.filter((r) => r.IsActive === true)) {
       const list = activeRulesByEntity.get(r.TargetEntity) ?? [];
       list.push(r);
       activeRulesByEntity.set(r.TargetEntity, list);

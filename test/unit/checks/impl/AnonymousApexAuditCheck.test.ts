@@ -48,13 +48,36 @@ describe('AnonymousApexAuditCheck', () => {
     expect(r.findings[0].passed).toBe(true);
   });
 
-  it('scopes the query to 90 days and the developer-tool sections', async () => {
+  it('scopes the query to 90 days and never filters on Section, which SOQL cannot filter', async () => {
     const ctx = makeCtx([]);
     await check.run(ctx);
     const q = (ctx.soql.queryAll as any).mock.calls[0][0] as string;
     expect(q).toMatch(/LAST_N_DAYS:90/);
-    expect(q).toContain('Developer Console');
-    expect(q).toMatch(/executeCode/);
+    expect(q).not.toMatch(/WHERE[^]*Section/);
+  });
+
+  it('matches developer-tool sections and anonymous actions in code, ignoring other entries', async () => {
+    const other = { ...exec('005A'), Section: 'Manage Users', Action: 'changedpassword' };
+    const byAction = { ...exec('005B'), Section: 'Apex Class', Action: 'executeAnonymous' };
+    const r = await check.run(makeCtx([other, byAction]));
+    const all = r.findings.flatMap((f) => f.affectedItems ?? []).map((i) => i.label);
+    expect(all.some((l) => l.includes('005B'))).toBe(true);
+    expect(all.some((l) => l.includes('005A'))).toBe(false);
+  });
+
+  it('does not claim a pass when the trail was truncated and nothing matched', async () => {
+    const filler = Array.from({ length: 10000 }, () => ({ ...exec('005A'), Section: 'Manage Users', Action: 'x' }));
+    const r = await check.run(makeCtx(filler));
+    expect(r.findings[0].id).toBe('anonymous-apex-partial');
+    expect(r.findings[0].passed).toBeUndefined();
+    expect(r.findings[0].inconclusive).toBe(true);
+  });
+
+  it('says the list may be incomplete when the trail was truncated and some executions matched', async () => {
+    const filler = Array.from({ length: 9999 }, () => ({ ...exec('005A'), Section: 'Manage Users', Action: 'x' }));
+    const r = await check.run(makeCtx([exec('005B'), ...filler]));
+    expect(find(r, 'anonymous-apex-executed')).toBeDefined();
+    expect(find(r, 'anonymous-apex-partial')!.inconclusive).toBe(true);
   });
 
   // A non-admin running anonymous Apex in production is the control gap; an admin doing it is

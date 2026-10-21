@@ -5,6 +5,16 @@ import type { CheckResult } from '../../../../src/checks/SecurityCheck.js';
 
 const OBJECTS = ['Account', 'Contact', 'Lead', 'Opportunity', 'Case', 'Contract', 'User'];
 
+/** FieldDefinition returns one row per classified field; expand per-object counts into rows. */
+function fieldRows(counts: Array<{ objectName: string; classifiedCount: number }>) {
+  return counts.flatMap(({ objectName, classifiedCount }) =>
+    Array.from({ length: classifiedCount }, (_, i) => ({
+      EntityDefinition: { QualifiedApiName: objectName },
+      QualifiedApiName: `Field${i}`,
+    })),
+  );
+}
+
 function makeCtx(opts: {
   classified?: Array<{ objectName: string; classifiedCount: number }> | Error;
   keys?: unknown[] | Error;
@@ -22,7 +32,7 @@ function makeCtx(opts: {
       query: (jest.fn() as any).mockImplementation(() =>
         opts.classified instanceof Error
           ? Promise.reject(opts.classified)
-          : Promise.resolve(opts.classified ?? []),
+          : Promise.resolve(fieldRows(opts.classified ?? [])),
       ),
       getRecord: jest.fn(),
     } as any,

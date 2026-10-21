@@ -21,6 +21,16 @@ interface UserExecution {
   latest: string;
 }
 
+// SetupAuditTrail.Section cannot be filtered in SOQL, so the 90-day trail is read (bounded) and
+// matched here.
+const DEV_TOOL_SECTIONS = new Set(['Developer Console', 'Developer Tools', 'IDE', 'Development', 'Workbench']);
+const ANON_ACTION = /anon|runAs|executeCode/i;
+const MAX_TRAIL_ROWS = 10000;
+
+function isAnonymousExecution(r: AnonApexRecord): boolean {
+  return DEV_TOOL_SECTIONS.has(r.Section) || ANON_ACTION.test(r.Action ?? '');
+}
+
 function isAdminProfile(profileName: string): boolean {
   const lower = profileName.toLowerCase();
   return lower.includes('admin') || lower.includes('system administrator');
@@ -38,20 +48,19 @@ export class AnonymousApexAuditCheck implements SecurityCheck {
     const auditTrailUrl = `${baseUrl}/lightning/setup/AuditTrail/home`;
 
     let records: AnonApexRecord[] = [];
+    let truncated = false;
     try {
-      records = await ctx.soql.queryAll<AnonApexRecord>(
+      const trail = await ctx.soql.queryAll<AnonApexRecord>(
         `SELECT CreatedDate, CreatedBy.Id, CreatedBy.Username, CreatedBy.Profile.Name,
                 Section, Action, Display
          FROM SetupAuditTrail
          WHERE CreatedDate > LAST_N_DAYS:90
-           AND (Section IN ('Developer Console', 'Developer Tools', 'IDE', 'Development', 'Workbench')
-                OR Action LIKE '%anon%'
-                OR Action LIKE '%runAs%'
-                OR Action LIKE '%executeCode%')
          ORDER BY CreatedDate DESC
-         LIMIT 200`
+         LIMIT ${MAX_TRAIL_ROWS}`
       );
-    } catch {
+      truncated = trail.length >= MAX_TRAIL_ROWS;
+      records = trail.filter(isAnonymousExecution);
+    } catch (err) {
       findings.push({
         id: 'anonymous-apex-inaccessible',
         category: this.category,
@@ -59,9 +68,24 @@ export class AnonymousApexAuditCheck implements SecurityCheck {
         inconclusive: true,
         title: 'SetupAuditTrail could not be queried: anonymous Apex execution cannot be verified',
         detail:
-          'The SetupAuditTrail object was not accessible. This may indicate insufficient permissions to view the org audit trail.',
+          `The SetupAuditTrail query failed: ${err instanceof Error ? err.message : String(err)}. If the org denied access, the audit user may lack "View Setup and Configuration".`,
         remediation:
           'Grant "View Setup and Configuration" permission to the audit user. Review anonymous Apex execution manually in Setup → Audit Trail.',
+        affectedItems: [{ label: 'Setup Audit Trail', url: auditTrailUrl }],
+      });
+      return { findings };
+    }
+
+    if (records.length === 0 && truncated) {
+      findings.push({
+        id: 'anonymous-apex-partial',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `No anonymous Apex execution in the latest ${MAX_TRAIL_ROWS} audit-trail entries; older entries were not read`,
+        detail:
+          `The 90-day Setup Audit Trail holds more than ${MAX_TRAIL_ROWS} entries, so only the most recent were checked. None of them record anonymous Apex execution, but older ones in the window may.`,
+        remediation: 'Review anonymous Apex execution in Setup → Audit Trail, or export the full trail for review.',
         affectedItems: [{ label: 'Setup Audit Trail', url: auditTrailUrl }],
       });
       return { findings };
@@ -80,6 +104,20 @@ export class AnonymousApexAuditCheck implements SecurityCheck {
           'Continue monitoring. If anonymous Apex execution is ever required, ensure it is pre-approved, logged, and reviewed.',
       });
       return { findings };
+    }
+
+    if (truncated) {
+      // Matches were found, but older entries in the window were not read: the list may be short.
+      findings.push({
+        id: 'anonymous-apex-partial',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `Anonymous Apex executions listed may be incomplete: only the latest ${MAX_TRAIL_ROWS} audit-trail entries were read`,
+        detail: `The 90-day Setup Audit Trail holds more than ${MAX_TRAIL_ROWS} entries. The executions reported here come from the most recent ones; older executions in the window, and the users behind them, may be missing.`,
+        remediation: 'Review anonymous Apex execution in Setup → Audit Trail, or export the full trail for review.',
+        affectedItems: [{ label: 'Setup Audit Trail', url: auditTrailUrl }],
+      });
     }
 
     const userMap = new Map<string, UserExecution>();

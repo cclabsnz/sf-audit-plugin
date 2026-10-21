@@ -1,6 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { hasField } from '../support/schema.js';
 
 interface PsaRecord {
   Assignee: { Id: string; Username: string; Profile?: { Name: string } };
@@ -18,7 +19,25 @@ export class ApiClientPermissionCheck implements SecurityCheck {
     const baseUrl = ctx.orgInfo.instanceUrl;
 
     try {
-      // Single query — PermissionsUseAnyApiClient may not exist in orgs without API Access Control
+      // PermissionsUseAnyApiClient is absent from orgs without API Access Control (and from
+      // some releases altogether). Describe first: filtering on an absent field is rejected.
+      // Absence is unassessed, not a pass: the bypass may exist under a name this check does not read.
+      if (!(await hasField(ctx, 'PermissionSet', 'PermissionsUseAnyApiClient'))) {
+        findings.push({
+          id: 'api-client-permission-not-available',
+          category: this.category,
+          riskLevel: 'INFO',
+          inconclusive: true,
+          notAssessed: true,
+          title: '"Use Any API Client" holders could not be read: the permission field is not in this org',
+          detail:
+            'This org has no PermissionSet.PermissionsUseAnyApiClient field, which is usual when API Access Control is not available. Who can bypass API client restrictions is therefore unestablished, and SBS-ACS-006 is unevaluated rather than satisfied.',
+          remediation:
+            'If API Access Control is enabled, review who holds "Use Any API Client" in Setup → Permission Sets.',
+        });
+        return { findings };
+      }
+
       const result = await ctx.soql.query<PsaRecord>(
         `SELECT Assignee.Id, Assignee.Username, Assignee.Profile.Name,
                 PermissionSet.Name, PermissionSet.IsOwnedByProfile
@@ -60,17 +79,17 @@ export class ApiClientPermissionCheck implements SecurityCheck {
           note: `via: ${r.PermissionSet.IsOwnedByProfile ? `Profile (${r.Assignee.Profile?.Name ?? 'unknown'})` : r.PermissionSet.Name}`,
         })),
       });
-    } catch {
+    } catch (err) {
       findings.push({
         id: 'api-client-permission-inconclusive',
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: '"Use Any API Client" permission check could not run: field may not exist in this org edition',
+        title: '"Use Any API Client" holders could not be read',
         detail:
-          'SBS-ACS-006 requires documented justification for the "Use Any API Client" permission. This field is part of the API Access Control feature and may not be available in all Salesforce editions.',
+          `SBS-ACS-006 requires documented justification for the "Use Any API Client" permission. Who holds it could not be read, so this is unassessed. The org said: ${err instanceof Error ? err.message : String(err)}`,
         remediation:
-          'Verify in Setup → Permission Sets whether "Use Any API Client" is available and review assignments if so.',
+          'Check the error above. If it is an access error, confirm the audit user can read PermissionSetAssignment (View Setup and Configuration); otherwise review assignments in Setup → Permission Sets.',
       });
     }
 

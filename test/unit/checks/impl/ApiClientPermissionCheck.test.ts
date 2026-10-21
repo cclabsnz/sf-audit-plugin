@@ -5,7 +5,7 @@ import type { CheckResult } from '../../../../src/checks/SecurityCheck.js';
 
 let lastSoql = '';
 
-function makeCtx(rows: unknown[] | Error): AuditContext {
+function makeCtx(rows: unknown[] | Error, fieldPresent = true): AuditContext {
   return {
     soql: {
       query: (jest.fn() as any).mockImplementation((q: string) => {
@@ -14,7 +14,11 @@ function makeCtx(rows: unknown[] | Error): AuditContext {
       }),
     } as any,
     tooling: {} as any,
-    rest: {} as any,
+    rest: {
+      get: (jest.fn() as any).mockImplementation(async () => ({
+        fields: [{ name: 'Id' }, ...(fieldPresent ? [{ name: 'PermissionsUseAnyApiClient' }] : [])],
+      })),
+    } as any,
     orgInfo: {
       id: 'o', name: 'n', type: 'DE', isSandbox: false,
       instance: 'NA1', instanceUrl: 'https://x.my.salesforce.com',
@@ -65,12 +69,24 @@ describe('ApiClientPermissionCheck', () => {
       .toBe('via: Profile (unknown)');
   });
 
-  it('is inconclusive when the field does not exist in this edition', async () => {
-    const r = await check.run(makeCtx(new Error('No such column PermissionsUseAnyApiClient')));
+  it('is inconclusive, quoting the org, when the holders query fails', async () => {
+    const r = await check.run(makeCtx(new Error('INSUFFICIENT_ACCESS: no PSA')));
     expect(r.findings).toHaveLength(1);
     const f = find(r, 'api-client-permission-inconclusive');
     expect(f?.inconclusive).toBe(true);
     expect(f?.passed).toBeUndefined();
+    expect(f?.detail).toContain('INSUFFICIENT_ACCESS: no PSA');
+  });
+
+  it('is not assessed, never a pass, and does not query when the field is absent (MN-051)', async () => {
+    lastSoql = '';
+    const r = await check.run(makeCtx([], false));
+    expect(r.findings).toHaveLength(1);
+    const f = find(r, 'api-client-permission-not-available');
+    expect(f?.passed).toBeFalsy();
+    expect(f?.inconclusive).toBe(true);
+    expect(f?.notAssessed).toBe(true);
+    expect(lastSoql).toBe('');
   });
 
   it('excludes inactive and frozen users in the query itself', async () => {

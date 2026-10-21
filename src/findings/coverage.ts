@@ -42,3 +42,17 @@ export function coverageSummary(coverage: EvidenceCoverage & { gradeCapped?: boo
   const base = `Evidence coverage ${coverage.percent}% (${coverage.checksAssessed} of ${coverage.checksRun} checks)`;
   return coverage.gradeCapped ? `${base}; grade capped at B, below the ${MIN_COVERAGE_FOR_A}% needed for an A` : base;
 }
+
+/**
+ * What a reader should do about unassessed checks, or '' when every check gathered evidence.
+ * Inconclusive is not one cause: each finding quotes what the org said, and only an access
+ * error is fixed by granting permissions.
+ */
+export function coverageAdvice(coverage: EvidenceCoverage): string {
+  if (coverage.notAssessed.length === 0) return '';
+  return (
+    'Each unassessed check has an inconclusive finding quoting what the org returned. Where the cause is access, ' +
+    '`sf audit preflight` lists the permissions the audit user is missing, and PERMISSIONS.md ' +
+    '(https://github.com/cclabsnz/sf-audit-plugin/blob/main/PERMISSIONS.md) has the read-only permission set to assign.'
+  );
+}

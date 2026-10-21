@@ -3,7 +3,8 @@ import { ReleaseUpdatesCheck } from '../../../../src/checks/impl/ReleaseUpdatesC
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { CheckResult } from '../../../../src/checks/SecurityCheck.js';
 
-function makeCtx(updates: unknown[] | Error): AuditContext {
+/** `releaseUpdate` says whether the org serves Tooling ReleaseUpdate; older orgs only have CriticalUpdate. */
+function makeCtx(updates: unknown[] | Error, releaseUpdate = false): AuditContext {
   return {
     soql: {} as any,
     tooling: {
@@ -12,7 +13,14 @@ function makeCtx(updates: unknown[] | Error): AuditContext {
       ),
       getRecord: jest.fn(),
     } as any,
-    rest: {} as any,
+    rest: {
+      get: (jest.fn() as any).mockImplementation(async (path: string) => {
+        if (releaseUpdate && path === '/tooling/sobjects/ReleaseUpdate/describe') {
+          return { fields: ['Id', 'DeveloperName', 'Title', 'Description', 'DueDate', 'Status'].map((name) => ({ name })) };
+        }
+        throw Object.assign(new Error('The requested resource does not exist'), { errorCode: 'NOT_FOUND' });
+      }),
+    } as any,
     orgInfo: {
       id: 'o', name: 'n', type: 'DE', isSandbox: false,
       instance: 'NA1', instanceUrl: 'https://x.my.salesforce.com',
@@ -31,6 +39,28 @@ const find = (r: CheckResult, id: string) => r.findings.find((f) => f.id === id)
 
 describe('ReleaseUpdatesCheck', () => {
   const check = new ReleaseUpdatesCheck();
+
+  describe('on an org that serves Tooling ReleaseUpdate', () => {
+    const ru = (Title: string, days: number) => ({
+      Id: `0Ru${Title}`, DeveloperName: Title.replace(/\W/g, ''), Title, Description: null, Status: 'Invocable',
+      DueDate: new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10),
+    });
+
+    it('queries ReleaseUpdate for updates not enabled (available, or enabled then revoked), not CriticalUpdate', async () => {
+      const ctx = makeCtx([], true);
+      await check.run(ctx);
+      const q: string = (ctx.tooling.query as any).mock.calls[0][0];
+      expect(q).toContain('FROM ReleaseUpdate');
+      expect(q).toContain("Status IN ('Invocable', 'Revoked')");
+      expect(q).not.toContain('CriticalUpdate');
+    });
+
+    it('maps Title and DueDate onto the same overdue/upcoming buckets', async () => {
+      const r = await check.run(makeCtx([ru('Old one', -10), ru('Soon one', 20)], true));
+      expect(find(r, 'release-updates-overdue')!.affectedItems![0].label).toBe('Old one');
+      expect(find(r, 'release-updates-upcoming')!.affectedItems![0].label).toBe('Soon one');
+    });
+  });
 
   it('is inconclusive when CriticalUpdate cannot be read', async () => {
     const r = await check.run(makeCtx(new Error('INSUFFICIENT_ACCESS')));

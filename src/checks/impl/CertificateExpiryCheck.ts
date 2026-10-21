@@ -85,7 +85,8 @@ export class CertificateExpiryCheck implements SecurityCheck {
       findings.push({
         id: 'certificate-expiring-critical',
         category: this.category,
-        riskLevel: 'CRITICAL',
+        // An expiring certificate is an outage risk, not a data exposure: HIGH, however urgent.
+        riskLevel: 'HIGH',
         title: `${critical.length} certificate(s) expire within 30 days`,
         detail:
           'Expired certificates break all integrations, SSO logins, and JWT-based authentication that depend on them. Certificates expiring within 30 days require immediate replacement to avoid service disruption.',

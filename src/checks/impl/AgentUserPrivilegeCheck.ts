@@ -26,8 +26,8 @@ interface ObjectPermissionRow {
 // Aggregate count of classified fields per object (Data Classification / ComplianceGroup),
 // same shape/query DataClassificationCheck uses.
 interface FieldClassificationRow {
-  objectName: string;
-  classifiedCount: number;
+  EntityDefinition?: { QualifiedApiName: string };
+  QualifiedApiName: string;
 }
 
 // An agent user's write access is "broad" when it can create/update/delete on more than
@@ -255,14 +255,15 @@ export class AgentUserPrivilegeCheck implements SecurityCheck {
     if (readableObjects.length === 0) return new Set();
     const objList = readableObjects.map((o) => `'${o}'`).join(', ');
     try {
+      // FieldDefinition supports no aggregates (its Id is not aggregatable): list the classified
+      // fields and take their objects.
       const rows = await ctx.tooling.query<FieldClassificationRow>(
-        `SELECT EntityDefinition.QualifiedApiName objectName, COUNT(Id) classifiedCount
+        `SELECT EntityDefinition.QualifiedApiName, QualifiedApiName
          FROM FieldDefinition
          WHERE EntityDefinition.QualifiedApiName IN (${objList})
-           AND ComplianceGroup != null
-         GROUP BY EntityDefinition.QualifiedApiName`,
+           AND ComplianceGroup != null`,
       );
-      return new Set(rows.filter((r) => (r.classifiedCount ?? 0) > 0).map((r) => r.objectName));
+      return new Set(rows.map((r) => r.EntityDefinition?.QualifiedApiName).filter((o): o is string => Boolean(o)));
     } catch {
       // No classification feature / no Tooling access: skip the sub-signal silently.
       return new Set();

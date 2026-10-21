@@ -3,6 +3,7 @@ import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 import type { EffectivePermissionGrant } from '@cclabsnz/sf-core';
 import { DANGEROUS_PERMS } from '../permCatalog.js';
+import { presentFields } from '../support/schema.js';
 
 interface PsaRow {
   AssigneeId: string;
@@ -30,11 +31,16 @@ export class PrivilegedAccessCheck implements SecurityCheck {
     const findings: Finding[] = [];
     const setupUrl = `${ctx.orgInfo.instanceUrl}/lightning/setup/ManageUsers/home`;
 
-    const permFields = DANGEROUS_PERMS.map((p) => `PermissionSet.${p.field}`).join(', ');
-    const permWhere = DANGEROUS_PERMS.map((p) => `PermissionSet.${p.field} = true`).join(' OR ');
-
     let rows: PsaRow[];
+    // Some catalogued permissions exist only with a licence or feature (Event Monitoring, API
+    // Access Control). One absent field fails the whole query, so select only those this org
+    // has. A permission the org lacks cannot be held, so leaving it out loses nothing.
+    let perms = DANGEROUS_PERMS;
     try {
+      const present = new Set(await presentFields(ctx, 'PermissionSet', DANGEROUS_PERMS.map((p) => p.field)));
+      perms = DANGEROUS_PERMS.filter((p) => present.has(p.field));
+      const permFields = perms.map((p) => `PermissionSet.${p.field}`).join(', ');
+      const permWhere = perms.map((p) => `PermissionSet.${p.field} = true`).join(' OR ');
       rows = await ctx.soql.queryAll<PsaRow>(
         `SELECT AssigneeId, Assignee.Username, Assignee.Name, Assignee.Profile.Name, ${permFields}
          FROM PermissionSetAssignment
@@ -48,8 +54,9 @@ export class PrivilegedAccessCheck implements SecurityCheck {
         riskLevel: 'INFO',
         inconclusive: true,
         title: 'Effective-permission resolution could not be completed',
-        detail: `The PermissionSetAssignment query was not accessible: ${msg}`,
-        remediation: 'Grant the audit user "View Setup and Configuration" and "View All Users", then re-run the audit.',
+        detail: `Effective permissions could not be read, so privileged access is unassessed. The org said: ${msg}`,
+        remediation:
+          'Check the error above. If it is an access error, confirm the audit user has "View Setup and Configuration" and "View All Users", then re-run the audit.',
       });
       return { findings };
     }
@@ -59,7 +66,7 @@ export class PrivilegedAccessCheck implements SecurityCheck {
     const byUser = new Map<string, EffectivePermissionGrant>();
     for (const row of rows) {
       const ps = row.PermissionSet ?? {};
-      const held = DANGEROUS_PERMS.filter((p) => ps[p.field]).map((p) => p.key);
+      const held = perms.filter((p) => ps[p.field]).map((p) => p.key);
       if (held.length === 0) continue;
       let g = byUser.get(row.AssigneeId);
       if (!g) {

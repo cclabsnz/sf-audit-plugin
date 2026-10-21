@@ -8,7 +8,9 @@ interface ExternalServiceRegistrationRecord {
   Id: string;
   DeveloperName: string;
   MasterLabel: string;
-  NamedCredentialId?: string | null;
+  // The registration names its credential either by name (NamedCredential) or by reference.
+  NamedCredential?: string | null;
+  NamedCredentialReferenceId?: string | null;
 }
 
 /** Flow.Metadata is one row per Tooling query, so reads run concurrently but bounded. */
@@ -35,11 +37,11 @@ export class FlowHttpCalloutCredentialBypassCheck implements SecurityCheck {
 
     const externalServices = await queryIfPresent(() =>
       ctx.tooling.query<ExternalServiceRegistrationRecord>(
-        'SELECT Id, DeveloperName, MasterLabel, NamedCredentialId FROM ExternalServiceRegistration',
+        'SELECT Id, DeveloperName, MasterLabel, NamedCredential, NamedCredentialReferenceId FROM ExternalServiceRegistration',
       ),
     );
     const uncredentialedServices = externalServices.filter(
-      (s) => !s.NamedCredentialId || s.NamedCredentialId.trim() === '',
+      (s) => !(s.NamedCredential ?? '').trim() && !(s.NamedCredentialReferenceId ?? '').trim(),
     );
 
     // Credentials live in the flow definition (formulas, constants, text templates, action

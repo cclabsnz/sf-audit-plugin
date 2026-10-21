@@ -2,6 +2,12 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
+interface ConnectedAppRow {
+  Id: string;
+  Name: string;
+  DeveloperName: string;
+}
+
 interface ConnectedAppScopeRecord {
   Id: string;
   Name: string;
@@ -15,6 +21,21 @@ interface ConnectedAppScopeRecord {
       refreshTokenPolicy?: string;
     };
   } | null;
+}
+
+// OAuth scopes and the refresh-token policy live only in the Metadata API definition: the Tooling
+// ConnectedApplication object has no Metadata column. Each app is read by name, up to this many.
+const MAX_METADATA_READS = 100;
+
+type ConnectedAppMetadata = NonNullable<ConnectedAppScopeRecord['Metadata']>;
+
+/** The Metadata API returns a single scope as a string, several as an array. */
+function normalise(meta: ConnectedAppMetadata): ConnectedAppMetadata {
+  const scopes = meta.oauthConfig?.scopes as unknown;
+  if (meta.oauthConfig && typeof scopes === 'string') {
+    return { ...meta, oauthConfig: { ...meta.oauthConfig, scopes: [scopes] } };
+  }
+  return meta;
 }
 
 // Scopes that grant effectively unlimited access as the authorising user.
@@ -39,22 +60,65 @@ export class ConnectedAppScopeCheck implements SecurityCheck {
     const findings: Finding[] = [];
     const setupUrl = `${ctx.orgInfo.instanceUrl}/lightning/setup/ConnectedApplication/home`;
 
-    let apps: ConnectedAppScopeRecord[] = [];
+    let rows: ConnectedAppRow[] = [];
     try {
-      apps = await ctx.tooling.query<ConnectedAppScopeRecord>(
-        'SELECT Id, Name, Metadata FROM ConnectedApplication'
-      );
-    } catch {
+      rows = await ctx.tooling.query<ConnectedAppRow>('SELECT Id, Name, DeveloperName FROM ConnectedApplication');
+    } catch (err) {
       findings.push({
         id: 'connected-app-scope-inconclusive',
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
         title: 'Connected app OAuth scope check could not be completed',
-        detail: 'ConnectedApplication Metadata was not accessible via Tooling API. This may indicate a permissions issue on the audit user.',
-        remediation: 'Grant the audit user the "Customize Application" permission to enable Tooling API access to connected app metadata.',
+        detail: `Connected apps could not be listed via the Tooling API: ${err instanceof Error ? err.message : String(err)}`,
+        remediation: 'Grant the audit user View Setup and Configuration, then re-run. Meanwhile review OAuth scopes in Setup → App Manager.',
       });
       return { findings };
+    }
+
+    if (rows.length > 0 && !ctx.metadata) {
+      findings.push({
+        id: 'connected-app-scope-inconclusive',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'Connected app OAuth scope check could not be completed',
+        detail: `${rows.length} connected app(s) exist, but their OAuth scopes and refresh-token policies are only in the Metadata API, which this run cannot read.`,
+        remediation: 'Review OAuth scopes and refresh-token policies in Setup → App Manager.',
+      });
+      return { findings };
+    }
+
+    const apps: ConnectedAppScopeRecord[] = [];
+    const unread: ConnectedAppRow[] = [];
+    for (const [i, row] of rows.entries()) {
+      let meta: ConnectedAppMetadata | null = null;
+      if (i < MAX_METADATA_READS) {
+        try {
+          meta = await ctx.metadata!.read<ConnectedAppMetadata>('ConnectedApp', row.DeveloperName);
+        } catch {
+          meta = null;
+        }
+      }
+      if (meta) apps.push({ Id: row.Id, Name: row.Name, Metadata: normalise(meta) });
+      else unread.push(row);
+    }
+
+    // An app whose definition could not be read is unassessed, never counted as scoped.
+    if (unread.length > 0) {
+      findings.push({
+        id: 'connected-app-scope-unread',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `OAuth settings of ${unread.length} connected app(s) could not be read`,
+        detail:
+          'Their Metadata API definitions were not returned (a managed-package app is read under its namespace, and reads stop after ' +
+          `${MAX_METADATA_READS} apps). Their scopes and refresh-token policies are unassessed, not clean.`,
+        remediation: 'Review these apps\' OAuth scopes and refresh-token policies in Setup → App Manager.',
+        affectedItems: unread.map((app) => ({ label: app.Name, url: setupUrl })),
+      });
+      if (apps.length === 0) return { findings };
     }
 
     if (apps.length === 0) {

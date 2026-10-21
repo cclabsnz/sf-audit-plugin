@@ -96,9 +96,14 @@ export class PlatformEventSubscriberContextCheck implements SecurityCheck {
         `SELECT Id, ProfileId FROM PermissionSet WHERE IsOwnedByProfile = true AND ProfileId IN (${profiles.map((p) => `'${p.Id}'`).join(', ')})`,
       );
       const profileByPermSet = new Map(owned.map((ps) => [ps.Id, ps.ProfileId]));
-      const objectPerms = await ctx.soql.queryAll<ObjectPermissionRecord>(
-        "SELECT Id, ParentId, SobjectType, PermissionsCreate FROM ObjectPermissions WHERE PermissionsCreate = true AND SobjectType LIKE '%__e'",
-      );
+      // SobjectType does not accept LIKE ("invalid operator on id field"): select these profiles'
+      // Create grants and keep the platform events (__e) in code.
+      const objectPerms =
+        owned.length === 0
+          ? []
+          : await ctx.soql.queryAll<ObjectPermissionRecord>(
+              `SELECT Id, ParentId, SobjectType, PermissionsCreate FROM ObjectPermissions WHERE PermissionsCreate = true AND ParentId IN (${owned.map((ps) => `'${ps.Id}'`).join(', ')})`,
+            );
       for (const op of objectPerms) {
         const profileId = profileByPermSet.get(op.ParentId);
         if (profileId && eventObjectNames.has(op.SobjectType)) {

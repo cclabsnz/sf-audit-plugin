@@ -21,9 +21,21 @@ const SINK_SEVERITY: Partial<Record<Capability, RiskLevel>> = {
 
 const MAX_STEPS = 4;
 
+// Population findings reported as passed at a healthy count (RULE-074) still name people who hold
+// the power, so they keep their place in correlation while they list any holder.
+const CHAIN_EVIDENCE_WHEN_PASSED = new Set(['users-modify-all-data', 'users-view-all-data']);
+
+// Findings that only show a surface exists (a guest user, a live classic site). Every org with a
+// site has them, so they never supply the entry point of a potential path on their own. RULE-071.
+const SURFACE_ONLY = new Set(['guest-user-baseline', 'classic-sites-active']);
+
 export class ChainEngine {
   correlate(findings: Finding[]): AttackChain[] {
-    const active = findings.filter((f) => !f.passed && !f.inconclusive);
+    const active = findings.filter(
+      (f) =>
+        !f.inconclusive &&
+        (!f.passed || (CHAIN_EVIDENCE_WHEN_PASSED.has(f.id) && (f.affectedItems?.length ?? 0) > 0)),
+    );
 
     // Build present capability set + per-finding grants.
     const present = new Set<Capability>();
@@ -122,6 +134,8 @@ export class ChainEngine {
 
     for (const src of SOURCE_CAPS) {
       if (!present.has(src)) continue;
+      const hasRealSource = active.some((f) => !SURFACE_ONLY.has(f.id) && (grantsByFinding.get(f) ?? []).includes(src));
+      if (!hasRealSource) continue;
       for (const sink of HIGH_IMPACT_SINKS) {
         if (!present.has(sink)) continue;
         const key = `${src}->${sink}`;

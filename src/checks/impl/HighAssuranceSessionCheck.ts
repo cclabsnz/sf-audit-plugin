@@ -5,13 +5,19 @@ import type { Finding } from '../../findings/Finding.js';
 interface ConnectedAppSessionRecord {
   Id: string;
   Name: string;
-  SessionTimeout: number | null;
+  // A picklist of minutes ('15', '30', … '720'); null = no app timeout.
+  SessionTimeout: string | number | null;
   OptionsAllowAdminApprovedUsersOnly: boolean;
 }
 
-// Session timeouts are in seconds in SOQL for ConnectedApplication.
-// 8 hours = 28800s; 12 hours = 43200s.
-const LONG_TIMEOUT_SECONDS = 8 * 3600;
+// 8 hours, in minutes: the unit of ConnectedApplication.SessionTimeout.
+const LONG_TIMEOUT_MINUTES = 8 * 60;
+
+/** Minutes, or null when the app sets no timeout of its own. */
+function timeoutMinutes(app: ConnectedAppSessionRecord): number | null {
+  const n = app.SessionTimeout === null || app.SessionTimeout === '' ? NaN : Number(app.SessionTimeout);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
 
 // Patterns that suggest an app has elevated / admin capabilities
 const ADMIN_APP_PATTERNS = [/admin/i, /manage/i, /setup/i, /deploy/i, /devops/i, /audit/i, /monitor/i];
@@ -29,21 +35,21 @@ export class HighAssuranceSessionCheck implements SecurityCheck {
 
     let apps: ConnectedAppSessionRecord[];
     try {
-      const result = await ctx.soql.query<ConnectedAppSessionRecord>(
+      // SessionTimeout is served only by the Tooling API; the standard API rejects the column.
+      apps = await ctx.tooling.query<ConnectedAppSessionRecord>(
         `SELECT Id, Name, SessionTimeout, OptionsAllowAdminApprovedUsersOnly
          FROM ConnectedApplication
          ORDER BY Name
          LIMIT 200`
       );
-      apps = result.records;
-    } catch {
+    } catch (err) {
       findings.push({
         id: 'high-assurance-session-inaccessible',
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
         title: 'Connected app session settings could not be read',
-        detail: 'ConnectedApplication session fields were not accessible. High assurance session configuration cannot be verified.',
+        detail: `ConnectedApplication session fields could not be read, so high assurance session configuration cannot be verified: ${err instanceof Error ? err.message : String(err)}`,
         remediation: 'Manually review connected apps in Setup → Connected Apps → Manage Connected Apps and verify session timeout policies.',
       });
       return { findings };
@@ -63,12 +69,13 @@ export class HighAssuranceSessionCheck implements SecurityCheck {
     }
 
     // Identify apps with no session timeout (unlimited) — any session remains valid until logout
-    const noTimeout = apps.filter((a) => a.SessionTimeout === null || a.SessionTimeout === 0);
+    const noTimeout = apps.filter((a) => timeoutMinutes(a) === null);
 
     // Identify admin-pattern apps with very long or no timeouts
     const adminAppsLongTimeout = apps.filter((a) => {
       const isAdminLike = ADMIN_APP_PATTERNS.some((p) => p.test(a.Name));
-      const hasLongTimeout = (a.SessionTimeout === null || a.SessionTimeout === 0 || a.SessionTimeout > LONG_TIMEOUT_SECONDS);
+      const minutes = timeoutMinutes(a);
+      const hasLongTimeout = minutes === null || minutes > LONG_TIMEOUT_MINUTES;
       return isAdminLike && hasLongTimeout;
     });
 
@@ -88,9 +95,9 @@ export class HighAssuranceSessionCheck implements SecurityCheck {
         affectedItems: adminAppsLongTimeout.map((a) => ({
           label: a.Name,
           url: setupUrl,
-          note: a.SessionTimeout === null || a.SessionTimeout === 0
+          note: timeoutMinutes(a) === null
             ? 'No session timeout: sessions never expire'
-            : `Session timeout: ${Math.round(a.SessionTimeout / 3600)}h, reduce to ≤2h`,
+            : `Session timeout: ${Math.round(timeoutMinutes(a)! / 60)}h, reduce to ≤2h`,
         })),
       });
     }

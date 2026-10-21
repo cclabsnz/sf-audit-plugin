@@ -62,7 +62,7 @@ describe('FlowHttpCalloutCredentialBypassCheck', () => {
 
   it('passes when flows hold no secrets and every external service has a Named Credential', async () => {
     const ctx = makeCtx({
-      services: [{ Id: '0es1', DeveloperName: 'Pay', MasterLabel: 'Pay', NamedCredentialId: '0XA1' }],
+      services: [{ Id: '0es1', DeveloperName: 'Pay', MasterLabel: 'Pay', NamedCredential: 'PayCred', NamedCredentialReferenceId: null }],
       flows: [{ apiName: 'Clean_Flow', versionId: id(1), metadata: { formulas: [{ name: 'f', expression: 'TODAY()' }] } }],
     });
     const r = await check.run(ctx);
@@ -110,10 +110,18 @@ describe('FlowHttpCalloutCredentialBypassCheck', () => {
 
   it('flags external services with no Named Credential', async () => {
     const ctx = makeCtx({
-      services: [{ Id: '0es2', DeveloperName: 'Raw', MasterLabel: 'Raw Endpoint', NamedCredentialId: null }],
+      services: [{ Id: '0es2', DeveloperName: 'Raw', MasterLabel: 'Raw Endpoint', NamedCredential: null, NamedCredentialReferenceId: null }],
     });
     const r = await check.run(ctx);
     expect(r.findings.map((f) => f.id)).toEqual(['flow-http-callout-uncredentialed-endpoint']);
+  });
+
+  it('counts a credential named only by reference as a Named Credential', async () => {
+    const ctx = makeCtx({
+      services: [{ Id: '0es3', DeveloperName: 'Ref', MasterLabel: 'Ref', NamedCredential: null, NamedCredentialReferenceId: '0XA9' }],
+    });
+    const r = await check.run(ctx);
+    expect(r.findings.some((f) => f.id === 'flow-http-callout-uncredentialed-endpoint')).toBe(false);
   });
 
   it('is inconclusive, not passed, when some flow metadata cannot be read', async () => {

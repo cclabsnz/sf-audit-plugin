@@ -3,7 +3,7 @@ import type { OrgMetrics } from '@cclabsnz/sf-core';
 import type { AuditRenderer } from './AuditRenderer.js';
 import { esc, firaFontFaceCss, INTERACTIVE_CSP_META } from '@cclabsnz/sf-core';
 import { renderAttackChainDagSvg } from './AttackChainDagRenderer.js';
-import { coverageSummary } from '../findings/coverage.js';
+import { coverageSummary, coverageAdvice } from '../findings/coverage.js';
 
 const RISK_COLORS: Record<string, string> = {
   CRITICAL: '#dc2626',
@@ -158,9 +158,12 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
     ? `<div class="waived-banner" style="background:#0f291e;border:1px solid #16a34a;border-radius:8px;padding:12px 16px;margin-bottom:20px;color:#dcfce7;font-size:13px;"><strong>Accepted risks:</strong> ${result.waivedFindings.length} finding(s) waived under an approved waiver and excluded from the score.</div>`
     : '';
 
+  const gradeReasonLine = result.gradeReason
+    ? `<div class="grade-reason" style="margin-top:10px;font-size:12px;color:#94a3b8">Why ${esc(result.grade)}: ${esc(result.gradeReason.replace(/^[A-F]: /, ''))}</div>`
+    : '';
   const cov = result.coverage;
   const coverageLine = cov
-    ? `<div class="coverage${cov.gradeCapped ? ' is-capped' : ''}" style="margin-top:10px;font-size:12px;color:${cov.gradeCapped ? '#fbbf24' : '#94a3b8'}">${esc(coverageSummary(cov))}${cov.notAssessed.length ? `<br>Not assessed: ${cov.notAssessed.map((id) => `<code>${esc(id)}</code>`).join(', ')}` : ''}</div>`
+    ? `<div class="coverage${cov.gradeCapped ? ' is-capped' : ''}" style="margin-top:10px;font-size:12px;color:${cov.gradeCapped ? '#fbbf24' : '#94a3b8'}">${esc(coverageSummary(cov))}${cov.notAssessed.length ? `<br>Not assessed: ${cov.notAssessed.map((id) => `<code>${esc(id)}</code>`).join(', ')}<br>${esc(coverageAdvice(cov))}` : ''}</div>`
     : '';
 
   return `
@@ -171,6 +174,7 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
         <div class="gauge-wrap">
           ${gauge}
         </div>
+        ${gradeReasonLine}
         ${coverageLine}
       </div>
       <div class="dash-risk-panel">

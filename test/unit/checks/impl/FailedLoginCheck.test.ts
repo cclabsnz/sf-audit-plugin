@@ -9,16 +9,34 @@ function makeCtx(opts: {
 } = {}): AuditContext {
   return {
     soql: {
-      queryAll: jest.fn(),
+      // Username lookup for the ids the per-user breakdown returned.
+      queryAll: (jest.fn() as any).mockImplementation(() =>
+        Promise.resolve(
+          opts.perUser instanceof Error ? [] : (opts.perUser ?? []).map((u) => ({ Id: `id-${u.Username}`, Username: u.Username })),
+        ),
+      ),
       query: (jest.fn() as any).mockImplementation((s: string) => {
-        if (/COUNT\(\)/i.test(s)) {
+        if (/GROUP BY Status$/i.test(s.trim())) {
           return opts.total instanceof Error
             ? Promise.reject(opts.total)
-            : Promise.resolve({ totalSize: opts.total ?? 0, records: [] });
+            : Promise.resolve({
+                totalSize: 2,
+                records: [
+                  { Status: 'Success', expr0: 1000 },
+                  { Status: 'Invalid Password', expr0: opts.total ?? 0 },
+                ],
+              });
         }
         return opts.perUser instanceof Error
           ? Promise.reject(opts.perUser)
-          : Promise.resolve({ totalSize: 0, records: opts.perUser ?? [] });
+          : Promise.resolve({
+              totalSize: 0,
+              records: [
+                // Successful logins are grouped too, and must never count as failures.
+                ...(opts.perUser ?? []).map((u) => ({ UserId: `id-${u.Username}`, Status: 'Success', expr0: 500 })),
+                ...(opts.perUser ?? []).map((u) => ({ UserId: `id-${u.Username}`, Status: 'Invalid Password', expr0: u.expr0 })),
+              ],
+            });
       }),
     } as any,
     tooling: {} as any,
@@ -49,13 +67,27 @@ describe('FailedLoginCheck', () => {
     expect(r.findings[0].passed).toBe(true);
   });
 
-  it('scopes both queries to failures in the last 7 days', async () => {
+  it('scopes both queries to the last 7 days and groups by Status, which cannot be filtered', async () => {
     const ctx = makeCtx({ total: 5 });
     await check.run(ctx);
-    for (const call of (ctx.soql.query as any).mock.calls) {
-      expect(call[0]).toMatch(/IsSuccess\s*=\s*false/i);
-      expect(call[0]).toMatch(/LAST_N_DAYS:7/);
+    const calls = (ctx.soql.query as any).mock.calls.map((c: string[]) => c[0]);
+    expect(calls).toHaveLength(2);
+    for (const q of calls) {
+      expect(q).toMatch(/LAST_N_DAYS:7/);
+      expect(q).toMatch(/GROUP BY[^]*Status/i);
+      expect(q).not.toMatch(/IsSuccess|WHERE[^]*Status\s*[!=]/i);
+      expect(q).not.toMatch(/Username/);
     }
+  });
+
+  it('counts only non-Success groups as failures', async () => {
+    const r = await check.run(makeCtx({ total: 0 }));
+    expect(r.findings[0].id).toBe('failed-login-none');
+  });
+
+  it('names targets by the username looked up from their user id', async () => {
+    const r = await check.run(makeCtx({ total: 60, perUser: [user('victim@x.com', 60)] }));
+    expect(find(r, 'failed-login-heavy-brute-force')!.affectedItems?.[0].label).toBe('victim@x.com');
   });
 
   // Thresholds: 20+ is targeted, 50+ is automated.

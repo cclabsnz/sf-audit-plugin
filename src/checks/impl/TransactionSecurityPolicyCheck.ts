@@ -4,7 +4,8 @@ import type { Finding } from '../../findings/Finding.js';
 
 interface TspRecord {
   Id: string;
-  Name: string;
+  DeveloperName: string;
+  MasterLabel?: string;
   EventType: string;
   State: string;
 }
@@ -24,9 +25,9 @@ export class TransactionSecurityPolicyCheck implements SecurityCheck {
     let policies: TspRecord[];
     try {
       policies = await ctx.tooling.query<TspRecord>(
-        `SELECT Id, Name, EventType, State FROM TransactionSecurityPolicy WHERE State = 'Enabled'`,
+        `SELECT Id, DeveloperName, MasterLabel, EventType, State FROM TransactionSecurityPolicy WHERE State = 'Enabled'`,
       );
-    } catch {
+    } catch (err) {
       findings.push({
         id: 'transaction-security-policy-inaccessible',
         category: this.category,
@@ -34,9 +35,9 @@ export class TransactionSecurityPolicyCheck implements SecurityCheck {
         inconclusive: true,
         title: 'Transaction Security Policies could not be queried',
         detail:
-          'The Tooling API TransactionSecurityPolicy query was not accessible. This may indicate the audit user lacks Tooling API access, or Transaction Security is not enabled for this org.',
+          `The Tooling API TransactionSecurityPolicy query failed, so whether automated threat response exists is unassessed, not absent: ${err instanceof Error ? err.message : String(err)}`,
         remediation:
-          'Enable Transaction Security in Setup and grant Tooling API access to the audit user, then re-run.',
+          'Check the error above. If it is an access error, confirm the audit user has API Enabled and View Setup and Configuration, then re-run.',
       });
       return { findings };
     }
@@ -74,7 +75,7 @@ export class TransactionSecurityPolicyCheck implements SecurityCheck {
       remediation:
         'Periodically review policies to ensure coverage includes login anomalies, bulk data exports, and high-volume API usage. Verify that policy actions (Block/Notify) are appropriate for each event type.',
       affectedItems: policies.map((p) => ({
-        label: p.Name,
+        label: p.MasterLabel || p.DeveloperName,
         url: setupUrl,
         note: `EventType: ${p.EventType}`,
       })),

@@ -1,15 +1,37 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
+import { fieldsOf } from '../support/schema.js';
 import type { Finding } from '../../findings/Finding.js';
 
 interface GuestUser {
   Id: string;
 }
+/**
+ * Whether a Tooling ReleaseUpdate status means the update is enabled. Invoked and Revocable
+ * (enabled, can still be reverted) are on; Invocable (available) and Revoked are off; any other
+ * status is unknown.
+ */
+function releaseUpdateEnabled(status: string): boolean | null {
+  if (status === 'Invoked' || status === 'Revocable') return true;
+  if (status === 'Invocable' || status === 'Revoked') return false;
+  return null;
+}
+
+/** Tooling ReleaseUpdate, the current form of CriticalUpdate. */
+interface ReleaseUpdateRecord {
+  Id: string;
+  DeveloperName: string;
+  Title: string | null;
+  Description: string | null;
+  Status: string;
+}
+
 interface CriticalUpdateRecord {
   Id: string;
   Name: string;
   Description: string | null;
-  IsEnabled: boolean;
+  /** null when the status does not say either way. */
+  IsEnabled: boolean | null;
 }
 
 /**
@@ -60,8 +82,8 @@ export class GuestRecordAccessPolicyCheck implements SecurityCheck {
       guests = await ctx.soql.queryAll<GuestUser>(
         "SELECT Id FROM User WHERE UserType = 'Guest' AND IsActive = true",
       );
-    } catch {
-      findings.push(this.inconclusive('guest-record-access-policy-inaccessible', 'Guest users could not be queried'));
+    } catch (err) {
+      findings.push(this.inconclusive('guest-record-access-policy-inaccessible', 'Guest users could not be queried', err));
       return { findings };
     }
 
@@ -80,17 +102,31 @@ export class GuestRecordAccessPolicyCheck implements SecurityCheck {
 
     let updates: CriticalUpdateRecord[];
     try {
-      updates = await ctx.tooling.query<CriticalUpdateRecord>(
-        'SELECT Id, Name, Description, IsEnabled FROM CriticalUpdate',
-      );
-    } catch {
-      findings.push(this.inconclusive('guest-record-access-policy-tooling-inaccessible', 'Release updates could not be queried'));
+      // Current orgs serve Release Updates as Tooling ReleaseUpdate (Status 'Invocable' = available
+      // but not enabled); CriticalUpdate is the older object. Read whichever this org serves.
+      if (await fieldsOf(ctx, 'ReleaseUpdate', 'tooling')) {
+        const rows = await ctx.tooling.query<ReleaseUpdateRecord>(
+          'SELECT Id, DeveloperName, Title, Description, Status FROM ReleaseUpdate',
+        );
+        updates = rows.map((r) => ({
+          Id: r.Id,
+          Name: r.Title ?? r.DeveloperName,
+          Description: r.Description,
+          IsEnabled: releaseUpdateEnabled(r.Status),
+        }));
+      } else {
+        updates = await ctx.tooling.query<CriticalUpdateRecord>(
+          'SELECT Id, Name, Description, IsEnabled FROM CriticalUpdate',
+        );
+      }
+    } catch (err) {
+      findings.push(this.inconclusive('guest-record-access-policy-tooling-inaccessible', 'Release updates could not be queried', err));
       return { findings };
     }
 
     const match = updates.find((u) => this.matchesSecureGuestAccess(u));
 
-    if (match && !match.IsEnabled) {
+    if (match && match.IsEnabled === false) {
       findings.push({
         id: 'guest-record-access-policy-not-enforced',
         category: this.category,
@@ -105,7 +141,7 @@ export class GuestRecordAccessPolicyCheck implements SecurityCheck {
       return { findings };
     }
 
-    if (match && match.IsEnabled) {
+    if (match && match.IsEnabled === true) {
       findings.push({
         id: 'guest-record-access-policy-enforced',
         category: this.category,
@@ -117,6 +153,22 @@ export class GuestRecordAccessPolicyCheck implements SecurityCheck {
         remediation:
           'Confirm "Assign new records created by guest users to the default owner" is enabled in Setup → Sharing Settings, and periodically review guest user sharing rules for least privilege.',
         affectedItems: [{ label: match.Name, url: setupUrl, note: 'Release Update enabled' }],
+      });
+      return { findings };
+    }
+
+    if (match) {
+      // Present, but its status says neither enabled nor available (e.g. a new status value):
+      // never read as enforced. MN-051.
+      findings.push({
+        id: 'guest-record-access-policy-verify-manually',
+        category: this.category,
+        riskLevel: 'LOW',
+        title: `Confirm guest record-access guardrails manually (${guests.length} active guest user(s))`,
+        detail: `The "Secure guest user record access" Release Update is present, but its status does not say whether it is enabled, so enforcement is not assumed.`,
+        remediation:
+          'In Setup → Release Updates and Setup → Sharing Settings, confirm "Secure guest user record access" is on and "Assign new records created by guest users to the default owner" is enabled.',
+        affectedItems: [{ label: match.Name, url: `${ctx.orgInfo.instanceUrl}/lightning/setup/ReleaseUpdates/home`, note: 'Status unknown' }],
       });
       return { findings };
     }
@@ -138,15 +190,17 @@ export class GuestRecordAccessPolicyCheck implements SecurityCheck {
     return { findings };
   }
 
-  private inconclusive(id: string, what: string): Finding {
+  private inconclusive(id: string, what: string, err: unknown): Finding {
+    const msg = err instanceof Error ? err.message : String(err);
     return {
       id,
       category: this.category,
       riskLevel: 'INFO',
       inconclusive: true,
-      title: `${what} (insufficient access)`,
-      detail: 'The audit user could not gather the data needed to evaluate guest record-access enforcement.',
-      remediation: 'Grant the audit user View Setup and Configuration plus Tooling API access, then re-run.',
+      title: what,
+      detail: `The audit user could not gather the data needed to evaluate guest record-access enforcement. The org returned: ${msg}`,
+      remediation:
+        'If the error is an access error, grant the audit user View Setup and Configuration (see PERMISSIONS.md) and re-run. Otherwise the area is unassessed, not clean.',
     };
   }
 }

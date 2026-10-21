@@ -5,9 +5,13 @@ import type { Finding } from '../../findings/Finding.js';
 interface LoginHistoryRecord {
   Id: string;
   UserId: string;
-  Username: string;
   LoginType: string;
   LoginTime: string;
+}
+
+interface UserRecord {
+  Id: string;
+  Username: string;
 }
 
 export class SsoEnforcementCheck implements SecurityCheck {
@@ -25,7 +29,8 @@ export class SsoEnforcementCheck implements SecurityCheck {
       // Presence of 'Username-Password' logins is direct evidence that SBS-AUTH-001
       // (org-wide SSO enforcement) is not fully applied.
       const result = await ctx.soql.queryAll<LoginHistoryRecord>(
-        `SELECT Id, UserId, Username, LoginType, LoginTime
+        // LoginHistory carries no Username field and no User relationship; names are resolved below.
+        `SELECT Id, UserId, LoginType, LoginTime
          FROM LoginHistory
          WHERE LoginTime > LAST_N_DAYS:30
            AND LoginType = 'Username-Password'
@@ -57,8 +62,16 @@ export class SsoEnforcementCheck implements SecurityCheck {
         if (existing) {
           existing.count++;
         } else {
-          byUser.set(r.UserId, { username: r.Username, count: 1, latest: r.LoginTime });
+          byUser.set(r.UserId, { username: r.UserId, count: 1, latest: r.LoginTime });
         }
+      }
+
+      // At most 300 logins, so at most 300 distinct users: one bounded lookup.
+      const inClause = [...byUser.keys()].map((id) => `'${id}'`).join(',');
+      const users = await ctx.soql.queryAll<UserRecord>(`SELECT Id, Username FROM User WHERE Id IN (${inClause})`);
+      for (const u of users) {
+        const entry = byUser.get(u.Id);
+        if (entry) entry.username = u.Username;
       }
 
       const uniqueUsers = [...byUser.entries()];
@@ -98,15 +111,16 @@ export class SsoEnforcementCheck implements SecurityCheck {
           })),
         });
       }
-    } catch {
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
       findings.push({
         id: 'sso-enforcement-inconclusive',
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'SSO enforcement status could not be determined: LoginHistory not accessible',
+        title: 'SSO enforcement status could not be determined: LoginHistory could not be read',
         detail:
-          'SBS-AUTH-001/002 require SSO enforcement configuration to be verified. LoginHistory was not accessible with current permissions.',
+          `SBS-AUTH-001/002 require SSO enforcement configuration to be verified. LoginHistory could not be read: ${reason}`,
         remediation:
           'Manually verify in Setup → Single Sign-On Settings that "Prevent Login with Salesforce Credentials" is enabled.',
       });

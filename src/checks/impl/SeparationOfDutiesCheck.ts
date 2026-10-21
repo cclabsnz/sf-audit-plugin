@@ -93,12 +93,20 @@ export class SeparationOfDutiesCheck implements SecurityCheck {
       return { findings };
     }
 
+    // A super-admin (Modify All Data + View All Data + Manage Users) already has unrestricted control,
+    // rated by users-super-admin-combo; a combination adds nothing for them. Rate the others, so the
+    // same users are not counted towards the grade again.
+    const isSuperAdmin = (g: { perms: string[] }) => ['ModifyAllData', 'ViewAllData', 'ManageUsers'].every((p) => g.perms.includes(p));
     let anyViolation = false;
+    let superAdminHolders = 0;
     for (const combo of COMBOS) {
-      const holders = grants.filter((g) => {
+      const all = grants.filter((g) => {
         const s = new Set(g.perms);
         return combo.perms.every((p) => s.has(p));
       });
+      const holders = all.filter((g) => !isSuperAdmin(g));
+      const leftOut = all.length - holders.length;
+      superAdminHolders = Math.max(superAdminHolders, leftOut);
       if (holders.length === 0) continue;
       anyViolation = true;
       findings.push({
@@ -106,7 +114,9 @@ export class SeparationOfDutiesCheck implements SecurityCheck {
         category: this.category,
         riskLevel: combo.risk,
         title: `${holders.length} user(s) hold a toxic permission combination: ${combo.label}`,
-        detail: `${combo.why} Each permission may look acceptable in isolation, which is why combination review matters.`,
+        detail:
+          `${combo.why} Each permission may look acceptable in isolation, which is why combination review matters.` +
+          (leftOut > 0 ? ` ${leftOut} super-admin(s) also hold it and are rated in the super-admin finding instead.` : ''),
         remediation: combo.fix,
         affectedItems: holders.map((g) => ({
           label: g.username,
@@ -126,7 +136,9 @@ export class SeparationOfDutiesCheck implements SecurityCheck {
         detail:
           grants.length === 0
             ? 'No active users hold catalogued high-risk permissions, so no separation-of-duties conflicts arise.'
-            : 'No active user holds a flagged combination of permissions that would violate separation of duties.',
+            : superAdminHolders > 0
+              ? `Only super-admins hold flagged combinations; they already have unrestricted control and are rated in the super-admin finding (users-super-admin-combo). No other active user holds a flagged combination.`
+              : 'No active user holds a flagged combination of permissions that would violate separation of duties.',
         remediation: 'Continue to separate user administration, code authorship, identity, and data-access duties across roles.',
       });
     }

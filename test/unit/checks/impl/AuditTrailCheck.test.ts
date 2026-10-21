@@ -33,6 +33,8 @@ function makeCtx(opts: {
   loginAsThrows?: boolean;
   deleters?: unknown[];
   deletersThrow?: boolean;
+  /** PermissionSet fields the describe returns; an Error makes the describe fail. */
+  permissionSetFields?: string[] | Error;
 }): AuditContext {
   // The two SetupAuditTrail reads are distinguished by the loginAs predicate, which only the
   // second carries. Matching on that rather than on call order keeps the mock honest if the
@@ -62,7 +64,14 @@ function makeCtx(opts: {
   return {
     soql: { query, queryAll } as any,
     tooling: { query: jest.fn(), getRecord: jest.fn() } as any,
-    rest: { get: jest.fn() } as any,
+    rest: {
+      get: (jest.fn() as any).mockImplementation(async (path: string) => {
+        if (!path.includes('/sobjects/PermissionSet/describe')) return {};
+        const fields = opts.permissionSetFields ?? ['Id', 'PermissionsManageEventLogFiles'];
+        if (fields instanceof Error) throw fields;
+        return { fields: fields.map((name) => ({ name })) };
+      }),
+    } as any,
     orgInfo: { id: 'o', name: 'n', type: 'DE', isSandbox: false, instance: 'NA1', instanceUrl: 'https://x' },
     cache: {},
   } as any;
@@ -170,6 +179,24 @@ describe('AuditTrailCheck', () => {
       expect(f).toBeDefined();
       expect(f!.riskLevel).toBe('INFO');
       expect(f!.passed).toBeFalsy();
+    });
+
+    it('is not assessed, never a pass, when the org has no such permission field (MN-051)', async () => {
+      const ctx = makeCtx({ permissionSetFields: ['Id', 'PermissionsViewEventLogFiles'] });
+      const r = await check.run(ctx);
+      const f = r.findings.find((x) => x.id === 'event-log-delete-permission-not-available');
+      expect(f!.passed).toBeFalsy();
+      expect(f!.inconclusive).toBe(true);
+      expect(f!.notAssessed).toBe(true);
+      // The permission does not exist, so filtering on it would be rejected: never query it.
+      expect((ctx.soql.query as any).mock.calls.some(([q]: [string]) => q.includes('PermissionsManageEventLogFiles'))).toBe(false);
+    });
+
+    it('is inconclusive, not a pass, when the describe itself fails', async () => {
+      const r = await check.run(makeCtx({ permissionSetFields: Object.assign(new Error('insufficient access'), { errorCode: 'INSUFFICIENT_ACCESS_RIGHTS' }) }));
+      const f = r.findings.find((x) => x.id === 'event-log-delete-permission-inconclusive');
+      expect(f!.inconclusive).toBe(true);
+      expect(r.findings.some((x) => x.id === 'event-log-delete-permission-not-available')).toBe(false);
     });
 
     it('still reports the audit-trail findings when that query fails', async () => {

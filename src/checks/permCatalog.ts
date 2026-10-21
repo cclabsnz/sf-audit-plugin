@@ -46,7 +46,7 @@ export const DANGEROUS_PERMS: DangerousPerm[] = [
     why: 'Bypass API Access Control to reach the org from any tool.' },
   { key: 'ManageEventLogFiles', field: 'PermissionsManageEventLogFiles', label: 'Manage Event Log Files', tier: 'MEDIUM',
     why: 'Access detailed monitoring/event data across the org.' },
-  { key: 'ManageSession', field: 'PermissionsManageSession', label: 'Manage Session Permission Set Activations', tier: 'MEDIUM',
+  { key: 'ManageSession', field: 'PermissionsManageSessionPermissionSets', label: 'Manage Session Permission Set Activations', tier: 'MEDIUM',
     why: 'Activate session-based permission sets, elevating access on demand.' },
   { key: 'ViewAllUsers', field: 'PermissionsViewAllUsers', label: 'View All Users', tier: 'MEDIUM',
     why: 'Enumerate every user in the org: reconnaissance for targeting.' },

@@ -3,15 +3,29 @@ import { ConnectedAppScopeCheck } from '../../../../src/checks/impl/ConnectedApp
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { CheckResult } from '../../../../src/checks/SecurityCheck.js';
 
-function makeCtx(apps: unknown[] | Error): AuditContext {
+// The Tooling API lists the apps (it has no Metadata column); each app's OAuth settings come from
+// the Metadata API, read by DeveloperName. An app missing from `metadata` reads as null.
+type App = ReturnType<typeof app>;
+function makeCtx(apps: App[] | Error, { metadata = true, unreadable = [] as string[] } = {}): AuditContext {
   return {
     soql: {} as any,
     tooling: {
-      query: (jest.fn() as any).mockImplementation(() =>
-        apps instanceof Error ? Promise.reject(apps) : Promise.resolve(apps),
-      ),
+      query: (jest.fn() as any).mockImplementation((q: string) => {
+        if (q.includes('Metadata')) return Promise.reject(new Error("No such column 'Metadata' on entity 'ConnectedApplication'"));
+        return apps instanceof Error
+          ? Promise.reject(apps)
+          : Promise.resolve(apps.map(({ Id, Name }) => ({ Id, Name, DeveloperName: Name })));
+      }),
       getRecord: jest.fn(),
     } as any,
+    metadata: metadata
+      ? {
+          read: (jest.fn() as any).mockImplementation((type: string, name: string) => {
+            const found = apps instanceof Error ? undefined : apps.find((a) => a.Name === name);
+            return Promise.resolve(type === 'ConnectedApp' && found && !unreadable.includes(name) ? found.Metadata : null);
+          }),
+        }
+      : undefined,
     rest: {} as any,
     orgInfo: {
       id: 'o', name: 'n', type: 'DE', isSandbox: false,
@@ -37,6 +51,35 @@ const app = (
 });
 
 const find = (r: CheckResult, id: string) => r.findings.find((f) => f.id === id);
+
+describe('ConnectedAppScopeCheck data sources', () => {
+  const check = new ConnectedAppScopeCheck();
+
+  it('reads scopes from the Metadata API, accepting a single scope as a string', async () => {
+    const one = { ...app('Solo'), Metadata: { oauthConfig: { scopes: 'Full' as unknown as string[] } } };
+    const r = await check.run(makeCtx([one]));
+    expect(find(r, 'connected-app-full-scope')?.affectedItems?.[0].label).toBe('Solo');
+  });
+
+  it('never counts an unread app as scoped', async () => {
+    const r = await check.run(makeCtx([app('Good', { scopes: ['Api'], validity: 90 }), app('Hidden')], { unreadable: ['Hidden'] }));
+    const f = find(r, 'connected-app-scope-unread');
+    expect(f?.inconclusive).toBe(true);
+    expect(f?.affectedItems?.map((i) => i.label)).toEqual(['Hidden']);
+    expect(find(r, 'connected-app-scope-ok')?.detail).toContain('All 1 connected app(s)');
+  });
+
+  it('is inconclusive when no app can be read', async () => {
+    const r = await check.run(makeCtx([app('Hidden')], { unreadable: ['Hidden'] }));
+    expect(r.findings.map((f) => f.id)).toEqual(['connected-app-scope-unread']);
+  });
+
+  it('is inconclusive when the run has no Metadata API client', async () => {
+    const r = await check.run(makeCtx([app('Any', { scopes: ['Api'] })], { metadata: false }));
+    expect(r.findings.map((f) => f.id)).toEqual(['connected-app-scope-inconclusive']);
+    expect(r.findings[0].inconclusive).toBe(true);
+  });
+});
 
 describe('ConnectedAppScopeCheck', () => {
   const check = new ConnectedAppScopeCheck();
@@ -131,8 +174,9 @@ describe('ConnectedAppScopeCheck', () => {
       .toContain('infinite');
   });
 
-  it('handles an app with null metadata without throwing', async () => {
-    const r = await check.run(makeCtx([{ Id: '0Ci', Name: 'Bare', Metadata: null }]));
-    expect(r.findings[0].id).toBe('connected-app-scope-ok');
+  it('reports an app with no readable metadata as unassessed, not as scoped (MN-051)', async () => {
+    const r = await check.run(makeCtx([{ Id: '0Ci', Name: 'Bare', Metadata: null } as unknown as App]));
+    expect(r.findings[0].id).toBe('connected-app-scope-unread');
+    expect(find(r, 'connected-app-scope-ok')).toBeUndefined();
   });
 });

@@ -13,8 +13,9 @@ function makeCtx(opts: { groups?: unknown[]; groupsThrow?: boolean; loginAsAnyUs
       ? { read: (async () => ({ enableAdminLoginAsAnyUser: opts.loginAsAnyUser ?? false })) as any }
       : undefined;
   return {
-    soql: { query: jest.fn(), queryAll } as any,
-    tooling: { query: jest.fn(), getRecord: jest.fn() } as any,
+    soql: { query: jest.fn(), queryAll: jest.fn() } as any,
+    // DelegateGroup is Tooling-only.
+    tooling: { query: queryAll, getRecord: jest.fn() } as any,
     rest: {} as any,
     metadata,
     orgInfo: { id: 'o', name: 'n', type: 'DE', isSandbox: false, instance: 'NA1', instanceUrl: 'https://x' },

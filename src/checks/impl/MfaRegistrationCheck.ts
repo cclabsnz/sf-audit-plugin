@@ -25,10 +25,11 @@ export class MfaRegistrationCheck implements SecurityCheck {
     const setupUrl = `${baseUrl}/lightning/setup/SetupOneIdEntityManagement/home`;
 
     const frozenFilter = `Id NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)`;
-    // COUNT(Id) expr0 puts the result in records[0].expr0; COUNT() without a field puts it in
+    // COUNT(Id) with no alias puts the result in records[0].expr0 (an explicit expr0 alias is
+    // reserved and rejected); COUNT() without a field puts it in
     // totalSize which is not exposed on the typed return value.
     const countResult = await ctx.soql.query<{ expr0: number }>(
-      `SELECT COUNT(Id) expr0 FROM User
+      `SELECT COUNT(Id) FROM User
        WHERE IsActive = true
          AND UserType = 'Standard'
          AND ${frozenFilter}`
@@ -46,7 +47,7 @@ export class MfaRegistrationCheck implements SecurityCheck {
          LIMIT 2000`
       );
     } catch {
-      ctx.cache.mfaRegistrations = [];
+      // Leave the cache unset: an empty list would read downstream as "nobody registered MFA".
       findings.push({
         id: 'mfa-registration-inaccessible',
         category: this.category,
