@@ -9,6 +9,8 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.18.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.18.0) — 2026-10-21
+
 Evidence coverage on a live org rises from about 58% to 96–97%, and grades and attack chains now
 mean what they say. Found by running the audit against a Developer Edition org and two sandboxes.
 
