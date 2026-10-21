@@ -1,6 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { hasField } from '../support/schema.js';
 
 interface PortalUserRecord {
   Id: string;
@@ -50,17 +51,36 @@ export class MfaEnforcementCheck implements SecurityCheck {
     // Query 2: portal users who have MFA explicitly enforced via permission
     let mfaEnforcedIds = new Set<string>();
     try {
+      // Absent permission: MFA cannot be read from permissions, so it is unknown (see the catch).
+      if (!(await hasField(ctx, 'PermissionSet', 'PermissionsForceTwoFactor'))) {
+        return {
+          findings: [
+            {
+              id: 'mfa-enforcement-not-available',
+              category: this.category,
+              riskLevel: 'INFO',
+              inconclusive: true,
+              notAssessed: true,
+              title: `MFA enforcement for ${allPortalUsers.length} external/portal user(s) cannot be read from permissions in this org`,
+              detail:
+                `This org has ${allPortalUsers.length} active external/portal user(s) but does not expose the "Multi-Factor Authentication for User Interface Logins" permission (PermissionSet.PermissionsForceTwoFactor), so whether they have MFA enforced cannot be established from permission assignments. SBS-AUTH-004 is unevaluated rather than failed.`,
+              remediation:
+                'Verify MFA for external users in the Experience Cloud site login settings, and at the identity provider where portal logins are federated.',
+            },
+          ],
+        };
+      }
+
       const mfaResult = await ctx.soql.query<{ AssigneeId: string }>(
         `SELECT AssigneeId
          FROM PermissionSetAssignment
-         WHERE PermissionSet.PermissionsMultiFactorForUiLogins = true
+         WHERE PermissionSet.PermissionsForceTwoFactor = true
            AND Assignee.IsActive = true
            AND Assignee.UserType IN (${userTypeList})`
       );
       mfaEnforcedIds = new Set(mfaResult.records.map((r) => r.AssigneeId));
-    } catch {
-      // PermissionsMultiFactorForUiLogins is absent in some editions, so this query legitimately
-      // fails. It previously fell through with an empty set, which is not a neutral default: with
+    } catch (err) {
+      // The query failed (the absent-field case is handled above). It previously fell through with an empty set, which is not a neutral default: with
       // nothing enforced every portal user lands in `withoutMfa`, and the check then stated as
       // established fact, at HIGH, that each named user lacks MFA. Over-reporting is not the safe
       // direction — it produces a remediation task against real users and an SBS-AUTH-004 claim
@@ -74,9 +94,9 @@ export class MfaEnforcementCheck implements SecurityCheck {
             inconclusive: true,
             title: `MFA enforcement for ${allPortalUsers.length} external/portal user(s) could not be determined`,
             detail:
-              `This org has ${allPortalUsers.length} active external/portal user(s), but PermissionSetAssignment could not be filtered on PermissionsMultiFactorForUiLogins. The field is absent in some editions, and the query also fails without access to PermissionSetAssignment. Whether these users have MFA enforced is therefore unestablished, so SBS-AUTH-004 is unevaluated rather than failed.`,
+              `This org has ${allPortalUsers.length} active external/portal user(s), but who holds PermissionsForceTwoFactor could not be read. Whether these users have MFA enforced is therefore unestablished, so SBS-AUTH-004 is unevaluated rather than failed. The org said: ${err instanceof Error ? err.message : String(err)}`,
             remediation:
-              'Grant the audit user read access to PermissionSetAssignment and re-run. If the permission does not exist in this edition, verify MFA for external users manually in Setup, and through the identity provider where portal logins are federated.',
+              'Check the error above. If it is an access error, confirm the audit user can read PermissionSetAssignment (View Setup and Configuration) and re-run; otherwise verify MFA for external users manually in Setup, and through the identity provider where portal logins are federated.',
           },
         ],
       };

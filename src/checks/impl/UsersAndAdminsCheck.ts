@@ -80,6 +80,14 @@ export class UsersAndAdminsCheck implements SecurityCheck {
     const customizeAppCount = uniqueIds(customizeAppUsers).size;
     const authorApexCount   = uniqueIds(authorApexUsers).size;
 
+    // In a sandbox, developers routinely hold admin: cap admin-count findings at HIGH, and say so.
+    const isSandbox = ctx.orgInfo.isSandbox;
+    const sandboxCap = (level: 'CRITICAL' | 'HIGH' | 'LOW'): 'CRITICAL' | 'HIGH' | 'LOW' =>
+      isSandbox && level === 'CRITICAL' ? 'HIGH' : level;
+    const sandboxNote = isSandbox
+      ? ' Rated at most HIGH because this org is a sandbox, where developers commonly hold admin; treat it as CRITICAL if this sandbox holds production data.'
+      : '';
+
     // SBS-ACS-004: flag users with ALL THREE super-admin permissions simultaneously
     const superAdminIds = [...modifyAllIds].filter((id) => viewAllIds.has(id) && manageUsersIds.has(id));
     if (superAdminIds.length > 0) {
@@ -90,23 +98,38 @@ export class UsersAndAdminsCheck implements SecurityCheck {
       findings.push({
         id: 'users-super-admin-combo',
         category: this.category,
-        riskLevel: 'CRITICAL',
+        // Every org needs an administrator: grade on how many hold unrestricted control.
+        riskLevel: sandboxCap(superAdminIds.length > 5 ? 'CRITICAL' : superAdminIds.length > 3 ? 'HIGH' : 'LOW'),
         title: `${superAdminIds.length} user(s) hold the super-admin permission combination (ViewAllData + ModifyAllData + ManageUsers)`,
         detail:
-          'SBS-ACS-004 requires documented justification for any user holding all three of ViewAllData, ModifyAllData, and ManageUsers simultaneously. This combination is equivalent to unrestricted org control.',
+          'SBS-ACS-004 requires documented justification for any user holding all three of ViewAllData, ModifyAllData, and ManageUsers simultaneously. This combination is equivalent to unrestricted org control.' +
+          (superAdminIds.length > 5 ? sandboxNote : ''),
         remediation:
           'Reduce to the minimum necessary permissions. Document justification for each user in the system of record. Consider breaking this into role-specific permission sets.',
         affectedItems: superAdminItems,
       });
     }
 
-    const modifyRisk = modifyAllCount > 5 ? 'CRITICAL' : modifyAllCount > 3 ? 'HIGH' : 'LOW';
+    // Rate Modify All Data on the holders the super-admin finding does not already cover, so the
+    // same users are not counted towards the grade twice. The finding still lists every holder.
+    const superAdminSet = new Set(superAdminIds);
+    const otherModifyAll = [...modifyAllIds].filter((id) => !superAdminSet.has(id)).length;
+    const modifyRisk = sandboxCap(otherModifyAll > 5 ? 'CRITICAL' : otherModifyAll > 3 ? 'HIGH' : 'LOW');
+    const coveredNote =
+      superAdminSet.size > 0
+        ? ` ${superAdminSet.size} of them also hold the super-admin combination and are rated in that finding; this severity reflects the other ${otherModifyAll}.`
+        : '';
     findings.push({
       id: 'users-modify-all-data',
       category: this.category,
       riskLevel: modifyRisk,
       title: `${modifyAllCount} user(s) have Modify All Data permission`,
-      detail: 'Modify All Data grants unrestricted write access across all objects. This is one of the most powerful permissions in Salesforce.',
+      // The population is always reported; at the lowest band it asks for no change.
+      passed: modifyRisk === 'LOW' || undefined,
+      detail:
+        'Modify All Data grants unrestricted write access across all objects. This is one of the most powerful permissions in Salesforce.' +
+        coveredNote +
+        (modifyRisk === 'HIGH' && otherModifyAll > 5 ? sandboxNote : ''),
       remediation: 'Limit Modify All Data to essential system administrators only. Review each user and remove the permission from any non-essential accounts.',
       affectedItems: modifyAllUsers.map((r) => userItem(r as PsaRecord)),
     });
@@ -117,6 +140,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
       category: this.category,
       riskLevel: viewRisk,
       title: `${viewAllCount} user(s) have View All Data permission`,
+      passed: viewRisk === 'LOW' || undefined,
       detail: 'View All Data grants unrestricted read access across all objects, bypassing sharing rules and record-level security.',
       remediation: 'Limit View All Data to essential users. Consider using permission sets scoped to specific objects instead.',
       affectedItems: viewAllUsers.map((r) => userItem(r as PsaRecord)),

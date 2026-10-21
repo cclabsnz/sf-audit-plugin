@@ -4,11 +4,14 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(records: unknown[], throws = false): AuditContext {
   return {
-    soql: {} as any,
-    tooling: {
-      query: throws
+    // CorsWhitelistEntry is a standard-API object; the Tooling API rejects it.
+    soql: {
+      queryAll: throws
         ? (jest.fn() as any).mockRejectedValue(Object.assign(new Error('not accessible'), { errorCode: 'ENTITY_IS_INACCESSIBLE' }))
         : (jest.fn() as any).mockResolvedValue(records),
+    } as any,
+    tooling: {
+      query: (jest.fn() as any).mockRejectedValue(Object.assign(new Error("sObject type 'CorsWhitelistEntry' is not supported."), { errorCode: 'INVALID_TYPE' })),
       getRecord: jest.fn(),
     } as any,
     rest: {} as any,

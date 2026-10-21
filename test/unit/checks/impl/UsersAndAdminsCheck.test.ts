@@ -100,7 +100,8 @@ describe('UsersAndAdminsCheck', () => {
     ]));
     const f = all.findings.find((x) => x.id === 'users-super-admin-combo');
     expect(f).toBeDefined();
-    expect(f!.riskLevel).toBe('CRITICAL');
+    // RULE-076: one administrator is expected; it is LOW (document the justification).
+    expect(f!.riskLevel).toBe('LOW');
 
     const twoOfThree = await check.run(makeCtx([
       row('boss', { ModifyAllData: true, ViewAllData: true }),

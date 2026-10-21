@@ -1,6 +1,17 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { fieldsOf } from '../support/schema.js';
+
+/** Tooling ReleaseUpdate. Status 'Invocable' = available but not enabled, 'Revoked' = enabled then reverted (both pending); 'Invoked'/'Revocable' = enabled. */
+interface ReleaseUpdateRecord {
+  Id: string;
+  Title: string | null;
+  DeveloperName: string;
+  Description: string | null;
+  DueDate: string | null;
+  Status: string;
+}
 
 interface CriticalUpdateRecord {
   Id: string;
@@ -23,17 +34,32 @@ export class ReleaseUpdatesCheck implements SecurityCheck {
 
     let pendingUpdates: CriticalUpdateRecord[] = [];
     try {
-      pendingUpdates = await ctx.tooling.query<CriticalUpdateRecord>(
-        'SELECT Id, Name, Description, AutoActivationDate, IsEnabled FROM CriticalUpdate WHERE IsEnabled = false'
-      );
-    } catch {
+      // Current orgs expose Release Updates as Tooling ReleaseUpdate; CriticalUpdate is the older
+      // object, absent from current releases. Use whichever this org serves.
+      if (await fieldsOf(ctx, 'ReleaseUpdate', 'tooling')) {
+        const rows = await ctx.tooling.query<ReleaseUpdateRecord>(
+          "SELECT Id, DeveloperName, Title, Description, DueDate, Status FROM ReleaseUpdate WHERE Status IN ('Invocable', 'Revoked')"
+        );
+        pendingUpdates = rows.map((r) => ({
+          Id: r.Id,
+          Name: r.Title || r.DeveloperName,
+          Description: r.Description,
+          AutoActivationDate: r.DueDate,
+          IsEnabled: false,
+        }));
+      } else {
+        pendingUpdates = await ctx.tooling.query<CriticalUpdateRecord>(
+          'SELECT Id, Name, Description, AutoActivationDate, IsEnabled FROM CriticalUpdate WHERE IsEnabled = false'
+        );
+      }
+    } catch (err) {
       findings.push({
         id: 'release-updates-inconclusive',
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
         title: 'Pending release updates check could not be completed',
-        detail: 'The CriticalUpdate Tooling API object was not accessible. This can occur if the audit user lacks the "Customize Application" permission or if the org is on a restricted edition.',
+        detail: `Pending release updates could not be read, so this is unassessed, not clean. The org said: ${err instanceof Error ? err.message : String(err)}`,
         remediation: 'Review pending Release Updates manually in Setup → Release Updates.',
       });
       return { findings };

@@ -3,17 +3,21 @@ import { ConnectedAppsCheck } from '../../../../src/checks/impl/ConnectedAppsChe
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { CheckResult } from '../../../../src/checks/SecurityCheck.js';
 
-// Routes by object, as the org does: ConnectedApplication rows never come back for an
-// ExternalClientApplication query.
+// Routes by API, as the org does: ConnectedApplication session settings come from the Tooling
+// API, External Client Apps from the standard API.
 function makeCtx(apps: unknown[] | Error, externalApps: unknown[] | Error = []): AuditContext {
   const answer = (rows: unknown[] | Error) => (rows instanceof Error ? Promise.reject(rows) : Promise.resolve(rows));
   return {
     soql: {
       queryAll: (jest.fn() as any).mockImplementation((q: string) =>
-        q.includes('FROM ExternalClientApplication') ? answer(externalApps) : answer(apps),
+        q.includes('FROM ExternalClientApplication') ? answer(externalApps) : Promise.reject(new Error('wrong API')),
       ),
     } as any,
-    tooling: {} as any,
+    tooling: {
+      query: (jest.fn() as any).mockImplementation((q: string) =>
+        q.includes('FROM ConnectedApplication') ? answer(apps) : Promise.reject(new Error('wrong API')),
+      ),
+    } as any,
     rest: {} as any,
     orgInfo: {
       id: 'o', name: 'n', type: 'DE', isSandbox: false,
@@ -30,7 +34,8 @@ const app = (
   Id: `0CiA${Name}`,
   Name,
   OptionsAllowAdminApprovedUsersOnly: restricted,
-  SessionTimeout,
+  // The Tooling API returns the picklist value as a string of minutes.
+  SessionTimeout: SessionTimeout === null ? null : String(SessionTimeout),
 });
 
 const find = (r: CheckResult, id: string) => r.findings.find((f) => f.id === id);

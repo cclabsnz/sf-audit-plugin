@@ -11,7 +11,7 @@ Each finding is assigned a risk level with a corresponding weight:
 | LOW | 1 |
 | INFO | 0 |
 
-The health score is calculated as `100 - (total weight / max possible weight) * 100`, capped at 0.
+The health score is calculated as `100 - (total weight / max possible weight) * 100`, capped at 0. Passed findings count towards the maximum, so a broad passing audit dilutes real failures; inconclusive and not-assessed findings count towards neither, so a check that gathered no evidence never improves the score.
 
 The audit produces a **Health Score** (0–100) and a **Grade** (A–F):
 
@@ -22,6 +22,12 @@ The audit produces a **Health Score** (0–100) and a **Grade** (A–F):
 | C | Score ≥ 55, ≤ 3 HIGH findings |
 | D | Score ≥ 40, no CRITICAL findings |
 | F | Score < 40 or any CRITICAL finding |
+
+The HIGH and CRITICAL counts take open findings only (not passed, inconclusive or waived) plus named attack chains. A *potential* chain, inferred from capability overlap rather than matched to a modelled attack, is reported but does not set the grade.
+
+Every output states why the grade is what it is, for example `F: 2 CRITICAL findings (D allows none)` or `C: 2 HIGH findings (B allows at most 1)`.
+
+CRITICAL is kept for breach-grade exposure. An expiring certificate is an outage risk and is rated HIGH. In a sandbox, the admin-count findings (`users-super-admin-combo`, `users-modify-all-data`) are capped at HIGH, with a note to treat them as CRITICAL if the sandbox holds production data. `users-modify-all-data` takes its severity from holders the super-admin finding does not already cover, so the same users are not counted twice. Externally callable Apex is CRITICAL when a class declares `without sharing`, and HIGH when it only lacks a declaration.
 
 ## Custom Scoring Config
 

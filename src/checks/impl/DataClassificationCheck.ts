@@ -2,9 +2,9 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
-interface FieldClassificationRecord {
-  objectName: string;
-  classifiedCount: number;
+interface ClassifiedFieldRecord {
+  EntityDefinition?: { QualifiedApiName?: string } | null;
+  QualifiedApiName: string;
 }
 
 interface EncryptionKeyRecord {
@@ -28,25 +28,26 @@ export class DataClassificationCheck implements SecurityCheck {
     const baseUrl = ctx.orgInfo.instanceUrl;
     const objectList = CLASSIFICATION_OBJECTS.map((o) => `'${o}'`).join(', ');
 
-    // Q1 (Tooling API): count fields with a ComplianceGroup set per key object.
+    // Q1 (Tooling API): fields with a ComplianceGroup set on each key object, counted here.
     // Salesforce Data Classification sets ComplianceGroup on FieldDefinition to mark fields
     // as PII, PCI, HIPAA, GDPR, etc. Objects with zero classified fields are uncovered.
-    let classifiedMap = new Map<string, number>();
-    let classificationQueryFailed = false;
+    // FieldDefinition supports no aggregates (its Id is not aggregatable), so no COUNT/GROUP BY.
+    const classifiedMap = new Map<string, number>();
+    let classificationError: string | undefined;
 
     try {
-      const classResult = await ctx.tooling.query<FieldClassificationRecord>(
-        `SELECT EntityDefinition.QualifiedApiName objectName, COUNT(Id) classifiedCount
+      const classResult = await ctx.tooling.query<ClassifiedFieldRecord>(
+        `SELECT EntityDefinition.QualifiedApiName, QualifiedApiName
          FROM FieldDefinition
          WHERE EntityDefinition.QualifiedApiName IN (${objectList})
-           AND ComplianceGroup != null
-         GROUP BY EntityDefinition.QualifiedApiName`
+           AND ComplianceGroup != null`
       );
       for (const r of classResult) {
-        classifiedMap.set(r.objectName, r.classifiedCount ?? 0);
+        const obj = r.EntityDefinition?.QualifiedApiName;
+        if (obj) classifiedMap.set(obj, (classifiedMap.get(obj) ?? 0) + 1);
       }
-    } catch {
-      classificationQueryFailed = true;
+    } catch (err) {
+      classificationError = err instanceof Error ? err.message : String(err);
     }
 
     // Q2 (SOQL): check for Shield Platform Encryption keys.
@@ -67,17 +68,17 @@ export class DataClassificationCheck implements SecurityCheck {
     }
 
     // SBS-DATA-001/002: data classification coverage
-    if (classificationQueryFailed) {
+    if (classificationError !== undefined) {
       findings.push({
         id: 'data-classification-inconclusive',
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'Data classification status could not be determined: Tooling API access needed',
+        title: 'Data classification status could not be determined',
         detail:
-          'SBS-DATA-001 requires all data fields to be classified by sensitivity. SBS-DATA-002 requires PII fields to be explicitly identified. The Tooling API FieldDefinition query was not accessible with the current user permissions.',
+          `SBS-DATA-001 requires all data fields to be classified by sensitivity. SBS-DATA-002 requires PII fields to be explicitly identified. The Tooling API FieldDefinition query failed, so classification is unassessed, not absent: ${classificationError}`,
         remediation:
-          'Enable Tooling API access for the audit user, or manually review data classification in Setup → Data Management → Data Classification for Account, Contact, Lead, Opportunity, Case, Contract, and User.',
+          'Check the error above. If it is an access error, confirm the audit user has API Enabled and View Setup and Configuration; otherwise review data classification manually in Setup → Data Management → Data Classification for Account, Contact, Lead, Opportunity, Case, Contract, and User.',
       });
     } else {
       const classifiedObjects = CLASSIFICATION_OBJECTS.filter((o) => (classifiedMap.get(o) ?? 0) > 0);

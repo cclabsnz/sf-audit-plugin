@@ -9,6 +9,54 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+Evidence coverage on a live org rises from about 58% to 96–97%, and grades and attack chains now
+mean what they say. Found by running the audit against a Developer Edition org and two sandboxes.
+
+### Fixed
+
+- About 40 checks sent queries the org rejected, then reported "insufficient permissions":
+  - fields that do not exist (`LoginHistory.Username`, `ContentDistribution.PasswordEnabled`,
+    `Organization.MyDomain`, `RestrictionRule.Active`, the wrong MFA permission field, and others)
+  - objects sent to the wrong API (`TraceFlag`, `DelegateGroup`, `ExternalCredential`,
+    `NetworkAccess` and `CorsWhitelistEntry`)
+  - filters on fields Salesforce will not filter (`SetupAuditTrail.Section`, `LoginHistory.Status`)
+  - invalid syntax: the reserved alias `expr0`, and `COUNT(Id)` on `FieldDefinition`
+- Commands pinned API 62.0 and could not see newer fields. They now use the org's own version.
+- A rejected query is reported as "query rejected by the org" and quotes Salesforce's error.
+  "Insufficient permissions" is kept for real access errors, and it names the needed permission.
+- Permission fields that only some editions carry are checked by describe before they are queried.
+  If one is absent, the check says the feature is not available in this org; that never counts as
+  a pass.
+- `MALFORMED_QUERY` was treated as "object not present", so a broken query read as clean.
+- Inconclusive checks no longer raise the health score.
+
+### Changed
+
+- Every output gives the reason for the grade, for example `F: 2 CRITICAL findings (D allows none)`.
+- Only open findings and named attack chains count towards the grade. Potential chains do not.
+- CRITICAL is kept for breach-grade exposure:
+  - The super-admin finding and Modify All Data are rated by how many hold them (more than 5 is
+    CRITICAL, more than 3 is HIGH).
+  - Modify All Data and separation-of-duties leave out users the super-admin finding already
+    covers, so the same admins are not counted three times.
+  - In a sandbox, admin-count findings are capped at HIGH.
+  - An expiring certificate is HIGH.
+  - Externally callable Apex is CRITICAL only when a class declares `without sharing`.
+- "Unauthenticated bulk exfiltration" needs a confirmed guest exposure. "Standard user to org
+  takeover" needs a low-trust way in and an escalation a non-admin can use. A guest user merely
+  existing no longer opens either chain, or any potential chain.
+- The remediation roadmap lists only work: INFO inventories and checks that gathered no evidence
+  are left out. Healthy lowest-band results (few failed logins, a Health Check score of 85 or
+  more, a small number of View/Modify All Data holders) are reported as passed.
+- Reports with unassessed checks point to `sf audit preflight` and PERMISSIONS.md.
+  `PERMISSIONS.md` and the read-only permission set now ship in the npm package.
+
+### Added
+
+- `scripts/capture-schema.mjs` and a captured Developer Edition schema
+  (`test/fixtures/schema/developer-edition.json`, standard fields only). A test runs every
+  check against it and fails on any query the org would reject.
+
 ## [v1.17.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.17.0) — 2026-10-17
 
 109 checks (up from 95) and 19 attack chains (up from 17).

@@ -77,3 +77,18 @@ describe('grade cap', () => {
     expect(['A', 'B', 'C', 'D', 'F']).toContain(r.grade);
   });
 });
+
+describe('coverageAdvice', () => {
+  it('is empty when every check gathered evidence', async () => {
+    const { coverageAdvice } = await import('../../../src/findings/coverage.js');
+    expect(coverageAdvice({ checksRun: 2, checksAssessed: 2, percent: 100, notAssessed: [] })).toBe('');
+  });
+
+  it('points to the org error, preflight and the permission set, without blaming access outright', async () => {
+    const { coverageAdvice } = await import('../../../src/findings/coverage.js');
+    const advice = coverageAdvice({ checksRun: 2, checksAssessed: 1, percent: 50, notAssessed: ['x'] });
+    expect(advice).toContain('quoting what the org returned');
+    expect(advice).toContain('sf audit preflight');
+    expect(advice).toContain('PERMISSIONS.md');
+  });
+});

@@ -2,12 +2,19 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
-interface OutboundMessageRecord {
+interface OutboundMessageRow {
   Id: string;
   Name: string;
+}
+
+interface OutboundMessageRecord extends OutboundMessageRow {
   EndpointUrl: string;
   IncludeSessionId: boolean;
 }
+
+// The endpoint and the session-ID flag live only in the Metadata column, which the Tooling API
+// returns one record at a time, so each message is fetched by id, up to this many.
+const MAX_RECORD_READS = 100;
 
 export class OutboundMessagesCheck implements SecurityCheck {
   readonly id = 'outbound-messages';
@@ -20,11 +27,9 @@ export class OutboundMessagesCheck implements SecurityCheck {
     const findings: Finding[] = [];
     const setupUrl = `${ctx.orgInfo.instanceUrl}/lightning/setup/WorkflowOutboundMessaging/home`;
 
-    let rows: OutboundMessageRecord[];
+    let listed: OutboundMessageRow[];
     try {
-      rows = await ctx.tooling.query<OutboundMessageRecord>(
-        'SELECT Id, Name, EndpointUrl, IncludeSessionId FROM WorkflowOutboundMessage',
-      );
+      listed = await ctx.tooling.query<OutboundMessageRow>('SELECT Id, Name FROM WorkflowOutboundMessage');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       findings.push({
@@ -33,13 +38,51 @@ export class OutboundMessagesCheck implements SecurityCheck {
         riskLevel: 'INFO',
         inconclusive: true,
         title: 'Workflow outbound messages could not be read',
-        detail: `The WorkflowOutboundMessage Tooling query was not accessible: ${msg}`,
+        detail: `The WorkflowOutboundMessage Tooling query failed: ${msg}`,
         remediation: 'Grant the audit user "View Setup and Configuration", then re-run the audit.',
       });
       return { findings };
     }
 
-    if (rows.length === 0) {
+    const rows: OutboundMessageRecord[] = [];
+    const unread: OutboundMessageRow[] = [];
+    for (const [i, row] of listed.entries()) {
+      let meta: { endpointUrl?: string; includeSessionId?: boolean | string } | undefined;
+      if (i < MAX_RECORD_READS) {
+        try {
+          const rec = await ctx.tooling.getRecord<{ Metadata?: typeof meta }>('WorkflowOutboundMessage', row.Id);
+          meta = rec?.Metadata ?? undefined;
+        } catch {
+          meta = undefined;
+        }
+      }
+      if (meta && typeof meta.endpointUrl === 'string') {
+        rows.push({
+          ...row,
+          EndpointUrl: meta.endpointUrl,
+          IncludeSessionId: meta.includeSessionId === true || meta.includeSessionId === 'true',
+        });
+      } else unread.push(row);
+    }
+
+    // A message whose definition could not be read is unassessed, and keeps the inventory from passing.
+    if (unread.length > 0) {
+      findings.push({
+        id: 'outbound-messages-unread',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `${unread.length} outbound message(s) could not be read`,
+        detail:
+          'Their endpoint and Include Session ID settings were not returned by the Tooling API ' +
+          `(reads stop after ${MAX_RECORD_READS} messages), so they are unassessed, not clean.`,
+        remediation: 'Review these outbound messages in Setup → Outbound Messages.',
+        affectedItems: unread.map((r) => ({ label: r.Name, url: setupUrl })),
+      });
+      if (rows.length === 0) return { findings };
+    }
+
+    if (listed.length === 0) {
       findings.push({
         id: 'outbound-messages-none',
         category: this.category,
@@ -95,8 +138,8 @@ export class OutboundMessagesCheck implements SecurityCheck {
     findings.push({
       id: 'outbound-messages-inventory',
       category: this.category,
-      riskLevel: sessionId.length === 0 && cleartext.length === 0 ? 'LOW' : 'INFO',
-      passed: sessionId.length === 0 && cleartext.length === 0 ? true : undefined,
+      riskLevel: sessionId.length === 0 && cleartext.length === 0 && unread.length === 0 ? 'LOW' : 'INFO',
+      passed: sessionId.length === 0 && cleartext.length === 0 && unread.length === 0 ? true : undefined,
       title: `${rows.length} workflow outbound message(s) configured (${sessionId.length} include session ID, ${cleartext.length} cleartext)`,
       detail:
         'Outbound messages POST record data to external endpoints automatically. Each destination should be a reviewed, currently-used HTTPS integration.',

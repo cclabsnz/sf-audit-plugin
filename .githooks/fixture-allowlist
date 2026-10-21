@@ -23,3 +23,11 @@
 0H4app0000001AAA
 159.223.10.10
 888xUNKNOWN0000
+# TrustedIPRangesCheck flags ranges wider than 65,536 hosts; a /24 documentation block cannot
+# exercise that, so the test uses the private RFC 1918 10.0.0.0/8 range.
+10.0.0.0
+10.255.255.255
+# My Domain URL shapes the domain checks must recognise: sandbox and Developer Edition variants of
+# the synthetic acme host.
+acme--uat.sandbox.my.salesforce.com
+acme-dev-ed.develop.my.salesforce.com

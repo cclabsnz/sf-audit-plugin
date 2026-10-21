@@ -2,6 +2,7 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 import { queryIfPresent } from '../support/missingObject.js';
+import { hasField } from '../support/schema.js';
 
 interface UserRecord {
   Id: string;
@@ -19,11 +20,6 @@ interface ExternalAccountHierarchyRecord {
   HierarchyLevel?: number;
 }
 
-function isMissingPrmField(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return /No such column 'IsPrmSuperUser'/i.test(msg);
-}
-
 export class ExternalAccountHierarchyExposureCheck implements SecurityCheck {
   readonly id = 'external-account-hierarchy-exposure';
   readonly name = 'External Account Hierarchy & Partner Super User Exposure';
@@ -37,17 +33,14 @@ export class ExternalAccountHierarchyExposureCheck implements SecurityCheck {
     const usersUrl = `${baseUrl}/lightning/setup/ManageUsers/home`;
 
     // 1. Active users with Partner Super User access. User.IsPrmSuperUser only exists in orgs
-    // with a partner (PRM) licence; there its absence means no super users. Any other error
-    // propagates so the check reports inconclusive rather than clean.
-    let superUsers: UserRecord[];
-    try {
-      superUsers = await ctx.soql.queryAll<UserRecord>(
-        'SELECT Id, Username, IsActive, IsPrmSuperUser FROM User WHERE IsPrmSuperUser = true AND IsActive = true',
-      );
-    } catch (err) {
-      if (!isMissingPrmField(err)) throw err;
-      superUsers = [];
-    }
+    // with a partner (PRM) licence; without it no user can be a super user, so the field is
+    // described first rather than queried blind. Query errors propagate so the check reports
+    // inconclusive rather than clean.
+    const superUsers = (await hasField(ctx, 'User', 'IsPrmSuperUser'))
+      ? await ctx.soql.queryAll<UserRecord>(
+          'SELECT Id, Username, IsActive, IsPrmSuperUser FROM User WHERE IsPrmSuperUser = true AND IsActive = true',
+        )
+      : [];
 
     if (superUsers.length > 0) {
       findings.push({

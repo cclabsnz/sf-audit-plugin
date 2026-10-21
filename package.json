@@ -101,6 +101,8 @@
   "files": [
     "/lib",
     "/CHANGELOG.md",
+    "/PERMISSIONS.md",
+    "/docs/permissionset",
     "/messages",
     "/config",
     "!/lib/**/*.map"

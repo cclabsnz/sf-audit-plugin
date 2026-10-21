@@ -234,7 +234,9 @@ confirm each: **[docs/TRUST.md](docs/TRUST.md)**. Least-privilege access is in
 
 Each finding carries a risk weight (CRITICAL 10, HIGH 7, MEDIUM 4, LOW 1, INFO 0). The health score is
 `100 - (total weight / max possible weight) * 100`, capped at 0, and maps to an A–F grade — A needs
-≥ 85 with no HIGH findings; any CRITICAL is an F.
+≥ 85 with no HIGH findings; any open CRITICAL finding or named CRITICAL attack chain is an F. Every report says
+which condition set the grade. Inconclusive checks count towards neither the penalty nor the maximum,
+so they never improve the score. See [docs/SCORING.md](docs/SCORING.md).
 
 Every report also states its **evidence coverage**: how many checks gathered evidence, out of how
 many ran. A check the audit user could not run (missing permission, or an error) is listed by id

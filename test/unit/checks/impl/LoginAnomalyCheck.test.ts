@@ -27,6 +27,21 @@ describe('LoginAnomalyCheck', () => {
     expect(r.findings[0].id).toBe('login-anomaly-inconclusive');
   });
 
+  it('selects Status and filters it in code, because Status cannot be filtered in SOQL', async () => {
+    const ctx = makeCtx({ rows: [] });
+    await check.run(ctx);
+    const q = (ctx.soql.queryAll as any).mock.calls[0][0] as string;
+    expect(q).toMatch(/SELECT UserId, SourceIp, LoginTime, Status FROM LoginHistory/);
+    expect(q).not.toMatch(/WHERE[^]*Status\s*=/);
+  });
+
+  it('ignores failed logins when counting distinct IPs', async () => {
+    const ips = Array.from({ length: 9 }, (_, i) => `10.0.0.${i}`);
+    const failed = logins('005X', ips).map((r) => ({ ...r, Status: 'Invalid Password' }));
+    const r = await check.run(makeCtx({ rows: failed }));
+    expect(r.findings.find((x) => x.id === 'login-anomaly-multi-ip')).toBeUndefined();
+  });
+
   it('passes when there are no successful logins', async () => {
     const r = await check.run(makeCtx({ rows: [] }));
     expect(r.findings.some((f) => f.id === 'login-anomaly-none' && f.passed)).toBe(true);

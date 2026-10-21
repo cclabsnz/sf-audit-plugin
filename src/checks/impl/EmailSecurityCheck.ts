@@ -2,13 +2,6 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
-interface OrgWideEmailRecord {
-  Id: string;
-  Address: string;
-  DisplayName: string;
-  IsAllowAllProfiles: boolean;
-}
-
 interface EmailServiceRecord {
   Id: string;
   FunctionName: string;
@@ -55,58 +48,16 @@ export class EmailSecurityCheck implements SecurityCheck {
   readonly name = 'Email Security & Spoofing';
   readonly category = 'External Connectivity';
   readonly description =
-    'Flags inbound email services that accept mail from any sender or run Apex without authentication, and org-wide send-as addresses available to every profile';
+    'Flags inbound email services that accept mail from any sender or run Apex without authentication';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
-    const owaUrl = `${baseUrl}/lightning/setup/OrgWideEmailAddresses/home`;
     const svcUrl = `${baseUrl}/lightning/setup/EmailToApex/home`;
 
-    // 1. Org-wide email addresses available to all profiles — any user can send "as" them.
-    const owa = await tryQuery(
-      () =>
-        ctx.soql.queryAll<OrgWideEmailRecord>(
-          'SELECT Id, Address, DisplayName, IsAllowAllProfiles FROM OrgWideEmailAddress',
-        ),
-      findings,
-      this.category,
-      'email-security-owa-inaccessible',
-      'Org-wide email addresses',
-    );
+    // Org-wide send-as addresses are reported once, by org-wide-email-spoofing.
 
-    if (owa) {
-      const allProfiles = owa.filter((r) => r.IsAllowAllProfiles);
-      if (allProfiles.length > 0) {
-        findings.push({
-          id: 'email-security-owa-all-profiles',
-          category: this.category,
-          riskLevel: 'MEDIUM',
-          title: `${allProfiles.length} org-wide email address(es) are available to all profiles`,
-          detail:
-            'An org-wide email address available to all profiles lets any user send email that appears to come from that address. This enables internal impersonation (e.g. spoofing a finance or executive sender) in phishing campaigns originating from inside the org.',
-          remediation:
-            'Restrict each org-wide email address to the specific profiles that legitimately need to send as it, rather than allowing all profiles.',
-          affectedItems: allProfiles.map((r) => ({
-            label: r.Address,
-            url: owaUrl,
-            note: `${r.DisplayName || 'no display name'}: restrict to specific profiles`,
-          })),
-        });
-      } else if (owa.length > 0) {
-        findings.push({
-          id: 'email-security-owa-ok',
-          category: this.category,
-          riskLevel: 'LOW',
-          passed: true,
-          title: `${owa.length} org-wide email address(es) are scoped to specific profiles`,
-          detail: 'No org-wide email address is exposed to all profiles, limiting send-as impersonation.',
-          remediation: 'Continue to scope org-wide addresses to the profiles that need them.',
-        });
-      }
-    }
-
-    // 2. Inbound email services (Email-to-Apex) — internet-reachable Apex triggers.
+    // Inbound email services (Email-to-Apex) — internet-reachable Apex triggers.
     const services = await tryQuery(
       () =>
         ctx.soql.queryAll<EmailServiceRecord>(
@@ -117,6 +68,18 @@ export class EmailSecurityCheck implements SecurityCheck {
       'email-security-services-inaccessible',
       'Inbound email services',
     );
+
+    if (services && services.length === 0) {
+      findings.push({
+        id: 'email-security-services-none',
+        category: this.category,
+        riskLevel: 'LOW',
+        passed: true,
+        title: 'No active inbound email services',
+        detail: 'No inbound email service is active, so no Apex runs on receipt of email.',
+        remediation: 'If one is added, require authentication and restrict accepted senders.',
+      });
+    }
 
     if (services && services.length > 0) {
       const unauthenticated = services.filter((s) => !s.IsAuthenticationRequired);

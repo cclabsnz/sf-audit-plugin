@@ -30,15 +30,16 @@ export class LoginAccessPolicyCheck implements SecurityCheck {
 
     let groups: DelegateGroupRec[];
     try {
-      groups = await ctx.soql.queryAll<DelegateGroupRec>('SELECT Id, DeveloperName FROM DelegateGroup');
-    } catch {
+      // DelegateGroup is served by the Tooling API only.
+      groups = await ctx.tooling.query<DelegateGroupRec>('SELECT Id, DeveloperName FROM DelegateGroup');
+    } catch (err) {
       findings.push({
         id: 'login-access-policy-inconclusive',
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
-        title: 'Delegated administration could not be queried (insufficient access)',
-        detail: 'DelegateGroup was not accessible, so delegated-admin escalation paths could not be evaluated.',
+        title: 'Delegated administration could not be queried',
+        detail: `The DelegateGroup query failed (${err instanceof Error ? err.message : String(err)}), so delegated-admin escalation paths could not be evaluated.`,
         remediation: 'Grant the audit user View Setup and Configuration, then re-run. Also manually verify Setup → Login Access Policies.',
       });
       return { findings };

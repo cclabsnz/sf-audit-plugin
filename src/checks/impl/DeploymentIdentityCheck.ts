@@ -20,6 +20,10 @@ const CI_CD_APP_PATTERNS = [
 
 const ADMIN_PROFILE_RE = /admin|system administrator/i;
 
+// SetupAuditTrail.Section cannot be filtered in SOQL; these are matched in code.
+const DEPLOY_SECTIONS = new Set(['Change Sets', 'Developer Tools', 'Packages', 'Metadata']);
+const MAX_TRAIL_ROWS = 10000;
+
 export class DeploymentIdentityCheck implements SecurityCheck {
   readonly id = 'deployment-identity';
   readonly name = 'Deployment Identity';
@@ -63,18 +67,24 @@ export class DeploymentIdentityCheck implements SecurityCheck {
     // Signal 2 (1 query): SetupAuditTrail entries in deploy-related sections over 90 days.
     // This reveals how many distinct users are performing deployment operations and whether
     // those users are individual admins rather than a designated deployment identity.
+    // SetupAuditTrail.Section cannot be filtered in SOQL: the trail is read (bounded) and the
+    // deploy sections are matched here. Up to 300 matches are analysed, as before.
     let deployRecords: AuditTrailRecord[];
+    // True when the trail or the deploy matches were cut off, so deployers may be missing.
+    let truncated = false;
     try {
-      deployRecords = await ctx.soql.queryAll<AuditTrailRecord>(
+      const trail = await ctx.soql.queryAll<AuditTrailRecord>(
         `SELECT CreatedDate, CreatedBy.Id, CreatedBy.Username, CreatedBy.Profile.Name,
                 Section, Action, Display
          FROM SetupAuditTrail
          WHERE CreatedDate > LAST_N_DAYS:90
-           AND Section IN ('Change Sets', 'Developer Tools', 'Packages', 'Metadata')
          ORDER BY CreatedDate DESC
-         LIMIT 300`
+         LIMIT ${MAX_TRAIL_ROWS}`
       );
-    } catch {
+      const matches = trail.filter((r) => DEPLOY_SECTIONS.has(r.Section));
+      truncated = trail.length >= MAX_TRAIL_ROWS || matches.length > 300;
+      deployRecords = matches.slice(0, 300);
+    } catch (err) {
       findings.push({
         id: 'deployment-audit-trail-inaccessible',
         category: this.category,
@@ -82,14 +92,30 @@ export class DeploymentIdentityCheck implements SecurityCheck {
         inconclusive: true,
         title: 'Deployment audit trail could not be read: SBS-DEP-003 unverified',
         detail:
-          'SetupAuditTrail was not accessible. Deployment activity from the past 90 days cannot be analyzed for unauthorized modifications. Without this data it is impossible to determine whether deployments are performed by a single designated identity.',
+          `The SetupAuditTrail query failed (${err instanceof Error ? err.message : String(err)}). Deployment activity from the past 90 days cannot be analyzed for unauthorized modifications. Without this data it is impossible to determine whether deployments are performed by a single designated identity.`,
         remediation:
           'Grant "View Setup and Configuration" permission to the audit user to enable audit trail analysis.',
       });
       return { findings };
     }
 
+    // MN-051: with the trail cut off, "nobody deployed" and "one identity deployed" are unproven.
+    const partialFinding = (): Finding => ({
+      id: 'deployment-identity-partial',
+      category: this.category,
+      riskLevel: 'INFO',
+      inconclusive: true,
+      title: `Deployment identity only partly assessed: the 90-day audit trail exceeds what was read`,
+      detail: `The 90-day Setup Audit Trail holds more than ${MAX_TRAIL_ROWS} entries (or more than 300 deployment entries), so only the most recent were analysed. Older deployers in the window may be missing, so a single-identity or no-activity result is not established.`,
+      remediation: 'Review deployment activity in Setup → View Setup Audit Trail, or export the full trail for review.',
+      affectedItems: [{ label: 'Setup Audit Trail', url: auditUrl }],
+    });
+
     if (deployRecords.length === 0 && ciCdApps.length === 0) {
+      if (truncated) {
+        findings.push(partialFinding());
+        return { findings };
+      }
       findings.push({
         id: 'deployment-no-activity',
         category: this.category,
@@ -141,6 +167,8 @@ export class DeploymentIdentityCheck implements SecurityCheck {
             note: `${count} deployment action(s) | last: ${new Date(latest).toISOString().split('T')[0]} | profile: ${profile}`,
           })),
         });
+      } else if (uniqueDeployers.length === 1 && truncated) {
+        findings.push(partialFinding());
       } else if (uniqueDeployers.length === 1) {
         const d = uniqueDeployers[0];
         findings.push({

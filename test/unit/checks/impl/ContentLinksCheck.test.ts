@@ -21,12 +21,15 @@ function makeCtx(records: unknown[] | Error): AuditContext {
   } as any;
 }
 
-const link = (Name: string, opts: { expiry?: boolean; password?: boolean; ageDays?: number } = {}) => ({
+const link = (Name: string, opts: { expiry?: boolean; password?: boolean; ageDays?: number; expiredDaysAgo?: number } = {}) => ({
   Id: `05D${Name}`, Name, ContentDocumentId: `069${Name}`,
-  ExpiryDate: opts.expiry === false || opts.expiry === undefined
-    ? null
-    : new Date(Date.now() + 30 * 86_400_000).toISOString(),
-  PasswordEnabled: opts.password ?? false,
+  ExpiryDate: opts.expiredDaysAgo !== undefined
+    ? new Date(Date.now() - opts.expiredDaysAgo * 86_400_000).toISOString()
+    : opts.expiry === false || opts.expiry === undefined
+      ? null
+      : new Date(Date.now() + 30 * 86_400_000).toISOString(),
+  PreferencesExpires: opts.expiry === true || opts.expiredDaysAgo !== undefined,
+  PreferencesPasswordRequired: opts.password ?? false,
   CreatedDate: new Date(Date.now() - (opts.ageDays ?? 1) * 86_400_000).toISOString(),
 });
 
@@ -47,10 +50,38 @@ describe('ContentLinksCheck', () => {
     expect(r.findings[0].passed).toBe(true);
   });
 
-  it('only considers public links', async () => {
+  it('queries only fields ContentDistribution has (every row is a public link)', async () => {
     const ctx = makeCtx([]);
     await check.run(ctx);
-    expect((ctx.soql.queryAll as any).mock.calls[0][0]).toMatch(/IsPublic\s*=\s*true/i);
+    const q = (ctx.soql.queryAll as any).mock.calls[0][0] as string;
+    expect(q).toMatch(/PreferencesExpires, PreferencesPasswordRequired/);
+    expect(q).not.toMatch(/IsPublic|PasswordEnabled/);
+  });
+
+  it('excludes expired links in the query, before the LIMIT', async () => {
+    const ctx = makeCtx([]);
+    await check.run(ctx);
+    const q = (ctx.soql.queryAll as any).mock.calls[0][0] as string;
+    expect(q).toMatch(/WHERE \(PreferencesExpires = false OR ExpiryDate = null OR ExpiryDate > \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\)[^]*LIMIT 500/);
+  });
+
+  // MN-051: a full page means newer links went unread, so it is never a clean pass.
+  it('reports a full page as partial and does not pass', async () => {
+    const page = Array.from({ length: 500 }, (_, i) => link(`L${i}`, { expiry: true, password: true }));
+    const r = await check.run(makeCtx(page));
+    expect(find(r, 'content-links-partial')!.inconclusive).toBe(true);
+    expect(find(r, 'content-links-ok')).toBeUndefined();
+  });
+
+  it('ignores links that have already expired', async () => {
+    const r = await check.run(makeCtx([link('gone', { expiredDaysAgo: 3, password: true })]));
+    expect(find(r, 'content-links-none')).toBeDefined();
+  });
+
+  it('treats an ExpiryDate without PreferencesExpires as no expiry', async () => {
+    const unenforced = { ...link('a', { expiry: true, password: true }), PreferencesExpires: false };
+    const r = await check.run(makeCtx([unenforced]));
+    expect(find(r, 'content-links-no-expiry')).toBeDefined();
   });
 
   it('flags a link with no expiry date (SBS-FILE-001)', async () => {

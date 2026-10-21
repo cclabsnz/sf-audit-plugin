@@ -15,19 +15,25 @@ interface IpRangeRecord {
   EndAddress: string;
 }
 
-// Salesforce ConnectedApp ipRelaxation enum values (from Metadata API ConnectedAppIpRelaxation):
-//   'WhiteList'  → enforce IP whitelist (secure)
-//   'Relax'      → relax IP restrictions for connected apps (MEDIUM risk)
-//   'All'        → bypass IP restrictions entirely (HIGH risk)
-interface ConnectedAppRecord {
+interface ConnectedAppRow {
   Id: string;
   Name: string;
-  Metadata: {
-    oauthConfig?: {
-      ipRelaxation?: string;
-    };
-  } | null;
+  DeveloperName: string;
 }
+
+// IP Relaxation lives only in the Metadata API definition (ConnectedApp.oauthPolicy.ipRelaxation):
+//   'ENFORCE'                    → enforce IP restrictions (secure)
+//   'ENFORCE_ACTIVATED_DEVICES'  → relax them for activated devices (MEDIUM risk)
+//   'BYPASS'                     → relax them entirely (HIGH risk)
+// The older spellings 'WhiteList' / 'Relax' / 'All' are accepted too.
+interface ConnectedAppMetadata {
+  oauthPolicy?: { ipRelaxation?: string };
+  oauthConfig?: { ipRelaxation?: string };
+}
+
+const BYPASS_VALUES = new Set(['BYPASS', 'ALL']);
+const RELAX_VALUES = new Set(['ENFORCE_ACTIVATED_DEVICES', 'RELAX']);
+const MAX_METADATA_READS = 100;
 
 // SBS-AUTH-003: detect ranges covering the full public internet or overly broad blocks.
 // Anything larger than a /16 (65 536 hosts) is flagged; 0.0.0.0 start is always flagged.
@@ -81,30 +87,43 @@ export class IpRestrictionsCheck implements SecurityCheck {
       }
     }
 
-    // 3. Connected apps — single Tooling SOQL with Metadata field (same pattern as
-    // SELECT Body FROM ApexClass). Replaces the previous N+1 getRecord loop.
-    // Salesforce ConnectedApp.Metadata.oauthConfig.ipRelaxation enum:
-    //   'All'      → bypass IP restrictions (every IP allowed)
-    //   'Relax'    → relax restrictions for this app's users
-    //   'WhiteList'→ enforce the org-level IP whitelist (secure)
+    // 3. Connected apps: listed via Tooling (which has no Metadata column on this object), then each
+    // app's IP Relaxation read from its Metadata API definition. An app that cannot be read leaves
+    // the question open, so it blocks the pass rather than counting as enforcing.
     const ipBypassingApps: Array<{ name: string; id: string }> = [];
     const ipRelaxingApps: Array<{ name: string; id: string }> = [];
     let appsUnavailable = false;
+    let unreadApps = 0;
+    let appsError = '';
     try {
-      const connectedApps = await ctx.tooling.query<ConnectedAppRecord>(
-        'SELECT Id, Name, Metadata FROM ConnectedApplication'
+      const connectedApps = await ctx.tooling.query<ConnectedAppRow>(
+        'SELECT Id, Name, DeveloperName FROM ConnectedApplication'
       );
-      for (const app of connectedApps) {
-        const relaxation = app.Metadata?.oauthConfig?.ipRelaxation;
-        if (relaxation === 'All') {
+      for (const [i, app] of connectedApps.entries()) {
+        let meta: ConnectedAppMetadata | null = null;
+        if (ctx.metadata && i < MAX_METADATA_READS) {
+          try {
+            meta = await ctx.metadata.read<ConnectedAppMetadata>('ConnectedApp', app.DeveloperName);
+          } catch {
+            meta = null;
+          }
+        }
+        if (!meta) {
+          unreadApps++;
+          continue;
+        }
+        const relaxation = (meta.oauthPolicy?.ipRelaxation ?? meta.oauthConfig?.ipRelaxation ?? '').toUpperCase();
+        if (BYPASS_VALUES.has(relaxation)) {
           ipBypassingApps.push({ name: app.Name, id: app.Id });
-        } else if (relaxation === 'Relax') {
+        } else if (RELAX_VALUES.has(relaxation)) {
           ipRelaxingApps.push({ name: app.Name, id: app.Id });
         }
       }
-    } catch {
+      appsUnavailable = unreadApps > 0;
+    } catch (err) {
       // Recorded so the result cannot be read as "no relaxed apps".
       appsUnavailable = true;
+      appsError = err instanceof Error ? err.message : String(err);
     }
 
     // Determine which profile IDs have at least one IP range
@@ -123,9 +142,9 @@ export class IpRestrictionsCheck implements SecurityCheck {
         inconclusive: true,
         title: `Login IP ranges could not be read; ${adminUsers.length} admin profile(s) were not evaluated`,
         detail:
-          'ProfileLoginIpRange was not queryable via SOQL or the Tooling API, so whether these admin profiles restrict login by IP is unknown. It is not reported as unrestricted, because the data does not support that conclusion.',
+          'This org does not serve ProfileLoginIpRange through SOQL or the Tooling API, so whether these admin profiles restrict login by IP is unknown. It is not reported as unrestricted, because the data does not support that conclusion.',
         remediation:
-          'Grant the audit user access to ProfileLoginIpRange and re-run, or review Login IP Ranges manually in Setup → Profiles.',
+          'Review Login IP Ranges for these admin profiles manually in Setup → Profiles.',
         affectedItems: adminUsers.map((u) => ({
           label: u.Username,
           url: `${baseUrl}/${u.Id}`,
@@ -159,10 +178,11 @@ export class IpRestrictionsCheck implements SecurityCheck {
         riskLevel: 'INFO',
         inconclusive: true,
         title: 'Connected app IP relaxation settings could not be read',
-        detail:
-          'The ConnectedApplication Metadata field was not accessible, so whether any connected app bypasses or relaxes login IP enforcement is unknown.',
+        detail: appsError
+          ? `Connected apps could not be listed, so whether any of them bypasses or relaxes login IP enforcement is unknown: ${appsError}`
+          : `The Metadata API definitions of ${unreadApps} connected app(s) could not be read, so whether they bypass or relax login IP enforcement is unknown.`,
         remediation:
-          'Grant the audit user access to the Tooling API ConnectedApplication Metadata field and re-run, or review IP Relaxation per app in Setup → Connected Apps.',
+          'Review IP Relaxation per app in Setup → App Manager → Manage → OAuth Policies.',
       });
     }
 

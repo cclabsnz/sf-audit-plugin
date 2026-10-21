@@ -36,7 +36,8 @@ export class DelegatedAdministrationGroupsCheck implements SecurityCheck {
 
     let groups: DelegateGroupRecord[] = [];
     try {
-      groups = await ctx.soql.queryAll<DelegateGroupRecord>(
+      // DelegateGroup and DelegateGroupMember are served by the Tooling API only.
+      groups = await ctx.tooling.query<DelegateGroupRecord>(
         'SELECT Id, DeveloperName FROM DelegateGroup',
       );
     } catch (err) {
@@ -68,7 +69,7 @@ export class DelegatedAdministrationGroupsCheck implements SecurityCheck {
 
     // Query members of delegated admin groups
     let members: DelegateGroupMemberRecord[] = [];
-    members = await ctx.soql.queryAll<DelegateGroupMemberRecord>(
+    members = await ctx.tooling.query<DelegateGroupMemberRecord>(
       'SELECT Id, DelegateGroupId, UserOrGroupId FROM DelegateGroupMember',
     );
 

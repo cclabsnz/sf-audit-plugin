@@ -28,7 +28,8 @@ export class DebugLogAccessCheck implements SecurityCheck {
 
     let traces: TraceFlagRecord[] = [];
     try {
-      const result = await ctx.soql.query<TraceFlagRecord>(
+      // TraceFlag is served by the Tooling API only.
+      traces = await ctx.tooling.query<TraceFlagRecord>(
         `SELECT Id, TracedEntityId, LogType, ExpirationDate,
                 DebugLevel.DeveloperName, DebugLevel.ApexCode
          FROM TraceFlag
@@ -36,8 +37,7 @@ export class DebugLogAccessCheck implements SecurityCheck {
          ORDER BY ExpirationDate ASC
          LIMIT 200`
       );
-      traces = result.records;
-    } catch {
+    } catch (err) {
       findings.push({
         id: 'debug-log-inaccessible',
         category: this.category,
@@ -45,7 +45,7 @@ export class DebugLogAccessCheck implements SecurityCheck {
         inconclusive: true,
         title: 'TraceFlag records could not be retrieved: active debug traces cannot be verified',
         detail:
-          'The TraceFlag object was not accessible. This may indicate the audit user lacks API access or the required permission to manage debug logs.',
+          `The TraceFlag query failed: ${err instanceof Error ? err.message : String(err)}. If the org denied access, the audit user may lack "View Setup and Configuration".`,
         remediation:
           'Grant "Manage Users" or "View All Data" permission to the audit user, or review active debug traces manually in Setup → Debug Logs.',
         affectedItems: [{ label: 'Debug Log Setup', url: setupUrl }],

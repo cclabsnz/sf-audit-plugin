@@ -3,14 +3,18 @@ import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
 interface ClassifiedFieldRec {
-  obj: string;
-  field: string;
+  EntityDefinition?: { QualifiedApiName?: string } | null;
+  QualifiedApiName: string;
 }
 interface DescribeResult {
   fields?: Array<{ name: string; encrypted?: boolean }>;
 }
 
 const MAX_OBJECTS = 25; // cap describe calls
+
+// FieldDefinition must be filtered by entity ("a filter on a reified column is required"), so the
+// scan covers these key standard objects, the same set data-classification checks.
+const SCANNED_OBJECTS = ['Account', 'Contact', 'Lead', 'Opportunity', 'Case', 'Contract', 'User', 'Individual'];
 
 /**
  * Cross-references data classification against ACTUAL field encryption. `data-
@@ -35,20 +39,28 @@ export class EncryptionCoverageCheck implements SecurityCheck {
     let classified: ClassifiedFieldRec[];
     try {
       classified = await ctx.tooling.query<ClassifiedFieldRec>(
-        `SELECT EntityDefinition.QualifiedApiName obj, QualifiedApiName field
-         FROM FieldDefinition WHERE ComplianceGroup != null`,
+        `SELECT EntityDefinition.QualifiedApiName, QualifiedApiName
+         FROM FieldDefinition
+         WHERE EntityDefinition.QualifiedApiName IN (${SCANNED_OBJECTS.map((o) => `'${o}'`).join(', ')})
+           AND ComplianceGroup != null`,
       );
-    } catch {
-      findings.push(this.inconclusive('Classified fields could not be queried (Tooling API access needed)'));
+    } catch (err) {
+      findings.push(
+        this.inconclusive(
+          'Classified fields could not be queried',
+          `The Tooling API FieldDefinition query failed: ${err instanceof Error ? err.message : String(err)}`,
+        ),
+      );
       return { findings };
     }
 
     const fieldsByObj = new Map<string, Set<string>>();
     for (const c of classified) {
-      if (!c.obj || !c.field) continue;
-      const set = fieldsByObj.get(c.obj) ?? new Set<string>();
-      set.add(c.field);
-      fieldsByObj.set(c.obj, set);
+      const obj = c.EntityDefinition?.QualifiedApiName;
+      if (!obj || !c.QualifiedApiName) continue;
+      const set = fieldsByObj.get(obj) ?? new Set<string>();
+      set.add(c.QualifiedApiName);
+      fieldsByObj.set(obj, set);
     }
 
     if (fieldsByObj.size === 0) {
@@ -57,8 +69,8 @@ export class EncryptionCoverageCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: 'No fields are classified as sensitive',
-        detail: 'No fields carry a ComplianceGroup (data classification), so encryption coverage cannot be assessed against a sensitivity baseline. Classification is the prerequisite — see the data-classification check.',
+        title: 'No fields are classified as sensitive on the key standard objects',
+        detail: `No fields on ${SCANNED_OBJECTS.join(', ')} carry a ComplianceGroup (data classification), so encryption coverage cannot be assessed against a sensitivity baseline. Custom objects are not scanned. Classification is the prerequisite — see the data-classification check.`,
         remediation: 'Classify PII/PHI fields (Setup → Data Classification) first, then encrypt the sensitive ones with Shield Platform Encryption.',
       });
       return { findings };
@@ -83,7 +95,12 @@ export class EncryptionCoverageCheck implements SecurityCheck {
     }
 
     if (!describedAny) {
-      findings.push(this.inconclusive('Object describes were not accessible, so field encryption could not be confirmed'));
+      findings.push(
+        this.inconclusive(
+          'Object describes were not accessible, so field encryption could not be confirmed',
+          'The audit user could not describe the classified objects, so per-field encryption is unknown.',
+        ),
+      );
       return { findings };
     }
 
@@ -106,7 +123,7 @@ export class EncryptionCoverageCheck implements SecurityCheck {
         riskLevel: 'LOW',
         passed: true,
         title: 'All classified sensitive fields checked are encrypted at rest',
-        detail: `Every classified field found across ${Math.min(fieldsByObj.size, MAX_OBJECTS)} object(s) is encrypted with Shield Platform Encryption.`,
+        detail: `Every classified field found across ${Math.min(fieldsByObj.size, MAX_OBJECTS)} object(s) is encrypted with Shield Platform Encryption. Scanned: ${SCANNED_OBJECTS.join(', ')}; custom objects are not scanned.`,
         remediation: 'Keep encryption policy in sync as new sensitive fields are added and classified.',
       });
     }
@@ -114,15 +131,16 @@ export class EncryptionCoverageCheck implements SecurityCheck {
     return { findings };
   }
 
-  private inconclusive(what: string): Finding {
+  private inconclusive(what: string, detail: string): Finding {
     return {
       id: 'encryption-coverage-inconclusive',
       category: this.category,
       riskLevel: 'INFO',
       inconclusive: true,
       title: `${what}`,
-      detail: 'The audit user could not gather the classification/describe data needed to assess encryption coverage.',
-      remediation: 'Grant the audit user Tooling API access and object describe (View Setup and Configuration), then re-run.',
+      detail: `${detail} Encryption coverage is unassessed, not clean.`,
+      remediation:
+        'Check the error above. If it is an access error, confirm the audit user has API Enabled and View Setup and Configuration, then re-run.',
     };
   }
 }

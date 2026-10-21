@@ -6,7 +6,6 @@ interface EmailServicesFunctionRecord {
   Id: string;
   FunctionName: string;
   IsActive: boolean;
-  RunAsUserId?: string | null;
   ApexClassId?: string | null;
   AuthenticationFailureAction?: string | number | null;
 }
@@ -18,6 +17,8 @@ interface EmailServicesAddressRecord {
   EmailDomainName?: string | null;
   IsActive: boolean;
   AuthorizedSenders?: string | null;
+  // The context user the handler runs as is set per address, not per function.
+  RunAsUserId?: string | null;
 }
 
 interface UserRecord {
@@ -47,7 +48,7 @@ export class InboundEmailHandlerExposureCheck implements SecurityCheck {
     let functions: EmailServicesFunctionRecord[] = [];
     try {
       functions = await ctx.soql.queryAll<EmailServicesFunctionRecord>(
-        'SELECT Id, FunctionName, IsActive, RunAsUserId, ApexClassId, AuthenticationFailureAction FROM EmailServicesFunction WHERE IsActive = true',
+        'SELECT Id, FunctionName, IsActive, ApexClassId, AuthenticationFailureAction FROM EmailServicesFunction WHERE IsActive = true',
       );
     } catch (err) {
       // This object exists in every org, so a failure is lack of access, never an absent feature.
@@ -79,7 +80,7 @@ export class InboundEmailHandlerExposureCheck implements SecurityCheck {
     // Query active EmailServicesAddress records
     let addresses: EmailServicesAddressRecord[] = [];
     addresses = await ctx.soql.queryAll<EmailServicesAddressRecord>(
-      'SELECT Id, FunctionId, LocalPart, EmailDomainName, IsActive, AuthorizedSenders FROM EmailServicesAddress WHERE IsActive = true',
+      'SELECT Id, FunctionId, LocalPart, EmailDomainName, IsActive, AuthorizedSenders, RunAsUserId FROM EmailServicesAddress WHERE IsActive = true',
     );
 
     const addressesByFunction = new Map<string, EmailServicesAddressRecord[]>();
@@ -91,7 +92,7 @@ export class InboundEmailHandlerExposureCheck implements SecurityCheck {
 
     // Query RunAs users
     const runAsUserIds = [
-      ...new Set(functions.map((f) => f.RunAsUserId).filter((id): id is string => Boolean(id))),
+      ...new Set(addresses.map((a) => a.RunAsUserId).filter((id): id is string => Boolean(id))),
     ];
     let adminUsers = new Set<string>();
     let userDetails = new Map<string, string>();
@@ -141,8 +142,8 @@ export class InboundEmailHandlerExposureCheck implements SecurityCheck {
       const authFailureAction = String(fn.AuthenticationFailureAction ?? '0');
       const acceptsSpoofedEmail = authFailureAction === '0' || authFailureAction === '';
 
-      // Check 3: RunAsUserId is admin or class runs without sharing / performs DML
-      const isRunAsAdmin = fn.RunAsUserId ? adminUsers.has(fn.RunAsUserId) : false;
+      // Check 3: the open address runs as an admin, or the class runs without sharing / performs DML
+      const isRunAsAdmin = openAddress?.RunAsUserId ? adminUsers.has(openAddress.RunAsUserId) : false;
       const classBody = fn.ApexClassId ? classBodies.get(fn.ApexClassId) ?? '' : '';
       const isWithoutSharing = /without\s+sharing/i.test(classBody);
       const hasDmlOrDynamicSoql =

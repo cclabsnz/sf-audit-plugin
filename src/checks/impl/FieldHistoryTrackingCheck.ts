@@ -2,9 +2,9 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
-interface FieldHistoryGroupRecord {
-  objectName: string;
-  trackedCount: number;
+interface TrackedFieldRecord {
+  EntityDefinition?: { QualifiedApiName?: string } | null;
+  QualifiedApiName: string;
 }
 
 // Sensitive standard objects SBS-DATA-004 requires history tracking on.
@@ -26,19 +26,20 @@ export class FieldHistoryTrackingCheck implements SecurityCheck {
     const objectList = SENSITIVE_OBJECTS.map((o) => `'${o}'`).join(', ');
 
     try {
-      // Tooling API: count fields with history tracking enabled per sensitive object.
-      // Objects with zero tracked fields will be absent from the result — those are violations.
-      const results = await ctx.tooling.query<FieldHistoryGroupRecord>(
-        `SELECT EntityDefinition.QualifiedApiName objectName, COUNT(Id) trackedCount
+      // Tooling API: the tracked fields on each sensitive object, counted here. FieldDefinition
+      // supports no aggregates (its Id is not aggregatable), so COUNT/GROUP BY is rejected.
+      // Objects with zero tracked fields are absent from the result — those are violations.
+      const results = await ctx.tooling.query<TrackedFieldRecord>(
+        `SELECT EntityDefinition.QualifiedApiName, QualifiedApiName
          FROM FieldDefinition
          WHERE EntityDefinition.QualifiedApiName IN (${objectList})
-           AND IsFieldHistoryTracked = true
-         GROUP BY EntityDefinition.QualifiedApiName`
+           AND IsFieldHistoryTracked = true`
       );
 
       const trackedMap = new Map<string, number>();
       for (const r of results) {
-        trackedMap.set(r.objectName, r.trackedCount ?? 0);
+        const obj = r.EntityDefinition?.QualifiedApiName;
+        if (obj) trackedMap.set(obj, (trackedMap.get(obj) ?? 0) + 1);
       }
 
       const withTracking = SENSITIVE_OBJECTS.filter((o) => (trackedMap.get(o) ?? 0) > 0);
@@ -60,8 +61,9 @@ export class FieldHistoryTrackingCheck implements SecurityCheck {
       findings.push({
         id: 'field-history-tracking-missing',
         category: this.category,
-        riskLevel: withoutTracking.length >= 3 ? 'HIGH' : 'MEDIUM',
-        title: `${withoutTracking.length} sensitive object(s) have no field history tracking: SBS-DATA-004`,
+        // Missing history limits investigation; it exposes nothing. RULE-078.
+        riskLevel: withoutTracking.length >= 3 ? 'MEDIUM' : 'LOW',
+        title: `${withoutTracking.length} sensitive object(s) have no field history tracking (investigation gap): SBS-DATA-004`,
         detail:
           `SBS-DATA-004 requires field history tracking on sensitive objects to capture who changed what data and when, enabling post-incident investigation and audit evidence. The following objects have no tracked fields: ${withoutTracking.join(', ')}. ${withTracking.length > 0 ? `Objects already configured: ${withTracking.map((o) => `${o} (${trackedMap.get(o)} field(s))`).join(', ')}.` : ''}`,
         remediation:
@@ -72,7 +74,7 @@ export class FieldHistoryTrackingCheck implements SecurityCheck {
           note: 'No fields have history tracking enabled: configure via Object Manager → Set History Tracking',
         })),
       });
-    } catch {
+    } catch (err) {
       findings.push({
         id: 'field-history-tracking-inconclusive',
         category: this.category,
@@ -80,9 +82,9 @@ export class FieldHistoryTrackingCheck implements SecurityCheck {
         inconclusive: true,
         title: 'Field history tracking status could not be determined',
         detail:
-          'SBS-DATA-004 requires field history tracking on sensitive objects. The Tooling API FieldDefinition query was not accessible with the current user permissions.',
+          `SBS-DATA-004 requires field history tracking on sensitive objects. The Tooling API FieldDefinition query failed, so tracking is unassessed, not absent: ${err instanceof Error ? err.message : String(err)}`,
         remediation:
-          'Grant the audit user Tooling API access, or manually verify field history tracking in Setup → Object Manager for Account, Contact, Lead, Opportunity, Case, Contract, and User.',
+          'Check the error above. If it is an access error, confirm the audit user has API Enabled and View Setup and Configuration; otherwise verify field history tracking manually in Setup → Object Manager for Account, Contact, Lead, Opportunity, Case, Contract, and User.',
       });
     }
 

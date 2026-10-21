@@ -3,14 +3,16 @@ import { ExternalCredentialsCheck } from '../../../../src/checks/impl/ExternalCr
 import type { AuditContext } from '@cclabsnz/sf-core';
 
 function makeCtx(opts: { creds?: unknown[]; throw?: boolean }): AuditContext {
-  const queryAll = jest.fn() as any;
-  queryAll.mockImplementation(async () => {
+  // ExternalCredential is a Tooling API object; the standard API rejects it.
+  const query = jest.fn() as any;
+  query.mockImplementation(async () => {
     if (opts.throw) throw new Error('no access');
     return opts.creds ?? [];
   });
+  const rejected = (jest.fn() as any).mockRejectedValue(new Error("sObject type 'ExternalCredential' is not supported."));
   return {
-    soql: { query: jest.fn(), queryAll } as any,
-    tooling: { query: jest.fn(), getRecord: jest.fn() } as any,
+    soql: { query: rejected, queryAll: rejected } as any,
+    tooling: { query, getRecord: jest.fn() } as any,
     rest: {} as any,
     orgInfo: { id: 'o', name: 'n', type: 'DE', isSandbox: false, instance: 'NA1', instanceUrl: 'https://x' },
     cache: {},

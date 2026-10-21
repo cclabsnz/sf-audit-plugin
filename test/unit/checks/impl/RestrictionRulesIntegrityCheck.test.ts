@@ -46,7 +46,7 @@ describe('RestrictionRulesIntegrityCheck', () => {
           Id: '0RR1',
           MasterLabel: 'Restrict Sensitive Tasks',
           TargetEntity: 'Task',
-          Active: false,
+          IsActive: false,
         },
       ],
     });
@@ -63,13 +63,13 @@ describe('RestrictionRulesIntegrityCheck', () => {
           Id: '0RR2',
           MasterLabel: 'Contract Rule A',
           TargetEntity: 'Contract',
-          Active: true,
+          IsActive: true,
         },
         {
           Id: '0RR3',
           MasterLabel: 'Contract Rule B',
           TargetEntity: 'Contract',
-          Active: true,
+          IsActive: true,
         },
       ],
     });
@@ -86,13 +86,13 @@ describe('RestrictionRulesIntegrityCheck', () => {
           Id: '0RR4',
           MasterLabel: 'Task Rule',
           TargetEntity: 'Task',
-          Active: true,
+          IsActive: true,
         },
         {
           Id: '0RR5',
           MasterLabel: 'Contract Rule',
           TargetEntity: 'Contract',
-          Active: true,
+          IsActive: true,
         },
       ],
     });

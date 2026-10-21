@@ -24,16 +24,15 @@ function makeCtx(byObject: Record<string, unknown[] | Error>): AuditContext {
 describe('EmailSecurityCheck', () => {
   const check = new EmailSecurityCheck();
 
-  it('flags org-wide addresses available to all profiles as MEDIUM', async () => {
+  // Org-wide send-as addresses are reported once, by org-wide-email-spoofing.
+  it('leaves org-wide addresses to the org-wide-email-spoofing check', async () => {
     const ctx = makeCtx({
       OrgWideEmailAddress: [{ Id: '1', Address: 'noreply@acme.com', DisplayName: 'Acme', IsAllowAllProfiles: true }],
       EmailServicesFunction: [],
       EmailServicesAddress: [],
     });
     const result = await check.run(ctx);
-    const f = result.findings.find((x) => x.id === 'email-security-owa-all-profiles');
-    expect(f).toBeDefined();
-    expect(f!.riskLevel).toBe('MEDIUM');
+    expect(result.findings.some((x) => x.id.startsWith('email-security-owa'))).toBe(false);
   });
 
   it('flags unauthenticated active inbound email services as HIGH', async () => {
@@ -67,13 +66,13 @@ describe('EmailSecurityCheck', () => {
       EmailServicesAddress: [],
     });
     const result = await check.run(ctx);
-    expect(result.findings.some((f) => f.id === 'email-security-owa-ok' && f.passed)).toBe(true);
+    expect(result.findings.length).toBeGreaterThan(0);
+    expect(result.findings.every((f) => f.passed || f.riskLevel === 'INFO')).toBe(true);
   });
 
   it('is inconclusive when a source is not accessible', async () => {
     const ctx = makeCtx({
-      // OrgWideEmailAddress omitted -> throws -> inconclusive
-      EmailServicesFunction: [],
+      // EmailServicesFunction omitted -> throws -> inconclusive
       EmailServicesAddress: [],
     });
     const result = await check.run(ctx);

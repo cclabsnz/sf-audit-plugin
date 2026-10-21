@@ -117,8 +117,9 @@ describe('newly modelled capabilities', () => {
   });
 
   it('shadow admins now reach a named takeover chain that they previously could not', () => {
+    // RULE-072: a real low-trust entry is required; a guest user merely existing is not one.
     const chains = new ChainEngine().correlate([
-      f('guest-user-baseline'),
+      f('experience-cloud-site-self-registration'),
       f('privileged-access-shadow-admins'),
     ]);
     expect(chains.map((c) => c.id)).toContain('standard-to-takeover');

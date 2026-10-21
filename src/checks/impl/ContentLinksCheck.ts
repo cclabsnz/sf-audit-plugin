@@ -7,9 +7,16 @@ interface ContentDistributionRecord {
   Name: string;
   ContentDocumentId: string;
   ExpiryDate: string | null;
-  PasswordEnabled: boolean;
+  PreferencesExpires: boolean;
+  PreferencesPasswordRequired: boolean;
   CreatedDate: string;
 }
+
+/** Live links read per run. A full page means more exist, so the result is partial. */
+const LINK_LIMIT = 500;
+
+/** A link expires only when PreferencesExpires is set; ExpiryDate alone is not enforced. */
+const expires = (r: ContentDistributionRecord): boolean => r.PreferencesExpires && Boolean(r.ExpiryDate);
 
 // Links older than this with no expiry date are considered stale (SBS-FILE-003)
 const STALE_DAYS = 90;
@@ -27,15 +34,23 @@ export class ContentLinksCheck implements SecurityCheck {
     // Single query — fetches all data needed for FILE-001 (no expiry),
     // FILE-002 (no password), and FILE-003 (stale links).
     let records: ContentDistributionRecord[];
+    let truncated = false;
     try {
-      records = await ctx.soql.queryAll<ContentDistributionRecord>(
-        `SELECT Id, Name, ContentDocumentId, ExpiryDate, PasswordEnabled, CreatedDate
+      // Every ContentDistribution is a public link (there is no IsPublic field). Links already past
+      // their expiry no longer serve the file, so they are excluded in the query, before the LIMIT:
+      // filtering after it could fill the page with dead links and hide live ones.
+      const now = Date.now();
+      const nowLiteral = new Date(now).toISOString().replace(/\.\d{3}Z$/, 'Z');
+      const all = await ctx.soql.queryAll<ContentDistributionRecord>(
+        `SELECT Id, Name, ContentDocumentId, ExpiryDate, PreferencesExpires, PreferencesPasswordRequired, CreatedDate
          FROM ContentDistribution
-         WHERE IsPublic = true
+         WHERE (PreferencesExpires = false OR ExpiryDate = null OR ExpiryDate > ${nowLiteral})
          ORDER BY CreatedDate ASC
-         LIMIT 500`
+         LIMIT ${LINK_LIMIT}`
       );
-    } catch {
+      truncated = all.length >= LINK_LIMIT;
+      records = all.filter((r) => !(expires(r) && new Date(r.ExpiryDate as string).getTime() < now));
+    } catch (err) {
       findings.push({
         id: 'content-links-inaccessible',
         category: this.category,
@@ -43,10 +58,23 @@ export class ContentLinksCheck implements SecurityCheck {
         inconclusive: true,
         title: 'Content distribution links could not be queried',
         detail:
-          'SBS-FILE-001/002/003 require review of public content distribution links. ContentDistribution was not accessible with the current user permissions.',
+          `SBS-FILE-001/002/003 require review of public content distribution links. The ContentDistribution query failed: ${err instanceof Error ? err.message : String(err)}`,
         remediation: 'Grant the audit user read access to ContentDistribution records to enable this check.',
       });
       return { findings };
+    }
+
+    if (truncated) {
+      // MN-051: links past the page were not read, so a clean result here proves nothing about them.
+      findings.push({
+        id: 'content-links-partial',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `Only the oldest ${LINK_LIMIT} live public content links were reviewed`,
+        detail: `The org has more than ${LINK_LIMIT} live public content distribution links. Findings below cover the oldest ${LINK_LIMIT}; newer links were not reviewed, so their absence from a finding is not a pass.`,
+        remediation: 'Review public links in Setup or with a report on Content Deliveries, and expire or delete the ones no longer needed.',
+      });
     }
 
     if (records.length === 0) {
@@ -63,10 +91,10 @@ export class ContentLinksCheck implements SecurityCheck {
     }
 
     const staleThreshold = new Date(Date.now() - STALE_DAYS * 86_400_000);
-    const noExpiry = records.filter((r) => !r.ExpiryDate);
-    const noPassword = records.filter((r) => !r.PasswordEnabled);
+    const noExpiry = records.filter((r) => !expires(r));
+    const noPassword = records.filter((r) => !r.PreferencesPasswordRequired);
     const stale = records.filter(
-      (r) => !r.ExpiryDate && new Date(r.CreatedDate) < staleThreshold
+      (r) => !expires(r) && new Date(r.CreatedDate) < staleThreshold
     );
 
     let hasPositiveFinding = false;
@@ -131,7 +159,7 @@ export class ContentLinksCheck implements SecurityCheck {
       });
     }
 
-    if (!hasPositiveFinding) {
+    if (!hasPositiveFinding && !truncated) {
       findings.push({
         id: 'content-links-ok',
         category: this.category,

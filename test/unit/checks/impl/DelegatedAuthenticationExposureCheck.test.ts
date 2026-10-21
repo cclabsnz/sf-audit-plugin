@@ -2,13 +2,16 @@ import { jest } from '@jest/globals';
 import { DelegatedAuthenticationExposureCheck } from '../../../../src/checks/impl/DelegatedAuthenticationExposureCheck.js';
 import type { AuditContext } from '@cclabsnz/sf-core';
 
-function makeCtx(metaSettings: any, profiles: any[] = []): AuditContext {
+function makeCtx(metaSettings: any, profiles: any[] = [], ssoFieldPresent = true): AuditContext {
+  const profileFields = ['Id', 'Name', ...(ssoFieldPresent ? ['PermissionsIsSsoEnabled'] : [])];
   return {
     soql: {
       queryAll: (jest.fn() as any).mockResolvedValue(profiles),
     } as any,
     tooling: {} as any,
-    rest: {} as any,
+    rest: {
+      get: (jest.fn() as any).mockResolvedValue({ fields: profileFields.map((name) => ({ name })) }),
+    } as any,
     metadata: {
       read: (jest.fn() as any).mockResolvedValue(metaSettings),
     } as any,
@@ -102,5 +105,20 @@ describe('DelegatedAuthenticationExposureCheck', () => {
     const ctx = makeCtx({ singleSignOnSettings: { isDelegatedAuthEnabled: false } });
     (ctx.soql as any).queryAll = (jest.fn() as any).mockRejectedValue(new Error('INSUFFICIENT_ACCESS'));
     await expect(check.run(ctx)).rejects.toThrow('INSUFFICIENT_ACCESS');
+  });
+
+  it('queries the real permission field name, PermissionsIsSsoEnabled', async () => {
+    const ctx = makeCtx({ singleSignOnSettings: { isDelegatedAuthEnabled: true, delegatedGatewayUrl: 'https://gw' } });
+    await check.run(ctx);
+    const q = (ctx.soql.queryAll as any).mock.calls[0][0] as string;
+    expect(q).toContain('PermissionsIsSsoEnabled = true');
+    expect(q).not.toContain('PermissionsIsSingleSignOnEnabled');
+  });
+
+  it('does not query Profile when the org has no delegated-auth permission field', async () => {
+    const ctx = makeCtx({ singleSignOnSettings: { isDelegatedAuthEnabled: false } }, [], false);
+    const r = await check.run(ctx);
+    expect((ctx.soql.queryAll as any).mock.calls).toHaveLength(0);
+    expect(r.findings[0].id).toBe('delegated-authentication-exposure-ok');
   });
 });

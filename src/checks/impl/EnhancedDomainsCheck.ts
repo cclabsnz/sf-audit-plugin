@@ -3,9 +3,23 @@ import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
 interface OrgRecord {
-  MyDomain: string | null;
   IsSandbox: boolean;
   InstanceName: string;
+}
+
+// Organization has no MyDomain field. Every org's My Domain is the subdomain of its instance URL
+// (<name>.my.salesforce.com, or a sandbox/develop/scratch variant); a legacy instance host such as
+// na1.salesforce.com means no My Domain.
+const MY_DOMAIN_HOST = /^(.+?)\.(?:(?:sandbox|develop|scratch|trailblaze)\.)?my\.(?:salesforce\.com|salesforce\.mil|sfcrmproducts\.cn)$/i;
+
+function myDomainOf(instanceUrl: string): string | null {
+  let host = instanceUrl;
+  try {
+    host = new URL(instanceUrl).hostname;
+  } catch {
+    // keep the raw string
+  }
+  return MY_DOMAIN_HOST.exec(host)?.[1] ?? null;
 }
 
 // Enhanced Domains changes the URL format for Salesforce org pages, Experience Cloud sites,
@@ -47,7 +61,7 @@ export class EnhancedDomainsCheck implements SecurityCheck {
     const domainSetupUrl = `${baseUrl}/lightning/setup/MyDomain/home`;
 
     const orgResult = await ctx.soql.query<OrgRecord>(
-      `SELECT MyDomain, IsSandbox, InstanceName FROM Organization LIMIT 1`
+      `SELECT IsSandbox, InstanceName FROM Organization LIMIT 1`
     );
     const org = orgResult.records[0];
 
@@ -64,7 +78,8 @@ export class EnhancedDomainsCheck implements SecurityCheck {
       return { findings };
     }
 
-    const { MyDomain: myDomain, IsSandbox: isSandbox } = org;
+    const { IsSandbox: isSandbox } = org;
+    const myDomain = myDomainOf(baseUrl);
     const instanceUrl = baseUrl;
     const instanceHost = hostnameOf(instanceUrl);
 
