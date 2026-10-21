@@ -14,6 +14,9 @@ mean what they say. Found by running the audit against a Developer Edition org a
 
 ### Fixed
 
+- `engines.node` now says `>=22.0.0`, not `>=18.0.0`. `@salesforce/core` 9 and
+  `@salesforce/sf-plugins-core` 13 already require Node 22, so the plugin never ran on 18 or 20.
+  The README's requirements say Node.js 22+ to match.
 - About 40 checks sent queries the org rejected, then reported "insufficient permissions":
   - fields that do not exist (`LoginHistory.Username`, `ContentDistribution.PasswordEnabled`,
     `Organization.MyDomain`, `RestrictionRule.Active`, the wrong MFA permission field, and others)
@@ -56,6 +59,7 @@ mean what they say. Found by running the audit against a Developer Edition org a
 - `scripts/capture-schema.mjs` and a captured Developer Edition schema
   (`test/fixtures/schema/developer-edition.json`, standard fields only). A test runs every
   check against it and fails on any query the org would reject.
+||||||| a23c86e
 
 ## [v1.17.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.17.0) — 2026-10-17
 
