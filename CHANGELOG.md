@@ -9,6 +9,10 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.18.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.18.1) — 2026-10-22
+
+The HTML report's dashboard now agrees with the score and the executive report.
+
 ### Fixed
 
 - The HTML report's dashboard counted passed and inconclusive findings, so it showed 66 LOW where
