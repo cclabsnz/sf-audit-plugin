@@ -153,7 +153,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
         inconclusive: true,
         title: `Permission assignments were not fully read: ${readNote}`,
         detail:
-          'Counts of Modify All Data, View All Data, super-admin, Customize Application and Author Apex holders are lower bounds. A count under its reporting threshold, or a super-admin whose permissions fell in the rows not read, may not be reported at all.',
+          'Counts of Modify All Data, View All Data, super-admin, Customize Application and Author Apex holders are lower bounds. A count under its reporting threshold, or a super-admin whose permissions fell in the rows not read, may not be reported at all; such a super-admin is rated under Modify All Data instead.',
         remediation: unknownRemediation,
       });
     }

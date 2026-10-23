@@ -11,20 +11,24 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ### Fixed
 
-- **Attack chains no longer fire on "0 user(s) have View All / Modify All Data".** Those two findings were always active, even with no holders, so `insider-bulk-exfil`, `mfa-bypass-admin`, `xss-to-privileged-session`, `soql-injection-read` and `inbound-email-rce` could be reported for orgs where nobody visible held either permission; `platform-event-priv-esc` and emergent paths could list them as steps. Every org with an active System Administrator has holders, so zero now reads as "Could not confirm who holds …" and is inconclusive.
-- `users-and-admins` reads every batch of permission set assignments, and checks the read against a `COUNT()` of the same query. When the client's row limit (default 10,000, or `org-max-query-limit`) cuts the read short, counts are reported as lower bounds ("At least 8 user(s) …") at that bound's severity, a zero is inconclusive, and a new inconclusive finding, `users-and-admins-read-incomplete`, says how much was read. Counts under a reporting threshold may not appear at all on a partial read, and that finding is the signal; it trips `--fail-on-inconclusive`. A failed `COUNT()` is treated the same way and no longer fails the check.
+- **"0 user(s) have View All / Modify All Data" is no longer reported as passed.** Every org with an active System Administrator has holders of both, so zero means the audit user could not see the assignments. The findings now read "Could not confirm who holds …" and are inconclusive, with advice on what to re-run as.
+- `users-and-admins` reads every batch of permission set assignments, and checks the read against a `COUNT()` of the same query. When the client's row limit (default 10,000, or `org-max-query-limit`) cuts the read short:
+  - counts are reported as lower bounds ("At least 8 user(s) …") at that bound's severity, and are never reported as passed;
+  - a zero is inconclusive;
+  - a new inconclusive finding, `users-and-admins-read-incomplete`, says how much was read. Counts under a reporting threshold may not appear at all, and this finding is the signal.
+  
+  A failed `COUNT()` is treated the same way and no longer fails the check.
 - An unknown or lower-bound Modify All / View All count is shown as "unknown" on the HTML dashboard, not a number, and the history diff does not compare it, including an archived "0 user(s)" from earlier versions. JSON output still carries 0 for these metrics.
 
 ### Changed
 
-These follow from treating an unreadable count as unknown. They affect CI gates when the audit user cannot see permission set assignments:
+These follow from treating an unreadable count as unknown. They affect runs where the audit user cannot see permission set assignments, or where there are more assignments than the row limit:
 
-- `--fail-on LOW` no longer fails on the zero-holder finding, which used to be an active LOW.
-- `--fail-on-inconclusive` now exits 3 for those runs.
+- The health score drops. A passed finding counts towards the maximum score and an inconclusive one does not, so losing the two passes makes the open findings weigh more.
+- `--fail-on-inconclusive` now exits 3.
 - `users-and-admins` counts as not assessed in evidence coverage, which can cap the grade at B.
-- In SARIF, `executionSuccessful` is false and the finding moves to `toolExecutionNotifications`, so GitHub code scanning may close the earlier alert.
-- `audit diff` treats the move from a counted finding to an inconclusive one like any other inconclusive finding, and shows it as a severity change. The health score is unchanged, since inconclusive findings no longer count towards it (v1.18.0).
-- A Modify All / View All count from a partial read is not reported as passed, even in the lowest band, because it is a lower bound.
+- In SARIF, `executionSuccessful` is false and the findings are listed under `toolExecutionNotifications`.
+- `audit diff` shows the move from passed to inconclusive as a severity change.
 
 ## [v1.18.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.18.1) — 2026-10-22
 
