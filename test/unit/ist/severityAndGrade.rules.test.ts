@@ -85,9 +85,10 @@ describe('RULE-066 / RULE-067 admin-count findings (MN-052)', () => {
       ctx(
         {
           soql: {
-            queryAll: jest.fn(),
+            queryAll: (jest.fn() as any).mockResolvedValue(rows),
+            // The PermissionSetAssignment COUNT() matches the rows read, so the read is complete.
             query: (jest.fn() as any).mockImplementation((s: string) =>
-              Promise.resolve(/COUNT\(\)/i.test(s) ? { totalSize: 50, records: [] } : { totalSize: rows.length, records: rows }),
+              Promise.resolve({ totalSize: /PermissionSetAssignment/.test(s) ? rows.length : 50, records: [] }),
             ),
           } as any,
         },
@@ -253,7 +254,7 @@ describe('RULE-076 the super-admin finding is graded on how many hold it (MN-052
   const sev = async (n: number, isSandbox = false) => {
     const rows = Array.from({ length: n }, (_, i) => row(`u${i}`));
     const r = await new UsersAndAdminsCheck().run(
-      ctx({ soql: { queryAll: jest.fn(), query: (jest.fn() as any).mockImplementation((s: string) => Promise.resolve(/COUNT\(\)/i.test(s) ? { totalSize: 50, records: [] } : { totalSize: n, records: rows })) } as any }, isSandbox),
+      ctx({ soql: { queryAll: (jest.fn() as any).mockResolvedValue(rows), query: (jest.fn() as any).mockImplementation((s: string) => Promise.resolve({ totalSize: /PermissionSetAssignment/.test(s) ? rows.length : 50, records: [] })) } as any }, isSandbox),
     );
     return r.findings.find((x) => x.id === 'users-super-admin-combo')?.riskLevel;
   };
@@ -313,7 +314,7 @@ describe('RULE-078 a defence-in-depth gap is at most MEDIUM', () => {
     const row = (id: string) => ({ Assignee: { Id: id, Username: id, Name: id, Profile: { Name: 'SA' } },
       PermissionSet: { Name: 'PS', IsOwnedByProfile: false, PermissionsModifyAllData: true, PermissionsViewAllData: true, PermissionsManageUsers: true, PermissionsCustomizeApplication: false, PermissionsAuthorApex: false } });
     const rows = [row('a')];
-    const r = await new C().run(ctx({ soql: { queryAll: jest.fn(), query: (jest.fn() as any).mockImplementation((s: string) => Promise.resolve(/COUNT\(\)/i.test(s) ? { totalSize: 5, records: [] } : { totalSize: 1, records: rows })) } as any }, true));
+    const r = await new C().run(ctx({ soql: { queryAll: (jest.fn() as any).mockResolvedValue(rows), query: (jest.fn() as any).mockImplementation((s: string) => Promise.resolve({ totalSize: /PermissionSetAssignment/.test(s) ? rows.length : 5, records: [] })) } as any }, true));
     expect(r.findings.find((x) => x.id === 'users-super-admin-combo')!.detail).not.toMatch(/sandbox/i);
   });
 });

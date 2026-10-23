@@ -24,11 +24,11 @@ const row = (id: string, perms: Perms, via = 'Admin_PS', ownedByProfile = false)
 function makeCtx(rows: unknown[], totalActiveUsers = 50): AuditContext {
   return {
     soql: {
-      queryAll: jest.fn(),
+      queryAll: (jest.fn() as any).mockResolvedValue(rows),
       query: (jest.fn() as any).mockImplementation((s: string) =>
-        /COUNT\(\)/i.test(s)
-          ? Promise.resolve({ totalSize: totalActiveUsers, records: [] })
-          : Promise.resolve({ totalSize: rows.length, records: rows }),
+        Promise.resolve(/COUNT\(\) FROM User/i.test(s)
+          ? { totalSize: totalActiveUsers, records: [] }
+          : { totalSize: rows.length, records: [] }),
       ),
     } as any,
     tooling: {} as any,
@@ -53,7 +53,10 @@ describe('UsersAndAdminsCheck', () => {
     const ids = r.findings.map((f) => f.id);
     expect(ids).toContain('users-modify-all-data');
     expect(ids).toContain('users-view-all-data');
-    expect(r.findings.find((f) => f.id === 'users-modify-all-data')!.riskLevel).toBe('LOW');
+    // Zero holders is reported but inconclusive (INT-004, RULE-040).
+    const mad = r.findings.find((f) => f.id === 'users-modify-all-data')!;
+    expect(mad.riskLevel).toBe('INFO');
+    expect(mad.inconclusive).toBe(true);
   });
 
   it('returns org metrics alongside the findings', async () => {
@@ -61,8 +64,9 @@ describe('UsersAndAdminsCheck', () => {
     expect(r.metrics).toMatchObject({
       totalActiveUsers: 137,
       modifyAllDataUsersCount: 2,
-      viewAllDataUsersCount: 0,
     });
+    // Zero View All holders is unknown, so the metric is left out (INT-004, RULE-043).
+    expect(r.metrics).not.toHaveProperty('viewAllDataUsersCount');
   });
 
   // Severity tracks how many people hold the permission, so the boundaries matter.
@@ -159,6 +163,10 @@ describe('UsersAndAdminsCheck', () => {
     (ctx.soql.query as any).mockImplementation((s: string) => {
       seen.push(s);
       return Promise.resolve({ totalSize: 0, records: [] });
+    });
+    (ctx.soql.queryAll as any).mockImplementation((s: string) => {
+      seen.push(s);
+      return Promise.resolve([]);
     });
     await check.run(ctx);
     const psaQuery = seen.find((s) => /FROM PermissionSetAssignment/i.test(s))!;

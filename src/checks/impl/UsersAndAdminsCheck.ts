@@ -44,23 +44,39 @@ export class UsersAndAdminsCheck implements SecurityCheck {
       };
     }
 
-    const broadPermResult = await ctx.soql.query<BroadPermRecord>(
-      `SELECT Assignee.Id, Assignee.Username, Assignee.Name, Assignee.Profile.Name,
-              PermissionSet.Name, PermissionSet.IsOwnedByProfile,
-              PermissionSet.PermissionsModifyAllData, PermissionSet.PermissionsViewAllData,
-              PermissionSet.PermissionsManageUsers, PermissionSet.PermissionsCustomizeApplication,
-              PermissionSet.PermissionsAuthorApex
-       FROM PermissionSetAssignment
+    const psaFrom = `FROM PermissionSetAssignment
        WHERE (PermissionSet.PermissionsModifyAllData = true
            OR PermissionSet.PermissionsViewAllData = true
            OR PermissionSet.PermissionsManageUsers = true
            OR PermissionSet.PermissionsCustomizeApplication = true
            OR PermissionSet.PermissionsAuthorApex = true)
          AND Assignee.IsActive = true
-         AND AssigneeId NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)`
-    );
+         AND AssigneeId NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)`;
 
-    const broadPerms = broadPermResult.records;
+    // queryAll fetches every batch, but the client caps how many rows it will fetch and returns the
+    // rest silently. The COUNT() says how many rows there are, so a capped read is detected (INT-004).
+    const broadPerms = await ctx.soql.queryAll<BroadPermRecord>(
+      `SELECT Assignee.Id, Assignee.Username, Assignee.Name, Assignee.Profile.Name,
+              PermissionSet.Name, PermissionSet.IsOwnedByProfile,
+              PermissionSet.PermissionsModifyAllData, PermissionSet.PermissionsViewAllData,
+              PermissionSet.PermissionsManageUsers, PermissionSet.PermissionsCustomizeApplication,
+              PermissionSet.PermissionsAuthorApex
+       ${psaFrom}`
+    );
+    // `partial` means the rows may be incomplete: the COUNT reports more than came back, or the
+    // COUNT itself failed, so completeness cannot be confirmed. Counts are then lower bounds.
+    let psaTotal: number | undefined;
+    try {
+      psaTotal = (await ctx.soql.query(`SELECT COUNT() ${psaFrom}`)).totalSize;
+    } catch {
+      psaTotal = undefined;
+    }
+    const partial = psaTotal === undefined || psaTotal > broadPerms.length;
+    const readNote = psaTotal === undefined
+      ? 'whether every assignment was read could not be confirmed'
+      : `read ${broadPerms.length} of ${psaTotal} assignments`;
+    // "At least N" when the read may be partial: the count is a lower bound, still definite.
+    const count = (n: number) => (partial ? `At least ${n}` : `${n}`);
 
     // Group by permission — a user may appear multiple times (once per permission set granting them)
     const modifyAllUsers = broadPerms.filter((r) => r.PermissionSet.PermissionsModifyAllData);
@@ -100,7 +116,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
         category: this.category,
         // Every org needs an administrator: grade on how many hold unrestricted control.
         riskLevel: sandboxCap(superAdminIds.length > 5 ? 'CRITICAL' : superAdminIds.length > 3 ? 'HIGH' : 'LOW'),
-        title: `${superAdminIds.length} user(s) hold the super-admin permission combination (ViewAllData + ModifyAllData + ManageUsers)`,
+        title: `${count(superAdminIds.length)} user(s) hold the super-admin permission combination (ViewAllData + ModifyAllData + ManageUsers)`,
         detail:
           'SBS-ACS-004 requires documented justification for any user holding all three of ViewAllData, ModifyAllData, and ManageUsers simultaneously. This combination is equivalent to unrestricted org control.' +
           (superAdminIds.length > 5 ? sandboxNote : ''),
@@ -110,6 +126,37 @@ export class UsersAndAdminsCheck implements SecurityCheck {
       });
     }
 
+    // Every org with an active System Administrator has holders of both permissions, so zero means
+    // the assignments were not visible to the audit user, or not all were read. Zero is unknown:
+    // inconclusive, never a pass and never an active exposure (INT-004). A non-zero count from a
+    // partial read is a definite lower bound, so it stays active at that bound's severity.
+    const modifyUnknown = modifyAllCount === 0;
+    const viewUnknown = viewAllCount === 0;
+    const unknownTitle = (perm: string) => partial
+      ? `Could not confirm who holds ${perm}: ${readNote}`
+      : `Could not confirm who holds ${perm}`;
+    const unknownDetail = (perm: string) => partial
+      ? `No ${perm} holder was found, but ${readNote}, so holders may be in the rows not read.`
+      : `No active user was found holding ${perm}, yet every org with an active System Administrator has at least one. The audit user most likely cannot see PermissionSetAssignment rows, so this is unknown, not clean.`;
+    const RAISE_LIMIT = 'Raise the query row limit (sf config set org-max-query-limit, or SF_ORG_MAX_QUERY_LIMIT) above the assignment count and re-run.';
+    const SEE_ROWS = 'Re-run as a user with View Setup and Configuration (or View All Users) so permission set assignments are visible.';
+    // A capped read needs a higher limit; a failed COUNT says nothing about the limit, so the
+    // visibility advice applies too.
+    const unknownRemediation = !partial ? SEE_ROWS : psaTotal === undefined ? `${SEE_ROWS} ${RAISE_LIMIT}` : RAISE_LIMIT;
+    // On a partial read, a count can also fall under its reporting threshold and not appear at all.
+    // This finding is the machine-readable signal for every count from the read (INT-004).
+    if (partial) {
+      findings.push({
+        id: 'users-and-admins-read-incomplete',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `Permission assignments were not fully read: ${readNote}`,
+        detail:
+          'Counts of Modify All Data, View All Data, super-admin, Customize Application and Author Apex holders are lower bounds. A count under its reporting threshold, or a super-admin whose permissions fell in the rows not read, may not be reported at all; such a super-admin is rated under Modify All Data instead.',
+        remediation: unknownRemediation,
+      });
+    }
     // Rate Modify All Data on the holders the super-admin finding does not already cover, so the
     // same users are not counted towards the grade twice. The finding still lists every holder.
     const superAdminSet = new Set(superAdminIds);
@@ -122,15 +169,23 @@ export class UsersAndAdminsCheck implements SecurityCheck {
     findings.push({
       id: 'users-modify-all-data',
       category: this.category,
-      riskLevel: modifyRisk,
-      title: `${modifyAllCount} user(s) have Modify All Data permission`,
-      // The population is always reported; at the lowest band it asks for no change.
-      passed: modifyRisk === 'LOW' || undefined,
-      detail:
-        'Modify All Data grants unrestricted write access across all objects. This is one of the most powerful permissions in Salesforce.' +
-        coveredNote +
-        (modifyRisk === 'HIGH' && otherModifyAll > 5 ? sandboxNote : ''),
-      remediation: 'Limit Modify All Data to essential system administrators only. Review each user and remove the permission from any non-essential accounts.',
+      riskLevel: modifyUnknown ? 'INFO' : modifyRisk,
+      ...(modifyUnknown ? { inconclusive: true } : {}),
+      title: modifyUnknown
+        ? unknownTitle('Modify All Data')
+        : `${count(modifyAllCount)} user(s) have Modify All Data permission`,
+      // The population is always reported; at the lowest band it asks for no change. Zero holders
+      // is unknown and a partial read is a lower bound, so neither is a pass (INT-004).
+      passed: (!modifyUnknown && !partial && modifyRisk === 'LOW') || undefined,
+      detail: modifyUnknown
+        ? unknownDetail('Modify All Data')
+        : 'Modify All Data grants unrestricted write access across all objects. This is one of the most powerful permissions in Salesforce.' +
+          coveredNote +
+          (modifyRisk === 'HIGH' && otherModifyAll > 5 ? sandboxNote : '') +
+          (partial ? ` This is a lower bound: ${readNote}.` : ''),
+      remediation: modifyUnknown
+        ? unknownRemediation
+        : 'Limit Modify All Data to essential system administrators only. Review each user and remove the permission from any non-essential accounts.',
       affectedItems: modifyAllUsers.map((r) => userItem(r as PsaRecord)),
     });
 
@@ -138,11 +193,18 @@ export class UsersAndAdminsCheck implements SecurityCheck {
     findings.push({
       id: 'users-view-all-data',
       category: this.category,
-      riskLevel: viewRisk,
-      title: `${viewAllCount} user(s) have View All Data permission`,
-      passed: viewRisk === 'LOW' || undefined,
-      detail: 'View All Data grants unrestricted read access across all objects, bypassing sharing rules and record-level security.',
-      remediation: 'Limit View All Data to essential users. Consider using permission sets scoped to specific objects instead.',
+      riskLevel: viewUnknown ? 'INFO' : viewRisk,
+      ...(viewUnknown ? { inconclusive: true } : {}),
+      title: viewUnknown
+        ? unknownTitle('View All Data')
+        : `${count(viewAllCount)} user(s) have View All Data permission`,
+      passed: (!viewUnknown && !partial && viewRisk === 'LOW') || undefined,
+      detail: viewUnknown
+        ? unknownDetail('View All Data')
+        : 'View All Data grants unrestricted read access across all objects, bypassing sharing rules and record-level security.' + (partial ? ` This is a lower bound: ${readNote}.` : ''),
+      remediation: viewUnknown
+        ? unknownRemediation
+        : 'Limit View All Data to essential users. Consider using permission sets scoped to specific objects instead.',
       affectedItems: viewAllUsers.map((r) => userItem(r as PsaRecord)),
     });
 
@@ -151,7 +213,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
         id: 'users-customize-application',
         category: this.category,
         riskLevel: 'MEDIUM',
-        title: `${customizeAppCount} user(s) have Customize Application permission`,
+        title: `${count(customizeAppCount)} user(s) have Customize Application permission`,
         detail: 'Customize Application allows users to make metadata changes, including modifying page layouts, custom fields, and application settings.',
         remediation: 'Customize Application allows metadata changes. Review and reduce to essential configuration administrators.',
         affectedItems: customizeAppUsers.map((r) => userItem(r as PsaRecord)),
@@ -163,7 +225,7 @@ export class UsersAndAdminsCheck implements SecurityCheck {
         id: 'users-author-apex',
         category: this.category,
         riskLevel: 'MEDIUM',
-        title: `${authorApexCount} user(s) have Author Apex permission`,
+        title: `${count(authorApexCount)} user(s) have Author Apex permission`,
         detail: 'Author Apex allows users to write and deploy Apex code, which can execute server-side logic with elevated privileges.',
         remediation: 'Author Apex allows code deployment. Limit to developers with a genuine need.',
         affectedItems: authorApexUsers.map((r) => userItem(r as PsaRecord)),
@@ -174,8 +236,10 @@ export class UsersAndAdminsCheck implements SecurityCheck {
       findings,
       metrics: {
         totalActiveUsers,
-        modifyAllDataUsersCount: modifyAllCount,
-        viewAllDataUsersCount: viewAllCount,
+        // An unknown or lower-bound count is left out rather than reported as an exact number;
+        // see unknownMetrics.
+        ...(modifyUnknown || partial ? {} : { modifyAllDataUsersCount: modifyAllCount }),
+        ...(viewUnknown || partial ? {} : { viewAllDataUsersCount: viewAllCount }),
       },
     };
   }

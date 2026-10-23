@@ -27,6 +27,8 @@ const BASELINE = makeResult({
   findings: [
     { id: 'f-resolved', checkId: 'c1', category: 'Auth', riskLevel: 'HIGH', title: 'Old finding', detail: 'detail', remediation: 'fix' },
     { id: 'f-new-base', checkId: 'c2', category: 'Auth', riskLevel: 'LOW',  title: 'Stays',       detail: 'detail', remediation: 'fix' },
+    // The metric is only known alongside its active finding (INT-004, RULE-043).
+    { id: 'users-modify-all-data', checkId: 'users-and-admins', category: 'Access', riskLevel: 'LOW', title: 'MAD holders', detail: 'detail', remediation: 'fix' },
   ],
   metrics: { ...EMPTY_METRICS, modifyAllDataUsersCount: 5 },
 });
@@ -38,6 +40,8 @@ const CURRENT = makeResult({
   findings: [
     { id: 'f-new-cur',  checkId: 'c3', category: 'Auth', riskLevel: 'CRITICAL', title: 'New one',  detail: 'detail', remediation: 'fix' },
     { id: 'f-new-base', checkId: 'c2', category: 'Auth', riskLevel: 'LOW',       title: 'Stays',   detail: 'detail', remediation: 'fix' },
+    // The metric is only known alongside its active finding (INT-004, RULE-043).
+    { id: 'users-modify-all-data', checkId: 'users-and-admins', category: 'Access', riskLevel: 'LOW', title: 'MAD holders', detail: 'detail', remediation: 'fix' },
   ],
   metrics: { ...EMPTY_METRICS, modifyAllDataUsersCount: 3 },
 });

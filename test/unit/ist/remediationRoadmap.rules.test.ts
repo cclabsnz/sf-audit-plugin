@@ -66,7 +66,7 @@ describe('RULE-074 a healthy result is reported as passed, not as an open LOW fi
     });
     const rows = [row('a'), row('b')];
     const r = await new UsersAndAdminsCheck().run({
-      soql: { queryAll: jest.fn(), query: (jest.fn() as any).mockImplementation((s: string) => Promise.resolve(/COUNT\(\)/i.test(s) ? { totalSize: 50, records: [] } : { totalSize: 2, records: rows })) } as any,
+      soql: { queryAll: (jest.fn() as any).mockResolvedValue(rows), query: (jest.fn() as any).mockImplementation((s: string) => Promise.resolve({ totalSize: /PermissionSetAssignment/.test(s) ? rows.length : 50, records: [] })) } as any,
       tooling: {} as any, rest: {} as any, orgInfo: ORG, cache: {} as any,
     } as any);
     for (const id of ['users-modify-all-data', 'users-view-all-data']) {

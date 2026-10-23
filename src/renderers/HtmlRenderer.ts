@@ -4,6 +4,7 @@ import type { AuditRenderer } from './AuditRenderer.js';
 import { esc, firaFontFaceCss, INTERACTIVE_CSP_META } from '@cclabsnz/sf-core';
 import { renderAttackChainDagSvg } from './AttackChainDagRenderer.js';
 import { coverageSummary, coverageAdvice } from '../findings/coverage.js';
+import { unknownMetrics } from '../findings/unknownMetrics.js';
 
 const RISK_COLORS: Record<string, string> = {
   CRITICAL: '#dc2626',
@@ -29,6 +30,9 @@ const GRADE_COLOR: Record<string, string> = {
 };
 
 // ── Dashboard helpers ────────────────────────────────────────────────────────
+
+/** The grey used for inconclusive findings. */
+const UNKNOWN_COLOR = '#8b949e';
 
 function statusColor(value: number, warnThreshold: number, dangerThreshold: number): string {
   if (value <= warnThreshold) return '#22c55e';
@@ -116,16 +120,18 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
     </div>`,
   ).join('');
 
-  // Users & Access
-  const modifyColor  = statusColor(m.modifyAllDataUsersCount, 2, 5);
-  const viewColor    = statusColor(m.viewAllDataUsersCount, 5, 15);
+  // Users & Access. A count the audit could not read is shown as unknown, never as a green 0.
+  const unknown = unknownMetrics(result.findings);
+  const countRow = (label: string, key: 'modifyAllDataUsersCount' | 'viewAllDataUsersCount', warn: number, danger: number) => {
+    if (unknown.has(key)) return metricRow(label, 'unknown', UNKNOWN_COLOR);
+    const color = statusColor(m[key], warn, danger);
+    return metricRow(label, m[key], color, m.totalActiveUsers > 0 ? progressBar(m[key], m.totalActiveUsers, color) : '');
+  };
   const inactiveColor = statusColor(m.inactiveUsers90d, 0, 5);
   const usersCard = inventoryCard('Users & Access', [
     metricRow('Active Users', m.totalActiveUsers),
-    metricRow('Modify All Data', m.modifyAllDataUsersCount, modifyColor,
-      m.totalActiveUsers > 0 ? progressBar(m.modifyAllDataUsersCount, m.totalActiveUsers, modifyColor) : ''),
-    metricRow('View All Data', m.viewAllDataUsersCount, viewColor,
-      m.totalActiveUsers > 0 ? progressBar(m.viewAllDataUsersCount, m.totalActiveUsers, viewColor) : ''),
+    countRow('Modify All Data', 'modifyAllDataUsersCount', 2, 5),
+    countRow('View All Data', 'viewAllDataUsersCount', 5, 15),
     metricRow('Inactive 90d', m.inactiveUsers90d, inactiveColor),
     metricRow('Profiles', m.profileCount),
     metricRow('Permission Sets', m.permissionSetCount),

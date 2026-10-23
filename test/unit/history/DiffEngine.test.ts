@@ -28,6 +28,8 @@ const BASELINE = makeResult({
     { id: 'f-severity', checkId: 'c2', category: 'Auth', riskLevel: 'CRITICAL', title: 'Severity changes',  detail: 'detail',     remediation: 'fix it' },
     { id: 'f-detail',   checkId: 'c3', category: 'Auth', riskLevel: 'MEDIUM',   title: 'Detail changes',    detail: 'old detail', remediation: 'fix it' },
     { id: 'f-unchanged',checkId: 'c4', category: 'Auth', riskLevel: 'LOW',      title: 'Unchanged finding', detail: 'detail',     remediation: 'fix it' },
+    // The metric is only known alongside its active finding (INT-004, RULE-043).
+    { id: 'users-modify-all-data', checkId: 'users-and-admins', category: 'Access', riskLevel: 'LOW', title: 'MAD holders', detail: 'detail', remediation: 'fix' },
   ],
   metrics: { ...EMPTY_METRICS, modifyAllDataUsersCount: 5, codeCoveragePercent: 60, totalActiveUsers: 100 },
 });
@@ -40,6 +42,8 @@ const CURRENT = makeResult({
     { id: 'f-severity', checkId: 'c2', category: 'Auth', riskLevel: 'HIGH',     title: 'Severity changes',  detail: 'detail',     remediation: 'fix it' },
     { id: 'f-detail',   checkId: 'c3', category: 'Auth', riskLevel: 'MEDIUM',   title: 'Detail changes',    detail: 'new detail', remediation: 'fix it' },
     { id: 'f-unchanged',checkId: 'c4', category: 'Auth', riskLevel: 'LOW',      title: 'Unchanged finding', detail: 'detail',     remediation: 'fix it' },
+    // The metric is only known alongside its active finding (INT-004, RULE-043).
+    { id: 'users-modify-all-data', checkId: 'users-and-admins', category: 'Access', riskLevel: 'LOW', title: 'MAD holders', detail: 'detail', remediation: 'fix' },
   ],
   metrics: { ...EMPTY_METRICS, modifyAllDataUsersCount: 3, codeCoveragePercent: 75, totalActiveUsers: 100 },
 });
