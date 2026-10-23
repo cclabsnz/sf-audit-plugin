@@ -9,6 +9,6 @@ cites: INT-001, MN-001
 - then ...
 ```
 
-The `cites:` line is what the link-checker reads. A rule that cites nothing, or cites an id that does not exist, fails CI. A rule with no test (visible or hidden) fails CI.
+The `cites:` line ties a rule to the intent and must-never it serves. Tests name the rule ids they cover.
 
 Rules are the contract the agent builds against. The agent may propose a rule; a human agrees it before implementation on high-risk work.
