@@ -1,6 +1,12 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { hasField } from '../support/schema.js';
+
+// "Is Single Sign-On Enabled". Salesforce adds this permission field only to orgs where it has
+// enabled delegated authentication; without the field no profile can route sign-in through a
+// delegated gateway.
+const SSO_PERMISSION = 'PermissionsIsSsoEnabled';
 
 interface SecuritySettingsMeta {
   singleSignOnSettings?: {
@@ -12,7 +18,7 @@ interface SecuritySettingsMeta {
 interface ProfileRecord {
   Id: string;
   Name: string;
-  PermissionsIsSingleSignOnEnabled?: boolean;
+  PermissionsIsSsoEnabled?: boolean;
 }
 
 export class DelegatedAuthenticationExposureCheck implements SecurityCheck {
@@ -45,9 +51,11 @@ export class DelegatedAuthenticationExposureCheck implements SecurityCheck {
     }
     const isDelegatedAuthEnabled = delegatedAuth === true;
 
-    const profiles = await ctx.soql.queryAll<ProfileRecord>(
-      'SELECT Id, Name, PermissionsIsSingleSignOnEnabled FROM Profile WHERE PermissionsIsSingleSignOnEnabled = true',
-    );
+    const profiles = (await hasField(ctx, 'Profile', SSO_PERMISSION))
+      ? await ctx.soql.queryAll<ProfileRecord>(
+          `SELECT Id, Name, ${SSO_PERMISSION} FROM Profile WHERE ${SSO_PERMISSION} = true`,
+        )
+      : [];
     const adminProfilesWithDelegatedAuth = profiles.filter(
       (p) => p.Name.toLowerCase().includes('admin') || p.Name === 'System Administrator',
     );

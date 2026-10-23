@@ -12,7 +12,7 @@ import { buildRoadmap, type Roadmap } from '../report/RemediationRoadmap.js';
 import type { Framework } from '../compliance/types.js';
 import { buildComplianceMatrix, type FrameworkMatrix } from '../report/ComplianceMatrix.js';
 import { renderAttackChainDagSvg } from './AttackChainDagRenderer.js';
-import { coverageSummary } from '../findings/coverage.js';
+import { coverageSummary, coverageAdvice } from '../findings/coverage.js';
 
 const SEV_COLOR: Record<string, string> = {
   CRITICAL: '#7d3a3a', HIGH: '#a35a2a', MEDIUM: '#8a6d1f', LOW: '#3a5a82', INFO: '#636770',
@@ -137,7 +137,7 @@ ${this.footer(b)}
     const meta = [r.orgName, r.orgType, r.orgId, r.generatedAt.toISOString().slice(0, 10)]
       .map((s) => esc(String(s))).join(' · ');
     const counts = SEV_ORDER
-      .map((l) => ({ l, n: r.findings.filter((f) => f.riskLevel === l && !f.passed && !f.inconclusive).length }))
+      .map((l) => ({ l, n: r.findings.filter((f) => f.riskLevel === l && !f.passed && !f.inconclusive && !f.waived).length }))
       .filter((c) => c.n > 0)
       .map((c) => this.chip(c.l, `${c.n} ${c.l}`)).join('');
     const prepared = b.preparedFor ? ` for ${esc(b.preparedFor)}` : '';
@@ -162,7 +162,7 @@ ${this.footer(b)}
     const waived = r.findings.filter((f) => f.waived).length;
     const waivedNote = waived ? `, with ${waived} waived as accepted risk` : '';
     return `${this.sectionHead(numStr, 'Executive Summary')}
-<p>This audit assessed the org’s security configuration and scored it <strong>${r.healthScore}/100 (Grade ${esc(r.grade)})</strong> across ${active} active finding${active === 1 ? '' : 's'}${incon ? `, with ${incon} inconclusive (insufficient access)` : ''}${waivedNote}. The priorities below are the highest-impact items to address first; the remediation roadmap groups every fix by effort. See Scope &amp; Liability for the basis and limits of this assessment.</p>${this.coverageNote(r)}`;
+<p>This audit assessed the org’s security configuration and scored it <strong>${r.healthScore}/100 (Grade ${esc(r.grade)})</strong>${r.gradeReason ? `, a grade set by ${esc(r.gradeReason.replace(/^[A-F]: /, ''))},` : ''} across ${active} active finding${active === 1 ? '' : 's'}${incon ? `, with ${incon} inconclusive (no evidence gathered)` : ''}${waivedNote}. The priorities below are the highest-impact items to address first; the remediation roadmap groups every fix by effort. See Scope &amp; Liability for the basis and limits of this assessment.</p>${this.coverageNote(r)}`;
   }
 
   private prioritiesSection(priorities: Finding[], chainIds: Set<string>, numStr: string): string {
@@ -182,7 +182,7 @@ ${impact}${chained}<p><strong>Fix:</strong> ${esc(f.remediation)}</p></div>`;
   private coverageNote(r: AuditResult): string {
     const c = r.coverage;
     if (!c || c.notAssessed.length === 0) return '';
-    return `<p class="muted">${esc(coverageSummary(c))}. The checks that gathered no evidence are listed as inconclusive in the findings appendix; their areas are unassessed, not clean.</p>`;
+    return `<p class="muted">${esc(coverageSummary(c))}. The checks that gathered no evidence are listed as inconclusive in the findings appendix; their areas are unassessed, not clean. ${esc(coverageAdvice(c))}</p>`;
   }
 
   private waiversSection(waived: Finding[], numStr: string): string {

@@ -11,7 +11,9 @@ import { isApiError } from '@cclabsnz/sf-core';
  */
 export function isMissingObjectError(err: unknown): boolean {
   if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
+    // MALFORMED_QUERY is a bug in the query, never an absent feature: treating it as "no rows"
+    // would report an unchecked area as clean.
+    if (/INVALID_TYPE|NOT_FOUND/i.test(err.errorCode)) return true;
     if (err.statusCode === 404) return true;
   }
   const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();

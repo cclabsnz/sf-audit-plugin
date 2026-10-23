@@ -4,8 +4,15 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 
 type Handler = (soql: string) => Promise<unknown[]>;
 
-function makeCtx(opts: { soql?: Handler; tooling?: Handler } = {}): AuditContext {
+// IP Relaxation comes from each app's Metadata API definition, keyed by DeveloperName.
+const META = new Map<string, unknown>();
+
+function makeCtx(opts: { soql?: Handler; tooling?: Handler; metadata?: boolean } = {}): AuditContext {
   return {
+    metadata:
+      opts.metadata === false
+        ? undefined
+        : { read: (jest.fn() as any).mockImplementation((type: string, name: string) => Promise.resolve(type === 'ConnectedApp' ? META.get(name) ?? null : null)) },
     soql: {
       queryAll: (jest.fn() as any).mockImplementation((s: string) =>
         opts.soql ? opts.soql(s) : Promise.resolve([]),
@@ -35,10 +42,11 @@ const range = (profileId: string, StartAddress: string, EndAddress: string) => (
   ProfileId: profileId, StartAddress, EndAddress,
 });
 
-const app = (Name: string, ipRelaxation?: string) => ({
-  Id: `0CiA${Name}`, Name,
-  Metadata: ipRelaxation ? { oauthConfig: { ipRelaxation } } : null,
-});
+const app = (Name: string, ipRelaxation?: string, { readable = true } = {}) => {
+  if (readable) META.set(Name, ipRelaxation ? { oauthPolicy: { ipRelaxation } } : {});
+  else META.delete(Name);
+  return { Id: `0CiA${Name}`, Name, DeveloperName: Name };
+};
 
 /** Route SOQL by object. */
 const soqlRouter = (o: { admins?: unknown[]; ranges?: unknown[]; rangeError?: boolean }): Handler => (s) => {
@@ -51,6 +59,7 @@ const soqlRouter = (o: { admins?: unknown[]; ranges?: unknown[]; rangeError?: bo
 
 const toolingRouter = (o: { apps?: unknown[]; ranges?: unknown[]; appError?: boolean }): Handler => (s) => {
   if (/FROM ConnectedApplication/i.test(s)) {
+    if (/\bMetadata\b/.test(s)) return Promise.reject(new Error("No such column 'Metadata' on entity 'ConnectedApplication'"));
     return o.appError ? Promise.reject(new Error('no metadata access')) : Promise.resolve(o.apps ?? []);
   }
   if (/FROM ProfileLoginIpRange/i.test(s)) return Promise.resolve(o.ranges ?? []);
@@ -101,6 +110,26 @@ describe('IpRestrictionsCheck', () => {
     }));
     expect(r.findings.find((x) => x.id === 'connected-apps-bypass-ip')!.riskLevel).toBe('HIGH');
     expect(r.findings.find((x) => x.id === 'connected-apps-relax-ip')!.riskLevel).toBe('MEDIUM');
+  });
+
+  it('reads the Metadata API values BYPASS (HIGH) and ENFORCE_ACTIVATED_DEVICES (MEDIUM)', async () => {
+    const r = await check.run(makeCtx({
+      tooling: toolingRouter({ apps: [app('Bypass2', 'BYPASS'), app('Relax2', 'ENFORCE_ACTIVATED_DEVICES'), app('Enforce2', 'ENFORCE')] }),
+    }));
+    expect(r.findings.find((x) => x.id === 'connected-apps-bypass-ip')!.affectedItems!.map((i) => i.label)).toEqual(['Bypass2']);
+    expect(r.findings.find((x) => x.id === 'connected-apps-relax-ip')!.affectedItems!.map((i) => i.label)).toEqual(['Relax2']);
+  });
+
+  it('does not pass when an app definition cannot be read (MN-051)', async () => {
+    const r = await check.run(makeCtx({ tooling: toolingRouter({ apps: [app('Hidden', undefined, { readable: false })] }) }));
+    expect(r.findings.find((x) => x.id === 'ip-restrictions-apps-unavailable')?.inconclusive).toBe(true);
+    expect(r.findings.some((x) => x.id === 'ip-restrictions-ok')).toBe(false);
+  });
+
+  it('does not pass when apps exist but the run has no Metadata API client', async () => {
+    const r = await check.run(makeCtx({ tooling: toolingRouter({ apps: [app('Any', 'ENFORCE')] }), metadata: false }));
+    expect(r.findings.some((x) => x.id === 'ip-restrictions-apps-unavailable')).toBe(true);
+    expect(r.findings.some((x) => x.id === 'ip-restrictions-ok')).toBe(false);
   });
 
   it('does not flag apps that enforce the whitelist or declare nothing', async () => {

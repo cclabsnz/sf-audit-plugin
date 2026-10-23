@@ -46,7 +46,6 @@ describe('InboundEmailHandlerExposureCheck', () => {
           Id: '01u1',
           FunctionName: 'SupportEmailHandler',
           IsActive: true,
-          RunAsUserId: '005Admin',
           ApexClassId: '01pClass',
           AuthenticationFailureAction: '0',
         },
@@ -59,6 +58,7 @@ describe('InboundEmailHandlerExposureCheck', () => {
           EmailDomainName: 'salesforce.com',
           IsActive: true,
           AuthorizedSenders: '',
+          RunAsUserId: '005Admin',
         },
       ],
       User: [
@@ -82,6 +82,22 @@ describe('InboundEmailHandlerExposureCheck', () => {
     expect(f?.riskLevel).toBe('HIGH');
   });
 
+  it('reads the run-as user from the address: an admin context user alone exposes an open handler', async () => {
+    const ctx = makeCtx({
+      'FROM EmailServicesFunction': [
+        { Id: '01u3', FunctionName: 'Quiet', IsActive: true, ApexClassId: '01pQ', AuthenticationFailureAction: '0' },
+      ],
+      'FROM EmailServicesAddress': [
+        { Id: '01v3', FunctionId: '01u3', LocalPart: 'quiet', IsActive: true, AuthorizedSenders: null, RunAsUserId: '005Admin' },
+      ],
+      'FROM User': [{ Id: '005Admin', Username: 'admin@corp.com', Profile: { Name: 'System Administrator' } }],
+      'FROM ApexClass': [{ Id: '01pQ', Name: 'Quiet', Body: 'public with sharing class Quiet {}' }],
+    });
+    const r = await check.run(ctx);
+    const f = r.findings.find((x) => x.id === 'inbound-email-handler-unauthenticated-execution');
+    expect(f?.affectedItems?.[0].note).toContain('Runs as System Administrator');
+  });
+
   it('passes when email service enforces authorized senders', async () => {
     const ctx = makeCtx({
       EmailServicesFunction: [
@@ -89,7 +105,6 @@ describe('InboundEmailHandlerExposureCheck', () => {
           Id: '01u2',
           FunctionName: 'SecureEmailHandler',
           IsActive: true,
-          RunAsUserId: '005Standard',
           ApexClassId: '01pClass2',
           AuthenticationFailureAction: '2',
         },
@@ -102,6 +117,7 @@ describe('InboundEmailHandlerExposureCheck', () => {
           EmailDomainName: 'salesforce.com',
           IsActive: true,
           AuthorizedSenders: 'partner@trustedcorp.com',
+          RunAsUserId: '005Standard',
         },
       ],
       User: [
@@ -128,7 +144,7 @@ describe('InboundEmailHandlerExposureCheck', () => {
   it('propagates a failure reading addresses instead of reporting handlers as restricted', async () => {
     const ctx = makeCtx({
       'FROM EmailServicesFunction': [
-        { Id: '01u2', FunctionName: 'H', IsActive: true, RunAsUserId: '005Admin', ApexClassId: '01pC', AuthenticationFailureAction: '0' },
+        { Id: '01u2', FunctionName: 'H', IsActive: true, ApexClassId: '01pC', AuthenticationFailureAction: '0' },
       ],
       'FROM EmailServicesAddress': new Error('INSUFFICIENT_ACCESS: EmailServicesAddress'),
     });

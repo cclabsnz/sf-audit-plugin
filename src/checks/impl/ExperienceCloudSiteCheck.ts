@@ -8,7 +8,26 @@ interface NetworkRecord {
   Status: string;
   UrlPathPrefix: string | null;
   SelfRegProfileId: string | null;
+}
+
+interface SiteRecord {
+  MasterLabel: string | null;
+  UrlPathPrefix: string | null;
   GuestUserId: string | null;
+  GuestUser: { IsActive: boolean } | null;
+}
+
+/**
+ * Network has no guest-user field: each Experience site's guest user is on its Site record
+ * (SiteType ChatterNetwork, or ChatterNetworkPicasso for Experience Builder sites). Site carries
+ * no network id, so a Site belongs to a network when its label is the network's name, or its path
+ * prefix is the network's, the network's followed by "/s", or (LWR sites) followed by "vforcesite".
+ */
+function siteBelongsTo(site: SiteRecord, network: NetworkRecord): boolean {
+  if (site.MasterLabel && site.MasterLabel === network.Name) return true;
+  const net = network.UrlPathPrefix ?? '';
+  const sp = site.UrlPathPrefix ?? '';
+  return sp === net || sp === (net === '' ? 's' : `${net}/s`) || sp === `${net}vforcesite`;
 }
 
 export class ExperienceCloudSiteCheck implements SecurityCheck {
@@ -26,11 +45,11 @@ export class ExperienceCloudSiteCheck implements SecurityCheck {
     let networks: NetworkRecord[];
     try {
       networks = await ctx.soql.queryAll<NetworkRecord>(
-        `SELECT Id, Name, Status, UrlPathPrefix, SelfRegProfileId, GuestUserId
+        `SELECT Id, Name, Status, UrlPathPrefix, SelfRegProfileId
          FROM Network
          WHERE Status = 'Live'`,
       );
-    } catch {
+    } catch (err) {
       findings.push({
         id: 'experience-cloud-site-inaccessible',
         category: this.category,
@@ -38,7 +57,7 @@ export class ExperienceCloudSiteCheck implements SecurityCheck {
         inconclusive: true,
         title: 'Experience Cloud site configuration could not be queried',
         detail:
-          'The Network SOQL query was not accessible. This may indicate the audit user lacks access to Experience Cloud configuration or no sites are provisioned.',
+          `The Network query failed: ${err instanceof Error ? err.message : String(err)}. If no Experience Cloud licence is active, this check is not applicable.`,
         remediation:
           'Grant "View Setup and Configuration" to the audit user and re-run. If no Experience Cloud licence is active, this check is not applicable.',
       });
@@ -60,7 +79,54 @@ export class ExperienceCloudSiteCheck implements SecurityCheck {
     }
 
     const selfRegSites = networks.filter((n) => n.SelfRegProfileId !== null);
-    const guestSites = networks.filter((n) => n.GuestUserId !== null);
+
+    let sites: SiteRecord[] | null;
+    try {
+      sites = await ctx.soql.queryAll<SiteRecord>(
+        `SELECT MasterLabel, UrlPathPrefix, GuestUserId, GuestUser.IsActive
+         FROM Site
+         WHERE SiteType IN ('ChatterNetwork', 'ChatterNetworkPicasso') AND Status = 'Active'`,
+      );
+    } catch {
+      sites = null;
+    }
+    const guestSites =
+      sites === null
+        ? []
+        : networks.filter((n) =>
+            sites!.some((s) => s.GuestUserId !== null && s.GuestUser?.IsActive !== false && siteBelongsTo(s, n)),
+          );
+
+    // A live network whose Site record could not be found has unknown guest access, not none.
+    const unmatched = sites === null ? [] : networks.filter((n) => !sites!.some((s) => siteBelongsTo(s, n)));
+    if (unmatched.length > 0) {
+      findings.push({
+        id: 'experience-cloud-site-guest-unknown',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: `Guest access could not be determined for ${unmatched.length} live Experience Cloud site(s)`,
+        detail:
+          'No active Site record could be matched to these live networks by name or path prefix, so whether they allow unauthenticated access is unknown, not absent.',
+        remediation: 'Review each site\'s guest user in Setup → Digital Experiences.',
+        affectedItems: unmatched.map((n) => ({ label: n.Name, url: setupUrl, note: `URL prefix: ${n.UrlPathPrefix ?? '(default)'}` })),
+      });
+    }
+
+    if (sites === null) {
+      // Without the Site records, guest access is unknown, not absent.
+      findings.push({
+        id: 'experience-cloud-site-guest-unknown',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'Guest access on live Experience Cloud sites could not be determined',
+        detail:
+          'The Site records that carry each Experience site\'s guest user could not be read, so whether these sites allow unauthenticated access is unknown.',
+        remediation: 'Review each site\'s guest user in Setup → Digital Experiences, or grant "View Setup and Configuration" and re-run.',
+        affectedItems: networks.map((n) => ({ label: n.Name, url: setupUrl })),
+      });
+    }
 
     if (selfRegSites.length > 0) {
       findings.push({
@@ -98,7 +164,7 @@ export class ExperienceCloudSiteCheck implements SecurityCheck {
       });
     }
 
-    if (selfRegSites.length === 0 && guestSites.length === 0) {
+    if (selfRegSites.length === 0 && guestSites.length === 0 && sites !== null && unmatched.length === 0) {
       findings.push({
         id: 'experience-cloud-site-ok',
         category: this.category,

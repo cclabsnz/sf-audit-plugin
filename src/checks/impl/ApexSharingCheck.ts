@@ -85,7 +85,9 @@ export class ApexSharingCheck implements SecurityCheck {
       findings.push({
         id: 'portal-exposed-apex-without-sharing',
         category: this.category,
-        riskLevel: 'CRITICAL',
+        // CRITICAL only for an explicit "without sharing". A class with no declaration takes its
+        // sharing from how it is entered, so it is a strong signal, not a confirmed bypass.
+        riskLevel: portalExposedWithoutSharing.length > 0 ? 'CRITICAL' : 'HIGH',
         title: `${allPortalRisk.length} externally exposed Apex class(es) (@AuraEnabled/@RemoteAction/@RestResource) lack "with sharing": IDOR risk`,
         detail:
           'Classes with @AuraEnabled, @RemoteAction or @RestResource methods that use "without sharing" or have no sharing declaration execute without record-level access control. Attackers can supply arbitrary record IDs to read or manipulate data they should not access (IDOR). SBS-CPORTAL-001 requires server-side authorization for every record accessed via portal Apex.',

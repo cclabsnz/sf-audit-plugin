@@ -209,7 +209,8 @@ describe('AgentUserPrivilegeCheck', () => {
       tooling: (soql) => {
         if (/FROM FieldDefinition/i.test(soql)) {
           // Patient__c has classified fields; Account does not appear here.
-          return Promise.resolve([{ objectName: 'Patient__c', classifiedCount: 4 }]);
+          // FieldDefinition supports no aggregates: one row per classified field.
+          return Promise.resolve(Array.from({ length: 4 }, (_, i) => ({ EntityDefinition: { QualifiedApiName: 'Patient__c' }, QualifiedApiName: `F${i}__c` })));
         }
         return Promise.resolve([]);
       },

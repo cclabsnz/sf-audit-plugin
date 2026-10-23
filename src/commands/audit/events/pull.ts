@@ -41,7 +41,11 @@ export default class AuditEventsPullCommand extends SfCommand<EventsPullResult> 
   public async run(): Promise<EventsPullResult> {
     const { flags } = await this.parse(AuditEventsPullCommand);
 
-    const conn = flags['target-org'].getConnection('62.0') as any;
+    // No pinned version: the org's own API version, so fields and objects added since an
+
+    // older release are visible. A pin at 62.0 hid every newer permission field.
+
+    const conn = flags['target-org'].getConnection() as any;
     const orgInfo = await resolveOrgInfo(conn);
     const ctx = buildAuditContext(conn, orgInfo);
 

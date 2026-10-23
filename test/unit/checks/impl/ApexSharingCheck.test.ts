@@ -86,14 +86,15 @@ describe('ApexSharingCheck', () => {
 
   // SBS-CPORTAL-001: the IDOR case. Portal-reachable code without record-level enforcement.
   it.each([
-    ['@AuraEnabled without sharing', '@AuraEnabled public without sharing class P { }', 'without sharing'],
-    ['@RemoteAction without sharing', '@RemoteAction public without sharing class P { }', 'without sharing'],
-    ['@AuraEnabled with no declaration', '@AuraEnabled public class P { }', 'No sharing declaration'],
-  ])('raises CRITICAL for %s', async (_label, body, expectedNote) => {
+    // RULE-069: CRITICAL only for an explicit "without sharing"; no declaration is HIGH.
+    ['@AuraEnabled without sharing', '@AuraEnabled public without sharing class P { }', 'without sharing', 'CRITICAL'],
+    ['@RemoteAction without sharing', '@RemoteAction public without sharing class P { }', 'without sharing', 'CRITICAL'],
+    ['@AuraEnabled with no declaration', '@AuraEnabled public class P { }', 'No sharing declaration', 'HIGH'],
+  ])('flags %s', async (_label, body, expectedNote, expectedRisk) => {
     const r = await check.run(makeCtx({ apexBodies: [cls('P', body)] }));
     const f = r.findings.find((x) => x.id === 'portal-exposed-apex-without-sharing');
     expect(f).toBeDefined();
-    expect(f!.riskLevel).toBe('CRITICAL');
+    expect(f!.riskLevel).toBe(expectedRisk);
     expect(f!.affectedItems?.[0].note).toContain(expectedNote);
   });
 

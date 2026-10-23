@@ -39,6 +39,7 @@ export class HealthCheckCheck implements SecurityCheck {
       category: this.category,
       riskLevel: scoreRisk,
       title: `Salesforce Security Health Check Score: ${score}/100`,
+      passed: scoreRisk === 'LOW' || undefined,
       detail: `The Salesforce Security Health Check scored ${score}/100. Scores below 85 indicate security configuration gaps that should be addressed.`,
       remediation: 'Review the Security Health Check in Setup → Security Center → Health Check.',
     });

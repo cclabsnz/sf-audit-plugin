@@ -1,6 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { hasField } from '../support/schema.js';
 
 interface AuditTrailRecord {
   CreatedDate: string;
@@ -107,6 +108,25 @@ export class AuditTrailCheck implements SecurityCheck {
     // SBS-MON-002: flag users who can delete Event Monitoring data (erasing the audit trail).
     // PermissionsManageEventLogFiles grants the "Delete Event Monitoring Data" capability.
     try {
+      // The permission field exists only in orgs licensed for Event Monitoring. Describe first:
+      // filtering on an absent field is rejected outright. Absence is reported as unassessed,
+      // not as a pass: this audit has not confirmed the delete capability has no other API name.
+      if (!(await hasField(ctx, 'PermissionSet', 'PermissionsManageEventLogFiles'))) {
+        findings.push({
+          id: 'event-log-delete-permission-not-available',
+          category: this.category,
+          riskLevel: 'INFO',
+          inconclusive: true,
+          notAssessed: true,
+          title: 'Who can delete Event Monitoring data could not be read: the permission is not in this org',
+          detail:
+            'This org has no PermissionSet.PermissionsManageEventLogFiles field, which is usual when Event Monitoring is not licensed. Who can delete event monitoring data is therefore unestablished from permissions, and SBS-MON-002 is unevaluated rather than satisfied.',
+          remediation:
+            'If the org licenses Event Monitoring, review who holds "Manage Event Log Files" or "Delete Event Monitoring Data" in Setup → Permission Sets.',
+        });
+        return { findings };
+      }
+
       const eventLogDeleteResult = await ctx.soql.query<EventLogDeleteRecord>(
         `SELECT Assignee.Id, Assignee.Username, Assignee.Profile.Name,
                 PermissionSet.Name, PermissionSet.IsOwnedByProfile
@@ -134,12 +154,10 @@ export class AuditTrailCheck implements SecurityCheck {
           })),
         });
       }
-    } catch {
-      // PermissionsManageEventLogFiles does not exist in orgs without Event Monitoring, so this
-      // query legitimately fails. Skipping silently was wrong: with no finding emitted, a reader
-      // cannot tell "nobody can delete event logs" from "we were unable to find out", and only
-      // the first of those is a pass. Declared inconclusive so it is scored as INFO, carries no
-      // penalty, and is still shown.
+    } catch (err) {
+      // Skipping silently was wrong: with no finding emitted, a reader cannot tell "nobody can
+      // delete event logs" from "we were unable to find out", and only the first of those is a
+      // pass. Declared inconclusive so it is scored as INFO, carries no penalty, and is still shown.
       findings.push({
         id: 'event-log-delete-permission-inconclusive',
         category: this.category,
@@ -147,9 +165,9 @@ export class AuditTrailCheck implements SecurityCheck {
         inconclusive: true,
         title: 'Manage Event Log Files assignments could not be queried',
         detail:
-          'PermissionSetAssignment could not be filtered on PermissionsManageEventLogFiles. The field is absent in orgs without Event Monitoring, and the query also fails without access to PermissionSetAssignment, so who can delete event monitoring data is unestablished. SBS-MON-002 is unevaluated rather than satisfied.',
+          `Who holds "Manage Event Log Files" could not be read, so who can delete event monitoring data is unestablished. SBS-MON-002 is unevaluated rather than satisfied. The org said: ${err instanceof Error ? err.message : String(err)}`,
         remediation:
-          'If the org has Event Monitoring, grant the audit user read access to PermissionSetAssignment and re-run. Otherwise there are no EventLogFile records to protect and no action is needed.',
+          'Check the error above. If it is an access error, confirm the audit user can read PermissionSetAssignment (View Setup and Configuration), then re-run.',
       });
     }
 

@@ -39,6 +39,21 @@ describe('DeploymentIdentityCheck', () => {
     expect(check.dependsOnCache).toEqual(expect.arrayContaining(['connectedAppNames']));
   });
 
+  // MN-051: with the trail cut off at its cap, one deployer (or none) is not established.
+  it('does not pass a single identity when the trail was truncated', async () => {
+    const filler = Array.from({ length: 9999 }, () => ({ ...entry('005A'), Section: 'Manage Users' }));
+    const r = await check.run(makeCtx({ trail: [entry('005A'), ...filler] }));
+    expect(find(r, 'deployment-single-identity')).toBeUndefined();
+    expect(find(r, 'deployment-identity-partial')!.inconclusive).toBe(true);
+  });
+
+  it('does not report "no activity" when the trail was truncated and nothing matched', async () => {
+    const filler = Array.from({ length: 10000 }, () => ({ ...entry('005A'), Section: 'Manage Users' }));
+    const r = await check.run(makeCtx({ trail: filler }));
+    expect(find(r, 'deployment-no-activity')).toBeUndefined();
+    expect(find(r, 'deployment-identity-partial')!.inconclusive).toBe(true);
+  });
+
   it('is inconclusive when the audit trail cannot be read', async () => {
     const r = await check.run(makeCtx({ trail: new Error('INSUFFICIENT_ACCESS') }));
     const f = find(r, 'deployment-audit-trail-inaccessible')!;
@@ -126,14 +141,18 @@ describe('DeploymentIdentityCheck', () => {
     expect(find(r, 'deployment-admin-accounts')!.riskLevel).toBe('MEDIUM');
   });
 
-  it('scopes the audit query to deployment sections and the last 90 days', async () => {
+  it('scopes the audit query to the last 90 days and never filters on Section, which SOQL cannot filter', async () => {
     const ctx = makeCtx({});
     await check.run(ctx);
     const q = (ctx.soql.queryAll as any).mock.calls[0][0] as string;
     expect(q).toMatch(/LAST_N_DAYS:90/);
-    for (const section of ['Change Sets', 'Developer Tools', 'Packages', 'Metadata']) {
-      expect(q).toContain(section);
-    }
+    expect(q).not.toMatch(/WHERE[^]*Section/);
+  });
+
+  it('counts only deploy-section entries, matched in code', async () => {
+    const unrelated = { ...entry('005Z'), Section: 'Manage Users' };
+    const r = await check.run(makeCtx({ trail: [unrelated] }));
+    expect(find(r, 'deployment-no-activity')).toBeDefined();
   });
 
   it('falls back to Unknown when the deployer profile is absent', async () => {

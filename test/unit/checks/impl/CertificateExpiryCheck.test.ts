@@ -63,8 +63,9 @@ describe('CertificateExpiryCheck', () => {
 
   // The three thresholds, tested either side of each boundary.
   it.each([
-    [10, 'certificate-expiring-critical', 'CRITICAL'],
-    [30, 'certificate-expiring-critical', 'CRITICAL'],
+    // RULE-068: an expiring certificate is an outage risk, rated HIGH.
+    [10, 'certificate-expiring-critical', 'HIGH'],
+    [30, 'certificate-expiring-critical', 'HIGH'],
     [45, 'certificate-expiring-soon', 'HIGH'],
     [90, 'certificate-expiring-soon', 'HIGH'],
     [120, 'certificate-expiring-medium', 'MEDIUM'],
@@ -78,11 +79,11 @@ describe('CertificateExpiryCheck', () => {
     expect(r.findings).toHaveLength(1);
   });
 
-  it('treats an already-expired certificate as CRITICAL', async () => {
+  it('treats an already-expired certificate as HIGH (RULE-068)', async () => {
     const r = await check.run(makeCtx([cert('Lapsed', -30)]));
     const f = r.findings.find((x) => x.id === 'certificate-expiring-critical');
     expect(f).toBeDefined();
-    expect(f!.riskLevel).toBe('CRITICAL');
+    expect(f!.riskLevel).toBe('HIGH');
     // The note carries the negative day count, so an expired cert reads as expired.
     expect(f!.affectedItems?.[0].note).toMatch(/-?\d+ day\(s\)/);
   });

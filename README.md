@@ -38,18 +38,14 @@ third-party plugin can satisfy it. Answer `y`.
 
 ### Unattended installs (CI/CD)
 
-To install in CI/CD without the interactive prompt, add the plugin to the CLI allowlist first (the merge step needs `jq`):
+To install in CI/CD without the interactive prompt, allowlist the plugin first (sf CLI 2.135.0 or later):
 
 ```bash
-mkdir -p ~/.config/sf
-if [ -f ~/.config/sf/unsignedPluginAllowList.json ]; then
-  jq '. + ["@cclabsnz/sf-audit"] | unique' ~/.config/sf/unsignedPluginAllowList.json > ~/.config/sf/unsignedPluginAllowList.json.tmp && mv ~/.config/sf/unsignedPluginAllowList.json.tmp ~/.config/sf/unsignedPluginAllowList.json
-else
-  echo '["@cclabsnz/sf-audit"]' > ~/.config/sf/unsignedPluginAllowList.json
-fi
-
+sf plugins trust allowlist add --name @cclabsnz/sf-audit
 sf plugins install @cclabsnz/sf-audit
 ```
+
+Older CLIs have no `allowlist` command; [docs/INSTALL.md](docs/INSTALL.md) shows the file to write instead.
 
 ### Verifying provenance
 
@@ -234,7 +230,9 @@ confirm each: **[docs/TRUST.md](docs/TRUST.md)**. Least-privilege access is in
 
 Each finding carries a risk weight (CRITICAL 10, HIGH 7, MEDIUM 4, LOW 1, INFO 0). The health score is
 `100 - (total weight / max possible weight) * 100`, capped at 0, and maps to an A–F grade — A needs
-≥ 85 with no HIGH findings; any CRITICAL is an F.
+≥ 85 with no HIGH findings; any open CRITICAL finding or named CRITICAL attack chain is an F. Every report says
+which condition set the grade. Inconclusive checks count towards neither the penalty nor the maximum,
+so they never improve the score. See [docs/SCORING.md](docs/SCORING.md).
 
 Every report also states its **evidence coverage**: how many checks gathered evidence, out of how
 many ran. A check the audit user could not run (missing permission, or an error) is listed by id
@@ -307,7 +305,7 @@ sensitive data.
 
 ## Requirements
 
-- Node.js 18+
+- Node.js 22+
 - Salesforce CLI (`sf`) v2+
 - A least-privilege, **read-only** org user. The audit performs no writes and does **not** require `View All Data` — without it one probe (integration write evidence) reports *inconclusive* rather than drawing a conclusion. See **[PERMISSIONS.md](PERMISSIONS.md)** for the exact minimum permission set, what each is for, what the tool does *not* need, and a ready-to-deploy `SF Audit (Read-Only)` permission set ([`docs/permissionset/`](docs/permissionset/SF_Audit_ReadOnly.permissionset-meta.xml)).
 

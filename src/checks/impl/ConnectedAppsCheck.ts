@@ -6,9 +6,15 @@ interface ConnectedAppRecord {
   Id: string;
   Name: string;
   OptionsAllowAdminApprovedUsersOnly: boolean;
-  // SessionTimeout is in minutes; 0 = use org-level session timeout (may be very long)
-  // SBS-DEP-006 requires access token timeout ≤ 15 minutes
-  SessionTimeout: number | null;
+  // A picklist of minutes ('15', '30', … '720'); null = no app timeout, so the org-level session
+  // timeout applies (may be very long). SBS-DEP-006 requires access token timeout ≤ 15 minutes.
+  SessionTimeout: string | number | null;
+}
+
+/** Minutes, or null when the app sets no timeout of its own. */
+function timeoutMinutes(app: ConnectedAppRecord): number | null {
+  const n = app.SessionTimeout === null || app.SessionTimeout === '' ? NaN : Number(app.SessionTimeout);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 interface ExternalClientAppRecord {
@@ -40,7 +46,8 @@ export class ConnectedAppsCheck implements SecurityCheck {
     const baseUrl = ctx.orgInfo.instanceUrl;
 
     // Single query fetches both access-control and session-timeout fields — no N+1 calls needed.
-    const connectedApps = await ctx.soql.queryAll<ConnectedAppRecord>(
+    // SessionTimeout is served only by the Tooling API; the standard API rejects the column.
+    const connectedApps = await ctx.tooling.query<ConnectedAppRecord>(
       `SELECT Id, Name, OptionsAllowAdminApprovedUsersOnly, SessionTimeout
        FROM ConnectedApplication`
     );
@@ -111,9 +118,10 @@ export class ConnectedAppsCheck implements SecurityCheck {
     // SBS-DEP-006: access token (session) timeout must be ≤ 15 minutes for CLI/integration apps.
     // SessionTimeout = 0 means the app inherits the org-level session timeout (often 2–8 hours),
     // which exceeds the 15-minute SBS requirement. Flag null/0 and values > 15 minutes.
-    const longSessionApps = connectedApps.filter(
-      (app) => app.SessionTimeout === null || app.SessionTimeout === 0 || app.SessionTimeout > 15
-    );
+    const longSessionApps = connectedApps.filter((app) => {
+      const minutes = timeoutMinutes(app);
+      return minutes === null || minutes > 15;
+    });
 
     if (longSessionApps.length > 0) {
       findings.push({
@@ -129,9 +137,9 @@ export class ConnectedAppsCheck implements SecurityCheck {
           label: app.Name,
           url: `${baseUrl}/${app.Id}`,
           note:
-            app.SessionTimeout === null || app.SessionTimeout === 0
+            timeoutMinutes(app) === null
               ? 'No explicit timeout: inherits org default (likely > 15 min)'
-              : `Session timeout: ${app.SessionTimeout} min, reduce to ≤ 15`,
+              : `Session timeout: ${timeoutMinutes(app)} min, reduce to ≤ 15`,
         })),
       });
     } else if (count > 0) {

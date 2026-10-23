@@ -3,7 +3,6 @@ import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
 interface OrgRecord {
-  MyDomain: string | null;
   IsSandbox: boolean;
 }
 
@@ -11,7 +10,22 @@ interface AuthConfigRecord {
   DeveloperName: string;
   AuthOptionsSaml: boolean;
   AuthOptionsUsernamePassword: boolean;
-  IsDisabled: boolean;
+  IsActive: boolean;
+}
+
+// Organization has no MyDomain field. Every org's My Domain is the subdomain of its instance URL
+// (<name>.my.salesforce.com, or a sandbox/develop/scratch variant); a legacy instance host such as
+// na1.salesforce.com means no My Domain.
+const MY_DOMAIN_HOST = /^(.+?)\.(?:(?:sandbox|develop|scratch|trailblaze)\.)?my\.(?:salesforce\.com|salesforce\.mil|sfcrmproducts\.cn)$/i;
+
+function myDomainOf(instanceUrl: string): string | null {
+  let host = instanceUrl;
+  try {
+    host = new URL(instanceUrl).hostname;
+  } catch {
+    // keep the raw string
+  }
+  return MY_DOMAIN_HOST.exec(host)?.[1] ?? null;
 }
 
 export class MyDomainLoginPolicyCheck implements SecurityCheck {
@@ -26,13 +40,10 @@ export class MyDomainLoginPolicyCheck implements SecurityCheck {
     const ssoSetupUrl = `${baseUrl}/lightning/setup/SingleSignOn/home`;
     const domainSetupUrl = `${baseUrl}/lightning/setup/MyDomain/home`;
 
-    // Q1 (SOQL): check if My Domain is configured
-    const orgResult = await ctx.soql.query<OrgRecord>(
-      `SELECT MyDomain, IsSandbox FROM Organization LIMIT 1`
-    );
-    const org = orgResult.records[0];
-    const myDomain = org?.MyDomain ?? null;
-    const isSandbox = org?.IsSandbox ?? false;
+    // Q1: is My Domain configured (from the instance URL), and is this a sandbox
+    const orgResult = await ctx.soql.query<OrgRecord>(`SELECT IsSandbox FROM Organization LIMIT 1`);
+    const myDomain = myDomainOf(baseUrl);
+    const isSandbox = orgResult.records[0]?.IsSandbox ?? ctx.orgInfo.isSandbox;
 
     if (!myDomain) {
       findings.push({
@@ -58,14 +69,14 @@ export class MyDomainLoginPolicyCheck implements SecurityCheck {
       remediation: 'Verify the login policy in Setup → My Domain prevents login from login.salesforce.com.',
     });
 
-    // Q2 (Tooling): check AuthConfig for login options.
+    // Q2: check AuthConfig (a standard-API object) for login options.
     // If AuthOptionsUsernamePassword is false in the AuthConfig for the org domain,
     // users cannot log in with Salesforce credentials — they must go through SSO.
     try {
-      const authConfigs = await ctx.tooling.query<AuthConfigRecord>(
-        `SELECT DeveloperName, AuthOptionsSaml, AuthOptionsUsernamePassword, IsDisabled
+      const authConfigs = await ctx.soql.queryAll<AuthConfigRecord>(
+        `SELECT DeveloperName, AuthOptionsSaml, AuthOptionsUsernamePassword, IsActive
          FROM AuthConfig
-         WHERE IsDisabled = false`
+         WHERE IsActive = true`
       );
 
       if (authConfigs.length === 0) {
@@ -123,7 +134,7 @@ export class MyDomainLoginPolicyCheck implements SecurityCheck {
           });
         }
       }
-    } catch {
+    } catch (err) {
       findings.push({
         id: 'my-domain-auth-config-inaccessible',
         category: this.category,
@@ -131,7 +142,7 @@ export class MyDomainLoginPolicyCheck implements SecurityCheck {
         inconclusive: true,
         title: 'My Domain login policy could not be verified: AuthConfig not accessible',
         detail:
-          'The Tooling API AuthConfig query was not accessible. The My Domain login policy (credential login vs SSO-only) cannot be automatically verified.',
+          `The AuthConfig query failed, so the My Domain login policy (credential login vs SSO-only) cannot be automatically verified: ${err instanceof Error ? err.message : String(err)}`,
         remediation:
           'Manually verify in Setup → My Domain → Authentication Configuration that "Login Page" is disabled and "Prevent Login from login.salesforce.com" is enabled.',
       });

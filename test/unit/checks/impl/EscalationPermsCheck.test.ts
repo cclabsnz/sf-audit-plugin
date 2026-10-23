@@ -2,6 +2,7 @@
 import { jest } from '@jest/globals';
 import { EscalationPermsCheck } from '../../../../src/checks/impl/EscalationPermsCheck.js';
 import type { AuditContext } from '@cclabsnz/sf-core';
+import { SCHEMA, validate } from '../../ist/support/schemaCtx.js';
 
 function makeCtx(records: unknown[], throws = false): AuditContext {
   return {
@@ -9,10 +10,16 @@ function makeCtx(records: unknown[], throws = false): AuditContext {
       query: jest.fn(),
       queryAll: throws
         ? (jest.fn() as any).mockRejectedValue(Object.assign(new Error('insufficient access'), { errorCode: 'INSUFFICIENT_ACCESS_RIGHTS' }))
-        : (jest.fn() as any).mockResolvedValue(records),
+        : (jest.fn() as any).mockImplementation(async (q: string) => {
+            validate('soql', q); // the query must be one the org accepts (RULE-063)
+            return records;
+          }),
     } as any,
     tooling: {} as any,
-    rest: {} as any,
+    rest: {
+      // PermissionSet describe as captured from a Developer Edition org.
+      get: (jest.fn() as any).mockResolvedValue({ fields: Object.keys(SCHEMA.soql.PermissionSet).map((name) => ({ name })) }),
+    } as any,
     orgInfo: { id: 'o', name: 'n', type: 'DE', isSandbox: false, instance: 'NA1', instanceUrl: 'https://x' },
     cache: {},
   } as any;
@@ -40,6 +47,14 @@ describe('EscalationPermsCheck', () => {
     const ctx = makeCtx([]);
     const result = await check.run(ctx);
     expect(result.findings.some((f) => f.id === 'escalation-perms-ok' && f.passed)).toBe(true);
+  });
+
+  it('leaves permissions the org lacks out of the query (RULE-063)', async () => {
+    const ctx = makeCtx([]);
+    await check.run(ctx);
+    const q: string = (ctx.soql.queryAll as any).mock.calls[0][0];
+    expect(q).not.toContain('PermissionsManageConnectedApps');
+    expect(q).toContain('PermissionsManageSessionPermissionSets');
   });
 
   it('returns an inconclusive finding when the query is blocked', async () => {

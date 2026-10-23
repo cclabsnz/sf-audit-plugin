@@ -35,9 +35,11 @@ export class MfaMethodStrengthCheck implements SecurityCheck {
     const baseUrl = ctx.orgInfo.instanceUrl;
     const setupUrl = `${baseUrl}/lightning/setup/SetupOneIdEntityManagement/home`;
 
-    const registrations: MfaRegistration[] = ctx.cache.mfaRegistrations ?? [];
+    const cached: MfaRegistration[] | undefined = ctx.cache.mfaRegistrations;
 
-    if (registrations.length === 0) {
+    // Unset means registration data was never gathered; an empty list means nobody has registered,
+    // which mfa-registration reports. Only the first is unknown.
+    if (cached === undefined) {
       findings.push({
         id: 'mfa-no-data',
         category: this.category,
@@ -45,9 +47,23 @@ export class MfaMethodStrengthCheck implements SecurityCheck {
         inconclusive: true,
         title: 'No MFA registration data available: MfaRegistrationCheck must run first',
         detail:
-          'The mfaRegistrations cache is empty. Either MfaRegistrationCheck did not run, or TwoFactorInfo was not accessible. MFA method strength analysis cannot be performed without this data.',
+          'MFA registration data was not gathered: either MfaRegistrationCheck did not run, or TwoFactorInfo could not be read. MFA method strength analysis cannot be performed without this data.',
         remediation:
           'Ensure MfaRegistrationCheck runs before this check. Grant "Manage Multi-Factor Authentication in API" permission to the audit user.',
+      });
+      return { findings };
+    }
+
+    const registrations = cached;
+    if (registrations.length === 0) {
+      findings.push({
+        id: 'mfa-method-strength-none-registered',
+        category: this.category,
+        riskLevel: 'INFO',
+        passed: true,
+        title: 'No registered MFA methods to grade',
+        detail: 'No active internal user has a registered MFA method, so there is no method strength to assess. Missing registration itself is reported by the MFA registration check.',
+        remediation: 'None for method strength. Address MFA registration coverage first.',
       });
       return { findings };
     }

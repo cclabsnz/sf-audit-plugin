@@ -3,10 +3,17 @@ import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
 interface NetworkAccessRecord {
-  Id: string;
   StartAddress: string;
   EndAddress: string;
   Description: string | null;
+}
+
+// Trusted IP ranges live in the Metadata API (SecuritySettings.networkAccess.ipRanges). The
+// standard API does not serve NetworkAccess, and the Tooling object carries only Id and DurableId.
+interface SecuritySettingsMetadata {
+  networkAccess?: {
+    ipRanges?: Array<{ start?: string; end?: string; description?: string }> | { start?: string; end?: string; description?: string };
+  } | null;
 }
 
 function ipToInt(ip: string): number {
@@ -28,30 +35,36 @@ export class TrustedIPRangesCheck implements SecurityCheck {
     const baseUrl = ctx.orgInfo.instanceUrl;
     const setupUrl = `${baseUrl}/lightning/setup/SecurityNetworkAccess/home`;
 
-    let ranges: NetworkAccessRecord[] = [];
-    try {
-      const result = await ctx.soql.query<NetworkAccessRecord>(
-        `SELECT Id, StartAddress, EndAddress, Description
-         FROM NetworkAccess
-         ORDER BY StartAddress
-         LIMIT 200`
-      );
-      ranges = result.records;
-    } catch {
+    let settings: SecuritySettingsMetadata | null = null;
+    let error = 'this run has no Metadata API client';
+    if (ctx.metadata) {
+      try {
+        settings = await ctx.metadata.read<SecuritySettingsMetadata>('SecuritySettings', 'Security');
+        if (!settings) error = 'the Security settings were not returned';
+      } catch (err) {
+        error = err instanceof Error ? err.message : String(err);
+      }
+    }
+    if (!settings) {
       findings.push({
         id: 'trusted-ip-inaccessible',
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
         title: 'Trusted IP ranges could not be retrieved',
-        detail:
-          'The NetworkAccess object was not accessible. This may indicate insufficient permissions to query network access settings.',
+        detail: `Trusted IP ranges are read from the Security settings in the Metadata API, and could not be: ${error}.`,
         remediation:
           'Review trusted IP ranges manually in Setup → Security → Network Access. Ensure the audit user has "View Setup and Configuration" permission.',
         affectedItems: [{ label: 'Network Access Setup', url: setupUrl }],
       });
       return { findings };
     }
+
+    // The Metadata API returns a single range as an object, several as an array.
+    const raw = settings.networkAccess?.ipRanges;
+    const ranges: NetworkAccessRecord[] = (raw === undefined ? [] : Array.isArray(raw) ? raw : [raw])
+      .filter((r) => r.start && r.end)
+      .map((r) => ({ StartAddress: r.start!, EndAddress: r.end!, Description: r.description ?? null }));
 
     if (ranges.length === 0) {
       findings.push({

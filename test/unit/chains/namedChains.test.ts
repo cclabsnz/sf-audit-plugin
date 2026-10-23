@@ -35,8 +35,9 @@ describe('NAMED_CHAINS', () => {
   });
 
   it('standard-to-takeover fires for a foothold + delegated admin + login-as-any-user', () => {
-    // guest-user-baseline supplies the unauth-foothold source; the login findings supply priv-esc.
-    const findings = [f('guest-user-baseline'), f('login-access-policy-delegated-admins'), f('login-access-policy-login-as-enabled')];
+    // Self-registration is the low-trust way in (RULE-072); the login findings supply the escalation.
+    // A guest user merely existing (guest-user-baseline) is not an entry.
+    const findings = [f('experience-cloud-site-self-registration'), f('login-access-policy-delegated-admins'), f('login-access-policy-login-as-enabled')];
     const chain = NAMED_CHAINS.find((c) => c.id === 'standard-to-takeover')!;
     const steps = chain.match(present(findings), findings);
     expect(steps).not.toBeNull();
@@ -44,7 +45,7 @@ describe('NAMED_CHAINS', () => {
   });
 
   it('standard-to-takeover fires for an integration account with escalation permissions', () => {
-    const findings = [f('guest-user-baseline'), f('integration-least-privilege-escalation-permissions'), f('escalation-perms-found')];
+    const findings = [f('experience-cloud-site-self-registration'), f('integration-least-privilege-escalation-permissions'), f('escalation-perms-found')];
     const chain = NAMED_CHAINS.find((c) => c.id === 'standard-to-takeover')!;
     const steps = chain.match(present(findings), findings);
     expect(steps).not.toBeNull();

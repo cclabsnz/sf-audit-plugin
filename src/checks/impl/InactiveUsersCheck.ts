@@ -31,7 +31,7 @@ export class InactiveUsersCheck implements SecurityCheck {
     // Q1: true count — query with LIMIT returns totalSize = min(actual, LIMIT),
     // so a separate COUNT query is required for an accurate number.
     const countResult = await ctx.soql.query<{ expr0: number }>(
-      `SELECT COUNT(Id) expr0 FROM User WHERE ${BASE_FILTER}`
+      `SELECT COUNT(Id) FROM User WHERE ${BASE_FILTER}`
     );
     const totalCount = countResult.records[0]?.expr0 ?? 0;
 

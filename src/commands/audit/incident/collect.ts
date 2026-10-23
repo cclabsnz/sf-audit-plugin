@@ -28,7 +28,9 @@ export default class AuditIncidentCollectCommand extends SfCommand<IncidentColle
 
   public async run(): Promise<IncidentCollectResult> {
     const { flags } = await this.parse(AuditIncidentCollectCommand);
-    const conn = flags['target-org'].getConnection('62.0') as any;
+    // No pinned version: the org's own API version, so fields and objects added since an
+    // older release are visible. A pin at 62.0 hid every newer permission field.
+    const conn = flags['target-org'].getConnection() as any;
     const orgInfo = await resolveOrgInfo(conn);
     const ctx = buildAuditContext(conn, orgInfo);
     const dir = flags.output ?? path.join(defaultIncidentRoot(), orgInfo.id, new Date().toISOString().replace(/[:.]/g, '-'));

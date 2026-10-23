@@ -11,7 +11,7 @@ type Step = Rows | Error;
  * PermissionSetAssignment, then User. Each test supplies the steps it expects to be
  * reached, and `calls` lets a test assert the later ones were never issued.
  */
-function makeCtx(steps: Step[]): AuditContext & { calls: string[] } {
+function makeCtx(steps: Step[], fieldPresent = true): AuditContext & { calls: string[] } {
   const calls: string[] = [];
   let i = 0;
   const ctx = {
@@ -24,7 +24,11 @@ function makeCtx(steps: Step[]): AuditContext & { calls: string[] } {
       }),
     } as any,
     tooling: {} as any,
-    rest: {} as any,
+    rest: {
+      get: (jest.fn() as any).mockImplementation(async () => ({
+        fields: [{ name: 'Id' }, ...(fieldPresent ? [{ name: 'PermissionsUseAnyApiAuth' }] : [])],
+      })),
+    } as any,
     orgInfo: {
       id: 'o', name: 'n', type: 'DE', isSandbox: false,
       instance: 'NA1', instanceUrl: 'https://x.my.salesforce.com',
@@ -125,15 +129,20 @@ describe('SoapLoginApiAuthCheck', () => {
 
   // spec case 7
   it('is inconclusive with a distinct id when the permission field is absent', async () => {
-    const ctx = makeCtx([
-      { records: [soapRow('005a')] },
-      new Error('No such column PermissionsUseAnyApiAuth'),
-    ]);
+    const ctx = makeCtx([{ records: [soapRow('005a')] }], false);
     const r = await check.run(ctx);
     expect(r.findings).toHaveLength(1);
     expect(r.findings[0].id).toBe('soap-login-api-auth-inconclusive-field');
     expect(r.findings[0].inconclusive).toBe(true);
-    expect(ctx.calls).toHaveLength(2);
+    expect(ctx.calls).toHaveLength(1); // never filters on a field the org lacks
+  });
+
+  it('quotes the org error when the holders query fails', async () => {
+    const ctx = makeCtx([{ records: [soapRow('005a')] }, new Error('INSUFFICIENT_ACCESS: no PSA')]);
+    const r = await check.run(ctx);
+    expect(r.findings).toHaveLength(1);
+    expect(r.findings[0].inconclusive).toBe(true);
+    expect(r.findings[0].detail).toContain('INSUFFICIENT_ACCESS: no PSA');
   });
 
   // spec case 8 — the regression the spec calls out as most likely

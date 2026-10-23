@@ -8,6 +8,22 @@ interface FailedLoginAgg {
   expr0: number;
 }
 
+interface StatusAgg {
+  Status: string;
+  expr0: number;
+}
+
+interface UserStatusAgg extends StatusAgg {
+  UserId: string;
+}
+
+// LoginHistory has no IsSuccess field, and Status cannot be filtered (not in WHERE, not in
+// HAVING). It can be grouped, so failures are counted by grouping on Status and dropping the
+// 'Success' group in code.
+const SUCCESS = 'Success';
+// An aggregate query returns at most 2,000 groups and cannot be paged.
+const MAX_GROUPS = 2000;
+
 // Thresholds for brute-force / credential stuffing detection (7-day window)
 const BRUTE_FORCE_PER_USER = 20;    // >20 failures for one user = targeted attack
 const BULK_THRESHOLD_PER_USER = 50; // >50 = highly likely automated attack
@@ -28,11 +44,11 @@ export class FailedLoginCheck implements SecurityCheck {
     // Query 1: total failed logins in last 7 days
     let totalFailures = 0;
     try {
-      const countResult = await ctx.soql.query<Record<string, never>>(
-        `SELECT COUNT() FROM LoginHistory WHERE IsSuccess = false AND LoginTime > LAST_N_DAYS:7`,
+      const byStatus = await ctx.soql.query<StatusAgg>(
+        `SELECT Status, COUNT(Id) FROM LoginHistory WHERE LoginTime > LAST_N_DAYS:7 GROUP BY Status`,
       );
-      totalFailures = countResult.totalSize;
-    } catch {
+      totalFailures = byStatus.records.filter((r) => r.Status !== SUCCESS).reduce((n, r) => n + r.expr0, 0);
+    } catch (err) {
       findings.push({
         id: 'failed-login-inaccessible',
         category: this.category,
@@ -40,7 +56,8 @@ export class FailedLoginCheck implements SecurityCheck {
         inconclusive: true,
         title: 'LoginHistory could not be queried: failed login analysis skipped',
         detail:
-          'The LoginHistory SOQL query was not accessible. This may indicate the audit user lacks "View All Users" or event monitoring access.',
+          `The LoginHistory query failed: ${err instanceof Error ? err.message : String(err)}. ` +
+          'If the org denied access, the audit user may lack "View All Users".',
         remediation:
           'Grant "View All Users" to the audit user. For event-level access, enable Event Monitoring.',
       });
@@ -65,15 +82,35 @@ export class FailedLoginCheck implements SecurityCheck {
     let perUserCounts: FailedLoginAgg[] = [];
     let perUserUnavailable = false;
     try {
-      const aggResult = await ctx.soql.query<FailedLoginAgg>(
-        `SELECT Username, COUNT(Id)
+      const aggResult = await ctx.soql.query<UserStatusAgg>(
+        `SELECT UserId, Status, COUNT(Id)
          FROM LoginHistory
-         WHERE IsSuccess = false AND LoginTime > LAST_N_DAYS:7
-         GROUP BY Username
+         WHERE LoginTime > LAST_N_DAYS:7
+         GROUP BY UserId, Status
          ORDER BY COUNT(Id) DESC
-         LIMIT 50`,
+         LIMIT ${MAX_GROUPS}`,
       );
-      perUserCounts = aggResult.records;
+      const failuresByUser = new Map<string, number>();
+      for (const r of aggResult.records) {
+        if (r.Status === SUCCESS) continue;
+        failuresByUser.set(r.UserId, (failuresByUser.get(r.UserId) ?? 0) + r.expr0);
+      }
+      const ranked = [...failuresByUser.entries()].sort((a, b) => b[1] - a[1]).slice(0, 50);
+      // LoginHistory has no Username field and no User relationship: resolve names separately.
+      const names = new Map<string, string>();
+      if (ranked.length > 0) {
+        const inClause = ranked.map(([id]) => `'${id}'`).join(',');
+        const users = await ctx.soql.queryAll<{ Id: string; Username: string }>(
+          `SELECT Id, Username FROM User WHERE Id IN (${inClause})`,
+        );
+        for (const u of users) names.set(u.Id, u.Username);
+      }
+      perUserCounts = ranked.map(([id, n]) => ({ Username: names.get(id) ?? id, expr0: n }));
+      // Groups are ranked by size across every status, so a full page may have cut off smaller
+      // failure groups. Targets found stand; "no target" is then not a conclusion.
+      if (aggResult.records.length >= MAX_GROUPS && !perUserCounts.some((r) => r.expr0 >= BRUTE_FORCE_PER_USER)) {
+        perUserUnavailable = true;
+      }
     } catch {
       // Recorded: without the per-user breakdown, "no brute-force pattern" is not a
       // conclusion this check can reach, only a question it could not answer.

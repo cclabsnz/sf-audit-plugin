@@ -3,7 +3,7 @@ import type { OrgMetrics } from '@cclabsnz/sf-core';
 import type { AuditRenderer } from './AuditRenderer.js';
 import { esc, firaFontFaceCss, INTERACTIVE_CSP_META } from '@cclabsnz/sf-core';
 import { renderAttackChainDagSvg } from './AttackChainDagRenderer.js';
-import { coverageSummary } from '../findings/coverage.js';
+import { coverageSummary, coverageAdvice } from '../findings/coverage.js';
 import { unknownMetrics } from '../findings/unknownMetrics.js';
 
 const RISK_COLORS: Record<string, string> = {
@@ -94,8 +94,16 @@ function buildDonutSvg(counts: Record<string, number>): string {
     <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#21262d" stroke-width="14" />
     ${arcs.join('')}
     <text x="${cx}" y="${cy - 5}" text-anchor="middle" fill="#f0f6fc" font-size="20" font-weight="700" font-family="system-ui,sans-serif">${total}</text>
-    <text x="${cx}" y="${cy + 14}" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui,sans-serif">findings</text>
+    <text x="${cx}" y="${cy + 14}" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui,sans-serif">open findings</text>
   </svg>`;
+}
+
+/** Open findings per severity: what the score and the executive report count (RULE-079). */
+function openCounts(result: AuditResult): Record<string, number> {
+  const open = result.findings.filter((f) => !f.passed && !f.inconclusive && !f.notAssessed && !f.waived);
+  return Object.fromEntries(
+    (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((l) => [l, open.filter((f) => f.riskLevel === l).length]),
+  );
 }
 
 function buildDashboard(result: AuditResult, counts: Record<string, number>): string {
@@ -164,9 +172,12 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
     ? `<div class="waived-banner" style="background:#0f291e;border:1px solid #16a34a;border-radius:8px;padding:12px 16px;margin-bottom:20px;color:#dcfce7;font-size:13px;"><strong>Accepted risks:</strong> ${result.waivedFindings.length} finding(s) waived under an approved waiver and excluded from the score.</div>`
     : '';
 
+  const gradeReasonLine = result.gradeReason
+    ? `<div class="grade-reason" style="margin-top:10px;font-size:12px;color:#94a3b8">Why ${esc(result.grade)}: ${esc(result.gradeReason.replace(/^[A-F]: /, ''))}</div>`
+    : '';
   const cov = result.coverage;
   const coverageLine = cov
-    ? `<div class="coverage${cov.gradeCapped ? ' is-capped' : ''}" style="margin-top:10px;font-size:12px;color:${cov.gradeCapped ? '#fbbf24' : '#94a3b8'}">${esc(coverageSummary(cov))}${cov.notAssessed.length ? `<br>Not assessed: ${cov.notAssessed.map((id) => `<code>${esc(id)}</code>`).join(', ')}` : ''}</div>`
+    ? `<div class="coverage${cov.gradeCapped ? ' is-capped' : ''}" style="margin-top:10px;font-size:12px;color:${cov.gradeCapped ? '#fbbf24' : '#94a3b8'}">${esc(coverageSummary(cov))}${cov.notAssessed.length ? `<br>Not assessed: ${cov.notAssessed.map((id) => `<code>${esc(id)}</code>`).join(', ')}<br>${esc(coverageAdvice(cov))}` : ''}</div>`
     : '';
 
   return `
@@ -177,6 +188,7 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
         <div class="gauge-wrap">
           ${gauge}
         </div>
+        ${gradeReasonLine}
         ${coverageLine}
       </div>
       <div class="dash-risk-panel">
@@ -341,6 +353,8 @@ ${firaFontFaceCss()}
     align-items: center;
     justify-content: center;
   }
+  /* The grade reason and coverage note sit under the gauge, not squeezed beside it. */
+  .dash-score-panel { flex-direction: column; text-align: center; }
 
   /* Score ring */
   .gauge-wrap { display: flex; align-items: center; justify-content: center; }
@@ -597,7 +611,7 @@ ${firaFontFaceCss()}
     </div>
   </div>
 
-  ${buildDashboard(result, counts)}
+  ${buildDashboard(result, openCounts(result))}
 
   ${attackPathsHtml}
 

@@ -1,6 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { hasField } from '../support/schema.js';
 
 interface UserRecord {
   Id: string;
@@ -50,15 +51,34 @@ export class InternalUserMfaCheck implements SecurityCheck {
 
     let mfaUserIds = new Set<string>();
     try {
+      // The permission is absent from some orgs and API versions. Without it, per-user MFA
+      // enforcement cannot be read from permissions at all: MFA may still be enforced org-wide
+      // (Session Settings) or by an SSO provider, so this is unknown, never a gap or a pass.
+      if (!(await hasField(ctx, 'PermissionSet', 'PermissionsForceTwoFactor'))) {
+        findings.push({
+          id: 'internal-user-mfa-not-available',
+          category: this.category,
+          riskLevel: 'INFO',
+          inconclusive: true,
+          notAssessed: true,
+          title: 'MFA enforcement for internal users cannot be read from permissions in this org',
+          detail:
+            `This org does not expose the "Multi-Factor Authentication for User Interface Logins" permission (PermissionSet.PermissionsForceTwoFactor), so whether its ${users.length} active internal user(s) have MFA enforced cannot be established from permission assignments. MFA may still be enforced org-wide in Session Settings or by an SSO identity provider.`,
+          remediation:
+            'Confirm "Require multi-factor authentication (MFA) for all direct UI logins" in Setup → Session Settings, and MFA at the identity provider for SSO users.',
+        });
+        return { findings };
+      }
+
       const psaResult = await ctx.soql.query<PsaRecord>(
         `SELECT AssigneeId
          FROM PermissionSetAssignment
-         WHERE PermissionSet.PermissionsMultiFactorForUiLogins = true
+         WHERE PermissionSet.PermissionsForceTwoFactor = true
            AND Assignee.IsActive = true
            AND Assignee.UserType = 'Standard'`
       );
       mfaUserIds = new Set(psaResult.records.map((r) => r.AssigneeId));
-    } catch {
+    } catch (err) {
       findings.push({
         id: 'internal-user-mfa-inaccessible',
         category: this.category,
@@ -66,9 +86,9 @@ export class InternalUserMfaCheck implements SecurityCheck {
         inconclusive: true,
         title: 'MFA permission set assignments could not be queried',
         detail:
-          'The PermissionSetAssignment query for PermissionsMultiFactorForUiLogins was not accessible. This may indicate insufficient permissions to query permission set assignments.',
+          `Which users hold PermissionsForceTwoFactor could not be read, so MFA enforcement for internal users is unassessed. The org said: ${err instanceof Error ? err.message : String(err)}`,
         remediation:
-          'Grant "View All Users" or "Manage Users" permission to the audit user. Review MFA enforcement manually in Setup → Users → Permission Sets.',
+          'Check the error above. If it is an access error, confirm the audit user can read PermissionSetAssignment (View Setup and Configuration); otherwise review MFA enforcement manually in Setup → Users → Permission Sets.',
       });
       return { findings };
     }
@@ -83,22 +103,23 @@ export class InternalUserMfaCheck implements SecurityCheck {
         passed: true,
         title: `All ${users.length} active internal user(s) have MFA explicitly enforced via permission`,
         detail:
-          'All active, unfrozen standard users have the PermissionsMultiFactorForUiLogins permission assigned. Salesforce auto-enforced MFA at the system level in Spring 2023; this explicit permission provides belt-and-suspenders assurance that MFA is enforced even if system-level enforcement has edge cases.',
+          'All active, unfrozen standard users have the PermissionsForceTwoFactor permission assigned. Salesforce auto-enforced MFA at the system level in Spring 2023; this explicit permission provides belt-and-suspenders assurance that MFA is enforced even if system-level enforcement has edge cases.',
         remediation:
           'Continue to ensure all new users are assigned MFA enforcement via their profile or a permission set.',
       });
       return { findings };
     }
 
-    const riskLevel = usersWithoutMfa.length > 20 ? 'HIGH' : 'MEDIUM';
+    // Salesforce enforces MFA for UI logins at org level; the explicit permission is a second layer. RULE-078.
+    const riskLevel = usersWithoutMfa.length > 20 ? 'MEDIUM' : 'LOW';
 
     findings.push({
       id: 'internal-user-mfa-gaps',
       category: this.category,
       riskLevel,
-      title: `${usersWithoutMfa.length} of ${users.length} active internal user(s) lack explicit MFA enforcement permission`,
+      title: `${usersWithoutMfa.length} of ${users.length} active internal user(s) lack the explicit MFA permission (second layer over org-level MFA)`,
       detail:
-        `${usersWithoutMfa.length} active standard users do not have the PermissionsMultiFactorForUiLogins permission assigned. Salesforce auto-enforced MFA at the system level in Spring 2023, but the explicit permission provides belt-and-suspenders assurance. Users without it rely solely on system-level enforcement, which can have edge cases in API-heavy or SSO-integrated environments. Users without the explicit permission should be reviewed to confirm they are subject to effective MFA controls.`,
+        `${usersWithoutMfa.length} active standard users do not have the PermissionsForceTwoFactor permission assigned. Salesforce auto-enforced MFA at the system level in Spring 2023, but the explicit permission provides belt-and-suspenders assurance. Users without it rely solely on system-level enforcement, which can have edge cases in API-heavy or SSO-integrated environments. Users without the explicit permission should be reviewed to confirm they are subject to effective MFA controls.`,
       remediation:
         'Assign the "Multi-Factor Authentication for User Interface Logins" permission to all internal standard users via their profile or a permission set. This ensures MFA is explicitly enforced regardless of system-level settings. Prioritise users with privileged access or access to sensitive data.',
       affectedItems: usersWithoutMfa.slice(0, 50).map((u) => ({

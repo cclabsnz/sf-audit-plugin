@@ -93,9 +93,10 @@ describe('RULE-040: zero holders is reported as inconclusive', () => {
   it.each([
     ['users-modify-all-data', { ModifyAllData: true }, /^1 user\(s\) have Modify All Data/],
     ['users-view-all-data', { ViewAllData: true }, /^1 user\(s\) have View All Data/],
-  ] as const)('%s with one holder is active with its count title', async (id, perms, title) => {
+  ] as const)('%s with one holder is a counted pass, not inconclusive', async (id, perms, title) => {
+    // RULE-074: a complete read in the lowest band is reported as passed, with its holders listed.
     const finding = byId(await realFindings([row('u1', perms)]), id);
-    expect(finding!.passed).not.toBe(true);
+    expect(finding!.passed).toBe(true);
     expect(finding!.inconclusive).not.toBe(true);
     expect(finding!.riskLevel).toBe('LOW');
     expect(finding!.title).toMatch(title);
@@ -186,6 +187,17 @@ describe('RULE-042: a partial read gives lower bounds, not passes', () => {
     expect(mad.riskLevel).toBe('CRITICAL');
     expect(mad.title).toMatch(/^At least 8 user\(s\) have Modify All Data/);
     expect(byId(findings, 'users-view-all-data')!.title).toMatch(/^At least 8 user\(s\) have View All Data/);
+  });
+
+  it('a capped read in the lowest band is a lower bound, never a pass', async () => {
+    const { findings } = await runCheck({ rows: both(1), psaTotal: 12000 });
+    for (const id of IDS) {
+      const x = byId(findings, id)!;
+      expect(x.riskLevel).toBe('LOW');
+      expect(x.passed).not.toBe(true);
+      expect(x.inconclusive).not.toBe(true);
+      expect(x.title).toMatch(/^At least 1 user\(s\)/);
+    }
   });
 
   it('a capped read with holders still completes a chain', async () => {

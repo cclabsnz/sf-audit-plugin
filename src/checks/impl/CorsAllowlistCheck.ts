@@ -20,7 +20,8 @@ export class CorsAllowlistCheck implements SecurityCheck {
 
     let rows: CorsRecord[];
     try {
-      rows = await ctx.tooling.query<CorsRecord>('SELECT Id, UrlPattern FROM CorsWhitelistEntry');
+      // CorsWhitelistEntry is served by the standard API; the Tooling API does not support it.
+      rows = await ctx.soql.queryAll<CorsRecord>('SELECT Id, UrlPattern FROM CorsWhitelistEntry');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       findings.push({
@@ -29,7 +30,7 @@ export class CorsAllowlistCheck implements SecurityCheck {
         riskLevel: 'INFO',
         inconclusive: true,
         title: 'CORS allowlist could not be read',
-        detail: `The CorsWhitelistEntry Tooling query was not accessible: ${msg}`,
+        detail: `The CorsWhitelistEntry query failed: ${msg}`,
         remediation: 'Grant the audit user "View Setup and Configuration", then re-run the audit.',
       });
       return { findings };

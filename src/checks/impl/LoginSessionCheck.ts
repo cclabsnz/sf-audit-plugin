@@ -44,6 +44,8 @@ export class LoginSessionCheck implements SecurityCheck {
       category: this.category,
       riskLevel: failedRiskLevel,
       title: `${failedCount} failed login attempt(s) in the last 30 days`,
+      // A handful of failures is ordinary typing; only the higher bands ask for action.
+      passed: failedRiskLevel === 'LOW' || undefined,
       detail: `There were ${failedCount} failed login attempts out of ${totalLogins} total logins in the last 30 days.`,
       remediation:
         'Investigate accounts with repeated failures. Consider IP restrictions or additional MFA policies for high-failure accounts.',

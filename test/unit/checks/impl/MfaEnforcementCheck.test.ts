@@ -17,6 +17,8 @@ function makeCtx(opts: {
   portalThrows?: boolean;
   mfaAssigned?: string[];
   mfaThrows?: boolean;
+  /** Whether the org's PermissionSet describe carries PermissionsForceTwoFactor. */
+  mfaFieldPresent?: boolean;
 }): AuditContext {
   const queryAll = jest.fn() as any;
   queryAll.mockImplementation(async (soql: string) => {
@@ -29,8 +31,8 @@ function makeCtx(opts: {
 
   const query = jest.fn() as any;
   query.mockImplementation(async (soql: string) => {
-    if (soql.includes('PermissionsMultiFactorForUiLogins')) {
-      if (opts.mfaThrows) throw new Error('No such column PermissionsMultiFactorForUiLogins');
+    if (soql.includes('PermissionsForceTwoFactor')) {
+      if (opts.mfaThrows) throw new Error('No such column PermissionsForceTwoFactor');
       return { records: (opts.mfaAssigned ?? []).map((id) => ({ AssigneeId: id })) };
     }
     return { records: [] };
@@ -39,7 +41,11 @@ function makeCtx(opts: {
   return {
     soql: { query, queryAll } as any,
     tooling: { query: jest.fn(), getRecord: jest.fn() } as any,
-    rest: { get: jest.fn() } as any,
+    rest: {
+      get: (jest.fn() as any).mockImplementation(async () => ({
+        fields: [{ name: 'Id' }, ...(opts.mfaFieldPresent === false ? [] : [{ name: 'PermissionsForceTwoFactor' }])],
+      })),
+    } as any,
     orgInfo: { id: 'o', name: 'n', type: 'DE', isSandbox: false, instance: 'NA1', instanceUrl: 'https://x' },
     cache: {},
   } as any;
@@ -131,6 +137,17 @@ describe('MfaEnforcementCheck', () => {
       const r = await check.run(makeCtx({ portal: users(3), mfaThrows: true }));
       expect(r.findings.some((x) => x.passed)).toBe(false);
     });
+  });
+
+  it('is not assessed, never failed or passed, when the org has no MFA permission field (MN-051)', async () => {
+    const ctx = makeCtx({ portal: users(3), mfaFieldPresent: false });
+    const r = await check.run(ctx);
+    expect(r.findings).toHaveLength(1);
+    expect(r.findings[0].id).toBe('mfa-enforcement-not-available');
+    expect(r.findings[0].inconclusive).toBe(true);
+    expect(r.findings[0].notAssessed).toBe(true);
+    expect(r.findings[0].passed).toBeFalsy();
+    expect((ctx.soql.query as any).mock.calls).toHaveLength(0);
   });
 
   it('propagates a failure to query external users at all', async () => {

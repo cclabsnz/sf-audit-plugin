@@ -10,45 +10,85 @@ import { getComplianceTags } from '../compliance/resolve.js';
 import { ChainEngine } from '../chains/ChainEngine.js';
 import type { WaiverLoader } from '../waivers/WaiverLoader.js';
 import { applyWaivers } from '../waivers/applyWaivers.js';
+import { permissionLabelsFor } from '../preflight/permissions.js';
 
-const PERMISSION_ERROR_CODES = new Set([
+const ACCESS_ERROR_CODES = new Set([
   'INSUFFICIENT_ACCESS_RIGHTS',
+  'INSUFFICIENT_ACCESS_OR_READONLY',
   'INVALID_CROSS_REFERENCE_KEY',
   'ENTITY_IS_INACCESSIBLE',
-  'INVALID_FIELD',
-  'INVALID_TYPE',
 ]);
 
-function isPermissionError(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
+const REJECTION_ERROR_CODES = new Set(['INVALID_FIELD', 'INVALID_TYPE', 'MALFORMED_QUERY']);
+
+const PERMISSIONS_DOC = 'https://github.com/cclabsnz/sf-audit-plugin/blob/main/PERMISSIONS.md';
+
+type ErrorKind = 'access' | 'rejected' | 'failed';
+
+/**
+ * Why a check threw. A query the org rejects (unknown field or object, an unfilterable field,
+ * bad syntax) is not an access problem, even though a field hidden by field-level security is
+ * also reported as an unknown column: telling an admin to grant access sends them the wrong way.
+ */
+function classifyError(err: unknown): ErrorKind {
+  if (!(err instanceof Error)) return 'failed';
   const code = (err as Error & { errorCode?: string }).errorCode ?? '';
   const msg = err.message ?? '';
+  if (ACCESS_ERROR_CODES.has(code) || /INSUFFICIENT_ACCESS|insufficient access|entity type cannot be queried/i.test(msg)) {
+    return 'access';
+  }
+  if (
+    REJECTION_ERROR_CODES.has(code) ||
+    /INVALID_FIELD|INVALID_TYPE|MALFORMED_QUERY|No such column|is not supported|can not be filtered|alias is reserved/i.test(msg)
+  ) {
+    return 'rejected';
+  }
+  return 'failed';
+}
+
+function accessRemediation(check: SecurityCheck): string {
+  const labels = permissionLabelsFor(check);
+  const named = labels.length > 0 ? `This check needs ${labels.join(' and ')}. ` : '';
   return (
-    PERMISSION_ERROR_CODES.has(code) ||
-    msg.includes('INSUFFICIENT_ACCESS') ||
-    msg.includes('insufficient access') ||
-    msg.includes('INVALID_FIELD') ||
-    msg.includes('entity type cannot be queried')
+    `${named}Run \`sf audit preflight\` to see which permissions the audit user is missing, and ` +
+    `assign the read-only permission set described in PERMISSIONS.md (${PERMISSIONS_DOC}), then re-run the audit.`
   );
 }
 
 function buildErrorFinding(check: SecurityCheck, err: unknown): Finding {
   const msg = err instanceof Error ? err.message : String(err);
-  const inconclusive = isPermissionError(err);
+  const kind = classifyError(err);
+  const base = { id: `${check.id}-error`, checkId: check.id, category: check.category, riskLevel: 'INFO' as const };
+  // A check that threw gathered no evidence, whatever the cause.
+  if (kind === 'access') {
+    return {
+      ...base,
+      title: `${check.name}: insufficient permissions`,
+      detail: `This check could not gather evidence because the org denied the audit user access: ${msg}`,
+      remediation: accessRemediation(check),
+      inconclusive: true,
+      notAssessed: true,
+    };
+  }
+  if (kind === 'rejected') {
+    return {
+      ...base,
+      title: `${check.name}: query rejected by the org`,
+      detail:
+        `The org rejected this check's query, so it gathered no evidence. Salesforce said: ${msg}. ` +
+        'The object or field may not exist in this edition or API version, or field-level security may hide it from the audit user.',
+      remediation:
+        'If the audit user is a System Administrator, this is a defect in the check: please report it at ' +
+        'https://github.com/cclabsnz/sf-audit-plugin/issues with the error above. The area this check covers is unassessed, not clean.',
+      inconclusive: true,
+      notAssessed: true,
+    };
+  }
   return {
-    id: `${check.id}-error`,
-    checkId: check.id,
-    category: check.category,
-    riskLevel: 'INFO',
-    title: `${check.name}: ${inconclusive ? 'insufficient permissions' : 'check failed'}`,
-    detail: inconclusive
-      ? `This check could not gather evidence because the running user lacks the required permissions: ${msg}`
-      : `This check encountered an error and could not complete: ${msg}`,
-    remediation: inconclusive
-      ? 'Grant the audit user the permissions listed in the tool documentation, then re-run the audit.'
-      : 'Review the error message and verify the running user has the required permissions.',
-    inconclusive: inconclusive || undefined,
-    // A check that threw gathered no evidence, whatever the cause.
+    ...base,
+    title: `${check.name}: check failed`,
+    detail: `This check encountered an error and could not complete: ${msg}`,
+    remediation: 'Review the error message and re-run the audit. The area this check covers is unassessed, not clean.',
     notAssessed: true,
   };
 }

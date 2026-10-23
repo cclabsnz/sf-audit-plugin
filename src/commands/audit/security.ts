@@ -21,7 +21,7 @@ import { EXIT_FINDINGS, EXIT_INCONCLUSIVE, resolveExitCode, violationsFor } from
 import { buildDigest, type AuditDigest } from '../../findings/digest.js';
 
 import { WaiverLoader, DEFAULT_WAIVER_FILE } from '../../waivers/WaiverLoader.js';
-import { coverageSummary } from '../../findings/coverage.js';
+import { coverageSummary, coverageAdvice } from '../../findings/coverage.js';
 
 const RENDERERS: Record<string, AuditRenderer> = {
   html: new HtmlRenderer(),
@@ -119,7 +119,11 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
     const checksToRun = this.resolveChecks(flags.checks);
     const formats = this.resolveFormats(flags.format);
 
-    const conn = flags['target-org'].getConnection('62.0') as any;
+    // No pinned version: the org's own API version, so fields and objects added since an
+
+    // older release are visible. A pin at 62.0 hid every newer permission field.
+
+    const conn = flags['target-org'].getConnection() as any;
     const orgInfo = await resolveOrgInfo(conn);
     const ctx = buildAuditContext(conn, orgInfo, {
       resolveDomains: flags['resolve-domains'],
@@ -247,9 +251,13 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
     }
     this.log('─────────────────────────────');
     this.log(`  Score: ${result.healthScore}/100   Grade: ${result.grade}`);
+    if (result.gradeReason) this.log(`  Why: ${result.gradeReason}`);
     if (result.coverage) {
       this.log(`  ${coverageSummary(result.coverage)}`);
-      if (result.coverage.notAssessed.length > 0) this.log(`  Not assessed: ${result.coverage.notAssessed.join(', ')}`);
+      if (result.coverage.notAssessed.length > 0) {
+        this.log(`  Not assessed: ${result.coverage.notAssessed.join(', ')}`);
+        this.log(`  ${coverageAdvice(result.coverage)}`);
+      }
     }
     if (result.waivedFindings && result.waivedFindings.length > 0) {
       this.log('─────────────────────────────');

@@ -160,9 +160,13 @@ export class IntegrationLeastPrivilegeCheck implements SecurityCheck {
         `SELECT AssigneeId, PermissionSetId, PermissionSet.Name, PermissionSet.IsOwnedByProfile, ${permFields}
          FROM PermissionSetAssignment WHERE AssigneeId IN (${idList})`,
       );
-    } catch {
+    } catch (err) {
       findings.push(
-        this.inconclusive('integration-least-privilege-permissions-inaccessible', 'Integration account permissions could not be queried'),
+        this.inconclusive(
+          'integration-least-privilege-permissions-inaccessible',
+          'Integration account permissions could not be queried',
+          err instanceof Error ? err.message : String(err),
+        ),
       );
       return { findings };
     }
@@ -565,15 +569,18 @@ export class IntegrationLeastPrivilegeCheck implements SecurityCheck {
     });
   }
 
-  private inconclusive(id: string, what: string): Finding {
+  private inconclusive(id: string, what: string, orgError?: string): Finding {
     return {
       id,
       category: this.category,
       riskLevel: 'INFO',
       inconclusive: true,
-      title: `${what} (insufficient access)`,
-      detail: 'The audit user could not gather the data needed to evaluate integration account privilege.',
-      remediation: 'Grant the audit user View Setup and Configuration and re-run.',
+      title: what,
+      detail:
+        'The audit user could not gather the data needed to evaluate integration account privilege, so it is unassessed.' +
+        (orgError ? ` The org said: ${orgError}` : ''),
+      remediation:
+        'If the cause is an access error, confirm the audit user has View Setup and Configuration and View All Users, then re-run.',
     };
   }
 }

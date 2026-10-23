@@ -32,16 +32,19 @@ export class ExternalCredentialsCheck implements SecurityCheck {
     const baseUrl = ctx.orgInfo.instanceUrl;
 
     let creds: ExternalCredentialRec[];
+    let error = '';
     try {
-      creds = await ctx.soql.queryAll<ExternalCredentialRec>('SELECT Id, DeveloperName, AuthenticationProtocol FROM ExternalCredential');
-    } catch {
+      // ExternalCredential is served by the Tooling API; the standard API does not support it.
+      creds = await ctx.tooling.query<ExternalCredentialRec>('SELECT Id, DeveloperName, AuthenticationProtocol FROM ExternalCredential');
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err);
       findings.push({
         id: 'external-credentials-inconclusive',
         category: this.category,
         riskLevel: 'INFO',
         inconclusive: true,
         title: 'External Credentials could not be queried (insufficient access or unsupported)',
-        detail: 'The ExternalCredential object was not accessible. This can mean the org has not migrated to External Credentials, or the audit user lacks access.',
+        detail: `The ExternalCredential Tooling query failed: ${error}`,
         remediation: 'Grant the audit user View Setup and Configuration and re-run. Also review Setup → Named Credentials → External Credentials manually.',
       });
       return { findings };

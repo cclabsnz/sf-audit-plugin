@@ -7,7 +7,9 @@ interface RemoteProxyRecord {
   SiteName: string;
   EndpointUrl: string;
   IsActive: boolean;
-  DisableProtocolSecurity: boolean;
+  // The Setup checkbox "Disable Protocol Security" (Metadata API disableProtocolSecurity). The
+  // Tooling object exposes it as ProtocolMismatch; it has no DisableProtocolSecurity column.
+  ProtocolMismatch: boolean;
 }
 
 export class RemoteSitesCheck implements SecurityCheck {
@@ -25,7 +27,7 @@ export class RemoteSitesCheck implements SecurityCheck {
 
     // Query active remote site settings using Tooling API
     const records = await ctx.tooling.query<RemoteProxyRecord>(
-      'SELECT Id, SiteName, EndpointUrl, IsActive, DisableProtocolSecurity FROM RemoteProxy WHERE IsActive = true'
+      'SELECT Id, SiteName, EndpointUrl, IsActive, ProtocolMismatch FROM RemoteProxy WHERE IsActive = true'
     );
 
     const count = records.length;
@@ -34,8 +36,8 @@ export class RemoteSitesCheck implements SecurityCheck {
     ctx.cache.remoteSiteUrls = records.map((r) => r.EndpointUrl);
 
     // Flag sites with protocol security disabled — these allow insecure HTTP callouts
-    const insecureSites = records.filter((r) => r.DisableProtocolSecurity);
-    const secureSites = records.filter((r) => !r.DisableProtocolSecurity);
+    const insecureSites = records.filter((r) => r.ProtocolMismatch);
+    const secureSites = records.filter((r) => !r.ProtocolMismatch);
 
     if (insecureSites.length > 0) {
       findings.push({
@@ -70,7 +72,7 @@ export class RemoteSitesCheck implements SecurityCheck {
         affectedItems: records.map((r) => ({
           label: r.SiteName,
           url: setupUrl,
-          note: `${r.EndpointUrl}${r.DisableProtocolSecurity ? ' ⚠ Protocol security disabled' : ''}`,
+          note: `${r.EndpointUrl}${r.ProtocolMismatch ? ' ⚠ Protocol security disabled' : ''}`,
         })),
       });
     } else {
