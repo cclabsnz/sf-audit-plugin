@@ -9,6 +9,11 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.19.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.19.0) — 2026-10-23
+
+When the audit user cannot see who holds Modify All Data or View All Data, the report now says so
+instead of reporting it as passed.
+
 ### Fixed
 
 - **"0 user(s) have View All / Modify All Data" is no longer reported as passed.** Every org with an active System Administrator has holders of both, so zero means the audit user could not see the assignments. The findings now read "Could not confirm who holds …" and are inconclusive, with advice on what to re-run as.
@@ -29,6 +34,13 @@ These follow from treating an unreadable count as unknown. They affect runs wher
 - `users-and-admins` counts as not assessed in evidence coverage, which can cap the grade at B.
 - In SARIF, `executionSuccessful` is false and the findings are listed under `toolExecutionNotifications`.
 - `audit diff` shows the move from passed to inconclusive as a severity change.
+
+### Dependencies
+
+- **@oclif/core** 4 → 5.1.8, **@salesforce/sf-plugins-core** 13.0.0 → 13.0.7,
+  **@salesforce/core** 9.3.0 → 9.4.0, **zod** 4.4.3 → 4.6.7. No change to commands or flags. (#170)
+- Pinned actions: codeql-action v4.39.0, scorecard-action v2.5.0, upload-artifact v7.0.2.
+  (#168, #169, #171, #174)
 
 ## [v1.18.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.18.1) — 2026-10-22
 
