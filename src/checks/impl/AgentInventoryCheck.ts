@@ -61,7 +61,8 @@ const AGENT_LICENSE_HINTS = ['agentforce', 'einstein agent'];
 function isMissingObjectError(err: unknown): boolean {
   if (isApiError(err)) {
     if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    if (err.statusCode === 404) return true;
+    // sf-core 0.12: a Connection-path 404 with no Salesforce code carries no statusCode.
+    if (err.statusCode === 404 || err.errorCode === 'ERROR_HTTP_404') return true;
   }
   const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
   return (

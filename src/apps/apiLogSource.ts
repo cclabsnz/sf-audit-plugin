@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { RestClient, SoqlClient } from '@cclabsnz/sf-core';
+import { apiErrorText } from '../lib/apiErrorText.js';
 
 export const API_LOG_TYPES = ['RestApi', 'BulkApi2', 'GraphQlQueryExecution', 'AuraRequest'] as const;
 export type ApiLogType = (typeof API_LOG_TYPES)[number];
@@ -36,7 +37,7 @@ export async function downloadApiLogs(deps: { soql: SoqlClient; rest: RestClient
         `AND LogDate = LAST_N_DAYS:${since} ORDER BY LogDate DESC`,
     );
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = apiErrorText(e);
     const permission = /INSUFFICIENT_ACCESS|HTTP 403|INVALID_TYPE|not supported/i.test(msg);
     throw new ApiLogListingError(
       permission
