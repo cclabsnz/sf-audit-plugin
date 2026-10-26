@@ -227,7 +227,9 @@ describe('RULE-042: a partial read gives lower bounds, not passes', () => {
     expect(finding.riskLevel).toBe('INFO');
     expect(finding.title).toMatch(/read 1 of 12000 assignments$/);
     expect(finding.detail).toMatch(/holders may be in the rows not read/);
-    expect(finding.remediation).toMatch(/org-max-query-limit/);
+    // sf-core 0.12 reads every page, so no row limit applies: a short read means the rows changed.
+    expect(finding.remediation).toMatch(/Re-run the audit/);
+    expect(finding.remediation).not.toMatch(/org-max-query-limit/);
   });
 
   it('a partial read adds one inconclusive read-incomplete finding; a complete read does not', async () => {
@@ -244,11 +246,12 @@ describe('RULE-042: a partial read gives lower bounds, not passes', () => {
     expect(byId(complete, 'users-modify-all-data')!.detail).not.toMatch(/lower bound/);
   });
 
-  it('a failed COUNT gives both visibility and row-limit advice', async () => {
+  it('a failed COUNT gives visibility and re-run advice, never row-limit advice', async () => {
     const { findings } = await runCheck({ rows: [], countThrows: true });
     const r = byId(findings, 'users-modify-all-data')!.remediation;
     expect(r).toMatch(/View Setup and Configuration/);
-    expect(r).toMatch(/org-max-query-limit/);
+    expect(r).toMatch(/Re-run the audit/);
+    expect(r).not.toMatch(/org-max-query-limit/);
     expect(byId(findings, 'users-and-admins-read-incomplete')!.title).toMatch(/could not be confirmed$/);
   });
 

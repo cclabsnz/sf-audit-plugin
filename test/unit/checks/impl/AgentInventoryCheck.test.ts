@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import { AgentInventoryCheck } from '../../../../src/checks/impl/AgentInventoryCheck.js';
-import type { AuditContext } from '@cclabsnz/sf-core';
+import { SalesforceApiError, type AuditContext } from '@cclabsnz/sf-core';
 
 // Route each query by the sObject it hits so a fixture can supply per-object records
 // (or per-object errors) without depending on call order.
@@ -157,6 +157,29 @@ describe('AgentInventoryCheck', () => {
     expect(ctx.cache.agentInventory).toEqual([]);
     expect(ctx.cache.agentUsers).toEqual([]);
     expect(result.findings).toHaveLength(0);
+  });
+
+  // sf-core 0.12 wraps Connection-path errors as SalesforceApiError with no statusCode, so
+  // isApiError now accepts them and the errorCode decides.
+  it('a malformed BotDefinition query is unknown, never not-enabled', async () => {
+    const ctx = makeCtx({
+      tooling: async () => {
+        throw new SalesforceApiError('MALFORMED_QUERY', "unexpected token: 'FROM'");
+      },
+    });
+    const result = await check.run(ctx);
+    expect(ctx.cache.agentAccess).toBe('unknown');
+    expect(result.findings).toHaveLength(0);
+  });
+
+  it('a 404 with no Salesforce code and no status means the objects do not exist', async () => {
+    const ctx = makeCtx({
+      tooling: async () => {
+        throw new SalesforceApiError('ERROR_HTTP_404', '');
+      },
+    });
+    await check.run(ctx);
+    expect(ctx.cache.agentAccess).toBe('not-enabled');
   });
 
   it('does not throw when a non-ApiError message says the sObject type is not supported', async () => {
