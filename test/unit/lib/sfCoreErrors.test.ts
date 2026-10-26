@@ -59,6 +59,15 @@ describe('downloadApiLogs classifies sf-core 0.12 errors', () => {
   });
 });
 
+describe('a download error with an empty message still says what failed', () => {
+  it('names the code and status in the failed-log entry', async () => {
+    const soql = { queryAll: async () => [{ Id: 'ELF1', EventType: 'RestApi', LogDate: '2026-09-15T00:00:00.000+0000' }] } as any;
+    const rest = { getRawToFile: async () => { throw http(403); } } as any;
+    const logs = await downloadApiLogs({ soql, rest }, 7);
+    expect(logs.failed[0]?.error).toMatch(/ERROR_HTTP_403 HTTP 403/);
+  });
+});
+
 describe('missing-object detection reads sf-core 0.12 codes', () => {
   it('treats a Connection-path 404 with no status as a missing object', () => {
     expect(isMissingObjectError(conn('ERROR_HTTP_404', ''))).toBe(true);

@@ -17,6 +17,8 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 - **An expired session stops `incident collect` again.** sf-core 0.12 reports a failed log download as `INVALID_SESSION_ID` instead of "HTTP 401", so collect recorded every remaining log as failed instead of stopping. Error classifiers now read the error's code and status, not only its message.
 - A Salesforce error that arrives with only a code (`INSUFFICIENT_ACCESS`, or `ERROR_HTTP_403` with no body) is classified as a permission problem in `incident collect` and the API log listing, and `ERROR_HTTP_404` counts as a missing object in the checks that probe for optional features.
+- **A malformed agent query no longer reads as "Agentforce not enabled".** The AI & Agents checks counted `MALFORMED_QUERY` as an absent object, which became reachable with sf-core 0.12; they now share the missing-object test the other checks use, so a broken query is inconclusive.
+- A failed download whose error body is empty now names its code and status (`ERROR_HTTP_403 HTTP 403`) in `incident collect` and the API log listing, instead of an empty reason.
 - `users-and-admins` no longer advises raising `org-max-query-limit`, which no longer limits the read. When the assignment count differs from the rows read, it advises re-running the audit.
 
 ## [v1.19.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.19.0) — 2026-10-23

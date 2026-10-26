@@ -62,7 +62,7 @@ export async function downloadApiLogs(deps: { soql: SoqlClient; rest: RestClient
           csv[r.EventType as ApiLogType] += '\n' + content;
         }
       } catch (e) {
-        failed.push({ id: r.Id, eventType: r.EventType, error: e instanceof Error ? e.message : String(e) });
+        failed.push({ id: r.Id, eventType: r.EventType, error: apiErrorText(e) });
       } finally {
         rmSync(tmp, { force: true });
       }

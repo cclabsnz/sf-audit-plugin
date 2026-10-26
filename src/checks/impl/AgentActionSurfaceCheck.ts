@@ -1,7 +1,8 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { isApiError } from '@cclabsnz/sf-core';
+// Shared, so MALFORMED_QUERY (a bug in the query) is never read as an absent feature.
+import { isMissingObjectError } from '../support/missingObject.js';
 
 // One GenAI action (function). GenAiFunction / GenAiFunctionDefinition expose the same
 // core fields across releases; we query defensively and fall back between them. Invocation
@@ -30,20 +31,6 @@ const ACTION_COUNT_THRESHOLD = 15;
 // them as write-capable). Apex and Flow can both mutate data; where the type string is
 // unknown/ambiguous we deliberately err toward flagging and say so in the finding.
 const WRITE_CAPABLE_TYPE_HINTS = ['apex', 'flow'];
-
-function isMissingObjectError(err: unknown): boolean {
-  if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    // sf-core 0.12: a Connection-path 404 with no Salesforce code carries no statusCode.
-    if (err.statusCode === 404 || err.errorCode === 'ERROR_HTTP_404') return true;
-  }
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes('not supported') ||
-    msg.includes('invalid type') ||
-    msg.includes('sobject type')
-  );
-}
 
 export class AgentActionSurfaceCheck implements SecurityCheck {
   readonly id = 'agent-action-surface';
