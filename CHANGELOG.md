@@ -9,17 +9,36 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.20.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.20.0) — 2026-10-28
+
+Findings now say which threats they enable, and each named attack chain says who would run it and
+which single fix stops it.
+
+### Added
+
+- **STRIDE and LINDDUN on every finding.** Each check is mapped to the STRIDE categories it guards (all 109 checks) and, where personal data is involved, to LINDDUN privacy categories (32 checks). Findings carry them as `threats` in JSON, as a **Threats:** line in Markdown, and as `stride:` / `linddun:` rule tags in SARIF. Tagging never changes severity, score or grade.
+- **Threat view in the Markdown report.** One row per category, reading "N findings (from N checks)", "no findings from N checks", "not assessed in this run" or "not assessed by this tool". An empty category is never shown as assurance, and privacy and security readings of the same finding are kept apart, not netted against each other.
+- **Named attack chains are abuse cases.** Every named chain states its actor, goal and preconditions, and its break point: the fix that stops the chain in every case it fires. Markdown, HTML and the executive report show "Abuse case:" and "Breaks the chain:", with the full remediation below it. SARIF chain results carry `abuseCase`, and break-point steps carry `breaksChain`.
+
 ### Changed
 
+- **The attack-chain diagram marks the proven break point** ("✂ BREAK POINT", on every step of a multi-step break point) instead of guessing one cut-point. Steps whose capability was inferred no longer show a capability label.
+- Potential chains label their fix text "Recommended fixes" in Markdown, HTML and the executive report, since no single break point is proven for them.
+- **`cred-theft-pivot` needs an exposed secret.** The chain now fires only when one of its steps exposes a credential (including credentials stored in custom settings), so orgs without one no longer show it.
 - **Moves to `@cclabsnz/sf-core` 0.12.** `queryAll` now reads every page instead of stopping at the client's row limit, so reads that came back short on large orgs are complete.
 
 ### Fixed
 
+- **The executive report's "Breaks the chain" line no longer shows the full remediation list.** It now names the break point; the full list follows as "Full remediation".
 - **An expired session stops `incident collect` again.** sf-core 0.12 reports a failed log download as `INVALID_SESSION_ID` instead of "HTTP 401", so collect recorded every remaining log as failed instead of stopping. Error classifiers now read the error's code and status, not only its message.
 - A Salesforce error that arrives with only a code (`INSUFFICIENT_ACCESS`, or `ERROR_HTTP_403` with no body) is classified as a permission problem in `incident collect` and the API log listing, and `ERROR_HTTP_404` counts as a missing object in the checks that probe for optional features.
 - **A malformed agent query no longer reads as "Agentforce not enabled".** The AI & Agents checks counted `MALFORMED_QUERY` as an absent object, which became reachable with sf-core 0.12; they now share the missing-object test the other checks use, so a broken query is inconclusive.
 - A failed download whose error body is empty now names its code and status (`ERROR_HTTP_403 HTTP 403`) in `incident collect` and the API log listing, instead of an empty reason.
 - `users-and-admins` no longer advises raising `org-max-query-limit`, which no longer limits the read. When the assignment count differs from the rows read, it advises re-running the audit.
+
+### Security
+
+- `fast-uri` pinned to 3.1.9 or later, closing Dependabot alerts #44–47. (#181)
 
 ## [v1.19.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.19.0) — 2026-10-23
 
