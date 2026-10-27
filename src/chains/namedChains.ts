@@ -4,7 +4,10 @@ import type { Finding } from '../findings/Finding.js';
 import type { Capability } from './Capability.js';
 import { capabilitiesFor } from './CapabilityRegistry.js';
 
-/** Findings a chain reads: by exact id, by id prefix, or any finding granting a capability. */
+/**
+ * Findings a chain reads: by exact id, by id prefix, or any finding granting one of the capabilities.
+ * A group is satisfied by any one member; a chain that needs two capabilities lists two groups.
+ */
 export interface FindingGroup {
   ids?: readonly string[];
   prefixes?: readonly string[];
@@ -59,7 +62,7 @@ const byPrefixes = (active: Finding[], prefixes: readonly string[]): Finding[] =
 // Findings that show an unauthenticated visitor can actually read, write or run something. A guest
 // user existing (`guest-user-baseline`) or a site being live (`classic-sites-active`) is a surface,
 // not an exposure: every org with a site has one. RULE-071.
-const GUEST_EXPOSURE = [
+export const GUEST_EXPOSURE = [
   'guest-user-read-access', 'guest-user-write-access', 'guest-user-sharing-exposure',
   'guest-executable-apex-unprotected', 'guest-executable-apex-exposed', 'guest-executable-apex-system-mode',
   'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
@@ -71,7 +74,7 @@ const GUEST_EXPOSURE = [
 
 // Ways in for a low-trust principal: external users with public sharing, social sign-on,
 // self-registration, or a confirmed guest exposure. RULE-072.
-const LOW_TRUST_ENTRY = [
+export const LOW_TRUST_ENTRY = [
   'sharing-model-external-read', 'sharing-model-external-write',
   'auth-providers-social', 'experience-cloud-site-self-registration',
   ...GUEST_EXPOSURE,
@@ -79,7 +82,7 @@ const LOW_TRUST_ENTRY = [
 
 // Escalations a non-admin can use. Admins holding admin permissions (`users-super-admin-combo`,
 // `users-author-apex`) are not an escalation: they already have the access. RULE-072.
-const NON_ADMIN_ESCALATION = [
+export const NON_ADMIN_ESCALATION = [
   'escalation-perms-found', 'privileged-access-shadow-admins',
   'separation-of-duties-self-escalation', 'separation-of-duties-identity-takeover', 'separation-of-duties-grant-self-data',
   'login-access-policy-delegated-admins',
@@ -88,7 +91,7 @@ const NON_ADMIN_ESCALATION = [
 
 // Each chain's finding groups, shared by match() and its abuse case so the two cannot drift.
 
-const UNAUTH_EXFIL_STEPS = [
+export const UNAUTH_EXFIL_STEPS = [
   'guest-user-read-access', 'guest-user-write-access', 'guest-user-sharing-exposure', 'guest-user-baseline',
   'guest-executable-apex-unprotected', 'guest-executable-apex-exposed', 'guest-executable-apex-system-mode',
   'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
@@ -106,19 +109,19 @@ const UNAUTH_EXFIL_STEPS = [
 ];
 // Internal-only weaknesses that widen what a foothold reaches. They join as evidence but
 // never count toward the floor: without a guest-side step they describe no unauthenticated path.
-const UNAUTH_EXFIL_WIDENERS = ['data-cloud-data-space-default-overshared', 'restriction-rules-inactive'];
+export const UNAUTH_EXFIL_WIDENERS = ['data-cloud-data-space-default-overshared', 'restriction-rules-inactive'];
 
-const GUEST_TRAFFIC = ['guest-traffic-anomaly-recon', 'guest-traffic-anomaly-anonymizer'];
+export const GUEST_TRAFFIC = ['guest-traffic-anomaly-recon', 'guest-traffic-anomaly-anonymizer'];
 // A readable User roster counts as an exposed surface in its own right — recon against an org
 // that leaks its staff list is the same incident. The object-level Read grant is excluded: on
 // its own it is not a confirmed exposure, and this chain asserts one already in progress.
-const GUEST_BULK_SURFACE = [
+export const GUEST_BULK_SURFACE = [
   'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
   'guest-user-visibility-view-all-users', 'guest-user-visibility-owd',
 ];
 
 // Admin powers: they widen what a takeover reaches but are not themselves the escalation.
-const TAKEOVER_ADMIN_EVIDENCE = [
+export const TAKEOVER_ADMIN_EVIDENCE = [
   'users-super-admin-combo', 'users-author-apex', 'guest-user-baseline', 'login-access-policy-login-as-enabled',
   'separation-of-duties-code-and-data',
   'delegated-administration-groups-active',
@@ -127,90 +130,91 @@ const TAKEOVER_ADMIN_EVIDENCE = [
 ];
 
 // Exposed secrets: every finding here that grants credential-theft.
-const EXPOSED_SECRETS = [
+export const EXPOSED_SECRETS = [
   'hardcoded-credentials-found', 'custom-labels-credential-value-match', 'custom-labels-credential-name-match',
   'debug-log-active-traces', 'cors-wildcard-origin', 'cors-broad-origin',
   'flow-http-callout-hardcoded-secret', 'oauth-device-flow-enabled', 'oauth-password-flow-enabled',
+  'custom-settings-credentials',
 ];
-const EGRESS_PATHS = [
+export const EGRESS_PATHS = [
   'named-credentials-inventory', 'named-credentials-http-endpoint', 'remote-sites-inventory',
   // A user who can stand up connected apps and bypass API access control has provisioned
   // their own egress path.
   'separation-of-duties-external-exfil-channel',
 ];
 
-const SOQL_INJECTION = ['soql-injection-risk'];
-const SOQL_READ_SINKS = [
+export const SOQL_INJECTION = ['soql-injection-risk'];
+export const SOQL_READ_SINKS = [
   'sharing-model-external-read', 'sharing-model-external-write',
   'field-level-security-high', 'field-level-security-medium', 'users-view-all-data',
   'public-group-sharing-exposure', 'report-folder-access-public',
   'encryption-coverage-unencrypted-sensitive',
 ];
 
-const AGENT_GUEST_CHANNEL = ['agent-channel-exposure-guest-'];
-const AGENT_PRIVILEGE = ['agent-user-privilege-admin-', 'agent-user-privilege-broad-write-'];
-const AGENT_WRITE_ACTIONS = ['agent-action-surface-write'];
+export const AGENT_GUEST_CHANNEL = ['agent-channel-exposure-guest-'];
+export const AGENT_PRIVILEGE = ['agent-user-privilege-admin-', 'agent-user-privilege-broad-write-'];
+export const AGENT_WRITE_ACTIONS = ['agent-action-surface-write'];
 
-const ACTIVE_AGENTS = ['agent-inventory-summary'];
-const STALE_TRUSTED_URL = ['trusted-url-hygiene-unresolvable-', 'trusted-url-hygiene-parked-'];
-const AGENT_NO_CAPTURE = ['agent-monitoring-coverage-none'];
+export const ACTIVE_AGENTS = ['agent-inventory-summary'];
+export const STALE_TRUSTED_URL = ['trusted-url-hygiene-unresolvable-', 'trusted-url-hygiene-parked-'];
+export const AGENT_NO_CAPTURE = ['agent-monitoring-coverage-none'];
 
-const AGENT_QUERY_REACH = ['agent-query-reach-'];
+export const AGENT_QUERY_REACH = ['agent-query-reach-'];
 // Egress: an outbound action that needs no confirmation, or a trusted domain anyone can claim.
-const AGENT_OUTBOUND = ['agent-outbound-actions-unconfirmed', 'agent-outbound-actions-unverified'];
+export const AGENT_OUTBOUND = ['agent-outbound-actions-unconfirmed', 'agent-outbound-actions-unverified'];
 // Where outsider text enters, when the org shows it. Evidence only: the chain fires without
 // it, since Web-to-Lead, Web-to-Case and email exist in almost every org.
-const UNTRUSTED_INPUT = [
+export const UNTRUSTED_INPUT = [
   'inbound-email-handler-unauthenticated-execution',
   'guest-user-write-access',
   'guest-object-exposure-guest-owned',
 ];
 
-const SANDBOX_PII = ['sandbox-data-masking-pii-present'];
-const SANDBOX_WEAK_CONTROLS = [
+export const SANDBOX_PII = ['sandbox-data-masking-pii-present'];
+export const SANDBOX_WEAK_CONTROLS = [
   'internal-user-mfa-gaps', 'trusted-ip-broad-ranges', 'mfa-portal-users-without-enforcement',
   'public-group-sharing-exposure', 'report-folder-access-public', 'standard-profiles-in-use',
   'privileged-access-shadow-admins', 'sharing-model-external-read', 'sharing-model-external-write',
   'guest-user-read-access', 'guest-user-write-access', 'guest-user-sharing-exposure',
 ];
 
-const INSIDER_BROAD_READ = [
+export const INSIDER_BROAD_READ = [
   'public-group-sharing-exposure', 'report-folder-access-public',
   'users-view-all-data', 'users-modify-all-data',
   // An unused Data Export or View All Users grant on an integration account is the same
   // bulk-read reach as the other members of this set.
   'integration-least-privilege-data-permissions',
 ];
-const INSIDER_BULK_EGRESS = [
+export const INSIDER_BULK_EGRESS = [
   'data-export-weekly-export', 'data-export-bulk-api-viewall',
   'separation-of-duties-external-exfil-channel',
 ];
-const INSIDER_BLIND_SPOT = [
+export const INSIDER_BLIND_SPOT = [
   'event-monitoring-disabled', 'siem-integration-not-detected', 'event-monitoring-retention-short',
 ];
 
-const DETECTION_BLIND_SPOTS = [
+export const DETECTION_BLIND_SPOTS = [
   'threat-detection-inactive', 'threat-detection-guest-anomaly-missing',
   'event-monitoring-disabled', 'event-monitoring-retention-short',
   'transaction-security-policy-none', 'siem-integration-not-detected', 'siem-retention-gap',
 ];
-const EXPLOITABLE_ACCESS: readonly Capability[] = ['unauth-foothold', 'priv-esc', 'org-takeover'];
+export const EXPLOITABLE_ACCESS: readonly Capability[] = ['unauth-foothold', 'priv-esc', 'org-takeover'];
 
-const MFA_WEAKNESS = ['trusted-ip-broad-ranges', 'internal-user-mfa-gaps', 'mfa-portal-users-without-enforcement'];
-const PRIVILEGED_ACCOUNTS = [
+export const MFA_WEAKNESS = ['trusted-ip-broad-ranges', 'internal-user-mfa-gaps', 'mfa-portal-users-without-enforcement'];
+export const PRIVILEGED_ACCOUNTS = [
   'users-modify-all-data', 'users-view-all-data', 'users-super-admin-combo',
   'privileged-access-shadow-admins', 'separation-of-duties-self-escalation',
 ];
 
 // Standing reach: a token that can act broadly, and keeps being able to.
-const OAUTH_STANDING = [
+export const OAUTH_STANDING = [
   'connected-app-full-scope-infinite-token',
   'connected-app-full-scope',
   'connected-app-infinite-refresh-token',
 ];
 // What removes the containment or the observation. Any one of these turns standing access
 // into access nobody is watching or limiting.
-const OAUTH_UNCONTAINED = [
+export const OAUTH_UNCONTAINED = [
   // Nobody is reviewing it: tokens with no matching app, or long unused.
   'oauth-token-unmatched-app', 'oauth-token-stale', 'oauth-token-no-app-inventory',
   // Nothing is limiting it: the network control that survives authorisation, removed.
@@ -222,11 +226,11 @@ const OAUTH_UNCONTAINED = [
   'api-client-permission-assigned',
 ];
 
-const SELF_REGISTRATION = ['experience-cloud-site-self-registration'];
+export const SELF_REGISTRATION = ['experience-cloud-site-self-registration'];
 // What an account is worth once obtained. Deliberately excludes report-folder-access-public:
 // it is real for internal users, but a self-registered portal account is a Customer Community
 // licence, which generally has no report access at all, so including it would overstate reach.
-const PORTAL_REACH = [
+export const PORTAL_REACH = [
   'sharing-model-external-read', 'sharing-model-external-write',
   'portal-exposed-apex-without-sharing',
   'flows-autolaunched-without-sharing', 'flows-screen-without-sharing',
@@ -235,12 +239,12 @@ const PORTAL_REACH = [
 ];
 // Social sign-on is a second way in rather than a requirement, so it joins as evidence when
 // present but never gates the chain on its own.
-const SOCIAL_SIGN_ON = ['auth-providers-social'];
+export const SOCIAL_SIGN_ON = ['auth-providers-social'];
 
-const SESSION_ID_LEAK = ['outbound-messages-session-id'];
+export const SESSION_ID_LEAK = ['outbound-messages-session-id'];
 // Why a replayed session would not be stopped or seen. Any one is enough; the point of the
 // chain is the credential leaving, and these say what happens next.
-const SESSION_UNCHECKED = [
+export const SESSION_UNCHECKED = [
   // Disclosed in transit, so compromising the endpoint is not even required.
   'outbound-messages-cleartext',
   // Nothing binds or shortens the session that was handed over.
@@ -250,7 +254,7 @@ const SESSION_UNCHECKED = [
   'event-monitoring-disabled', 'siem-integration-not-detected', 'threat-detection-inactive',
 ];
 
-const ANONYMOUS_FILES = [
+export const ANONYMOUS_FILES = [
   'public-content-public-documents', 'public-content-public-static-resources',
   'content-links-no-expiry', 'content-links-no-password', 'content-links-stale',
   'guest-site-options-file-access',
@@ -258,36 +262,36 @@ const ANONYMOUS_FILES = [
 // No way to answer "what was in it" or "who took it". Classification and monitoring only:
 // content-links-stale is a subset of content-links-no-expiry, so counting it on both sides
 // would let one check satisfy the conjunction by itself.
-const FILES_UNACCOUNTED = [
+export const FILES_UNACCOUNTED = [
   'data-classification-missing', 'data-encryption-not-detected',
   'event-monitoring-disabled', 'siem-integration-not-detected', 'threat-detection-inactive',
 ];
 
-const VF_XSS = ['visualforce-xss-escape-false', 'visualforce-xss-js-merge-field', 'visualforce-xss-attr-merge-field'];
+export const VF_XSS = ['visualforce-xss-escape-false', 'visualforce-xss-js-merge-field', 'visualforce-xss-attr-merge-field'];
 // The browser-side controls that would otherwise contain an injected script. Excludes
 // 'experience-csp-verify', which asks the operator to confirm a setting rather than reporting
 // a weakness — treating an advisory as a confirmed gap would inflate the chain.
-const BROWSER_WEAKENED = ['session-hardening-risks', 'csp-trusted-sites-insecure'];
+export const BROWSER_WEAKENED = ['session-hardening-risks', 'csp-trusted-sites-insecure'];
 // Somebody whose session is worth the trouble.
-const SESSION_TARGETS = [
+export const SESSION_TARGETS = [
   'users-super-admin-combo', 'privileged-access-shadow-admins',
   'users-modify-all-data', 'users-view-all-data',
   'separation-of-duties-self-escalation',
 ];
 
-const OPEN_EMAIL_HANDLER = ['inbound-email-handler-unauthenticated-execution'];
-const EMAIL_FOLLOW_ON = [
+export const OPEN_EMAIL_HANDLER = ['inbound-email-handler-unauthenticated-execution'];
+export const EMAIL_FOLLOW_ON = [
   'apex-crud-fls-without-sharing', 'soql-injection-risk', 'portal-exposed-apex-without-sharing',
   'flows-autolaunched-without-sharing', 'users-modify-all-data', 'users-super-admin-combo',
   'privileged-access-shadow-admins',
 ];
 
-const EVENT_SUBSCRIBER_ESCALATION = ['platform-event-subscriber-escalation'];
-const EVENT_PUBLISHER_FOOTHOLD = [
+export const EVENT_SUBSCRIBER_ESCALATION = ['platform-event-subscriber-escalation'];
+export const EVENT_PUBLISHER_FOOTHOLD = [
   'guest-user-read-access', 'guest-user-write-access', 'guest-user-sharing-exposure', 'guest-user-baseline',
   'sharing-model-external-read', 'sharing-model-external-write', 'experience-cloud-site-self-registration',
 ];
-const EVENT_PRIVILEGED_TARGETS = ['users-super-admin-combo', 'users-modify-all-data', 'privileged-access-shadow-admins'];
+export const EVENT_PRIVILEGED_TARGETS = ['users-super-admin-combo', 'users-modify-all-data', 'privileged-access-shadow-admins'];
 
 export const NAMED_CHAINS: NamedChainDef[] = [
   {
@@ -311,7 +315,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     abuseCase: {
       actor: 'an unauthenticated site visitor',
       goal: 'read or change business data in bulk without logging in',
-      preconditions: [{ ids: GUEST_EXPOSURE }, { ids: UNAUTH_EXFIL_STEPS }, { ids: UNAUTH_EXFIL_WIDENERS }, { capabilities: ['unauth-foothold', 'data-read-bulk'] }],
+      preconditions: [{ ids: GUEST_EXPOSURE }, { ids: UNAUTH_EXFIL_STEPS }, { ids: UNAUTH_EXFIL_WIDENERS }, { capabilities: ['unauth-foothold'] }, { capabilities: ['code-exec', 'data-read-bulk', 'data-write'] }],
       breakPoint: 0,
       breakPointText:
         'Close every confirmed guest exposure: guest object and record access, guest-callable Apex, guest API access, guest visibility of users, the guest record-access policy, and unauthenticated email handlers.',
@@ -396,10 +400,10 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     abuseCase: {
       actor: 'anyone who obtains an exposed secret',
       goal: 'use it to move data to infrastructure they control',
-      preconditions: [{ ids: EXPOSED_SECRETS }, { ids: EGRESS_PATHS }, { capabilities: ['credential-theft', 'external-egress'] }],
+      preconditions: [{ ids: EXPOSED_SECRETS }, { ids: EGRESS_PATHS }, { capabilities: ['credential-theft'] }, { capabilities: ['external-egress'] }],
       breakPoint: 0,
       breakPointText:
-        'Rotate and remove every exposed secret: hardcoded credentials, credential-like labels, active debug traces, broad CORS origins and enabled device or password OAuth flows.',
+        'Rotate and remove every exposed secret: hardcoded credentials, credentials in custom settings or labels, active debug traces, broad CORS origins and enabled device or password OAuth flows.',
     },
     match(present, active) {
       if (!has(present, 'credential-theft', 'external-egress')) return null;
@@ -577,7 +581,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       preconditions: [{ ids: INSIDER_BROAD_READ }, { ids: INSIDER_BULK_EGRESS }, { ids: INSIDER_BLIND_SPOT }],
       breakPoint: 1,
       breakPointText:
-        'Restrict Weekly Data Export and bulk API export to a named few.',
+        'Restrict Weekly Data Export and bulk API export to a named few, and remove self-provisioned connected-app or API export channels.',
     },
     match(_present, active) {
       const broadRead = byIds(active, INSIDER_BROAD_READ);
@@ -717,7 +721,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       preconditions: [{ ids: SELF_REGISTRATION }, { ids: PORTAL_REACH }, { ids: SOCIAL_SIGN_ON }],
       breakPoint: 0,
       breakPointText:
-        'Turn off self-registration, or put an approval step in front of it.',
+        'Turn off self-registration on the site.',
     },
     match(_present, active) {
       const acquisition = byIds(active, SELF_REGISTRATION);
@@ -865,7 +869,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     abuseCase: {
       actor: 'any internet email sender',
       goal: 'trigger privileged Apex without credentials',
-      preconditions: [{ ids: OPEN_EMAIL_HANDLER }, { ids: EMAIL_FOLLOW_ON }, { capabilities: ['unauth-foothold', 'code-exec'] }],
+      preconditions: [{ ids: OPEN_EMAIL_HANDLER }, { ids: EMAIL_FOLLOW_ON }, { capabilities: ['unauth-foothold'] }, { capabilities: ['code-exec'] }],
       breakPoint: 0,
       breakPointText:
         'Restrict the email service to authorised senders and reject mail that fails authentication.',
@@ -892,7 +896,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     abuseCase: {
       actor: 'a guest or portal user',
       goal: 'publish an event that runs as a privileged user',
-      preconditions: [{ ids: EVENT_PUBLISHER_FOOTHOLD }, { ids: EVENT_SUBSCRIBER_ESCALATION }, { ids: EVENT_PRIVILEGED_TARGETS }, { capabilities: ['unauth-foothold', 'priv-esc'] }],
+      preconditions: [{ ids: EVENT_PUBLISHER_FOOTHOLD }, { ids: EVENT_SUBSCRIBER_ESCALATION }, { ids: EVENT_PRIVILEGED_TARGETS }, { capabilities: ['unauth-foothold', 'low-trust-authenticated'] }, { capabilities: ['priv-esc', 'data-write'] }],
       breakPoint: 1,
       breakPointText:
         'Run event subscribers as a dedicated least-privilege user, not Automated Process or an administrator.',

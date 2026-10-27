@@ -46,6 +46,10 @@ describe('RULE-110 named chains are structured abuse cases', () => {
     expect(ac.preconditions.length).toBeGreaterThan(0);
     expect(Number.isInteger(ac.breakPoint)).toBe(true);
     expect(ac.preconditions[ac.breakPoint]).toBeDefined();
+    // A break point is something to fix, so it names findings; a capability group names none.
+    const bp = ac.preconditions[ac.breakPoint];
+    expect(bp.capabilities).toBeUndefined();
+    expect((bp.ids?.length ?? 0) + (bp.prefixes?.length ?? 0)).toBeGreaterThan(0);
   });
 
   // Drift guard: every group constant a chain's match() reads must also be named in its abuse case,
@@ -111,6 +115,8 @@ describe('RULE-111 a break point breaks the chain (MN-060)', () => {
     const findings = ['outbound-messages-session-id', 'named-credentials-inventory', 'remote-sites-inventory'].map((i) => finding(i));
     expect(fires(findings, 'cred-theft-pivot')).toBe(false);
     expect(fires([...findings, finding('hardcoded-credentials-found')], 'cred-theft-pivot')).toBe(true);
+    // Credentials in custom settings are an exposed secret too.
+    expect(fires([...findings, finding('custom-settings-credentials')], 'cred-theft-pivot')).toBe(true);
   });
 });
 
