@@ -1,7 +1,7 @@
 // src/renderers/AttackChainDagRenderer.ts
 //
-// Draws an attack chain as an inline SVG strip of step cards joined by arrows, with the step whose
-// fix breaks the chain marked as the cut-point. The executive report runs under a strict CSP (no
+// Draws an attack chain as an inline SVG strip of step cards joined by arrows, with the steps that
+// make up a named chain's proven break point marked (RULE-111). Potential chains have none. The executive report runs under a strict CSP (no
 // script, inline style only), so the output is self-contained: no <script>, no event handlers, no
 // <foreignObject>, no external references. Every chain/step string is escaped before it is placed
 // in text or an attribute; colours come only from fixed lookup tables.
@@ -22,27 +22,12 @@ const SEV_COLORS: Record<'dark' | 'light', Record<string, string>> = {
 /** Cards per row before the strip wraps, so long chains stay readable when scaled to page width. */
 const MAX_PER_ROW = 4;
 
-export function identifyCutPointIndex(chain: AttackChain): number {
-  if (!chain.steps || chain.steps.length === 0) return 0;
-  const rem = (chain.remediation || '').toLowerCase();
-
-  for (let i = 0; i < chain.steps.length; i++) {
-    const s = chain.steps[i];
-    if (s.findingId && rem.includes(s.findingId.toLowerCase())) return i;
-    if (s.title && rem.includes(s.title.toLowerCase())) return i;
-  }
-
-  const sevRank: Record<string, number> = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, INFO: 0 };
-  let bestIdx = 0;
-  let bestRank = -1;
-  for (let i = 0; i < chain.steps.length; i++) {
-    const rank = sevRank[chain.steps[i].severity ?? 'LOW'] ?? 1;
-    if (rank > bestRank) {
-      bestRank = rank;
-      bestIdx = i;
-    }
-  }
-  return bestIdx;
+/**
+ * Indices of the steps in the chain's break point: removing every one of them stops a named chain.
+ * Empty for potential chains, which have no proven break point (MN-060).
+ */
+export function breakPointIndices(chain: AttackChain): number[] {
+  return (chain.steps ?? []).flatMap((s, i) => (s.breaksChain ? [i] : []));
 }
 
 /** Truncate by code point (never splitting a surrogate pair); escaping happens after. */
@@ -56,7 +41,7 @@ export function renderAttackChainDagSvg(chain: AttackChain, opts: DagRenderOptio
   const steps = chain.steps ?? [];
   if (steps.length === 0) return '';
 
-  const cutPointIdx = identifyCutPointIndex(chain);
+  const cutPoints = new Set(breakPointIndices(chain));
 
   const cardW = 220;
   const cardH = 96;
@@ -88,12 +73,13 @@ export function renderAttackChainDagSvg(chain: AttackChain, opts: DagRenderOptio
   const nodesSvg = steps
     .map((step: AttackChainStep, idx: number) => {
       const { x, y } = posOf(idx);
-      const isCut = idx === cutPointIdx;
+      const isCut = cutPoints.has(idx);
       const sevRaw = String(step.severity ?? 'LOW');
       const sevCol = sevColors[sevRaw] ?? sevColors.INFO;
       const sev = esc(truncate(sevRaw, 10));
       const title = esc(truncate(String(step.title || step.findingId || ''), 26));
-      const cap = esc(truncate(String(step.capability ?? ''), 24));
+      // An inferred capability is a fallback, not something the finding grants (RULE-110).
+      const cap = step.capabilityInferred ? '' : esc(truncate(String(step.capability ?? ''), 24));
 
       const stroke = isCut ? cutAccent : cardBorder;
       const strokeWidth = isCut ? '2.5' : '1';
@@ -102,12 +88,12 @@ export function renderAttackChainDagSvg(chain: AttackChain, opts: DagRenderOptio
       const cutBadge = isCut
         ? `<g transform="translate(${x + cardW - 84}, ${y - 10})">
             <rect width="80" height="18" rx="4" fill="${cutAccent}" />
-            <text x="40" y="12" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="system-ui, sans-serif">✂ CUT-POINT</text>
+            <text x="40" y="12" fill="#ffffff" font-size="9" font-weight="700" text-anchor="middle" font-family="system-ui, sans-serif">✂ BREAK POINT</text>
           </g>`
         : '';
 
       const cutNote = isCut
-        ? `<text x="${x + 10}" y="${y + cardH - 10}" fill="${cutAccent}" font-size="9" font-weight="600" font-family="system-ui, sans-serif">★ Remediating breaks chain</text>`
+        ? `<text x="${x + 10}" y="${y + cardH - 10}" fill="${cutAccent}" font-size="9" font-weight="600" font-family="system-ui, sans-serif">${cutPoints.size > 1 ? `Fix all ${cutPoints.size} ✂ steps to break the chain` : 'Fixing this breaks the chain'}</text>`
         : '';
 
       return `<g class="dag-node${isCut ? ' dag-cut-point' : ''}">
@@ -116,8 +102,8 @@ export function renderAttackChainDagSvg(chain: AttackChain, opts: DagRenderOptio
         <circle cx="${x + 18}" cy="${y + 20}" r="4" fill="${sevCol}" />
         <text x="${x + 28}" y="${y + 24}" fill="${sevCol}" font-size="10" font-weight="700" font-family="system-ui, sans-serif">STEP ${idx + 1} · ${sev}</text>
         <text x="${x + 10}" y="${y + 44}" fill="${textColor}" font-size="12" font-weight="600" font-family="system-ui, sans-serif">${title}</text>
-        <rect x="${x + 10}" y="${y + 54}" width="${cardW - 20}" height="18" rx="4" fill="${pillBg}" />
-        <text x="${x + 16}" y="${y + 67}" fill="${mutedColor}" font-size="10" font-family="ui-monospace, monospace">grants: ${cap}</text>
+        ${cap ? `<rect x="${x + 10}" y="${y + 54}" width="${cardW - 20}" height="18" rx="4" fill="${pillBg}" />
+        <text x="${x + 16}" y="${y + 67}" fill="${mutedColor}" font-size="10" font-family="ui-monospace, monospace">grants: ${cap}</text>` : ''}
         ${cutNote}
       </g>`;
     })

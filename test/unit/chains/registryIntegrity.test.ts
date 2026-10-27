@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { NAMED_CHAINS } from '../../../src/chains/namedChains.js';
 import { CAPABILITY_REGISTRY } from '../../../src/chains/CapabilityRegistry.js';
 
 /**
@@ -37,12 +38,11 @@ function collectEmittableIds(): { literals: Set<string>; prefixes: Set<string> }
   return { literals, prefixes };
 }
 
-/** Finding ids referenced as chain ingredients, i.e. inside byIds(...) / byPrefixes(...). */
+/** Finding ids and prefixes the named chains read: every precondition group of every abuse case. */
 function collectChainReferencedIds(): Set<string> {
-  const src = readFileSync(join(ROOT, 'src/chains/namedChains.ts'), 'utf8');
   const refs = new Set<string>();
-  for (const call of src.matchAll(/by(?:Ids|Prefixes)\(\s*\w+\s*,\s*\[([\s\S]*?)\]\s*\)/g)) {
-    for (const q of call[1].matchAll(/'([^']+)'/g)) refs.add(q[1]);
+  for (const def of NAMED_CHAINS) {
+    for (const g of def.abuseCase.preconditions) for (const id of [...(g.ids ?? []), ...(g.prefixes ?? [])]) refs.add(id);
   }
   return refs;
 }

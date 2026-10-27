@@ -203,9 +203,12 @@ ${impact}${chained}<p><strong>Fix:</strong> ${esc(f.remediation)}</p></div>`;
       const dagSvg = renderAttackChainDagSvg(c, { theme: 'light' });
       return `<div class="card scenario" style="--c:${SEV_COLOR[c.severity]}">
 <div class="row"><h3>${esc(c.title)}</h3>${this.chip(c.severity, c.severity)}</div>
+${c.abuseCase ? `<p><strong>Abuse case:</strong> ${esc(c.abuseCase.actor)} wants to ${esc(c.abuseCase.goal)}.</p>` : ''}
 <p>${esc(c.narrative)}</p>
 ${dagSvg}
-<p><strong>Breaks the chain:</strong> ${esc(c.remediation)}</p></div>`;
+${c.abuseCase
+  ? `<p><strong>Breaks the chain:</strong> ${esc(c.abuseCase.breakPoint)}</p><p class="muted"><strong>Full remediation:</strong> ${esc(c.remediation)}</p>`
+  : `<p><strong>Recommended fixes:</strong> ${esc(c.remediation)}</p>`}</div>`;
     }).join('');
     return `${this.sectionHead(numStr, 'Attack Scenarios')}<p class="muted">How findings combine into real attack paths.</p>${items}`;
   }

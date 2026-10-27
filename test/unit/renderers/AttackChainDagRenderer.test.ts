@@ -1,4 +1,4 @@
-import { renderAttackChainDagSvg, identifyCutPointIndex } from '../../../src/renderers/AttackChainDagRenderer.js';
+import { renderAttackChainDagSvg, breakPointIndices } from '../../../src/renderers/AttackChainDagRenderer.js';
 import type { AttackChain, AttackChainStep } from '../../../src/chains/AttackChain.js';
 import { HtmlRenderer } from '../../../src/renderers/HtmlRenderer.js';
 import { ClientReportRenderer } from '../../../src/renderers/ClientReportRenderer.js';
@@ -25,34 +25,50 @@ describe('AttackChainDagRenderer', () => {
         capability: 'code-exec',
         title: 'Portal exposed apex without sharing',
         severity: 'CRITICAL',
+        breaksChain: true,
       },
     ],
   };
 
-  describe('identifyCutPointIndex', () => {
-    it('identifies cut-point mentioned in remediation text', () => {
-      const idx = identifyCutPointIndex(sampleChain);
-      // 'portal-exposed-apex-without-sharing' is explicitly mentioned in remediation
-      expect(idx).toBe(1);
+  describe('breakPointIndices (RULE-111, MN-060)', () => {
+    it('marks exactly the steps the chain engine put in the break point', () => {
+      expect(breakPointIndices(sampleChain)).toEqual([1]);
     });
 
-    it('falls back to highest severity step when remediation mentions no specific step', () => {
+    it('marks nothing when no step is in a break point, whatever the remediation text or severities say', () => {
       const chain: AttackChain = {
         ...sampleChain,
-        remediation: 'Review and audit all guest configurations.',
+        confidence: 'potential',
+        remediation: 'Fix guest-user-read-access first.',
+        steps: sampleChain.steps.map(({ breaksChain: _b, ...s }) => s),
       };
-      const idx = identifyCutPointIndex(chain);
-      // Step 1 is CRITICAL, Step 0 is HIGH
-      expect(idx).toBe(1);
+      expect(breakPointIndices(chain)).toEqual([]);
+      expect(renderAttackChainDagSvg(chain)).not.toContain('BREAK POINT');
+      expect(renderAttackChainDagSvg(chain)).not.toContain('stroke-dasharray');
+    });
+
+    it('marks every step of a multi-step break point and says all must be fixed', () => {
+      const chain: AttackChain = { ...sampleChain, steps: sampleChain.steps.map((s) => ({ ...s, breaksChain: true as const })) };
+      expect(breakPointIndices(chain)).toEqual([0, 1]);
+      expect(renderAttackChainDagSvg(chain)).toContain('Fix all 2 ✂ steps to break the chain');
     });
 
     it('handles empty steps gracefully', () => {
+      const chain: AttackChain = { ...sampleChain, steps: [] };
+      expect(breakPointIndices(chain)).toEqual([]);
+      expect(renderAttackChainDagSvg(chain)).toBe('');
+    });
+  });
+
+  describe('inferred capabilities (RULE-110)', () => {
+    it('draws no capability pill for a step whose capability was inferred', () => {
       const chain: AttackChain = {
         ...sampleChain,
-        steps: [],
+        steps: [{ ...sampleChain.steps[0], capability: 'data-read', capabilityInferred: true }, sampleChain.steps[1]],
       };
-      expect(identifyCutPointIndex(chain)).toBe(0);
-      expect(renderAttackChainDagSvg(chain)).toBe('');
+      const svg = renderAttackChainDagSvg(chain);
+      expect(svg).not.toContain('grants: data-read');
+      expect(svg).toContain('grants: code-exec');
     });
   });
 
@@ -61,7 +77,7 @@ describe('AttackChainDagRenderer', () => {
       const svg = renderAttackChainDagSvg(sampleChain, { theme: 'dark' });
       expect(svg).toContain('<svg class="attack-chain-dag"');
       expect(svg).toContain('<marker id="dag-arrow-unauth-bulk-exfil-dark"');
-      expect(svg).toContain('✂ CUT-POINT');
+      expect(svg).toContain('✂ BREAK POINT');
       expect(svg).toContain('stroke-dasharray="4 2"');
       expect(svg).toContain('STEP 1 · HIGH');
       expect(svg).toContain('STEP 2 · CRITICAL');
@@ -75,7 +91,7 @@ describe('AttackChainDagRenderer', () => {
       const svg = renderAttackChainDagSvg(sampleChain, { theme: 'light' });
       expect(svg).toContain('dag-arrow-unauth-bulk-exfil-light');
       expect(svg).toContain('fill="#ffffff"'); // light card bg
-      expect(svg).toContain('✂ CUT-POINT');
+      expect(svg).toContain('✂ BREAK POINT');
     });
 
     it('adheres to strict CSP by containing no script tags or javascript protocols', () => {
