@@ -158,6 +158,8 @@ export class GuestUserAccessCheck implements SecurityCheck {
       findings.push({
         id: 'guest-user-write-access',
         category: this.category,
+        // Writing is tampering, not the disclosure the rest of this check reports.
+        threats: { stride: ['T', 'I'] },
         riskLevel: 'CRITICAL',
         title: 'Guest user profile(s) have write access to Salesforce objects',
         affectedItems: writeViolations.map((v) => {

@@ -43,6 +43,8 @@ describe('GuestApiAccessCheck', () => {
   it('flags Bulk API Hard Delete on a guest as CRITICAL', async () => {
     const r = await check.run(makeCtx({ guests: GUEST, psa: [ps({ PermissionsBulkApiHardDelete: true })] }));
     expect(r.findings.find((f) => f.id === 'guest-api-hard-delete')?.riskLevel).toBe('CRITICAL');
+    // RULE-101: irreversible deletion is denial of service and tampering, not the check's disclosure.
+    expect(r.findings.find((f) => f.id === 'guest-api-hard-delete')?.threats).toEqual({ stride: ['D', 'T'] });
   });
 
   it('passes when guests have no API/Bulk permissions', async () => {

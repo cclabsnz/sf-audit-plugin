@@ -1,5 +1,6 @@
 import type { RiskLevel } from '@cclabsnz/sf-core';
 import type { Capability } from '../chains/Capability.js';
+import type { FindingThreats } from '../threats/types.js';
 
 export interface AffectedItem {
   label: string;
@@ -32,6 +33,12 @@ export interface Finding {
    * Populated by CheckEngine from ComplianceMapping after each check runs.
    */
   complianceTags?: string[];
+  /**
+   * STRIDE and LINDDUN categories. Populated by CheckEngine from the threat maps; a check may set
+   * either list inline to override its check-level entry for this finding. Carries no weight in
+   * scoring, grading or --fail-on (RULE-105).
+   */
+  threats?: FindingThreats;
   /**
    * True when the check could not gather evidence due to insufficient permissions.
    * Scored as INFO (no impact on health score) but displayed distinctly.

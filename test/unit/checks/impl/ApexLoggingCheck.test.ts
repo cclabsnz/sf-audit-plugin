@@ -95,6 +95,8 @@ describe('ApexLoggingCheck', () => {
   ])('flags logging %s as HIGH (SBS-CODE-004)', async (_label, body) => {
     const r = await check.run(makeCtx({ apexBodies: [cls('Leaky', `public class Leaky { ${body} }`)] }));
     const f = find(r, 'apex-logging-sensitive-data')!;
+    // RULE-103: logging sensitive data is a disclosure, not a repudiation gap.
+    expect(f.threats).toEqual({ stride: ['I'] });
     expect(f.riskLevel).toBe('HIGH');
   });
 
