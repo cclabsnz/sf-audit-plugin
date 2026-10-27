@@ -93,7 +93,7 @@ export function renderAttackChainDagSvg(chain: AttackChain, opts: DagRenderOptio
         : '';
 
       const cutNote = isCut
-        ? `<text x="${x + 10}" y="${y + cardH - 10}" fill="${cutAccent}" font-size="9" font-weight="600" font-family="system-ui, sans-serif">${cutPoints.size > 1 ? `Fix all ${cutPoints.size} ✂ steps to break the chain` : 'Fixing this breaks the chain'}</text>`
+        ? `<text x="${x + 10}" y="${y + cardH - 10}" fill="${cutAccent}" font-size="9" font-weight="600" font-family="system-ui, sans-serif">${cutPoints.size > 1 ? 'Fix every ✂ step' : 'Fixing this breaks it'}</text>`
         : '';
 
       return `<g class="dag-node${isCut ? ' dag-cut-point' : ''}">

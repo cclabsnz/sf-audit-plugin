@@ -572,7 +572,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       'few, and enable Event Monitoring (plus forwarding to a SIEM) so bulk reads are recorded and ' +
       'alertable.',
     abuseCase: {
-      actor: 'an internal user, or whoever holds their stolen credentials',
+      actor: 'an internal user or whoever holds their stolen credentials',
       goal: 'export business data in bulk without a record of it',
       preconditions: [{ ids: INSIDER_BROAD_READ }, { ids: INSIDER_BULK_EGRESS }, { ids: INSIDER_BLIND_SPOT }],
       breakPoint: 1,

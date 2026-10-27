@@ -50,7 +50,7 @@ describe('AttackChainDagRenderer', () => {
     it('marks every step of a multi-step break point and says all must be fixed', () => {
       const chain: AttackChain = { ...sampleChain, steps: sampleChain.steps.map((s) => ({ ...s, breaksChain: true as const })) };
       expect(breakPointIndices(chain)).toEqual([0, 1]);
-      expect(renderAttackChainDagSvg(chain)).toContain('Fix all 2 ✂ steps to break the chain');
+      expect(renderAttackChainDagSvg(chain)).toContain('Fix every ✂ step');
     });
 
     it('handles empty steps gracefully', () => {
