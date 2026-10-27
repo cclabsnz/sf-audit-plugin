@@ -143,6 +143,18 @@ describe('RULE-103 logging is read both ways (MN-061)', () => {
     expect(view.linddun?.find((r) => r.category === 'D')?.findings).toContain(missing);
   });
 
+  it('a finding that reports sensitive data being logged is a disclosure, not a dual reading', () => {
+    const leak = f('apex-logging', 'HIGH', { id: 'apex-logging-sensitive-data', threats: threatsFor('apex-logging', { stride: ['I'] }) });
+    const view = buildThreatView([leak]);
+    expect(view.dualReadings).not.toContain(leak);
+    expect(view.linddun?.find((r) => r.category === 'DD')?.findings).toContain(leak);
+  });
+
+  it('dual readings follow a finding-level LINDDUN override', () => {
+    const overridden = f('audit-trail', 'HIGH', { threats: { stride: ['R'], linddun: ['DD'] } });
+    expect(buildThreatView([overridden]).dualReadings).not.toContain(overridden);
+  });
+
   it('the Markdown report states both readings', () => {
     const md = new MarkdownRenderer().render(buildAuditResult(ctx(), [f('audit-trail', 'MEDIUM')], {}));
     expect(md).toMatch(/Logging, read both ways/);
@@ -166,7 +178,7 @@ describe('RULE-104 the threat view reports coverage, not assurance (MN-058, INT-
 
   it('distinguishes findings, no findings, not assessed in this run, and not covered', () => {
     expect(row('I').status).toBe('findings');
-    expect(threatRowStatusText(row('I'))).toBe('1 finding');
+    expect(threatRowStatusText(row('I'))).toBe('1 finding (from 1 check)');
     expect(row('D').status).toBe('no-findings');
     expect(threatRowStatusText(row('D'))).toBe('no findings from 1 check');
     expect(row('R').status).toBe('not-assessed-in-run');
@@ -192,7 +204,9 @@ describe('RULE-104 the threat view reports coverage, not assurance (MN-058, INT-
 
   it('never reads as a pass', () => {
     const md = new MarkdownRenderer().render(buildAuditResult(ctx(), findings, {}));
-    const section = md.slice(md.indexOf('## Threat View'));
+    const start = md.indexOf('## Threat View');
+    const section = md.slice(start, md.indexOf('\n---\n', start));
+    expect(section).toMatch(/### STRIDE/);
     expect(section).not.toMatch(/\b(pass|passed|compliant|no threats)\b/i);
   });
 });

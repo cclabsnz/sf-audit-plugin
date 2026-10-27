@@ -64,7 +64,7 @@ export function buildThreatView(findings: readonly Finding[]): ThreatView {
   const view: ThreatView = {
     stride: rows(STRIDE_CATEGORIES, STRIDE_NAMES, CHECK_STRIDE_MAP, (f) => f.threats?.stride),
     dualReadings: active.filter((f) => {
-      const linddun = CHECK_LINDDUN_MAP[f.checkId ?? f.id] ?? [];
+      const linddun = f.threats?.linddun ?? [];
       return (f.threats?.stride ?? []).includes('R') && (linddun.includes('Nr') || linddun.includes('D'));
     }),
   };
@@ -78,7 +78,7 @@ export function buildThreatView(findings: readonly Finding[]): ThreatView {
 export function threatRowStatusText(row: ThreatRow<string>): string {
   switch (row.status) {
     case 'findings':
-      return `${row.findings.length} finding${row.findings.length === 1 ? '' : 's'}`;
+      return `${row.findings.length} finding${row.findings.length === 1 ? '' : 's'} (from ${row.assessedChecks} check${row.assessedChecks === 1 ? '' : 's'})`;
     case 'no-findings':
       return `no findings from ${row.assessedChecks} check${row.assessedChecks === 1 ? '' : 's'}`;
     case 'not-assessed-in-run':

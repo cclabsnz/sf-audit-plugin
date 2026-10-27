@@ -82,6 +82,8 @@ describe('GuestUserAccessCheck', () => {
       queryAll: router({ users: [guest()], perms: [perm(over)] }),
     }));
     const f = r.findings.find((x) => x.id === 'guest-user-write-access');
+    // RULE-101: writing is tampering, not the check's disclosure.
+    expect(f?.threats).toEqual({ stride: ['T', 'I'] });
     expect(f).toBeDefined();
     expect(f!.riskLevel).toBe('CRITICAL');
     expect(f!.affectedItems?.[0].label).toContain('Account');

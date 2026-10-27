@@ -21,7 +21,7 @@ export const CHECK_LINDDUN_MAP: Record<string, LinddunCategory[]> = {
   'content-links':                       ['DD', 'L'],
   'public-content-exposure':             ['DD'],
   'data-export-access':                  ['DD'],
-  'debug-log-access':                    ['DD', 'D'],
+  'debug-log-access':                    ['DD'],
   'data-cloud-data-space-isolation':     ['L', 'DD'],
   'agent-query-reach':                   ['DD'],
   'agent-outbound-actions':              ['DD', 'Nc'],
