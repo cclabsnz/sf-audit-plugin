@@ -160,7 +160,11 @@ export class SarifRenderer implements AuditRenderer {
 
       const acc = this.ruleFor(rules, ruleId, f);
       acc.worst = acc.worst ? maxRisk(acc.worst, f.riskLevel) : f.riskLevel;
-      for (const tag of f.complianceTags ?? []) {
+      const threatTags = [
+        ...(f.threats?.stride ?? []).map((c) => `stride:${c}`),
+        ...(f.threats?.linddun ?? []).map((c) => `linddun:${c}`),
+      ];
+      for (const tag of [...(f.complianceTags ?? []), ...threatTags]) {
         if (!acc.rule.properties.tags.includes(tag)) acc.rule.properties.tags.push(tag);
       }
 

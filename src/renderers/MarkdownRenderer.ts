@@ -1,9 +1,27 @@
 import type { AuditResult } from '../findings/AuditResult.js';
 import type { AuditRenderer } from './AuditRenderer.js';
 import { coverageSummary, coverageAdvice } from '../findings/coverage.js';
+import type { Finding } from '../findings/Finding.js';
+import { buildThreatView, threatRowStatusText, PRIVACY_COST_OF_LOGGING, type ThreatRow } from '../threats/view.js';
 
 function escapeMdCell(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
+}
+
+function threatTags(f: Finding): string {
+  const parts: string[] = [];
+  if (f.threats?.stride?.length) parts.push(`STRIDE ${f.threats.stride.join(' · ')}`);
+  if (f.threats?.linddun?.length) parts.push(`LINDDUN ${f.threats.linddun.join(' · ')}`);
+  return parts.join(' | ');
+}
+
+function threatTable(lines: string[], rows: ThreatRow<string>[]): void {
+  lines.push('| Category | Coverage | Findings |');
+  lines.push('| --- | --- | --- |');
+  for (const r of rows) {
+    const titles = r.findings.map((f) => escapeMdCell(f.title)).join('; ') || '—';
+    lines.push(`| ${r.category}: ${r.name} | ${threatRowStatusText(r)} | ${titles} |`);
+  }
 }
 
 export class MarkdownRenderer implements AuditRenderer {
@@ -68,6 +86,11 @@ export class MarkdownRenderer implements AuditRenderer {
           lines.push('');
           lines.push(`**Compliance:** ${f.complianceTags.join(' · ')}`);
         }
+        const threats = threatTags(f);
+        if (threats) {
+          lines.push('');
+          lines.push(`**Threats:** ${threats}`);
+        }
         if (f.affectedItems?.length) {
           const hasUrls = f.affectedItems.some((i) => i.url);
           const hasNotes = f.affectedItems.some((i) => i.note);
@@ -90,6 +113,30 @@ export class MarkdownRenderer implements AuditRenderer {
         lines.push('---');
         lines.push('');
       }
+    }
+
+    const view = buildThreatView(result.findings);
+    lines.push('');
+    lines.push('## Threat View');
+    lines.push('');
+    lines.push('_Findings grouped by threat category. Coverage shows what this run looked at, not that a threat is absent._');
+    lines.push('');
+    lines.push('### STRIDE');
+    lines.push('');
+    threatTable(lines, view.stride);
+    if (view.linddun) {
+      lines.push('');
+      lines.push('### LINDDUN (privacy)');
+      lines.push('');
+      threatTable(lines, view.linddun);
+    }
+    if (view.dualReadings.length > 0) {
+      lines.push('');
+      lines.push('### Logging, read both ways');
+      lines.push('');
+      lines.push(`Each of these is a repudiation gap (STRIDE R). ${PRIVACY_COST_OF_LOGGING}`);
+      lines.push('');
+      for (const f of view.dualReadings) lines.push(`- ${f.title}`);
     }
 
     lines.push('');
