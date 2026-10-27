@@ -54,15 +54,27 @@ export class MarkdownRenderer implements AuditRenderer {
         const conf = c.confidence === 'named' ? '' : ' _(potential)_';
         lines.push(`### [${c.severity}] ${c.title}${conf}`);
         lines.push('');
+        if (c.abuseCase) {
+          lines.push(`**Abuse case:** ${c.abuseCase.actor} wants to ${c.abuseCase.goal}.`);
+          lines.push('');
+        }
         lines.push(c.narrative);
         lines.push('');
         lines.push('**Steps:**');
         lines.push('');
         c.steps.forEach((s, i) => {
-          lines.push(`${i + 1}. **${s.title ?? s.findingId}** (${s.severity ?? '—'}): grants \`${s.capability}\``);
+          const grants = s.capabilityInferred ? '' : `: grants \`${s.capability}\``;
+          const cut = s.breaksChain ? ' ✂ _break point_' : '';
+          lines.push(`${i + 1}. **${s.title ?? s.findingId}** (${s.severity ?? '—'})${grants}${cut}`);
         });
         lines.push('');
-        lines.push(`**Remediation:** ${c.remediation}`);
+        if (c.abuseCase) {
+          lines.push(`**Breaks the chain:** ${c.abuseCase.breakPoint}`);
+          lines.push('');
+          lines.push(`**Remediation:** ${c.remediation}`);
+        } else {
+          lines.push(`**Recommended fixes:** ${c.remediation}`);
+        }
         lines.push('');
         lines.push('---');
         lines.push('');

@@ -229,14 +229,22 @@ export class HtmlRenderer implements AuditRenderer {
         const conf = c.confidence === 'named' ? '' : ' (potential)';
         const dagSvg = renderAttackChainDagSvg(c, { theme: 'dark' });
         const steps = c.steps
-          .map((s) => `<li><strong>${esc(s.title ?? s.findingId)}</strong> (${esc(s.severity ?? '—')}): grants <code>${esc(s.capability)}</code></li>`)
+          .map((s) => {
+            const grants = s.capabilityInferred ? '' : `: grants <code>${esc(s.capability)}</code>`;
+            const cut = s.breaksChain ? ' <strong>✂ break point</strong>' : '';
+            return `<li><strong>${esc(s.title ?? s.findingId)}</strong> (${esc(s.severity ?? '—')})${grants}${cut}</li>`;
+          })
           .join('');
         return `<div class="attack-chain severity-${c.severity.toLowerCase()}">
   <h3>[${esc(c.severity)}] ${esc(c.title)}${conf}</h3>
+  ${c.abuseCase ? `<p><strong>Abuse case:</strong> ${esc(c.abuseCase.actor)} wants to ${esc(c.abuseCase.goal)}.</p>` : ''}
   <p>${esc(c.narrative)}</p>
   ${dagSvg}
   <ol>${steps}</ol>
-  <p class="remediation"><strong>Remediation:</strong> ${esc(c.remediation)}</p>
+  ${c.abuseCase
+    ? `<p class="remediation"><strong>Breaks the chain:</strong> ${esc(c.abuseCase.breakPoint)}</p>
+  <p class="remediation"><strong>Remediation:</strong> ${esc(c.remediation)}</p>`
+    : `<p class="remediation"><strong>Recommended fixes:</strong> ${esc(c.remediation)}</p>`}
 </div>`;
       })
       .join('\n');

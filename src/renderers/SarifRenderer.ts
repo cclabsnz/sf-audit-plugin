@@ -294,7 +294,10 @@ export class SarifRenderer implements AuditRenderer {
     const stepLocation = (step: AttackChain['steps'][number], idx: number) => ({
       message: { text: `Step ${idx + 1}: ${step.title ?? step.findingId} (${step.findingId})` },
       logicalLocations: logicalLocations([step.findingId]),
-      properties: { capability: step.capability },
+      properties: {
+        ...(step.capabilityInferred ? {} : { capability: step.capability }),
+        ...(step.breaksChain ? { breaksChain: true } : {}),
+      },
     });
 
     return {
@@ -314,6 +317,7 @@ export class SarifRenderer implements AuditRenderer {
         confidence: chain.confidence,
         attackChainId: chain.id,
         remediation: chain.remediation,
+        ...(chain.abuseCase ? { abuseCase: chain.abuseCase } : {}),
       },
     };
   }
