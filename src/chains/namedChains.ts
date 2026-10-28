@@ -142,7 +142,7 @@ export const TAKEOVER_ADMIN_EVIDENCE = [
 // Exposed secrets: every finding here that grants credential-theft.
 export const EXPOSED_SECRETS = [
   'hardcoded-credentials-found', 'custom-labels-credential-value-match', 'custom-labels-credential-name-match',
-  'debug-log-active-traces', 'cors-wildcard-origin', 'cors-broad-origin',
+  'cors-wildcard-origin', 'cors-broad-origin',
   'flow-http-callout-hardcoded-secret', 'oauth-device-flow-enabled', 'oauth-password-flow-enabled',
   'custom-settings-credentials',
 ];
@@ -406,8 +406,8 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     title: 'Credential theft to external pivot',
     severity: 'CRITICAL',
     narrative:
-      'Exposed secrets (hardcoded credentials, credentials in custom labels, debug logs, or broad CORS) ' +
-      'combine with an external egress path (named credential or remote site) to exfiltrate data to attacker infrastructure.',
+      'Exposed secrets (hardcoded credentials, credentials in custom labels or settings, or broad CORS) ' +
+      'combine with an external egress path (named credential, remote site or Flow callout) to exfiltrate data to attacker infrastructure.',
     remediation:
       'Rotate and remove exposed secrets, tighten CORS origins, and review external callout endpoints.',
     abuseCase: {
@@ -417,7 +417,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       breakPoint: 0,
       tactics: { entry: 'credential-access', goal: 'exfiltration' },
       breakPointText:
-        'Rotate and remove every exposed secret: hardcoded credentials, credentials in custom settings or labels, active debug traces, broad CORS origins and enabled device or password OAuth flows.',
+        'Rotate and remove every exposed secret: hardcoded credentials, credentials in custom settings or labels, broad CORS origins and enabled device or password OAuth flows.',
     },
     match(present, active) {
       if (!has(present, 'credential-theft', 'external-egress')) return null;
@@ -425,6 +425,9 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       // in an outbound message) is session-id-egress, and egress paths alone are no pivot. INT-012.
       if (byIds(active, EXPOSED_SECRETS).length === 0) return null;
       const steps = byIds(active, [...EXPOSED_SECRETS, ...EGRESS_PATHS]);
+      // The egress must be one of the steps too: egress granted by a finding outside the chain would
+      // fire a pivot with no egress path in it.
+      if (!steps.some((s) => capabilitiesFor(s).grants.includes('external-egress'))) return null;
       return steps.length >= 2 ? steps : null;
     },
   },

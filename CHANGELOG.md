@@ -9,6 +9,15 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Changed
+
+- **Active debug traces no longer count as an exposed secret.** The finding fires on a trace at any log level, and only View All Data users can read debug logs, so it grants no attacker capability. It no longer feeds `cred-theft-pivot`, nor the potential chain from an unauthenticated foothold to credential theft.
+- **Org-wide email spoofing no longer grants egress.** An address open to all profiles, or mail without DKIM, is a phishing surface rather than a channel for moving data.
+
+### Fixed
+
+- **`cred-theft-pivot` needs an egress path among its steps.** It checked only that some finding granted egress, so exposed secrets plus a finding outside the chain (org-wide email spoofing, a session id in an outbound message) fired a CRITICAL chain with no egress step in it.
+
 ## [v1.20.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.20.0) — 2026-10-28
 
 Findings now say which threats they enable, and each named attack chain says who would run it and

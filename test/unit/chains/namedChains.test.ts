@@ -1,5 +1,5 @@
 // test/unit/chains/namedChains.test.ts
-import { NAMED_CHAINS } from '../../../src/chains/namedChains.js';
+import { NAMED_CHAINS, EXPOSED_SECRETS, EGRESS_PATHS } from '../../../src/chains/namedChains.js';
 import { capabilitiesFor } from '../../../src/chains/CapabilityRegistry.js';
 import type { Finding } from '../../../src/findings/Finding.js';
 import type { Capability } from '../../../src/chains/Capability.js';
@@ -90,6 +90,29 @@ describe('NAMED_CHAINS', () => {
     const findings = [f('hardcoded-credentials-found'), f('named-credentials-inventory')];
     const chain = NAMED_CHAINS.find((c) => c.id === 'cred-theft-pivot')!;
     expect(chain.match(present(findings), findings)).not.toBeNull();
+  });
+
+  it('cred-theft-pivot does NOT fire on a debug trace beside egress paths', () => {
+    const findings = [f('debug-log-active-traces'), f('named-credentials-inventory'), f('remote-sites-inventory')];
+    const chain = NAMED_CHAINS.find((c) => c.id === 'cred-theft-pivot')!;
+    expect(chain.match(present(findings), findings)).toBeNull();
+  });
+
+  it('cred-theft-pivot does NOT fire when egress comes only from a finding outside its steps', () => {
+    const chain = NAMED_CHAINS.find((c) => c.id === 'cred-theft-pivot')!;
+    const secrets = [f('hardcoded-credentials-found'), f('cors-wildcard-origin')];
+    for (const outside of ['org-wide-email-spoofing-no-dkim', 'outbound-messages-session-id']) {
+      const findings = [...secrets, f(outside)];
+      expect({ outside, steps: chain.match(present(findings), findings) }).toEqual({ outside, steps: null });
+    }
+    // A Flow callout carrying a hardcoded secret is both the secret and the way out.
+    const viaFlow = [f('hardcoded-credentials-found'), f('flow-http-callout-hardcoded-secret')];
+    expect(chain.match(present(viaFlow), viaFlow)).not.toBeNull();
+  });
+
+  it('EXPOSED_SECRETS all grant credential-theft and EGRESS_PATHS all grant external-egress', () => {
+    for (const id of EXPOSED_SECRETS) expect({ id, grants: capabilitiesFor(f(id)).grants.includes('credential-theft') }).toEqual({ id, grants: true });
+    for (const id of EGRESS_PATHS) expect({ id, grants: capabilitiesFor(f(id)).grants.includes('external-egress') }).toEqual({ id, grants: true });
   });
 
   it('unauth-bulk-exfil fires for a guest with View All Users and a public external OWD on User', () => {

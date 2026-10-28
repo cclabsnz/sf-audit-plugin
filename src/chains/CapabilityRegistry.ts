@@ -40,7 +40,8 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'hardcoded-credentials-found':           { grants: ['credential-theft'] },
   'custom-labels-credential-value-match':  { grants: ['credential-theft'] },
   'custom-labels-credential-name-match':   { grants: ['credential-theft'] },
-  'debug-log-active-traces':               { grants: ['credential-theft'], techniques: { 'credential-theft': [] } },
+  // Active debug traces grant nothing: reading debug logs needs View All Data, so a log reader
+  // already reads every record, and a trace at any level counts here, even one that logs no values.
   // Egress
   'named-credentials-inventory':     { grants: ['external-egress'] },
   'named-credentials-http-endpoint': { grants: ['external-egress'] },
@@ -193,8 +194,6 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'auth-provider-registration-handler-admin-exec': { grants: ['priv-esc', 'org-takeover'], techniques: { 'priv-esc': ['T1546'] } },
   'auth-provider-registration-handler-unverified-email-linking': { grants: ['priv-esc', 'org-takeover'], techniques: { 'priv-esc': ['T1078.004'] } },
   'inbound-email-handler-unauthenticated-execution': { grants: ['unauth-foothold', 'code-exec'], techniques: { 'code-exec': [] } },
-  'org-wide-email-spoofing-all-profiles':        { grants: ['external-egress'], techniques: { 'external-egress': [] } },
-  'org-wide-email-spoofing-no-dkim':             { grants: ['external-egress'], techniques: { 'external-egress': [] } },
   'external-account-hierarchy-super-users':      { grants: ['data-read-bulk'] },
   'external-account-hierarchy-active':           { grants: ['data-read-bulk'] },
   'restriction-rules-inactive':                  { grants: ['data-read-bulk'] },
