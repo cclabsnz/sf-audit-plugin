@@ -63,6 +63,7 @@ cites: INT-014, MN-062
 cites: INT-014
 - When a finding grants a `Capability` (`capabilitiesFor(f).grants`)
 - then it carries the verified techniques in `CAPABILITY_TECHNIQUES` for every capability it grants
+- and where that default does not fit the finding, the finding's registry entry (`CapabilityEntry.techniques`) names the technique that does for that capability, or an empty list for none
 - and a capability a finding only requires adds no technique to it
 - and no check maps to a technique directly
 
@@ -75,7 +76,7 @@ cites: INT-014, MN-059
 ## RULE-108 Detection gaps reference what they leave unseen
 cites: INT-014, MN-059, MN-062
 - When a finding reports missing detection (`audit-trail`, `event-monitoring`, `siem-integration`, `apex-logging`, threat-detection and transaction-security gaps)
-- then it may reference, as `detects`, the technique it leaves unobserved (its tactic comes from the catalog's `tactics`), never as a technique the finding grants
+- then it may reference, as `detects` (keyed by finding id in `DETECTION_GAP_TECHNIQUES`), the technique it leaves unobserved (its tactic comes from the catalog's `tactics`), never as a technique the finding grants
 - and chains that already use detection gaps as steps (`insider-bulk-exfil`, `undetected-compromise`) keep them unchanged; those steps render with no ATT&CK technique
 
 ## RULE-109 Every capability has a technique before ATT&CK renders
@@ -109,6 +110,7 @@ cites: INT-014, MN-058, MN-059, MN-060
 - When the JSON output is written, then each finding carries `threats` and each chain step its verified technique ids
 - When SARIF is written, then rule `properties.tags` gain `stride:<C>`, `linddun:<C>` and, for chain results, `attack:<id>`
 - When Markdown or HTML is written, then each finding shows its STRIDE and LINDDUN tags beside its compliance tags, and a threat view section (RULE-104) follows the findings
+- and the Markdown Threats line adds the finding's ATT&CK technique ids and, for a detection gap, the technique it leaves unobserved by id and name; each chain step shows capability → technique (id and name) in Markdown and HTML
 - When the executive report is written, then the threat view follows the compliance matrix, and each fired named chain is listed as an abuse case: actor, goal, steps, break point
 - and the executive report's "Breaks the chain" line shows the chain's `breakPoint` (RULE-111), not `remediation`; potential chains show their remediation labelled "Recommended fixes"
 - and the compliance matrix is unchanged
@@ -126,9 +128,26 @@ cites: INT-014, MN-059
 - When a check assesses an API surface (`apex-rest-endpoint`, `connected-apps`, `api-client-permission`, `integration-least-privilege`, `guest-api-access`, `soap-login-api-auth`)
 - then it also maps to the matching OWASP API Security Top 10:2023 control, catalogued with provenance under a new `Framework` value (`OWASP_API`), selectable with `--frameworks owasp-api`, and not added to the `universal` or `nz` packs
 
+## RULE-116 Chain steps follow the ATT&CK tactic order
+cites: INT-014, MN-060, MN-062
+- When `ChainEngine.correlate` builds a chain, named or potential
+- then its steps are listed in the pinned release's Enterprise tactic order, each placed by the earliest tactic of its verified techniques, or, when its finding has none, of its capability's default technique (used to place the step, never rendered on it)
+- and an inferred step takes the earliest place in its precondition group, else that of the nearest earlier group with a placed step, else that of the step `match()` listed before it (first, if none); ties keep the order `match()` returned
+- and a precondition group may name a `role`, the capability its findings contribute to the chain; a step shows that capability when its finding grants it, otherwise its first grant
+- and ordering moves steps only: which chains fire, their steps, break points, severity, score and grade are unchanged
+
+## RULE-117 Every named chain starts and ends where its abuse case says
+cites: INT-014, MN-059
+- When a named chain declares `abuseCase.tactics`, `entry` and `goal` are tactics of the pinned release
+- then, on the fixture holding every registry finding and every finding any named chain matches on, the chain fires, `entry` is a tactic of the techniques shown on its earliest steps, and `goal` is a tactic of the techniques shown on a step placed after them (on any step, when no `entry` is declared)
+- and only techniques a step shows count: a capability default used to place a step whose finding overrides it does not
+- and a chain whose first shown technique depends on optional findings, or whose steps show none, declares no `entry`
+
 ## Draft mappings (to verify, not to render)
 
 Starting point for RULE-101 and RULE-106. Every ATT&CK id below is `verified: false` until checked against a pinned release, and the fit is verified, not only the id.
+
+The ATT&CK table below is the draft. The verified mapping is pinned to Enterprise ATT&CK v20.0 and recorded, with each fit judgement and the candidates dropped, in `docs/compliance/verification-worksheet.md`. In short: T1562.008 is revoked in v20.0, and the missing-SIEM gap references T1110 and T1078.004 instead, which is what SBS-MON-003/004 monitor for; T1530, T1552.001 and T1548 were dropped; T1136.003 applies to self-registration only; several capabilities take a different technique, or none, per finding.
 
 | Capability | Candidate techniques |
 |---|---|

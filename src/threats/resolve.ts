@@ -1,4 +1,6 @@
 import type { FindingThreats } from './types.js';
+import type { Finding } from '../findings/Finding.js';
+import { attackFor, detectsFor } from './attack.js';
 import { CHECK_STRIDE_MAP } from './stride.js';
 import { CHECK_LINDDUN_MAP } from './linddun.js';
 
@@ -14,4 +16,12 @@ export function threatsFor(checkId: string, inline?: FindingThreats): FindingThr
   if (stride?.length) out.stride = [...stride];
   if (linddun?.length) out.linddun = [...linddun];
   return out.stride || out.linddun ? out : undefined;
+}
+
+/** Adds the finding's verified ATT&CK techniques, which follow its granted capabilities, not its check (RULE-106, RULE-108). */
+export function withAttack(finding: Finding, threats: FindingThreats | undefined): FindingThreats | undefined {
+  const attack = attackFor(finding);
+  const detects = detectsFor(finding);
+  if (!attack && !detects) return threats;
+  return { ...threats, ...(attack ? { attack } : {}), ...(detects ? { detects } : {}) };
 }

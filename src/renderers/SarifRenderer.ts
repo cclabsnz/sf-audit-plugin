@@ -290,6 +290,10 @@ export class SarifRenderer implements AuditRenderer {
       rules.set(ruleId, acc);
     }
     acc.worst = acc.worst ? maxRisk(acc.worst, chain.severity) : chain.severity;
+    for (const id of chain.steps.flatMap((s) => s.techniques ?? [])) {
+      const tag = `attack:${id}`;
+      if (!acc.rule.properties.tags.includes(tag)) acc.rule.properties.tags.push(tag);
+    }
 
     const stepLocation = (step: AttackChain['steps'][number], idx: number) => ({
       message: { text: `Step ${idx + 1}: ${step.title ?? step.findingId} (${step.findingId})` },
@@ -297,6 +301,7 @@ export class SarifRenderer implements AuditRenderer {
       properties: {
         ...(step.capabilityInferred ? {} : { capability: step.capability }),
         ...(step.breaksChain ? { breaksChain: true } : {}),
+        ...(step.techniques?.length ? { attackTechniques: step.techniques } : {}),
       },
     });
 

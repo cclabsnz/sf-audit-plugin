@@ -1,0 +1,183 @@
+// MITRE ATT&CK techniques. They attach to the attacker capabilities a finding grants, never to a
+// check (RULE-106), and only verified techniques ever render (RULE-107, MN-059).
+
+import type { Capability } from '../chains/Capability.js';
+import { ALL_CAPABILITIES } from '../chains/Capability.js';
+import { CAPABILITY_REGISTRY, capabilitiesFor } from '../chains/CapabilityRegistry.js';
+import type { Finding } from '../findings/Finding.js';
+
+/** The Enterprise ATT&CK release every technique below was checked against. */
+export const ATTACK_RELEASE = '20.0';
+
+/** The Enterprise matrix's tactic order in the pinned release, earliest stage first (RULE-116). */
+export const ATTACK_TACTIC_ORDER: readonly string[] = [
+  'reconnaissance', 'resource-development', 'initial-access', 'execution', 'persistence',
+  'privilege-escalation', 'stealth', 'defense-impairment', 'credential-access', 'discovery',
+  'lateral-movement', 'collection', 'command-and-control', 'exfiltration', 'impact',
+];
+
+export interface AttackTechnique {
+  id: string;
+  name: string;
+  /** Tactic short names as the pinned release spells them. */
+  tactics: string[];
+  release: string;
+  url: string;
+  /** Provenance gate: true only once id, name, tactics and fit are recorded in the verification worksheet. */
+  verified: boolean;
+}
+
+function t(id: string, name: string, tactics: string[], verified: boolean): AttackTechnique {
+  return {
+    id, name, tactics, release: ATTACK_RELEASE,
+    url: `https://attack.mitre.org/techniques/${id.replace('.', '/')}`,
+    verified,
+  };
+}
+
+export const ATTACK_TECHNIQUES: Record<string, AttackTechnique> = {
+  'T1190':     t('T1190', 'Exploit Public-Facing Application', ['initial-access'], true),
+  'T1078.004': t('T1078.004', 'Cloud Accounts', ['stealth', 'persistence', 'privilege-escalation', 'initial-access'], true),
+  'T1213.004': t('T1213.004', 'Customer Relationship Management Software', ['collection'], true),
+  'T1565.001': t('T1565.001', 'Stored Data Manipulation', ['impact'], true),
+  'T1059.009': t('T1059.009', 'Cloud API', ['execution'], true),
+  'T1552':     t('T1552', 'Unsecured Credentials', ['credential-access'], true),
+  'T1528':     t('T1528', 'Steal Application Access Token', ['credential-access'], true),
+  'T1110':     t('T1110', 'Brute Force', ['credential-access'], true),
+  'T1110.003': t('T1110.003', 'Password Spraying', ['credential-access'], true),
+  'T1136.003': t('T1136.003', 'Cloud Account', ['persistence'], true),
+  'T1087.004': t('T1087.004', 'Cloud Account', ['discovery'], true),
+  'T1485':     t('T1485', 'Data Destruction', ['impact'], true),
+  'T1556':     t('T1556', 'Modify Authentication Process', ['defense-impairment', 'persistence', 'credential-access'], true),
+  'T1556.007': t('T1556.007', 'Hybrid Identity', ['defense-impairment', 'persistence', 'credential-access'], true),
+  'T1098.003': t('T1098.003', 'Additional Cloud Roles', ['persistence', 'privilege-escalation'], true),
+  'T1098':     t('T1098', 'Account Manipulation', ['persistence', 'privilege-escalation'], true),
+  'T1546':     t('T1546', 'Event Triggered Execution', ['privilege-escalation', 'persistence'], true),
+  'T1648':     t('T1648', 'Serverless Execution', ['execution'], true),
+  'T1567':     t('T1567', 'Exfiltration Over Web Service', ['exfiltration'], true),
+};
+
+/**
+ * What an attacker does with each capability. A technique sits here only if it fits every finding
+ * that grants the capability; a finding it does not fit overrides it in its registry entry
+ * (`CapabilityEntry.techniques`).
+ */
+export const CAPABILITY_TECHNIQUES: Record<Capability, string[]> = {
+  'unauth-foothold':         ['T1190'],
+  'low-trust-authenticated': ['T1078.004'],
+  'data-read':               ['T1213.004'],
+  'data-read-bulk':          ['T1213.004'],
+  'data-write':              ['T1565.001'],
+  'code-exec':               ['T1059.009'],
+  'credential-theft':        ['T1552'],
+  'priv-esc':                ['T1098.003'],
+  'org-takeover':            ['T1098'],
+  'external-egress':         ['T1567'],
+};
+
+/**
+ * Detection gaps: the technique a finding leaves unobserved (RULE-108). Never a technique the
+ * finding grants, and never added to a chain step.
+ */
+export const DETECTION_GAP_TECHNIQUES: Record<string, string[]> = {
+  // SBS-MON-003/004: nobody is alerted to suspicious logins or API anomalies, so password guessing
+  // and a stolen account in use go unnoticed.
+  'siem-integration-not-detected': ['T1110', 'T1078.004'],
+};
+
+/** RULE-109: on only while every capability has a verified technique. */
+export const ATTACK_OUTPUT_ENABLED = true;
+
+function verifiedIds(ids: readonly string[] | undefined): string[] {
+  if (!ATTACK_OUTPUT_ENABLED || !ids) return [];
+  return ids.filter((id) => ATTACK_TECHNIQUES[id]?.verified);
+}
+
+/** Verified techniques for one capability as granted by this finding id. */
+export function techniquesForGrant(findingId: string, capability: Capability): string[] {
+  const override = CAPABILITY_REGISTRY[findingId]?.techniques?.[capability];
+  return verifiedIds(override ?? CAPABILITY_TECHNIQUES[capability]);
+}
+
+/** Verified techniques for every capability the finding grants; none for capabilities it only requires. */
+export function attackFor(finding: Finding): string[] | undefined {
+  const out = new Set<string>();
+  for (const cap of capabilitiesFor(finding).grants) {
+    for (const id of techniquesForGrant(finding.id, cap)) out.add(id);
+  }
+  return out.size ? [...out] : undefined;
+}
+
+/** Verified techniques this detection-gap finding leaves unobserved. */
+export function detectsFor(finding: Finding): string[] | undefined {
+  if (finding.passed || finding.inconclusive) return undefined;
+  const ids = verifiedIds(DETECTION_GAP_TECHNIQUES[finding.id]);
+  return ids.length ? ids : undefined;
+}
+
+/** "T1213.004 Customer Relationship Management Software" — for text outputs. */
+export function techniqueLabel(id: string): string {
+  const tech = ATTACK_TECHNIQUES[id];
+  return tech ? `${tech.id} ${tech.name}` : id;
+}
+
+/** Capabilities with no verified technique; RULE-109 requires this to be empty while output is on. */
+export function capabilitiesWithoutTechnique(): Capability[] {
+  return ALL_CAPABILITIES.filter(
+    (c) => !(CAPABILITY_TECHNIQUES[c] ?? []).some((id) => ATTACK_TECHNIQUES[id]?.verified),
+  );
+}
+
+/** Position of the earliest tactic among these verified techniques; undefined when there are none. */
+export function tacticRank(ids: readonly string[] | undefined): number | undefined {
+  let best: number | undefined;
+  for (const id of verifiedIds(ids)) {
+    for (const tactic of ATTACK_TECHNIQUES[id].tactics) {
+      const i = ATTACK_TACTIC_ORDER.indexOf(tactic);
+      if (i >= 0 && (best === undefined || i < best)) best = i;
+    }
+  }
+  return best;
+}
+
+/**
+ * Where a step sits in tactic order: its own techniques, or, when its finding has none, the
+ * default technique of the capability it grants. The default orders the step and is never
+ * rendered on it. An inferred step has no rank of its own.
+ */
+export function stepTacticRank(step: { capability: Capability; capabilityInferred?: true; techniques?: string[] }): number | undefined {
+  if (step.capabilityInferred) return undefined;
+  return tacticRank(step.techniques) ?? tacticRank(CAPABILITY_TECHNIQUES[step.capability]);
+}
+
+/**
+ * Steps in ATT&CK tactic order (RULE-116). A step without a rank takes the earliest rank in its
+ * precondition group, else the rank of the group before it, else of the step before it; ties keep
+ * their order. Sorting changes no step, only where it is listed.
+ */
+export function orderStepsByTactic<T extends { capability: Capability; capabilityInferred?: true; techniques?: string[] }>(
+  steps: readonly T[],
+  groupOf: (step: T) => number | undefined = () => undefined,
+): T[] {
+  const own = steps.map((s) => stepTacticRank(s));
+  const groupRank = new Map<number, number>();
+  steps.forEach((s, i) => {
+    const g = groupOf(s);
+    const r = own[i];
+    if (g === undefined || r === undefined) return;
+    groupRank.set(g, Math.min(groupRank.get(g) ?? r, r));
+  });
+  const keys: number[] = [];
+  steps.forEach((s, i) => {
+    let key = own[i];
+    const g = groupOf(s);
+    if (key === undefined && g !== undefined) {
+      for (let k = g; k >= 0 && key === undefined; k--) key = groupRank.get(k);
+    }
+    keys.push(key ?? (i > 0 ? keys[i - 1] : -1));
+  });
+  return steps
+    .map((s, i) => ({ s, i, key: keys[i] }))
+    .sort((a, b) => a.key - b.key || a.i - b.i)
+    .map((x) => x.s);
+}

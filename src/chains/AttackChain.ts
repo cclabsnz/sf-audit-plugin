@@ -11,6 +11,8 @@ export interface AttackChainStep {
   capabilityInferred?: true;
   /** The step belongs to the named chain's break point: fixing all such steps stops the chain (RULE-111). */
   breaksChain?: true;
+  /** Verified ATT&CK technique ids for `capability` as this step's finding grants it; absent when inferred (RULE-110, RULE-113). */
+  techniques?: string[];
   title?: string;
   severity?: RiskLevel;
 }

@@ -190,3 +190,53 @@ controller/processor contracts are out of scope for a configuration review and d
 | [x] | GDPR-Art33 | Notification of a personal data breach to the supervisory authority | Regulation (EU) 2016/679, Art. 33(1) |
 | [x] | GDPR-Art44 | General principle for transfers | Regulation (EU) 2016/679, Art. 44 |
 
+
+## ATT&CK — Enterprise ATT&CK v20.0 (19/19 verified)
+
+ATT&CK techniques are threat references, not compliance controls, and never enter the compliance
+matrix or the totals above (RULE-100). They attach to the attacker capabilities a finding grants,
+never to a check (RULE-106).
+
+**Source.** `enterprise-attack-20.0.json` from
+[mitre-attack/attack-stix-data](https://github.com/mitre-attack/attack-stix-data) tag v20.0
+(collection modified 2026-10-13; its Enterprise matrix gives the tactic order chains are listed in, RULE-116), sha256 `81113ba98afa2928f3dcff62022539f7ce30c315c32e14422f11ff95ce534352`.
+The id, name, tactics and url of each technique below are checked against that file, and
+`test/fixtures/attack/enterprise-attack-20.0-extract.json` keeps the extract the tests compare with.
+Checked 2026-10-28, and the fit of every grant reviewed adversarially against each finding's own
+title and detail the same day.
+
+**Fit.** A technique sits on a capability only when it describes what an attacker does with that
+capability for *every* finding that grants it. Where it does not fit one finding, that finding's
+registry entry (`CapabilityEntry.techniques`) names the technique that does, or none. The notes
+column records the judgement; the platform caveat is ATT&CK's list of platforms where the technique
+is documented, which for some behaviours does not yet name SaaS.
+
+| ✓ | id | name | tactics (v20.0) | used for | fit notes |
+|---|---|---|---|---|---|
+| [x] | T1190 | Exploit Public-Facing Application | initial-access | `unauth-foothold` | ATT&CK includes a misconfiguration of an Internet-facing system as the weakness exploited: guest access to data, Apex or the API, and an unauthenticated inbound email handler. Not an active guest user or site on its own, nor observed guest traffic, which are a surface and an observation rather than a weakness (overrides: none). Platforms do not list SaaS. |
+| [x] | T1078.004 | Cloud Accounts | stealth, persistence, privilege-escalation, initial-access | `low-trust-authenticated`, self-registration included; `priv-esc` for Login-As and for registration handlers that link by unverified email; `detects` for a missing SIEM | A valid account in a SaaS application: an external, social-login or self-registered user, or another user's account reached through Login-As or email linking. |
+| [x] | T1136.003 | Cloud Account | persistence | `low-trust-authenticated` for self-registration, alongside T1078.004 | Anyone may create the account the external-sharing findings assume, and then signs in with it; ATT&CK files account creation under persistence only, so T1078.004 carries the initial access. |
+| [x] | T1213.004 | Customer Relationship Management Software | collection | `data-read`, `data-read-bulk` | ATT&CK names Salesforce as an example. Not for missing Shield encryption, which gives no one new read access (override: none). |
+| [x] | T1087.004 | Cloud Account | discovery | `data-read`, `data-read-bulk` for guest visibility of users, alongside T1213.004 | Listing the org's users is cloud account discovery. |
+| [x] | T1565.001 | Stored Data Manipulation | impact | `data-write` | Insert, delete or change data at rest, databases included. Platforms list Linux, macOS and Windows only. |
+| [x] | T1485 | Data Destruction | impact | `data-write` for guest hard delete | Hard delete bypasses the recycle bin and cannot be undone. Platforms do not list SaaS. |
+| [x] | T1059.009 | Cloud API | execution | `code-exec` | Invoking the org's APIs to run functions: exposed and system-mode Apex, REST resources, autolaunched flows. Not the inbound email handler (an email triggers it), screen flows (a user clicks through them) or a SOQL injection pattern in code (overrides: none). |
+| [x] | T1552 | Unsecured Credentials | credential-access | `credential-theft` | Credentials stored insecurely: hardcoded literals, custom labels, custom settings, Flow callout secrets. Not CORS allowlist entries, which grant no capability: an entry exposes no stored credential, and abusing it needs a controlled origin and a logged-in victim. Not active debug traces, which grant no capability either: reading debug logs needs View All Data. |
+| [x] | T1528 | Steal Application Access Token | credential-access | `credential-theft` for OAuth device flow and outbound messages that carry a session id | ATT&CK covers tokens obtained by consent phishing (device flow) and tokens an app holds; a session id posted to an external endpoint is an access token in another party's hands. |
+| [x] | T1110.003 | Password Spraying | credential-access | `credential-theft` for the OAuth username-password flow | The flow exchanges a password for a token without the interactive login or MFA; lockout still limits guessing one account, so spraying across many is the fit. |
+| [x] | T1110 | Brute Force | credential-access | `detects` for a missing SIEM | SBS-MON-003 is alerting on suspicious logins. |
+| [x] | T1098.003 | Additional Cloud Roles | persistence, privilege-escalation | `priv-esc` | Granting more permissions to an account the attacker holds: permission-set assignment, delegated administration, separation-of-duties combinations that grant permissions. |
+| [x] | T1098 | Account Manipulation | persistence, privilege-escalation | `org-takeover`; `priv-esc` for escalation permissions and integration accounts with them | Whoever controls the org can change any account. The escalation findings cover a mix (create users, reset passwords, assign permission sets), which the parent technique covers and the role-only sub-technique does not. |
+| [x] | T1556 | Modify Authentication Process | defense-impairment, persistence, credential-access | `priv-esc` for Manage Auth. Providers with Manage Users | The holder can reroute authentication to impersonate or lock out users. |
+| [x] | T1556.007 | Hybrid Identity | defense-impairment, persistence, credential-access | `org-takeover` for delegated authentication | Delegated authentication hands password checks to an external endpoint; whoever controls that endpoint decides who logs in, admins included. |
+| [x] | T1546 | Event Triggered Execution | privilege-escalation, persistence | `priv-esc` for platform event subscribers and registration handlers running as an admin | Code that an event runs as a more privileged account; ATT&CK lists SaaS. |
+| [x] | T1648 | Serverless Execution | execution | `priv-esc` for Author Apex | Deploying code the platform runs in system context, beyond the deployer's own permissions. |
+| [x] | T1567 | Exfiltration Over Web Service | exfiltration | `external-egress` | Data leaving through an HTTP endpoint the org already calls: named credentials, remote sites, Flow callouts, outbound messages. Not org-wide email addresses: they are a phishing surface rather than a data channel, so they grant no capability. |
+
+**Draft candidates not used.** T1562.008 Impair Defenses: Disable or Modify Cloud Logs is revoked in
+v20.0 by T1685.002, which does not fit the missing-SIEM finding either: that finding is about
+alerting on logins and API anomalies, and setting changes still land in Setup Audit Trail. T1530
+Data from Cloud Storage fits only file findings. T1552.001 Credentials In Files does not list SaaS;
+the parent T1552 fits. T1548 Abuse Elevation Control Mechanism does not list SaaS and fits no
+escalation finding better than the techniques above. T1537 for Data Cloud shares was considered
+and not used: it means a transfer within the same cloud provider.
