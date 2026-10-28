@@ -9,6 +9,17 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.21.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.21.0) — 2026-10-28
+
+Findings and attack chains now name the MITRE ATT&CK techniques an attacker would use, and chain
+steps are listed in the order an attack would run.
+
+### Added
+
+- **MITRE ATT&CK techniques on findings.** A finding carries the techniques for the attacker capabilities it grants, never for the check that raised it: as `threats.attack` in JSON, an **ATT&CK** line in Markdown, `attack:<id>` rule tags in SARIF, and a technique label on each attack-chain step in Markdown and HTML (SARIF steps carry `attackTechniques`). Techniques are pinned to Enterprise ATT&CK v20.0, and only techniques whose id, name, tactics and fit are recorded in the verification worksheet are ever shown. Where a capability's usual technique does not fit a finding, the finding names its own or none.
+- **Detection gaps say what goes unseen.** A finding showing that nothing alerts on suspicious logins carries the techniques it leaves unobserved (`threats.detects`, "leaves unobserved" in Markdown), kept apart from the techniques a finding grants.
+- **Chain steps follow the ATT&CK tactic order.** Steps of named and potential chains are listed from the earliest tactic (initial access) to the latest (exfiltration, impact). Ordering moves steps only; the break point, severity and score are unchanged.
+
 ### Changed
 
 - **Active debug traces no longer count as an exposed secret.** The finding fires on a trace at any log level, and only View All Data users can read debug logs, so it grants no attacker capability. It no longer feeds `cred-theft-pivot`, nor the potential chain from an unauthenticated foothold to credential theft.
