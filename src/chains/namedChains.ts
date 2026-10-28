@@ -363,7 +363,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'map the guest-readable data and pull it',
       preconditions: [{ ids: GUEST_TRAFFIC }, { ids: GUEST_BULK_SURFACE, role: 'data-read-bulk' }],
       breakPoint: 1,
-      tactics: { entry: 'initial-access', goal: 'collection' },
+      tactics: { entry: 'discovery', goal: 'collection' },
       breakPointText:
         'Close the guest bulk-read surface: guest object exposure and guest visibility of users.',
     },
@@ -441,7 +441,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'read large datasets beyond their own access',
       preconditions: [{ ids: SOQL_INJECTION }, { ids: SOQL_READ_SINKS, role: 'data-read-bulk' }, { capabilities: ['code-exec'] }],
       breakPoint: 0,
-      tactics: { entry: 'execution', goal: 'collection' },
+      tactics: { goal: 'collection' },
       breakPointText:
         'Use bind variables in the injectable dynamic SOQL.',
     },
@@ -701,7 +701,8 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'use standing API access that no login control sees',
       preconditions: [{ ids: OAUTH_STANDING }, { ids: OAUTH_UNCONTAINED }],
       breakPoint: 0,
-      tactics: { entry: 'execution', goal: 'collection' },
+      // No tactics declared: the token holder's own access carries no catalogued technique (T1550.001
+      // is not mapped), so the chain's first technique depends on which optional findings are present.
       breakPointText:
         'Replace Full scope with the scopes each integration uses, and set refresh tokens to expire.',
     },
@@ -824,7 +825,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'collect org files outside every record control',
       preconditions: [{ ids: ANONYMOUS_FILES }, { ids: FILES_UNACCOUNTED }],
       breakPoint: 0,
-      tactics: { entry: 'collection', goal: 'collection' },
+      tactics: { entry: 'collection' },
       breakPointText:
         'Remove anonymous access to files: public documents and static resources, links without expiry or password, and guest file access.',
     },

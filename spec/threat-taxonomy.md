@@ -132,15 +132,16 @@ cites: INT-014, MN-059
 cites: INT-014, MN-060, MN-062
 - When `ChainEngine.correlate` builds a chain, named or potential
 - then its steps are listed in the pinned release's Enterprise tactic order, each placed by the earliest tactic of its verified techniques, or, when its finding has none, of its capability's default technique (used to place the step, never rendered on it)
-- and an inferred step takes the earliest place in its precondition group, else the place of the group before it; ties keep the order `match()` returned
+- and an inferred step takes the earliest place in its precondition group, else that of the nearest earlier group with a placed step, else that of the step `match()` listed before it (first, if none); ties keep the order `match()` returned
 - and a precondition group may name a `role`, the capability its findings contribute to the chain; a step shows that capability when its finding grants it, otherwise its first grant
 - and ordering moves steps only: which chains fire, their steps, break points, severity, score and grade are unchanged
 
 ## RULE-117 Every named chain starts and ends where its abuse case says
 cites: INT-014, MN-059
 - When a named chain declares `abuseCase.tactics`, `entry` and `goal` are tactics of the pinned release
-- then, on the fixture holding every finding it matches on, the chain fires, `entry` is a tactic of its earliest-placed steps, and `goal` is a tactic of one of its placed steps
-- and a chain whose steps carry no verified technique declares neither
+- then, on the fixture holding every registry finding and every finding any named chain matches on, the chain fires, `entry` is a tactic of the techniques shown on its earliest steps, and `goal` is a tactic of the techniques shown on a step placed after them (on any step, when no `entry` is declared)
+- and only techniques a step shows count: a capability default used to place a step whose finding overrides it does not
+- and a chain whose first shown technique depends on optional findings, or whose steps show none, declares no `entry`
 
 ## Draft mappings (to verify, not to render)
 

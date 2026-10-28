@@ -10,13 +10,13 @@ import { ALL_CAPABILITIES } from '../../../src/chains/Capability.js';
 import { CAPABILITY_REGISTRY, capabilitiesFor } from '../../../src/chains/CapabilityRegistry.js';
 import { ChainEngine } from '../../../src/chains/ChainEngine.js';
 import type { AttackChain } from '../../../src/chains/AttackChain.js';
-import { NAMED_CHAINS } from '../../../src/chains/namedChains.js';
+import { NAMED_CHAINS, inGroup } from '../../../src/chains/namedChains.js';
 import type { Finding } from '../../../src/findings/Finding.js';
 import { buildAuditResult } from '../../../src/findings/scoring.js';
 import { CHECK_STRIDE_MAP } from '../../../src/threats/stride.js';
 import {
   ATTACK_OUTPUT_ENABLED, ATTACK_RELEASE, ATTACK_TACTIC_ORDER, ATTACK_TECHNIQUES, CAPABILITY_TECHNIQUES,
-  DETECTION_GAP_TECHNIQUES, attackFor, capabilitiesWithoutTechnique, detectsFor, orderStepsByTactic, stepTacticRank,
+  DETECTION_GAP_TECHNIQUES, attackFor, capabilitiesWithoutTechnique, detectsFor, orderStepsByTactic, stepTacticRank, tacticRank,
   techniqueLabel, techniquesForGrant,
 } from '../../../src/threats/attack.js';
 import { MarkdownRenderer } from '../../../src/renderers/MarkdownRenderer.js';
@@ -242,11 +242,9 @@ describe('RULE-113 every output carries ATT&CK in its own idiom', () => {
   });
 });
 
-/** The tactics a step is placed by: its own techniques, else its capability's default. */
-function stepTactics(s: AttackChain['steps'][number]): string[] {
-  if (s.capabilityInferred) return [];
-  const ids = s.techniques?.length ? s.techniques : CAPABILITY_TECHNIQUES[s.capability];
-  return ids.flatMap((id) => ATTACK_TECHNIQUES[id].tactics);
+/** The tactics of the techniques a step renders; a placement-only default never counts (RULE-117). */
+function shownTactics(s: AttackChain['steps'][number]): string[] {
+  return (s.techniques ?? []).flatMap((id) => ATTACK_TECHNIQUES[id].tactics);
 }
 
 describe('RULE-116 chain steps follow the ATT&CK tactic order', () => {
@@ -288,14 +286,21 @@ describe('RULE-116 chain steps follow the ATT&CK tactic order', () => {
       .toEqual(['foothold', 'gap', 'read-a', 'read-b', 'exfil']);
   });
 
-  it('ordering moves steps only: the same steps, the same break point, the same chains', () => {
+  it('ordering moves steps only: every chain fires with the same steps, each once, break point unmoved', () => {
     const fs = allFindings();
+    const byId = new Map(fs.map((f) => [f.id, f]));
+    const present = new Set(fs.flatMap((f) => capabilitiesFor(f).grants));
     const chains = new ChainEngine().correlate(fs);
     for (const def of NAMED_CHAINS) {
       const c = chains.find((x) => x.id === def.id);
-      if (!c) continue;
-      const members = new Set(def.match(new Set(fs.flatMap((f) => capabilitiesFor(f).grants)), fs)?.map((f) => f.id));
-      expect(new Set(c.steps.map((s) => s.findingId))).toEqual(members);
+      expect({ chain: def.id, fired: Boolean(c) }).toEqual({ chain: def.id, fired: true });
+      const members = def.match(present, fs)!.map((f) => f.id).sort();
+      expect({ chain: def.id, steps: c!.steps.map((s) => s.findingId).sort() }).toEqual({ chain: def.id, steps: members });
+      const breakGroup = def.abuseCase.preconditions[def.abuseCase.breakPoint];
+      for (const s of c!.steps) {
+        expect({ chain: def.id, step: s.findingId, breaks: Boolean(s.breaksChain) })
+          .toEqual({ chain: def.id, step: s.findingId, breaks: inGroup(byId.get(s.findingId)!, breakGroup) });
+      }
     }
   });
 
@@ -315,14 +320,17 @@ describe('RULE-117 every named chain starts and ends where its abuse case says',
     it(`${def.id} starts at ${declared.entry ?? '—'} and reaches ${declared.goal ?? '—'}`, () => {
       const c = chains.find((x) => x.id === def.id)!;
       expect(c).toBeDefined();
-      const ranked = c.steps.filter((s) => stepTacticRank(s) !== undefined);
-      expect(ranked.length).toBeGreaterThan(0);
-      const first = Math.min(...ranked.map((s) => stepTacticRank(s)!));
+      const shown = c.steps.filter((s) => tacticRank(s.techniques) !== undefined);
+      expect(shown.length).toBeGreaterThan(0);
+      const first = Math.min(...shown.map((s) => tacticRank(s.techniques)!));
       if (declared.entry) {
-        const entryTactics = ranked.filter((s) => stepTacticRank(s) === first).flatMap(stepTactics);
-        expect(entryTactics).toContain(declared.entry);
+        expect(shown.filter((s) => tacticRank(s.techniques) === first).flatMap(shownTactics)).toContain(declared.entry);
       }
-      if (declared.goal) expect(ranked.flatMap(stepTactics)).toContain(declared.goal);
+      if (declared.goal) {
+        // With an entry, the goal must be reached by a later step, not by a tactic the entry step happens to list.
+        const reaching = declared.entry ? shown.filter((s) => tacticRank(s.techniques)! > first) : shown;
+        expect(reaching.flatMap(shownTactics)).toContain(declared.goal);
+      }
     });
   }
 
