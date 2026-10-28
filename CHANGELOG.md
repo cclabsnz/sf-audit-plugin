@@ -12,6 +12,7 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 ### Changed
 
 - **Active debug traces no longer count as an exposed secret.** The finding fires on a trace at any log level, and only View All Data users can read debug logs, so it grants no attacker capability. It no longer feeds `cred-theft-pivot`, nor the potential chain from an unauthenticated foothold to credential theft.
+- **Wildcard and broad CORS origins no longer count as an exposed secret.** An allowlist entry exposes no stored credential; abusing one needs a controlled origin and a logged-in victim, and reaches only that user's own access. The findings keep their severity but no longer feed `cred-theft-pivot`, nor the potential chain from an unauthenticated foothold to credential theft.
 - **Org-wide email spoofing no longer grants egress.** An address open to all profiles, or mail without DKIM, is a phishing surface rather than a channel for moving data.
 
 ### Fixed

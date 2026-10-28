@@ -90,7 +90,7 @@ describe('RULE-106 ATT&CK techniques attach to granted capabilities, not checks'
   it('a registry override replaces the default for that grant only, and an empty override means none', () => {
     expect(techniquesForGrant('oauth-device-flow-enabled', 'credential-theft')).toEqual(['T1528']);
     expect(techniquesForGrant('hardcoded-credentials-found', 'credential-theft')).toEqual(['T1552']);
-    expect(techniquesForGrant('cors-wildcard-origin', 'credential-theft')).toEqual([]);
+    expect(techniquesForGrant('inbound-email-handler-unauthenticated-execution', 'code-exec')).toEqual([]);
     expect(techniquesForGrant('users-author-apex', 'code-exec')).toEqual(['T1059.009']);
     expect(techniquesForGrant('users-author-apex', 'priv-esc')).toEqual(['T1648']);
   });

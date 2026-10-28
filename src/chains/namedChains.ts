@@ -142,7 +142,6 @@ export const TAKEOVER_ADMIN_EVIDENCE = [
 // Exposed secrets: every finding here that grants credential-theft.
 export const EXPOSED_SECRETS = [
   'hardcoded-credentials-found', 'custom-labels-credential-value-match', 'custom-labels-credential-name-match',
-  'cors-wildcard-origin', 'cors-broad-origin',
   'flow-http-callout-hardcoded-secret', 'oauth-device-flow-enabled', 'oauth-password-flow-enabled',
   'custom-settings-credentials',
 ];
@@ -406,10 +405,10 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     title: 'Credential theft to external pivot',
     severity: 'CRITICAL',
     narrative:
-      'Exposed secrets (hardcoded credentials, credentials in custom labels or settings, or broad CORS) ' +
+      'Exposed secrets (hardcoded credentials, credentials in custom labels or settings, or enabled device or password OAuth flows) ' +
       'combine with an external egress path (named credential, remote site or Flow callout) to exfiltrate data to attacker infrastructure.',
     remediation:
-      'Rotate and remove exposed secrets, tighten CORS origins, and review external callout endpoints.',
+      'Rotate and remove exposed secrets, and review external callout endpoints.',
     abuseCase: {
       actor: 'anyone who obtains an exposed secret',
       goal: 'use it to move data to infrastructure they control',
@@ -417,7 +416,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       breakPoint: 0,
       tactics: { entry: 'credential-access', goal: 'exfiltration' },
       breakPointText:
-        'Rotate and remove every exposed secret: hardcoded credentials, credentials in custom settings or labels, broad CORS origins and enabled device or password OAuth flows.',
+        'Rotate and remove every exposed secret: hardcoded credentials, credentials in custom settings or labels, and enabled device or password OAuth flows.',
     },
     match(present, active) {
       if (!has(present, 'credential-theft', 'external-egress')) return null;

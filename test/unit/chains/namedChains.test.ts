@@ -100,7 +100,7 @@ describe('NAMED_CHAINS', () => {
 
   it('cred-theft-pivot does NOT fire when egress comes only from a finding outside its steps', () => {
     const chain = NAMED_CHAINS.find((c) => c.id === 'cred-theft-pivot')!;
-    const secrets = [f('hardcoded-credentials-found'), f('cors-wildcard-origin')];
+    const secrets = [f('hardcoded-credentials-found'), f('custom-labels-credential-value-match')];
     for (const outside of ['org-wide-email-spoofing-no-dkim', 'outbound-messages-session-id']) {
       const findings = [...secrets, f(outside)];
       expect({ outside, steps: chain.match(present(findings), findings) }).toEqual({ outside, steps: null });

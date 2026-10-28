@@ -56,8 +56,9 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'guest-executable-apex-exposed':     { grants: ['code-exec'] },
   // Sharing still bounds which records a guest reaches; SYSTEM_MODE lifts only CRUD/FLS on them.
   'guest-executable-apex-system-mode': { grants: ['code-exec', 'data-read'] },
-  'cors-wildcard-origin':              { grants: ['credential-theft'], techniques: { 'credential-theft': [] } },
-  'cors-broad-origin':                 { grants: ['credential-theft'], techniques: { 'credential-theft': [] } },
+  // CORS allowlist entries grant nothing: an entry exposes no stored credential. Abusing one needs
+  // control of a matching origin and a logged-in victim visiting it, and yields at most that user's
+  // own session-scoped access.
   'escalation-perms-found':            { grants: ['priv-esc'], techniques: { 'priv-esc': ['T1098'] } },
   // Guest bulk-read surface (UI-API reachable) — the confirmed exfiltration sink
   'guest-object-exposure-public-owd':  { grants: ['unauth-foothold', 'data-read-bulk'] },

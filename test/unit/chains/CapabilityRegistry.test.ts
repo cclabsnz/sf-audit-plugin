@@ -112,6 +112,13 @@ describe('CapabilityRegistry', () => {
 
   // An org-wide address open to all profiles, or mail sent without DKIM, lets someone send
   // convincing phishing. That is no attacker capability in this model and no data channel.
+  // An allowlist entry exposes no stored credential; abusing it needs a controlled origin and a
+  // logged-in victim, and reaches only that user's own access.
+  it('grants nothing to wildcard or broad CORS origins', () => {
+    expect(capabilitiesFor(f('cors-wildcard-origin')).grants).toEqual([]);
+    expect(capabilitiesFor(f('cors-broad-origin')).grants).toEqual([]);
+  });
+
   it('grants nothing to org-wide email spoofing', () => {
     expect(capabilitiesFor(f('org-wide-email-spoofing-all-profiles')).grants).toEqual([]);
     expect(capabilitiesFor(f('org-wide-email-spoofing-no-dkim')).grants).toEqual([]);
