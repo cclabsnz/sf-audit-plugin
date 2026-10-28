@@ -9,6 +9,13 @@ import type { Finding } from '../findings/Finding.js';
 /** The Enterprise ATT&CK release every technique below was checked against. */
 export const ATTACK_RELEASE = '20.0';
 
+/** The Enterprise matrix's tactic order in the pinned release, earliest stage first (RULE-116). */
+export const ATTACK_TACTIC_ORDER: readonly string[] = [
+  'reconnaissance', 'resource-development', 'initial-access', 'execution', 'persistence',
+  'privilege-escalation', 'stealth', 'defense-impairment', 'credential-access', 'discovery',
+  'lateral-movement', 'collection', 'command-and-control', 'exfiltration', 'impact',
+];
+
 export interface AttackTechnique {
   id: string;
   name: string;
@@ -119,4 +126,58 @@ export function capabilitiesWithoutTechnique(): Capability[] {
   return ALL_CAPABILITIES.filter(
     (c) => !(CAPABILITY_TECHNIQUES[c] ?? []).some((id) => ATTACK_TECHNIQUES[id]?.verified),
   );
+}
+
+/** Position of the earliest tactic among these verified techniques; undefined when there are none. */
+export function tacticRank(ids: readonly string[] | undefined): number | undefined {
+  let best: number | undefined;
+  for (const id of verifiedIds(ids)) {
+    for (const tactic of ATTACK_TECHNIQUES[id].tactics) {
+      const i = ATTACK_TACTIC_ORDER.indexOf(tactic);
+      if (i >= 0 && (best === undefined || i < best)) best = i;
+    }
+  }
+  return best;
+}
+
+/**
+ * Where a step sits in tactic order: its own techniques, or, when its finding has none, the
+ * default technique of the capability it grants. The default orders the step and is never
+ * rendered on it. An inferred step has no rank of its own.
+ */
+export function stepTacticRank(step: { capability: Capability; capabilityInferred?: true; techniques?: string[] }): number | undefined {
+  if (step.capabilityInferred) return undefined;
+  return tacticRank(step.techniques) ?? tacticRank(CAPABILITY_TECHNIQUES[step.capability]);
+}
+
+/**
+ * Steps in ATT&CK tactic order (RULE-116). A step without a rank takes the earliest rank in its
+ * precondition group, else the rank of the group before it, else of the step before it; ties keep
+ * their order. Sorting changes no step, only where it is listed.
+ */
+export function orderStepsByTactic<T extends { capability: Capability; capabilityInferred?: true; techniques?: string[] }>(
+  steps: readonly T[],
+  groupOf: (step: T) => number | undefined = () => undefined,
+): T[] {
+  const own = steps.map((s) => stepTacticRank(s));
+  const groupRank = new Map<number, number>();
+  steps.forEach((s, i) => {
+    const g = groupOf(s);
+    const r = own[i];
+    if (g === undefined || r === undefined) return;
+    groupRank.set(g, Math.min(groupRank.get(g) ?? r, r));
+  });
+  const keys: number[] = [];
+  steps.forEach((s, i) => {
+    let key = own[i];
+    const g = groupOf(s);
+    if (key === undefined && g !== undefined) {
+      for (let k = g; k >= 0 && key === undefined; k--) key = groupRank.get(k);
+    }
+    keys.push(key ?? (i > 0 ? keys[i - 1] : -1));
+  });
+  return steps
+    .map((s, i) => ({ s, i, key: keys[i] }))
+    .sort((a, b) => a.key - b.key || a.i - b.i)
+    .map((x) => x.s);
 }

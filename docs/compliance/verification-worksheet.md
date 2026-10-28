@@ -199,7 +199,7 @@ never to a check (RULE-106).
 
 **Source.** `enterprise-attack-20.0.json` from
 [mitre-attack/attack-stix-data](https://github.com/mitre-attack/attack-stix-data) tag v20.0
-(collection modified 2026-10-13), sha256 `81113ba98afa2928f3dcff62022539f7ce30c315c32e14422f11ff95ce534352`.
+(collection modified 2026-10-13; its Enterprise matrix gives the tactic order chains are listed in, RULE-116), sha256 `81113ba98afa2928f3dcff62022539f7ce30c315c32e14422f11ff95ce534352`.
 The id, name, tactics and url of each technique below are checked against that file, and
 `test/fixtures/attack/enterprise-attack-20.0-extract.json` keeps the extract the tests compare with.
 Checked 2026-10-28, and the fit of every grant reviewed adversarially against each finding's own
@@ -214,8 +214,8 @@ is documented, which for some behaviours does not yet name SaaS.
 | ✓ | id | name | tactics (v20.0) | used for | fit notes |
 |---|---|---|---|---|---|
 | [x] | T1190 | Exploit Public-Facing Application | initial-access | `unauth-foothold` | ATT&CK includes a misconfiguration of an Internet-facing system as the weakness exploited: guest access to data, Apex or the API, and an unauthenticated inbound email handler. Not an active guest user or site on its own, nor observed guest traffic, which are a surface and an observation rather than a weakness (overrides: none). Platforms do not list SaaS. |
-| [x] | T1078.004 | Cloud Accounts | stealth, persistence, privilege-escalation, initial-access | `low-trust-authenticated`; `priv-esc` for Login-As and for registration handlers that link by unverified email; `detects` for a missing SIEM | A valid account in a SaaS application: an external or social-login user, or another user's account reached through Login-As or email linking. |
-| [x] | T1136.003 | Cloud Account | persistence | `low-trust-authenticated` for self-registration | Anyone may create the account the external-sharing findings assume. |
+| [x] | T1078.004 | Cloud Accounts | stealth, persistence, privilege-escalation, initial-access | `low-trust-authenticated`, self-registration included; `priv-esc` for Login-As and for registration handlers that link by unverified email; `detects` for a missing SIEM | A valid account in a SaaS application: an external, social-login or self-registered user, or another user's account reached through Login-As or email linking. |
+| [x] | T1136.003 | Cloud Account | persistence | `low-trust-authenticated` for self-registration, alongside T1078.004 | Anyone may create the account the external-sharing findings assume, and then signs in with it; ATT&CK files account creation under persistence only, so T1078.004 carries the initial access. |
 | [x] | T1213.004 | Customer Relationship Management Software | collection | `data-read`, `data-read-bulk` | ATT&CK names Salesforce as an example. Not for missing Shield encryption, which gives no one new read access (override: none). |
 | [x] | T1087.004 | Cloud Account | discovery | `data-read`, `data-read-bulk` for guest visibility of users, alongside T1213.004 | Listing the org's users is cloud account discovery. |
 | [x] | T1565.001 | Stored Data Manipulation | impact | `data-write` | Insert, delete or change data at rest, databases included. Platforms list Linux, macOS and Windows only. |

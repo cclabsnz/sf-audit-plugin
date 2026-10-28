@@ -5,8 +5,8 @@ import type { AttackChain, AttackChainStep } from './AttackChain.js';
 import type { Capability } from './Capability.js';
 import { SOURCE_CAPS, HIGH_IMPACT_SINKS } from './Capability.js';
 import { capabilitiesFor } from './CapabilityRegistry.js';
-import { techniquesForGrant } from '../threats/attack.js';
-import { NAMED_CHAINS, inGroup } from './namedChains.js';
+import { orderStepsByTactic, techniquesForGrant } from '../threats/attack.js';
+import { NAMED_CHAINS, inGroup, type NamedChainDef } from './namedChains.js';
 
 const SEVERITY_ORDER: Record<RiskLevel, number> = {
   CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4,
@@ -61,11 +61,11 @@ export class ChainEngine {
     return (c.confidence === 'named' ? 0 : 100) + SEVERITY_ORDER[c.severity];
   }
 
-  private stepFor(f: Finding, grants: Capability[]): AttackChainStep {
+  private stepFor(f: Finding, grants: Capability[], role?: Capability): AttackChainStep {
     const step: AttackChainStep = {
       findingId: f.id,
       checkId: f.checkId,
-      capability: grants[0] ?? 'data-read',
+      capability: (role && grants.includes(role) ? role : grants[0]) ?? 'data-read',
       title: f.title,
       severity: f.riskLevel,
     };
@@ -95,11 +95,7 @@ export class ChainEngine {
         narrative: def.narrative,
         remediation: def.remediation,
         abuseCase: { actor: def.abuseCase.actor, goal: def.abuseCase.goal, breakPoint: def.abuseCase.breakPointText },
-        steps: members.map((f) => {
-          const step = this.stepFor(f, grantsByFinding.get(f) ?? []);
-          if (inGroup(f, def.abuseCase.preconditions[def.abuseCase.breakPoint])) step.breaksChain = true;
-          return step;
-        }),
+        steps: this.namedSteps(def, members, grantsByFinding),
       });
     }
     return out;
@@ -174,11 +170,24 @@ export class ChainEngine {
             `${this.label(sink)}. Review whether these can be combined into an exploit path.`,
           remediation:
             'Treat the contributing findings as a single risk: remediating any one of them breaks the path.',
-          steps: members.map((f) => this.stepFor(f, grantsByFinding.get(f) ?? [])),
+          steps: orderStepsByTactic(members.map((f) => this.stepFor(f, grantsByFinding.get(f) ?? []))),
         });
       }
     }
     return out;
+  }
+
+  /** A named chain's steps, break point marked, in tactic order; inferred steps keep their precondition group's place. */
+  private namedSteps(def: NamedChainDef, members: Finding[], grantsByFinding: Map<Finding, Capability[]>): AttackChainStep[] {
+    const group = new Map<AttackChainStep, number>();
+    const steps = members.map((f) => {
+      const g = def.abuseCase.preconditions.findIndex((p) => inGroup(f, p));
+      const step = this.stepFor(f, grantsByFinding.get(f) ?? [], def.abuseCase.preconditions[g]?.role);
+      if (inGroup(f, def.abuseCase.preconditions[def.abuseCase.breakPoint])) step.breaksChain = true;
+      if (g >= 0) group.set(step, g);
+      return step;
+    });
+    return orderStepsByTactic(steps, (s) => group.get(s));
   }
 
   private label(c: Capability): string {

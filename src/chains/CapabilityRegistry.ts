@@ -163,7 +163,7 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // already assumes they have. On its own it is a supported feature and harmless; it earns a
   // capability because 'sharing-model-external-*' grants reach to whoever holds an account, and
   // this is the finding that says anyone may hold one.
-  'experience-cloud-site-self-registration':    { grants: ['low-trust-authenticated'], techniques: { 'low-trust-authenticated': ['T1136.003'] } },
+  'experience-cloud-site-self-registration':    { grants: ['low-trust-authenticated'], techniques: { 'low-trust-authenticated': ['T1136.003', 'T1078.004'] } },
 
   // The "Full" OAuth scope gives a token the same API reach as the user who authorised it. The
   // never-expiring refresh token and the stale/unmatched token findings are deliberately absent:

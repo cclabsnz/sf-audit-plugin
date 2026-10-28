@@ -12,6 +12,11 @@ export interface FindingGroup {
   ids?: readonly string[];
   prefixes?: readonly string[];
   capabilities?: readonly Capability[];
+  /**
+   * The capability this group's findings contribute to the chain. A step shows it when its finding
+   * grants it; otherwise the step shows the finding's first grant. Matching never reads it.
+   */
+  role?: Capability;
 }
 
 /**
@@ -26,6 +31,11 @@ export interface AbuseCaseDef {
   breakPoint: number;
   /** What to fix to break the chain, in plain language for every output. */
   breakPointText: string;
+  /**
+   * ATT&CK tactics the chain's steps must start at and reach, in tactic order (RULE-117). Absent
+   * where the steps that would show them carry no verified technique.
+   */
+  tactics?: { entry?: string; goal?: string };
 }
 
 export interface NamedChainDef {
@@ -317,6 +327,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'read or change business data in bulk without logging in',
       preconditions: [{ ids: GUEST_EXPOSURE }, { ids: UNAUTH_EXFIL_STEPS }, { ids: UNAUTH_EXFIL_WIDENERS }, { capabilities: ['unauth-foothold'] }, { capabilities: ['code-exec', 'data-read-bulk', 'data-write'] }],
       breakPoint: 0,
+      tactics: { entry: 'initial-access', goal: 'collection' },
       breakPointText:
         'Close every confirmed guest exposure: guest object and record access, guest-callable Apex, guest API access, guest visibility of users, the guest record-access policy, and unauthenticated email handlers.',
     },
@@ -350,8 +361,9 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     abuseCase: {
       actor: 'an unauthenticated visitor already probing the site',
       goal: 'map the guest-readable data and pull it',
-      preconditions: [{ ids: GUEST_TRAFFIC }, { ids: GUEST_BULK_SURFACE }],
+      preconditions: [{ ids: GUEST_TRAFFIC }, { ids: GUEST_BULK_SURFACE, role: 'data-read-bulk' }],
       breakPoint: 1,
+      tactics: { entry: 'initial-access', goal: 'collection' },
       breakPointText:
         'Close the guest bulk-read surface: guest object exposure and guest visibility of users.',
     },
@@ -376,6 +388,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'take full control of the org',
       preconditions: [{ ids: LOW_TRUST_ENTRY }, { ids: NON_ADMIN_ESCALATION }, { ids: TAKEOVER_ADMIN_EVIDENCE }],
       breakPoint: 1,
+      tactics: { entry: 'initial-access', goal: 'privilege-escalation' },
       breakPointText:
         'Remove every escalation permission held by someone who is not an administrator.',
     },
@@ -402,6 +415,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'use it to move data to infrastructure they control',
       preconditions: [{ ids: EXPOSED_SECRETS }, { ids: EGRESS_PATHS }, { capabilities: ['credential-theft'] }, { capabilities: ['external-egress'] }],
       breakPoint: 0,
+      tactics: { entry: 'credential-access', goal: 'exfiltration' },
       breakPointText:
         'Rotate and remove every exposed secret: hardcoded credentials, credentials in custom settings or labels, active debug traces, broad CORS origins and enabled device or password OAuth flows.',
     },
@@ -425,8 +439,9 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     abuseCase: {
       actor: 'a user who can reach injectable Apex',
       goal: 'read large datasets beyond their own access',
-      preconditions: [{ ids: SOQL_INJECTION }, { ids: SOQL_READ_SINKS }, { capabilities: ['code-exec'] }],
+      preconditions: [{ ids: SOQL_INJECTION }, { ids: SOQL_READ_SINKS, role: 'data-read-bulk' }, { capabilities: ['code-exec'] }],
       breakPoint: 0,
+      tactics: { entry: 'execution', goal: 'collection' },
       breakPointText:
         'Use bind variables in the injectable dynamic SOQL.',
     },
@@ -521,6 +536,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'have the agent query records and send them out',
       preconditions: [{ prefixes: AGENT_QUERY_REACH }, { ids: AGENT_OUTBOUND, prefixes: STALE_TRUSTED_URL }, { ids: UNTRUSTED_INPUT }],
       breakPoint: 1,
+      tactics: { entry: 'initial-access' },
       breakPointText:
         'Require confirmation on every outbound agent action and remove trusted domains you no longer control.',
     },
@@ -551,6 +567,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'read real production personal data under weaker controls',
       preconditions: [{ ids: SANDBOX_PII }, { ids: SANDBOX_WEAK_CONTROLS }],
       breakPoint: 0,
+      tactics: { entry: 'initial-access', goal: 'collection' },
       breakPointText:
         'Mask the production personal data in the sandbox, or refresh it without production data.',
     },
@@ -580,6 +597,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'export business data in bulk without a record of it',
       preconditions: [{ ids: INSIDER_BROAD_READ }, { ids: INSIDER_BULK_EGRESS }, { ids: INSIDER_BLIND_SPOT }],
       breakPoint: 1,
+      tactics: { entry: 'collection', goal: 'exfiltration' },
       breakPointText:
         'Restrict Weekly Data Export and bulk API export to a named few, and remove self-provisioned connected-app or API export channels.',
     },
@@ -610,6 +628,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'act without being detected or reconstructed afterwards',
       preconditions: [{ ids: DETECTION_BLIND_SPOTS }, { capabilities: EXPLOITABLE_ACCESS }],
       breakPoint: 0,
+      tactics: { entry: 'initial-access' },
       breakPointText:
         'Restore detection: Event Monitoring with adequate retention, threat detection, a Transaction Security policy and SIEM forwarding.',
     },
@@ -637,6 +656,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'take over a privileged account without a second factor',
       preconditions: [{ ids: MFA_WEAKNESS }, { ids: PRIVILEGED_ACCOUNTS }],
       breakPoint: 0,
+      tactics: { goal: 'privilege-escalation' },
       breakPointText:
         'Enforce MFA for every user and remove trusted-IP ranges that bypass it.',
     },
@@ -681,6 +701,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'use standing API access that no login control sees',
       preconditions: [{ ids: OAUTH_STANDING }, { ids: OAUTH_UNCONTAINED }],
       breakPoint: 0,
+      tactics: { entry: 'execution', goal: 'collection' },
       breakPointText:
         'Replace Full scope with the scopes each integration uses, and set refresh tokens to expire.',
     },
@@ -720,6 +741,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'self-register and read more than their own records',
       preconditions: [{ ids: SELF_REGISTRATION }, { ids: PORTAL_REACH }, { ids: SOCIAL_SIGN_ON }],
       breakPoint: 0,
+      tactics: { entry: 'initial-access', goal: 'collection' },
       breakPointText:
         'Turn off self-registration on the site.',
     },
@@ -758,6 +780,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'replay the session it receives as the running user',
       preconditions: [{ ids: SESSION_ID_LEAK }, { ids: SESSION_UNCHECKED }],
       breakPoint: 0,
+      tactics: { entry: 'credential-access' },
       breakPointText:
         'Clear Send Session ID on the outbound message.',
     },
@@ -801,6 +824,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'collect org files outside every record control',
       preconditions: [{ ids: ANONYMOUS_FILES }, { ids: FILES_UNACCOUNTED }],
       breakPoint: 0,
+      tactics: { entry: 'collection', goal: 'collection' },
       breakPointText:
         'Remove anonymous access to files: public documents and static resources, links without expiry or password, and guest file access.',
     },
@@ -871,6 +895,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'trigger privileged Apex without credentials',
       preconditions: [{ ids: OPEN_EMAIL_HANDLER }, { ids: EMAIL_FOLLOW_ON }, { capabilities: ['unauth-foothold'] }, { capabilities: ['code-exec'] }],
       breakPoint: 0,
+      tactics: { entry: 'initial-access', goal: 'execution' },
       breakPointText:
         'Restrict the email service to authorised senders and reject mail that fails authentication.',
     },
@@ -898,6 +923,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       goal: 'publish an event that runs as a privileged user',
       preconditions: [{ ids: EVENT_PUBLISHER_FOOTHOLD }, { ids: EVENT_SUBSCRIBER_ESCALATION }, { ids: EVENT_PRIVILEGED_TARGETS }, { capabilities: ['unauth-foothold', 'low-trust-authenticated'] }, { capabilities: ['priv-esc', 'data-write'] }],
       breakPoint: 1,
+      tactics: { entry: 'initial-access', goal: 'privilege-escalation' },
       breakPointText:
         'Run event subscribers as a dedicated least-privilege user, not Automated Process or an administrator.',
     },

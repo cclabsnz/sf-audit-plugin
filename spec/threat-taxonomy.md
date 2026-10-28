@@ -128,6 +128,20 @@ cites: INT-014, MN-059
 - When a check assesses an API surface (`apex-rest-endpoint`, `connected-apps`, `api-client-permission`, `integration-least-privilege`, `guest-api-access`, `soap-login-api-auth`)
 - then it also maps to the matching OWASP API Security Top 10:2023 control, catalogued with provenance under a new `Framework` value (`OWASP_API`), selectable with `--frameworks owasp-api`, and not added to the `universal` or `nz` packs
 
+## RULE-116 Chain steps follow the ATT&CK tactic order
+cites: INT-014, MN-060, MN-062
+- When `ChainEngine.correlate` builds a chain, named or potential
+- then its steps are listed in the pinned release's Enterprise tactic order, each placed by the earliest tactic of its verified techniques, or, when its finding has none, of its capability's default technique (used to place the step, never rendered on it)
+- and an inferred step takes the earliest place in its precondition group, else the place of the group before it; ties keep the order `match()` returned
+- and a precondition group may name a `role`, the capability its findings contribute to the chain; a step shows that capability when its finding grants it, otherwise its first grant
+- and ordering moves steps only: which chains fire, their steps, break points, severity, score and grade are unchanged
+
+## RULE-117 Every named chain starts and ends where its abuse case says
+cites: INT-014, MN-059
+- When a named chain declares `abuseCase.tactics`, `entry` and `goal` are tactics of the pinned release
+- then, on the fixture holding every finding it matches on, the chain fires, `entry` is a tactic of its earliest-placed steps, and `goal` is a tactic of one of its placed steps
+- and a chain whose steps carry no verified technique declares neither
+
 ## Draft mappings (to verify, not to render)
 
 Starting point for RULE-101 and RULE-106. Every ATT&CK id below is `verified: false` until checked against a pinned release, and the fit is verified, not only the id.

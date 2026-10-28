@@ -15,8 +15,9 @@ import type { Finding } from '../../../src/findings/Finding.js';
 import { buildAuditResult } from '../../../src/findings/scoring.js';
 import { CHECK_STRIDE_MAP } from '../../../src/threats/stride.js';
 import {
-  ATTACK_OUTPUT_ENABLED, ATTACK_RELEASE, ATTACK_TECHNIQUES, CAPABILITY_TECHNIQUES, DETECTION_GAP_TECHNIQUES,
-  attackFor, capabilitiesWithoutTechnique, detectsFor, techniqueLabel, techniquesForGrant,
+  ATTACK_OUTPUT_ENABLED, ATTACK_RELEASE, ATTACK_TACTIC_ORDER, ATTACK_TECHNIQUES, CAPABILITY_TECHNIQUES,
+  DETECTION_GAP_TECHNIQUES, attackFor, capabilitiesWithoutTechnique, detectsFor, orderStepsByTactic, stepTacticRank,
+  techniqueLabel, techniquesForGrant,
 } from '../../../src/threats/attack.js';
 import { MarkdownRenderer } from '../../../src/renderers/MarkdownRenderer.js';
 import { HtmlRenderer } from '../../../src/renderers/HtmlRenderer.js';
@@ -34,6 +35,7 @@ const finding = (id: string, extra: Partial<Finding> = {}): Finding => ({
 
 interface Extract {
   release: string;
+  tacticOrder: string[];
   sha256: string;
   techniques: Record<string, { name: string; tactics: string[]; url: string; revoked: boolean; deprecated: boolean }>;
 }
@@ -71,7 +73,7 @@ describe('RULE-106 ATT&CK techniques attach to granted capabilities, not checks'
   it('the defaults land on findings as the catalog says', () => {
     expect(new Set(attackFor(finding('guest-user-write-access')))).toEqual(new Set(['T1190', 'T1565.001', 'T1213.004']));
     expect(attackFor(finding('users-super-admin-combo'))).toEqual(['T1098']);
-    expect(attackFor(finding('experience-cloud-site-self-registration'))).toEqual(['T1136.003']);
+    expect(attackFor(finding('experience-cloud-site-self-registration'))).toEqual(['T1136.003', 'T1078.004']);
     expect(attackFor(finding('sharing-model-external-read'))).toEqual(['T1078.004', 'T1213.004']);
     expect(attackFor(finding('remote-sites-inventory'))).toEqual(['T1567']);
   });
@@ -237,5 +239,102 @@ describe('RULE-113 every output carries ATT&CK in its own idiom', () => {
     const a = buildAuditResult(ctx(), fs, {});
     const b = buildAuditResult(ctx(), tagged, {});
     expect({ score: b.healthScore, grade: b.grade }).toEqual({ score: a.healthScore, grade: a.grade });
+  });
+});
+
+/** The tactics a step is placed by: its own techniques, else its capability's default. */
+function stepTactics(s: AttackChain['steps'][number]): string[] {
+  if (s.capabilityInferred) return [];
+  const ids = s.techniques?.length ? s.techniques : CAPABILITY_TECHNIQUES[s.capability];
+  return ids.flatMap((id) => ATTACK_TECHNIQUES[id].tactics);
+}
+
+describe('RULE-116 chain steps follow the ATT&CK tactic order', () => {
+  it('the tactic order is the pinned release\'s Enterprise matrix', () => {
+    expect([...ATTACK_TACTIC_ORDER]).toEqual(EXTRACT.tacticOrder);
+  });
+
+  it('every chain lists its ranked steps in tactic order', () => {
+    for (const c of allChains()) {
+      const ranks = c.steps.map((s) => stepTacticRank(s)).filter((r): r is number => r !== undefined);
+      expect({ chain: c.id, ranks }).toEqual({ chain: c.id, ranks: [...ranks].sort((a, b) => a - b) });
+    }
+  });
+
+  it('potential chains are ordered too', () => {
+    const c = new ChainEngine()
+      .correlate(['hardcoded-credentials-found', 'guest-user-read-access'].map((id) => finding(id)))
+      .find((x) => x.confidence === 'potential')!;
+    expect(c.steps.map((s) => s.capability)).toEqual(['unauth-foothold', 'credential-theft']);
+  });
+
+  it('credentials come before the egress that carries them out', () => {
+    const c = allChains().find((x) => x.id === 'cred-theft-pivot')!;
+    const caps = c.steps.map((s) => s.capability);
+    expect(caps.lastIndexOf('credential-theft')).toBeLessThan(caps.indexOf('external-egress'));
+  });
+
+  it('a step without a rank keeps its precondition group\'s place; ties keep their order', () => {
+    const step = (name: string, capability: any, extra: object = {}) => ({ name, capability, ...extra });
+    const steps = [
+      step('exfil', 'external-egress'),
+      step('gap', 'data-read', { capabilityInferred: true as const }),
+      step('foothold', 'unauth-foothold'),
+      step('read-a', 'data-read'),
+      step('read-b', 'data-read-bulk'),
+    ];
+    const group: Record<string, number> = { foothold: 0, 'read-a': 1, gap: 1, 'read-b': 1, exfil: 2 };
+    expect(orderStepsByTactic(steps, (s) => group[s.name]).map((s) => s.name))
+      .toEqual(['foothold', 'gap', 'read-a', 'read-b', 'exfil']);
+  });
+
+  it('ordering moves steps only: the same steps, the same break point, the same chains', () => {
+    const fs = allFindings();
+    const chains = new ChainEngine().correlate(fs);
+    for (const def of NAMED_CHAINS) {
+      const c = chains.find((x) => x.id === def.id);
+      if (!c) continue;
+      const members = new Set(def.match(new Set(fs.flatMap((f) => capabilitiesFor(f).grants)), fs)?.map((f) => f.id));
+      expect(new Set(c.steps.map((s) => s.findingId))).toEqual(members);
+    }
+  });
+
+  it('a group role shows the capability the step contributes, when its finding grants it', () => {
+    const c = allChains().find((x) => x.id === 'active-guest-exfil')!;
+    const exposure = c.steps.find((s) => s.findingId === 'guest-object-exposure-public-owd')!;
+    expect(exposure.capability).toBe('data-read-bulk');
+    expect(exposure.techniques).toEqual(['T1213.004']);
+  });
+});
+
+describe('RULE-117 every named chain starts and ends where its abuse case says', () => {
+  const chains = allChains();
+  for (const def of NAMED_CHAINS) {
+    const declared = def.abuseCase.tactics;
+    if (!declared) continue;
+    it(`${def.id} starts at ${declared.entry ?? '—'} and reaches ${declared.goal ?? '—'}`, () => {
+      const c = chains.find((x) => x.id === def.id)!;
+      expect(c).toBeDefined();
+      const ranked = c.steps.filter((s) => stepTacticRank(s) !== undefined);
+      expect(ranked.length).toBeGreaterThan(0);
+      const first = Math.min(...ranked.map((s) => stepTacticRank(s)!));
+      if (declared.entry) {
+        const entryTactics = ranked.filter((s) => stepTacticRank(s) === first).flatMap(stepTactics);
+        expect(entryTactics).toContain(declared.entry);
+      }
+      if (declared.goal) expect(ranked.flatMap(stepTactics)).toContain(declared.goal);
+    });
+  }
+
+  it('every declared tactic is a tactic of the pinned release', () => {
+    for (const def of NAMED_CHAINS) {
+      for (const t of Object.values(def.abuseCase.tactics ?? {})) expect(ATTACK_TACTIC_ORDER).toContain(t);
+    }
+  });
+
+  it('a chain whose steps carry no technique declares nothing', () => {
+    for (const id of ['prompt-injection-blast-radius', 'forcedleak-pattern', 'xss-to-privileged-session']) {
+      expect(NAMED_CHAINS.find((d) => d.id === id)!.abuseCase.tactics).toBeUndefined();
+    }
   });
 });

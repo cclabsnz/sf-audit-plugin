@@ -3,6 +3,23 @@
   "release": "20.0",
   "sha256": "81113ba98afa2928f3dcff62022539f7ce30c315c32e14422f11ff95ce534352",
   "extracted": "2026-10-28",
+  "tacticOrder": [
+    "reconnaissance",
+    "resource-development",
+    "initial-access",
+    "execution",
+    "persistence",
+    "privilege-escalation",
+    "stealth",
+    "defense-impairment",
+    "credential-access",
+    "discovery",
+    "lateral-movement",
+    "collection",
+    "command-and-control",
+    "exfiltration",
+    "impact"
+  ],
   "techniques": {
     "T1059.009": {
       "name": "Cloud API",
