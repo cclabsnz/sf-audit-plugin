@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import { CorsAllowlistCheck } from '../../../../src/checks/impl/CorsAllowlistCheck.js';
 import type { AuditContext } from '@cclabsnz/sf-core';
+import { CHECK_META } from '../../../../src/findings/CheckMeta.js';
 
 function makeCtx(records: unknown[], throws = false): AuditContext {
   return {
@@ -37,6 +38,21 @@ describe('CorsAllowlistCheck', () => {
     const f = result.findings.find((x) => x.id === 'cors-broad-origin');
     expect(f).toBeDefined();
     expect(f!.riskLevel).toBe('MEDIUM');
+  });
+
+  // An allowlist entry exposes no stored credential: script on an allowed origin needs a token or
+  // session of its own. The wording must not promise theft, and must state that precondition.
+  it('never claims token or credential theft, and says a token is needed', async () => {
+    const overstated = /token theft|steal|credential theft|session-scoped|authenticated cross-origin/i;
+    const all = [
+      ...(await check.run(makeCtx([{ Id: '1', UrlPattern: 'https://*' }, { Id: '2', UrlPattern: 'https://*.example.com' }]))).findings,
+      ...(await check.run(makeCtx([]))).findings,
+    ];
+    for (const f of all) expect(`${f.id}: ${f.title} ${f.detail}`).not.toMatch(overstated);
+    expect(check.description).not.toMatch(overstated);
+    expect(CHECK_META['cors-allowlist'].impact).not.toMatch(overstated);
+    expect(CHECK_META['cors-allowlist'].impact).toMatch(/token or session/);
+    expect(all.find((f) => f.id === 'cors-wildcard-origin')!.detail).toMatch(/session ID or OAuth access token/);
   });
 
   it('passes when only exact origins are allow-listed', async () => {

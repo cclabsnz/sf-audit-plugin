@@ -69,7 +69,7 @@ export const CHECK_META: Record<string, CheckMeta> = {
   'custom-labels-credential':{ effort: 'quick',    impact: 'Credentials in custom labels are globally readable by all authenticated users via merge fields.' },
   'report-folder-access':    { effort: 'quick',    impact: 'Public report folders let any authenticated user view all reports and the data behind them: mass exfiltration.' },
   'escalation-perms':        { effort: 'moderate', impact: 'Lateral-movement permissions let a compromised account grant itself more access and persist.' },
-  'cors-allowlist':          { effort: 'quick',    impact: 'Wildcard CORS origins let malicious sites make authenticated browser requests against the org.' },
+  'cors-allowlist':          { effort: 'quick',    impact: 'Wildcard CORS origins let script on any matching website use a Salesforce token or session available to it to call the org\'s APIs from the user\'s browser; the entry itself supplies no credential.' },
   'guest-executable-apex':   { effort: 'project',  impact: 'Unauthenticated web users can execute Apex that bypasses sharing: bulk record exfiltration without login.' },
   'email-security':          { effort: 'quick',    impact: 'Unauthenticated inbound email services and all-profile send-as addresses let attackers trigger Apex or spoof internal senders.' },
   'outbound-messages':       { effort: 'quick',    impact: 'Outbound messages can ship a live session ID to external endpoints over cleartext: a direct session-hijack and exfiltration path.' },
