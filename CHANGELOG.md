@@ -9,6 +9,8 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.21.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.21.1) — 2026-10-28
+
 ### Fixed
 
 - **The CORS allowlist check no longer overstates the risk.** Its findings said a wildcard origin enabled "token theft" and "authenticated cross-origin requests". An allowlist entry supplies no credential: script on an allowed origin can use the org's APIs from a user's browser only with a session ID or OAuth token it already has, except for a Lightning Out app shared with guest users. The findings now say so. Severity is unchanged.
