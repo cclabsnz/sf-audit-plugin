@@ -37,12 +37,17 @@ export const ATTACK_TECHNIQUES: Record<string, AttackTechnique> = {
   'T1552':     t('T1552', 'Unsecured Credentials', ['credential-access'], true),
   'T1528':     t('T1528', 'Steal Application Access Token', ['credential-access'], true),
   'T1110':     t('T1110', 'Brute Force', ['credential-access'], true),
+  'T1110.003': t('T1110.003', 'Password Spraying', ['credential-access'], true),
+  'T1136.003': t('T1136.003', 'Cloud Account', ['persistence'], true),
+  'T1087.004': t('T1087.004', 'Cloud Account', ['discovery'], true),
+  'T1485':     t('T1485', 'Data Destruction', ['impact'], true),
+  'T1556':     t('T1556', 'Modify Authentication Process', ['defense-impairment', 'persistence', 'credential-access'], true),
+  'T1556.007': t('T1556.007', 'Hybrid Identity', ['defense-impairment', 'persistence', 'credential-access'], true),
   'T1098.003': t('T1098.003', 'Additional Cloud Roles', ['persistence', 'privilege-escalation'], true),
   'T1098':     t('T1098', 'Account Manipulation', ['persistence', 'privilege-escalation'], true),
   'T1546':     t('T1546', 'Event Triggered Execution', ['privilege-escalation', 'persistence'], true),
   'T1648':     t('T1648', 'Serverless Execution', ['execution'], true),
   'T1567':     t('T1567', 'Exfiltration Over Web Service', ['exfiltration'], true),
-  'T1685.002': t('T1685.002', 'Disable or Modify Cloud Log', ['defense-impairment'], true),
 };
 
 /**
@@ -68,8 +73,9 @@ export const CAPABILITY_TECHNIQUES: Record<Capability, string[]> = {
  * finding grants, and never added to a chain step.
  */
 export const DETECTION_GAP_TECHNIQUES: Record<string, string[]> = {
-  // No copy of the logs outside the org, so an attacker who disables or edits them there leaves no record.
-  'siem-integration-not-detected': ['T1685.002'],
+  // SBS-MON-003/004: nobody is alerted to suspicious logins or API anomalies, so password guessing
+  // and a stolen account in use go unnoticed.
+  'siem-integration-not-detected': ['T1110', 'T1078.004'],
 };
 
 /** RULE-109: on only while every capability has a verified technique. */

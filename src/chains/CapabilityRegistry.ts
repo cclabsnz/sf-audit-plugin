@@ -26,13 +26,13 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'guest-user-write-access':       { grants: ['unauth-foothold', 'data-write', 'data-read'] },
   'guest-user-read-access':        { grants: ['unauth-foothold', 'data-read'] },
   'guest-user-sharing-exposure':   { grants: ['unauth-foothold', 'data-read'] },
-  'guest-user-baseline':           { grants: ['unauth-foothold'] },
+  'guest-user-baseline':           { grants: ['unauth-foothold'], techniques: { 'unauth-foothold': [] } },
   // External / portal sharing
   'sharing-model-external-write':  { grants: ['low-trust-authenticated', 'data-write', 'data-read-bulk'] },
   'sharing-model-external-read':   { grants: ['low-trust-authenticated', 'data-read-bulk'] },
   // Apex / code execution surfaces
   'portal-exposed-apex-without-sharing': { grants: ['code-exec', 'data-read', 'data-write'] },
-  'soql-injection-risk':           { grants: ['code-exec', 'data-read-bulk'] },
+  'soql-injection-risk':           { grants: ['code-exec', 'data-read-bulk'], techniques: { 'code-exec': [] } },
   // Sensitive data presence
   'field-level-security-high':     { grants: ['data-read'] },
   'field-level-security-medium':   { grants: ['data-read'] },
@@ -40,7 +40,7 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'hardcoded-credentials-found':           { grants: ['credential-theft'] },
   'custom-labels-credential-value-match':  { grants: ['credential-theft'] },
   'custom-labels-credential-name-match':   { grants: ['credential-theft'] },
-  'debug-log-active-traces':               { grants: ['credential-theft'] },
+  'debug-log-active-traces':               { grants: ['credential-theft'], techniques: { 'credential-theft': [] } },
   // Egress
   'named-credentials-inventory':     { grants: ['external-egress'] },
   'named-credentials-http-endpoint': { grants: ['external-egress'] },
@@ -57,25 +57,25 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'guest-executable-apex-system-mode': { grants: ['code-exec', 'data-read'] },
   'cors-wildcard-origin':              { grants: ['credential-theft'], techniques: { 'credential-theft': [] } },
   'cors-broad-origin':                 { grants: ['credential-theft'], techniques: { 'credential-theft': [] } },
-  'escalation-perms-found':            { grants: ['priv-esc'] },
+  'escalation-perms-found':            { grants: ['priv-esc'], techniques: { 'priv-esc': ['T1098'] } },
   // Guest bulk-read surface (UI-API reachable) — the confirmed exfiltration sink
   'guest-object-exposure-public-owd':  { grants: ['unauth-foothold', 'data-read-bulk'] },
   'guest-object-exposure-guest-owned': { grants: ['unauth-foothold', 'data-read-bulk'] },
   // Observed guest recon in EventLogFile — an active unauthenticated foothold
-  'guest-traffic-anomaly-recon':       { grants: ['unauth-foothold'] },
-  'guest-traffic-anomaly-anonymizer':  { grants: ['unauth-foothold'] },
+  'guest-traffic-anomaly-recon':       { grants: ['unauth-foothold'], techniques: { 'unauth-foothold': [] } },
+  'guest-traffic-anomaly-anonymizer':  { grants: ['unauth-foothold'], techniques: { 'unauth-foothold': [] } },
   // Guest API/Bulk access — programmatic unauthenticated bulk read / destruction
   'guest-api-access-enabled':          { grants: ['unauth-foothold', 'data-read-bulk'] },
-  'guest-api-hard-delete':             { grants: ['unauth-foothold', 'data-write'] },
+  'guest-api-hard-delete':             { grants: ['unauth-foothold', 'data-write'], techniques: { 'data-write': ['T1485'] } },
   // Guest enumeration of other USERS. The staff roster is the targeting asset behind credential
   // stuffing and phishing at named admins, and both of the first two paths expose every User record
   // on their own, so both are bulk reads. The object-level Read grant is not: it makes User
   // queryable but still needs a sharing path before it returns anyone else's record.
-  'guest-user-visibility-view-all-users': { grants: ['unauth-foothold', 'data-read-bulk'] },
-  'guest-user-visibility-owd':            { grants: ['unauth-foothold', 'data-read-bulk'] },
-  'guest-user-visibility-object-read':    { grants: ['unauth-foothold', 'data-read'] },
+  'guest-user-visibility-view-all-users': { grants: ['unauth-foothold', 'data-read-bulk'], techniques: { 'data-read-bulk': ['T1087.004', 'T1213.004'] } },
+  'guest-user-visibility-owd':            { grants: ['unauth-foothold', 'data-read-bulk'], techniques: { 'data-read-bulk': ['T1087.004', 'T1213.004'] } },
+  'guest-user-visibility-object-read':    { grants: ['unauth-foothold', 'data-read'], techniques: { 'data-read': ['T1087.004', 'T1213.004'] } },
   // Classic Visualforce sites — a second unauthenticated foothold surface
-  'classic-sites-active':              { grants: ['unauth-foothold'] },
+  'classic-sites-active':              { grants: ['unauth-foothold'], techniques: { 'unauth-foothold': [] } },
   // Mass data-export capability — a bulk-read sink for an authenticated actor
   'data-export-weekly-export':         { grants: ['data-read-bulk'] },
   'data-export-bulk-api-viewall':      { grants: ['data-read-bulk', 'data-write'] },
@@ -88,7 +88,7 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // Toxic permission combinations held by one user. Capabilities follow each combo's own stated
   // outcome — see COMBOS in SeparationOfDutiesCheck, where the ids are defined.
   'separation-of-duties-self-escalation':       { grants: ['priv-esc', 'org-takeover'] },
-  'separation-of-duties-identity-takeover':     { grants: ['priv-esc', 'org-takeover'] },
+  'separation-of-duties-identity-takeover':     { grants: ['priv-esc', 'org-takeover'], techniques: { 'priv-esc': ['T1556'] } },
   'separation-of-duties-grant-self-data':       { grants: ['priv-esc', 'data-read-bulk'] },
   'separation-of-duties-code-and-data':         { grants: ['code-exec', 'data-read-bulk', 'data-write'] },
   'separation-of-duties-external-exfil-channel':{ grants: ['external-egress', 'data-read-bulk'] },
@@ -100,7 +100,7 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // 'portal-exposed-apex-without-sharing'. Screen flows need a user to drive them, so they do not
   // grant the unattended write that an autolaunched flow does.
   'flows-autolaunched-without-sharing':         { grants: ['code-exec', 'data-read', 'data-write'] },
-  'flows-screen-without-sharing':               { grants: ['code-exec', 'data-read'] },
+  'flows-screen-without-sharing':               { grants: ['code-exec', 'data-read'], techniques: { 'code-exec': [] } },
   // Sharing rules granting All Internal Users — bulk read for any authenticated employee. Internal
   // by definition, so this grants no 'low-trust-authenticated' entry point of its own.
   'public-group-sharing-exposure':              { grants: ['data-read-bulk'] },
@@ -111,14 +111,14 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // 'guest-user-sharing-exposure' rather than the confirmed bulk-read sinks.
   'guest-record-access-policy-not-enforced':    { grants: ['unauth-foothold', 'data-read'] },
   // Sensitive data present and readable — what every other capability is ultimately reaching for.
-  'encryption-coverage-unencrypted-sensitive':  { grants: ['data-read'] },
+  'encryption-coverage-unencrypted-sensitive':  { grants: ['data-read'], techniques: { 'data-read': [] } },
   'sandbox-data-masking-pii-present':           { grants: ['data-read'] },
   // Integration accounts holding permissions they do not use. Author Apex and Customize Application
   // deploy code that runs in system context, and the user-management permissions let the holder
   // grant itself the rest — the same reach as 'users-author-apex', on an account with long-lived
   // credentials and nobody watching. The unused-grant and dormancy findings grant nothing: an
   // unexercised permission is not a capability an attacker holds today.
-  'integration-least-privilege-escalation-permissions': { grants: ['code-exec', 'priv-esc'], techniques: { 'priv-esc': [] } },
+  'integration-least-privilege-escalation-permissions': { grants: ['code-exec', 'priv-esc'], techniques: { 'priv-esc': ['T1098'] } },
   'integration-least-privilege-data-permissions':       { grants: ['data-read-bulk'] },
 
   // Credentials in custom settings — the third place secrets hide, after hardcoded literals and
@@ -163,7 +163,7 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // already assumes they have. On its own it is a supported feature and harmless; it earns a
   // capability because 'sharing-model-external-*' grants reach to whoever holds an account, and
   // this is the finding that says anyone may hold one.
-  'experience-cloud-site-self-registration':    { grants: ['low-trust-authenticated'] },
+  'experience-cloud-site-self-registration':    { grants: ['low-trust-authenticated'], techniques: { 'low-trust-authenticated': ['T1136.003'] } },
 
   // The "Full" OAuth scope gives a token the same API reach as the user who authorised it. The
   // never-expiring refresh token and the stale/unmatched token findings are deliberately absent:
@@ -186,9 +186,9 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'flow-http-callout-hardcoded-secret':          { grants: ['credential-theft', 'external-egress'] },
   'flow-http-callout-uncredentialed-endpoint':   { grants: ['external-egress'] },
   'oauth-device-flow-enabled':                   { grants: ['credential-theft'], techniques: { 'credential-theft': ['T1528'] } },
-  'oauth-password-flow-enabled':                 { grants: ['credential-theft'], techniques: { 'credential-theft': ['T1110'] } },
-  'delegated-authentication-admin-assigned':     { grants: ['org-takeover'] },
-  'delegated-authentication-insecure-gateway':   { grants: ['org-takeover'] },
+  'oauth-password-flow-enabled':                 { grants: ['credential-theft'], techniques: { 'credential-theft': ['T1110.003'] } },
+  'delegated-authentication-admin-assigned':     { grants: ['org-takeover'], techniques: { 'org-takeover': ['T1556.007'] } },
+  'delegated-authentication-insecure-gateway':   { grants: ['org-takeover'], techniques: { 'org-takeover': ['T1556.007'] } },
   'delegated-administration-groups-active':      { grants: ['priv-esc'] },
   'auth-provider-registration-handler-admin-exec': { grants: ['priv-esc', 'org-takeover'], techniques: { 'priv-esc': ['T1546'] } },
   'auth-provider-registration-handler-unverified-email-linking': { grants: ['priv-esc', 'org-takeover'], techniques: { 'priv-esc': ['T1078.004'] } },

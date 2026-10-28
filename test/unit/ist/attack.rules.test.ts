@@ -10,6 +10,7 @@ import { ALL_CAPABILITIES } from '../../../src/chains/Capability.js';
 import { CAPABILITY_REGISTRY, capabilitiesFor } from '../../../src/chains/CapabilityRegistry.js';
 import { ChainEngine } from '../../../src/chains/ChainEngine.js';
 import type { AttackChain } from '../../../src/chains/AttackChain.js';
+import { NAMED_CHAINS } from '../../../src/chains/namedChains.js';
 import type { Finding } from '../../../src/findings/Finding.js';
 import { buildAuditResult } from '../../../src/findings/scoring.js';
 import { CHECK_STRIDE_MAP } from '../../../src/threats/stride.js';
@@ -40,9 +41,22 @@ const EXTRACT: Extract = JSON.parse(
   readFileSync(join(ROOT, 'test', 'fixtures', 'attack', `enterprise-attack-${ATTACK_RELEASE}-extract.json`), 'utf8'),
 );
 
-/** Every registry finding present at once: every named and potential chain that can fire, fires. */
+/**
+ * Every registry finding and every finding a named chain matches on, present at once, so every
+ * chain that can fire does, including the detection-gap chains whose blind-spot steps grant nothing.
+ */
+function allFindings(): Finding[] {
+  const ids = new Set(Object.keys(CAPABILITY_REGISTRY));
+  for (const def of NAMED_CHAINS) {
+    for (const g of def.abuseCase.preconditions) {
+      for (const id of g.ids ?? []) ids.add(id);
+      for (const p of g.prefixes ?? []) ids.add(`${p}fixture`);
+    }
+  }
+  return [...ids].map((id) => finding(id));
+}
 function allChains(): AttackChain[] {
-  return new ChainEngine().correlate(Object.keys(CAPABILITY_REGISTRY).map((id) => finding(id)));
+  return new ChainEngine().correlate(allFindings());
 }
 
 describe('RULE-106 ATT&CK techniques attach to granted capabilities, not checks', () => {
@@ -52,6 +66,14 @@ describe('RULE-106 ATT&CK techniques attach to granted capabilities, not checks'
       const expected = new Set(capabilitiesFor(f).grants.flatMap((c) => techniquesForGrant(id, c)));
       expect(new Set(attackFor(f) ?? [])).toEqual(expected);
     }
+  });
+
+  it('the defaults land on findings as the catalog says', () => {
+    expect(new Set(attackFor(finding('guest-user-write-access')))).toEqual(new Set(['T1190', 'T1565.001', 'T1213.004']));
+    expect(attackFor(finding('users-super-admin-combo'))).toEqual(['T1098']);
+    expect(attackFor(finding('experience-cloud-site-self-registration'))).toEqual(['T1136.003']);
+    expect(attackFor(finding('sharing-model-external-read'))).toEqual(['T1078.004', 'T1213.004']);
+    expect(attackFor(finding('remote-sites-inventory'))).toEqual(['T1567']);
   });
 
   it('a capability the finding only requires adds no technique', () => {
@@ -132,9 +154,9 @@ describe('RULE-107 ATT&CK techniques have provenance', () => {
 });
 
 describe('RULE-108 detection gaps reference what they leave unseen', () => {
-  it('a missing SIEM leaves log tampering unobserved, and grants nothing', () => {
+  it('a missing SIEM leaves password guessing and stolen-account use unobserved, and grants nothing', () => {
     const f = finding('siem-integration-not-detected');
-    expect(detectsFor(f)).toEqual(['T1685.002']);
+    expect(detectsFor(f)).toEqual(['T1110', 'T1078.004']);
     expect(attackFor(f)).toBeUndefined();
     expect(detectsFor({ ...f, passed: true })).toBeUndefined();
   });
@@ -145,8 +167,12 @@ describe('RULE-108 detection gaps reference what they leave unseen', () => {
   });
 
   it('chain steps never carry a detection technique; inferred steps carry none at all', () => {
-    for (const s of allChains().flatMap((c) => c.steps)) {
-      expect(s.techniques ?? []).not.toContain('T1685.002');
+    const chains = allChains();
+    const gapChains = chains.filter((c) => c.id === 'insider-bulk-exfil' || c.id === 'undetected-compromise');
+    expect(gapChains.map((c) => c.id).sort()).toEqual(['insider-bulk-exfil', 'undetected-compromise']);
+    expect(gapChains.some((c) => c.steps.some((s) => s.capabilityInferred))).toBe(true);
+    for (const s of chains.flatMap((c) => c.steps)) {
+      if (s.findingId in DETECTION_GAP_TECHNIQUES) expect(s.techniques).toBeUndefined();
       if (s.capabilityInferred) expect(s.techniques).toBeUndefined();
     }
   });
@@ -198,11 +224,11 @@ describe('RULE-113 every output carries ATT&CK in its own idiom', () => {
   it('Markdown shows a finding\'s techniques, and what a detection gap leaves unobserved, on its Threats line', () => {
     const fs = [
       { ...finding('oauth-device-flow-enabled'), threats: { stride: ['S' as const], attack: ['T1528'] } },
-      { ...finding('siem-integration-not-detected'), threats: { stride: ['R' as const], detects: ['T1685.002'] } },
+      { ...finding('siem-integration-not-detected'), threats: { stride: ['R' as const], detects: ['T1110', 'T1078.004'] } },
     ];
     const md = new MarkdownRenderer().render(buildAuditResult(ctx(), fs, {}));
     expect(md).toContain('**Threats:** STRIDE S | ATT&CK T1528');
-    expect(md).toContain('**Threats:** STRIDE R | leaves unobserved: T1685.002 Disable or Modify Cloud Log');
+    expect(md).toContain('**Threats:** STRIDE R | leaves unobserved: T1110 Brute Force · T1078.004 Cloud Accounts');
   });
 
   it('tagging changes no score or grade (MN-062)', () => {

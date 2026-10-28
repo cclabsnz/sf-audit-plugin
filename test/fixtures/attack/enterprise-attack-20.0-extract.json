@@ -37,6 +37,21 @@
       "revoked": false,
       "deprecated": false
     },
+    "T1087.004": {
+      "name": "Cloud Account",
+      "tactics": [
+        "discovery"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1087/004",
+      "platforms": [
+        "IaaS",
+        "Identity Provider",
+        "Office Suite",
+        "SaaS"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
     "T1098": {
       "name": "Account Manipulation",
       "tactics": [
@@ -96,6 +111,42 @@
       "revoked": false,
       "deprecated": false
     },
+    "T1110.003": {
+      "name": "Password Spraying",
+      "tactics": [
+        "credential-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1110/003",
+      "platforms": [
+        "Containers",
+        "ESXi",
+        "IaaS",
+        "Identity Provider",
+        "Linux",
+        "Network Devices",
+        "Office Suite",
+        "SaaS",
+        "Windows",
+        "macOS"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1136.003": {
+      "name": "Cloud Account",
+      "tactics": [
+        "persistence"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1136/003",
+      "platforms": [
+        "IaaS",
+        "SaaS",
+        "Office Suite",
+        "Identity Provider"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
     "T1190": {
       "name": "Exploit Public-Facing Application",
       "tactics": [
@@ -122,6 +173,23 @@
       "url": "https://attack.mitre.org/techniques/T1213/004",
       "platforms": [
         "SaaS"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1485": {
+      "name": "Data Destruction",
+      "tactics": [
+        "impact"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1485",
+      "platforms": [
+        "Containers",
+        "ESXi",
+        "IaaS",
+        "Linux",
+        "macOS",
+        "Windows"
       ],
       "revoked": false,
       "deprecated": false
@@ -180,19 +248,43 @@
       "revoked": false,
       "deprecated": false
     },
-    "T1562.008": {
-      "name": "Disable or Modify Cloud Logs",
+    "T1556": {
+      "name": "Modify Authentication Process",
       "tactics": [
-        "stealth"
+        "defense-impairment",
+        "persistence",
+        "credential-access"
       ],
-      "url": "https://attack.mitre.org/techniques/T1562/008",
+      "url": "https://attack.mitre.org/techniques/T1556",
       "platforms": [
         "IaaS",
-        "SaaS",
+        "Identity Provider",
+        "Linux",
+        "macOS",
+        "Network Devices",
         "Office Suite",
-        "Identity Provider"
+        "SaaS",
+        "Windows"
       ],
-      "revoked": true,
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1556.007": {
+      "name": "Hybrid Identity",
+      "tactics": [
+        "defense-impairment",
+        "persistence",
+        "credential-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1556/007",
+      "platforms": [
+        "IaaS",
+        "Identity Provider",
+        "Office Suite",
+        "SaaS",
+        "Windows"
+      ],
+      "revoked": false,
       "deprecated": false
     },
     "T1565.001": {
@@ -235,21 +327,6 @@
       "platforms": [
         "SaaS",
         "IaaS",
-        "Office Suite"
-      ],
-      "revoked": false,
-      "deprecated": false
-    },
-    "T1685.002": {
-      "name": "Disable or Modify Cloud Log",
-      "tactics": [
-        "defense-impairment"
-      ],
-      "url": "https://attack.mitre.org/techniques/T1685/002",
-      "platforms": [
-        "IaaS",
-        "SaaS",
-        "Identity Provider",
         "Office Suite"
       ],
       "revoked": false,
