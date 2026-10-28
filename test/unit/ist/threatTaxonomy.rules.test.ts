@@ -85,9 +85,9 @@ describe('RULE-101 every check carries a STRIDE category', () => {
     };
     const r = await new CheckEngine([check], ctx()).run();
     const byId = new Map(r.findings.map((x) => [x.id, x]));
-    expect(byId.get('guest-api-access-enabled')?.threats).toEqual({ stride: ['I', 'T'], linddun: ['DD'] });
+    expect(byId.get('guest-api-access-enabled')?.threats).toMatchObject({ stride: ['I', 'T'], linddun: ['DD'] });
     // The override replaces STRIDE only; LINDDUN still comes from the map.
-    expect(byId.get('guest-api-hard-delete')?.threats).toEqual({ stride: ['D', 'T'], linddun: ['DD'] });
+    expect(byId.get('guest-api-hard-delete')?.threats).toMatchObject({ stride: ['D', 'T'], linddun: ['DD'] });
   });
 
   it('a check that throws still carries its categories', async () => {

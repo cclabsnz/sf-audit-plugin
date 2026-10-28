@@ -5,6 +5,7 @@ import type { AttackChain, AttackChainStep } from './AttackChain.js';
 import type { Capability } from './Capability.js';
 import { SOURCE_CAPS, HIGH_IMPACT_SINKS } from './Capability.js';
 import { capabilitiesFor } from './CapabilityRegistry.js';
+import { techniquesForGrant } from '../threats/attack.js';
 import { NAMED_CHAINS, inGroup } from './namedChains.js';
 
 const SEVERITY_ORDER: Record<RiskLevel, number> = {
@@ -68,7 +69,12 @@ export class ChainEngine {
       title: f.title,
       severity: f.riskLevel,
     };
-    if (grants.length === 0) step.capabilityInferred = true;
+    if (grants.length === 0) {
+      step.capabilityInferred = true;
+    } else {
+      const techniques = techniquesForGrant(f.id, step.capability);
+      if (techniques.length) step.techniques = techniques;
+    }
     return step;
   }
 

@@ -63,6 +63,7 @@ cites: INT-014, MN-062
 cites: INT-014
 - When a finding grants a `Capability` (`capabilitiesFor(f).grants`)
 - then it carries the verified techniques in `CAPABILITY_TECHNIQUES` for every capability it grants
+- and where that default does not fit the finding, the finding's registry entry (`CapabilityEntry.techniques`) names the technique that does for that capability, or an empty list for none
 - and a capability a finding only requires adds no technique to it
 - and no check maps to a technique directly
 
@@ -75,7 +76,7 @@ cites: INT-014, MN-059
 ## RULE-108 Detection gaps reference what they leave unseen
 cites: INT-014, MN-059, MN-062
 - When a finding reports missing detection (`audit-trail`, `event-monitoring`, `siem-integration`, `apex-logging`, threat-detection and transaction-security gaps)
-- then it may reference, as `detects`, the technique it leaves unobserved (its tactic comes from the catalog's `tactics`), never as a technique the finding grants
+- then it may reference, as `detects` (keyed by finding id in `DETECTION_GAP_TECHNIQUES`), the technique it leaves unobserved (its tactic comes from the catalog's `tactics`), never as a technique the finding grants
 - and chains that already use detection gaps as steps (`insider-bulk-exfil`, `undetected-compromise`) keep them unchanged; those steps render with no ATT&CK technique
 
 ## RULE-109 Every capability has a technique before ATT&CK renders
@@ -129,6 +130,8 @@ cites: INT-014, MN-059
 ## Draft mappings (to verify, not to render)
 
 Starting point for RULE-101 and RULE-106. Every ATT&CK id below is `verified: false` until checked against a pinned release, and the fit is verified, not only the id.
+
+The ATT&CK table below is the draft. The verified mapping is pinned to Enterprise ATT&CK v20.0 and recorded, with each fit judgement and the candidates dropped, in `docs/compliance/verification-worksheet.md`. In short: T1562.008 is revoked in v20.0 by T1685.002; T1530, T1136.003, T1552.001 and T1548 were dropped; `credential-theft` defaults to T1552 with T1528 and T1110 per finding; `priv-esc` takes T1648, T1546 or T1078.004 per finding.
 
 | Capability | Candidate techniques |
 |---|---|

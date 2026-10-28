@@ -5,6 +5,11 @@ import type { Finding } from '../findings/Finding.js';
 export interface CapabilityEntry {
   grants?: Capability[];
   requires?: Capability[];
+  /**
+   * ATT&CK techniques for a granted capability where the capability's default
+   * (`CAPABILITY_TECHNIQUES`) does not fit this finding. An empty list means no technique fits.
+   */
+  techniques?: Partial<Record<Capability, string[]>>;
 }
 
 /**
@@ -44,14 +49,14 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'users-modify-all-data':  { grants: ['data-read-bulk', 'data-write'] },
   'users-view-all-data':    { grants: ['data-read-bulk'] },
   'users-super-admin-combo':{ grants: ['org-takeover'] },
-  'users-author-apex':      { grants: ['code-exec', 'priv-esc'] },
+  'users-author-apex':      { grants: ['code-exec', 'priv-esc'], techniques: { 'priv-esc': ['T1648'] } },
   // New checks (Tasks 8–10)
   'guest-executable-apex-unprotected': { grants: ['code-exec', 'data-read-bulk', 'data-write'] },
   'guest-executable-apex-exposed':     { grants: ['code-exec'] },
   // Sharing still bounds which records a guest reaches; SYSTEM_MODE lifts only CRUD/FLS on them.
   'guest-executable-apex-system-mode': { grants: ['code-exec', 'data-read'] },
-  'cors-wildcard-origin':              { grants: ['credential-theft'] },
-  'cors-broad-origin':                 { grants: ['credential-theft'] },
+  'cors-wildcard-origin':              { grants: ['credential-theft'], techniques: { 'credential-theft': [] } },
+  'cors-broad-origin':                 { grants: ['credential-theft'], techniques: { 'credential-theft': [] } },
   'escalation-perms-found':            { grants: ['priv-esc'] },
   // Guest bulk-read surface (UI-API reachable) — the confirmed exfiltration sink
   'guest-object-exposure-public-owd':  { grants: ['unauth-foothold', 'data-read-bulk'] },
@@ -76,7 +81,7 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'data-export-bulk-api-viewall':      { grants: ['data-read-bulk', 'data-write'] },
   // Impersonation / delegated-admin escalation
   'login-access-policy-delegated-admins': { grants: ['priv-esc'] },
-  'login-access-policy-login-as-enabled': { grants: ['priv-esc', 'data-read-bulk'] },
+  'login-access-policy-login-as-enabled': { grants: ['priv-esc', 'data-read-bulk'], techniques: { 'priv-esc': ['T1078.004'] } },
   // External federation an attacker could ride in on
   'auth-providers-social':             { grants: ['low-trust-authenticated'] },
 
@@ -113,7 +118,7 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // grant itself the rest — the same reach as 'users-author-apex', on an account with long-lived
   // credentials and nobody watching. The unused-grant and dormancy findings grant nothing: an
   // unexercised permission is not a capability an attacker holds today.
-  'integration-least-privilege-escalation-permissions': { grants: ['code-exec', 'priv-esc'] },
+  'integration-least-privilege-escalation-permissions': { grants: ['code-exec', 'priv-esc'], techniques: { 'priv-esc': [] } },
   'integration-least-privilege-data-permissions':       { grants: ['data-read-bulk'] },
 
   // Credentials in custom settings — the third place secrets hide, after hardcoded literals and
@@ -134,7 +139,7 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // A live session ID posted to an external endpoint. This is a credential leaving the org through
   // a supported feature rather than a flaw, which is exactly why it is easy to leave in place: the
   // receiving endpoint can act as the running user until the session expires.
-  'outbound-messages-session-id':               { grants: ['credential-theft', 'external-egress'] },
+  'outbound-messages-session-id':               { grants: ['credential-theft', 'external-egress'], techniques: { 'credential-theft': ['T1528'] } },
 
   // Anonymously fetchable files: public Documents and static resources, served from a URL that
   // never reaches a login, and content distribution links that never expire or ask for a password.
@@ -177,19 +182,19 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'genai-prompt-template-grounding-untrusted':   { grants: ['data-read'] },
   'data-cloud-data-space-default-overshared':    { grants: ['data-read-bulk'] },
   'data-cloud-data-share-target-unconstrained':  { grants: ['data-read-bulk'] },
-  'platform-event-subscriber-escalation':        { grants: ['priv-esc', 'data-write'] },
+  'platform-event-subscriber-escalation':        { grants: ['priv-esc', 'data-write'], techniques: { 'priv-esc': ['T1546'] } },
   'flow-http-callout-hardcoded-secret':          { grants: ['credential-theft', 'external-egress'] },
   'flow-http-callout-uncredentialed-endpoint':   { grants: ['external-egress'] },
-  'oauth-device-flow-enabled':                   { grants: ['credential-theft'] },
-  'oauth-password-flow-enabled':                 { grants: ['credential-theft'] },
+  'oauth-device-flow-enabled':                   { grants: ['credential-theft'], techniques: { 'credential-theft': ['T1528'] } },
+  'oauth-password-flow-enabled':                 { grants: ['credential-theft'], techniques: { 'credential-theft': ['T1110'] } },
   'delegated-authentication-admin-assigned':     { grants: ['org-takeover'] },
   'delegated-authentication-insecure-gateway':   { grants: ['org-takeover'] },
   'delegated-administration-groups-active':      { grants: ['priv-esc'] },
-  'auth-provider-registration-handler-admin-exec': { grants: ['priv-esc', 'org-takeover'] },
-  'auth-provider-registration-handler-unverified-email-linking': { grants: ['priv-esc', 'org-takeover'] },
-  'inbound-email-handler-unauthenticated-execution': { grants: ['unauth-foothold', 'code-exec'] },
-  'org-wide-email-spoofing-all-profiles':        { grants: ['external-egress'] },
-  'org-wide-email-spoofing-no-dkim':             { grants: ['external-egress'] },
+  'auth-provider-registration-handler-admin-exec': { grants: ['priv-esc', 'org-takeover'], techniques: { 'priv-esc': ['T1546'] } },
+  'auth-provider-registration-handler-unverified-email-linking': { grants: ['priv-esc', 'org-takeover'], techniques: { 'priv-esc': ['T1078.004'] } },
+  'inbound-email-handler-unauthenticated-execution': { grants: ['unauth-foothold', 'code-exec'], techniques: { 'code-exec': [] } },
+  'org-wide-email-spoofing-all-profiles':        { grants: ['external-egress'], techniques: { 'external-egress': [] } },
+  'org-wide-email-spoofing-no-dkim':             { grants: ['external-egress'], techniques: { 'external-egress': [] } },
   'external-account-hierarchy-super-users':      { grants: ['data-read-bulk'] },
   'external-account-hierarchy-active':           { grants: ['data-read-bulk'] },
   'restriction-rules-inactive':                  { grants: ['data-read-bulk'] },

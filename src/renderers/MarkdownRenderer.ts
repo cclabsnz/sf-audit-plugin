@@ -2,6 +2,7 @@ import type { AuditResult } from '../findings/AuditResult.js';
 import type { AuditRenderer } from './AuditRenderer.js';
 import { coverageSummary, coverageAdvice } from '../findings/coverage.js';
 import type { Finding } from '../findings/Finding.js';
+import { techniqueLabel } from '../threats/attack.js';
 import { buildThreatView, threatRowStatusText, PRIVACY_COST_OF_LOGGING, type ThreatRow } from '../threats/view.js';
 
 function escapeMdCell(s: string): string {
@@ -12,6 +13,8 @@ function threatTags(f: Finding): string {
   const parts: string[] = [];
   if (f.threats?.stride?.length) parts.push(`STRIDE ${f.threats.stride.join(' · ')}`);
   if (f.threats?.linddun?.length) parts.push(`LINDDUN ${f.threats.linddun.join(' · ')}`);
+  if (f.threats?.attack?.length) parts.push(`ATT&CK ${f.threats.attack.join(' · ')}`);
+  if (f.threats?.detects?.length) parts.push(`leaves unobserved: ${f.threats.detects.map(techniqueLabel).join(' · ')}`);
   return parts.join(' | ');
 }
 
@@ -63,7 +66,8 @@ export class MarkdownRenderer implements AuditRenderer {
         lines.push('**Steps:**');
         lines.push('');
         c.steps.forEach((s, i) => {
-          const grants = s.capabilityInferred ? '' : `: grants \`${s.capability}\``;
+          const technique = s.techniques?.length ? ` → ${s.techniques.map(techniqueLabel).join(' · ')}` : '';
+          const grants = s.capabilityInferred ? '' : `: grants \`${s.capability}\`${technique}`;
           const cut = s.breaksChain ? ' ✂ _break point_' : '';
           lines.push(`${i + 1}. **${s.title ?? s.findingId}** (${s.severity ?? '—'})${grants}${cut}`);
         });

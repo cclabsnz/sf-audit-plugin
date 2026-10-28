@@ -13,6 +13,10 @@ export type LinddunCategory = 'L' | 'I' | 'Nr' | 'D' | 'DD' | 'U' | 'Nc';
 export interface FindingThreats {
   stride?: StrideCategory[];
   linddun?: LinddunCategory[];
+  /** Verified ATT&CK technique ids for the capabilities the finding grants (RULE-106). */
+  attack?: string[];
+  /** Verified ATT&CK technique ids a detection gap leaves unobserved (RULE-108). */
+  detects?: string[];
 }
 
 export const STRIDE_CATEGORIES: readonly StrideCategory[] = ['S', 'T', 'R', 'I', 'D', 'E'];

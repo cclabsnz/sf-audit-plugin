@@ -4,6 +4,7 @@ import type { AuditRenderer } from './AuditRenderer.js';
 import { esc, firaFontFaceCss, INTERACTIVE_CSP_META } from '@cclabsnz/sf-core';
 import { renderAttackChainDagSvg } from './AttackChainDagRenderer.js';
 import { coverageSummary, coverageAdvice } from '../findings/coverage.js';
+import { techniqueLabel } from '../threats/attack.js';
 import { unknownMetrics } from '../findings/unknownMetrics.js';
 
 const RISK_COLORS: Record<string, string> = {
@@ -230,7 +231,8 @@ export class HtmlRenderer implements AuditRenderer {
         const dagSvg = renderAttackChainDagSvg(c, { theme: 'dark' });
         const steps = c.steps
           .map((s) => {
-            const grants = s.capabilityInferred ? '' : `: grants <code>${esc(s.capability)}</code>`;
+            const technique = s.techniques?.length ? ` → ${esc(s.techniques.map(techniqueLabel).join(' · '))}` : '';
+            const grants = s.capabilityInferred ? '' : `: grants <code>${esc(s.capability)}</code>${technique}`;
             const cut = s.breaksChain ? ' <strong>✂ break point</strong>' : '';
             return `<li><strong>${esc(s.title ?? s.findingId)}</strong> (${esc(s.severity ?? '—')})${grants}${cut}</li>`;
           })
