@@ -303,7 +303,7 @@ describe('GuestObjectExposureCheck', () => {
         [{ RecordId: 'a01x', HasReadAccess: true }],
       ]), 0, 5, 'a01x');
       const r = await check.run(ctx);
-      expect(r.findings.filter((x) => /guest-shared|public-owd$/.test(x.id))).toEqual([]);
+      expect(r.findings.filter((x) => /-(guest-shared|public-owd)$/.test(x.id))).toEqual([]);
     });
 
     // A parent-controlled object's share table shows nothing, but the guest may still read records.
