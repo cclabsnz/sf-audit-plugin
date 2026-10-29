@@ -1,6 +1,6 @@
 {
   "name": "@cclabsnz/sf-audit",
-  "version": "1.21.1",
+  "version": "1.24.0",
   "description": "Read-only Salesforce security audit for the sf CLI: 109 checks, attack-chain correlation, A-F risk grading, compliance mapping, free EventLogFile capture, and Guest User Anomaly investigation.",
   "keywords": [
     "salesforce",
@@ -47,6 +47,8 @@
   },
   "dependencies": {
     "@cclabsnz/sf-core": "^0.12.0",
+    "@fontsource-variable/source-sans-3": "^5.3.1",
+    "@fontsource-variable/source-serif-4": "^5.3.1",
     "@oclif/core": "^5",
     "@salesforce/core": "^9.3.0",
     "@salesforce/sf-plugins-core": "^13",
@@ -114,7 +116,8 @@
       "brace-expansion": "^5.0.11",
       "fast-uri@3": "^3.1.9",
       "browserslist": "^4.28.7",
-      "@istanbuljs/load-nyc-config>js-yaml": "^4.1.1"
+      "@istanbuljs/load-nyc-config>js-yaml": "^4.1.1",
+      "jest-config>deepmerge": "4.1.1"
     }
   }
 }

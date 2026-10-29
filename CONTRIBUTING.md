@@ -40,6 +40,14 @@ This tool audits production orgs, so it is **strictly read-only**:
 - Never run the plugin against a real org in tests. Verify behaviour with unit
   tests and mocked SOQL/Tooling/REST clients only.
 
+## Before building anything
+
+Search [docs/FEATURES.md](docs/FEATURES.md) first. It lists every command, check, attack chain,
+renderer, shared helper and framework mapping, with its file. If something close exists, extend
+it rather than writing a second one. Add your new feature's line in the same change:
+`test/unit/featureInventory.test.ts` fails when a check, chain, command, shared helper, renderer
+or chain module is missing from it.
+
 ## Adding a new check
 
 A new check is five touch points:
@@ -54,8 +62,8 @@ A new check is five touch points:
 4. A `CHECK_META` entry (effort + impact) in `src/findings/CheckMeta.ts`.
 5. A unit test in `test/unit/checks/impl/` with mocked clients.
 
-Then update the inventory in `docs/CHECKS.md` (the source-of-truth listing) and the
-per-domain summary in `README.md`. Both are enforced: `readme-check-count.test.ts`
+Then update the inventory in `docs/CHECKS.md` (the source-of-truth listing), the line in
+`docs/FEATURES.md`, and the per-domain summary in `README.md`. Both are enforced: `readme-check-count.test.ts`
 fails the build if either drifts from `src/checks/registry.ts`.
 
 ## Certificate of origin (DCO)

@@ -18,7 +18,7 @@ function makeCtx(logins: unknown[] | Error, users: unknown[] = []): AuditContext
   } as any;
 }
 
-const login = (UserId: string) => ({ Id: `0Ya${UserId}`, UserId, LoginType: 'Username-Password', LoginTime: '2026-10-01T00:00:00Z' });
+const login = (UserId: string) => ({ Id: `0Ya${UserId}`, UserId, LoginType: 'Application', LoginSubType: 'UI Username-Password', LoginTime: '2026-10-01T00:00:00Z' });
 
 describe('SsoEnforcementCheck', () => {
   const check = new SsoEnforcementCheck();
@@ -27,7 +27,7 @@ describe('SsoEnforcementCheck', () => {
     const ctx = makeCtx([]);
     await check.run(ctx);
     const q = (ctx.soql.queryAll as any).mock.calls[0][0] as string;
-    expect(q).toMatch(/SELECT Id, UserId, LoginType, LoginTime\s+FROM LoginHistory/);
+    expect(q).toMatch(/SELECT Id, UserId, LoginType, LoginSubType, LoginTime\s+FROM LoginHistory/);
   });
 
   it('resolves usernames from User for the logins it found', async () => {
@@ -42,5 +42,14 @@ describe('SsoEnforcementCheck', () => {
     const r = await check.run(makeCtx(new Error('INSUFFICIENT_ACCESS: LoginHistory')));
     expect(r.findings[0].inconclusive).toBe(true);
     expect(r.findings[0].detail).toContain('INSUFFICIENT_ACCESS: LoginHistory');
+  });
+
+  // LoginType has no 'Username-Password' value; credential logins are recorded in LoginSubType.
+  it('selects credential logins by LoginSubType', async () => {
+    const ctx = makeCtx([]);
+    await check.run(ctx);
+    const q: string = (ctx.soql.queryAll as any).mock.calls[0][0];
+    expect(q).toContain("LoginSubType IN ('UI Username-Password', 'OAuth Username-Password')");
+    expect(q).not.toContain("LoginType = 'Username-Password'");
   });
 });

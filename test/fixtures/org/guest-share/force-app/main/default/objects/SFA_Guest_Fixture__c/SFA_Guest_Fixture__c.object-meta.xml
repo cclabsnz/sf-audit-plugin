@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>sf-audit test fixture: guest sharing rule path. Safe to delete.</description>
+    <label>SFA Guest Fixture</label>
+    <pluralLabel>SFA Guest Fixtures</pluralLabel>
+    <nameField><label>Name</label><type>Text</type></nameField>
+    <sharingModel>Private</sharingModel>
+    <externalSharingModel>Private</externalSharingModel>
+    <enableSearch>false</enableSearch>
+    <enableReports>false</enableReports>
+</CustomObject>

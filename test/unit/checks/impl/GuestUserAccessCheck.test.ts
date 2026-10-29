@@ -40,9 +40,16 @@ const perm = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-/** Route a query by the object it hits, so fixtures do not depend on call order. */
+/**
+ * Route a query by the object it hits, so fixtures do not depend on call order. Each guest is
+ * assigned its profile's own permission set, given here the profile's Id, so a permission fixture
+ * with ParentId '00eG' reads as that profile's object permission.
+ */
 const router = (opts: { users?: unknown[]; perms?: unknown[] }): QueryAll => (soql) => {
   if (/FROM User\b/i.test(soql)) return Promise.resolve(opts.users ?? []);
+  if (/FROM PermissionSetAssignment/i.test(soql)) {
+    return Promise.resolve(((opts.users ?? []) as Array<{ Id: string; ProfileId: string }>).map((u) => ({ AssigneeId: u.Id, PermissionSetId: u.ProfileId })));
+  }
   if (/FROM ObjectPermissions/i.test(soql)) return Promise.resolve(opts.perms ?? []);
   return Promise.resolve([]);
 };
@@ -124,11 +131,11 @@ describe('GuestUserAccessCheck', () => {
     expect(JSON.stringify(f.affectedItems)).toContain('b@x.com');
   });
 
-  it('flags sharing rules that target a guest user', async () => {
+  it('flags share rows that give a guest user access', async () => {
     const r = await check.run(makeCtx({
       queryAll: router({ users: [guest()] }),
       query: (s) => Promise.resolve(
-        /FROM AccountShare/i.test(s) ? { records: [{ UserOrGroupId: '005G', cnt: 3 }] } : { records: [] },
+        (/FROM AccountShare/i.test(s) ? { records: [], totalSize: 3 } : { records: [], totalSize: 0 }) as any,
       ),
     }));
     const f = r.findings.find((x) => x.id === 'guest-user-sharing-exposure');
@@ -137,14 +144,23 @@ describe('GuestUserAccessCheck', () => {
     expect(f!.title).toContain('3');
   });
 
-  it('only counts sharing rows whose RowCause is SharingRule', async () => {
+  // 'SharingRule' is not a RowCause value; it matched nothing and hid every guest sharing rule.
+  // Guest rule rows count whoever they name; legacy manual, Apex and group shares count when they
+  // name a guest user or a group it belongs to.
+  it('counts guest rule rows and legacy shares naming a guest or its groups', async () => {
     const seen: string[] = [];
     await check.run(makeCtx({
-      queryAll: router({ users: [guest()] }),
-      query: (s) => { seen.push(s); return Promise.resolve({ records: [] }); },
+      queryAll: (s) => (/FROM GroupMember/.test(s) ? Promise.resolve([{ GroupId: '00GQ' }]) : router({ users: [guest()] })(s)),
+      query: (s) => { seen.push(s); return Promise.resolve({ records: [], totalSize: 0 } as any); },
     }));
-    expect(seen.length).toBeGreaterThan(0);
-    for (const s of seen) expect(s).toMatch(/RowCause\s*=\s*'SharingRule'/i);
+    const shares = seen.filter((s) => /FROM \w+Share /.test(s));
+    expect(shares.map((s) => /FROM (\w+)/.exec(s)![1])).toEqual(['AccountShare', 'CaseShare', 'ContactShare', 'OpportunityShare']);
+    for (const s of shares) {
+      expect(s).toContain("RowCause IN ('GuestRule', 'GuestParentImplicit', 'GuestPersonImplicit')");
+      expect(s).toContain("(UserOrGroupId IN ('005G') AND RowCause != 'Owner')");
+      expect(s).toContain("UserOrGroupId IN ('00GQ')");
+      expect(s).not.toMatch(/'SharingRule'/);
+    }
   });
 
   it('falls back to the baseline finding when guests exist but hold no access', async () => {
@@ -160,12 +176,12 @@ describe('GuestUserAccessCheck', () => {
     const withHc: string[] = [];
     await check.run(makeCtx({
       healthCloudInstalled: true,
-      queryAll: (s) => { withHc.push(s); return Promise.resolve(/FROM User\b/i.test(s) ? [guest()] : []); },
+      queryAll: (s) => { withHc.push(s); return router({ users: [guest()] })(s); },
     }));
     const withoutHc: string[] = [];
     await check.run(makeCtx({
       healthCloudInstalled: false,
-      queryAll: (s) => { withoutHc.push(s); return Promise.resolve(/FROM User\b/i.test(s) ? [guest()] : []); },
+      queryAll: (s) => { withoutHc.push(s); return router({ users: [guest()] })(s); },
     }));
     const hcQuery = withHc.find((s) => /FROM ObjectPermissions/i.test(s))!;
     const plainQuery = withoutHc.find((s) => /FROM ObjectPermissions/i.test(s))!;
@@ -194,5 +210,62 @@ describe('GuestUserAccessCheck', () => {
       query: () => Promise.reject(new Error('no such object')),
     }));
     expect(r.findings.some((x) => x.id === 'guest-user-baseline')).toBe(true);
+  });
+
+  // A share the table does not show (Contact controlled by its parent) still lets the guest read.
+  it('asks UserRecordAccess when the share table shows no guest rows', async () => {
+    const r = await check.run(makeCtx({
+      queryAll: (s) => (/FROM UserRecordAccess WHERE UserId = '005G'/.test(s) && /'003x'/.test(s)
+        ? Promise.resolve([{ RecordId: '003x', HasReadAccess: true }])
+        : router({ users: [guest()], perms: [perm({ SobjectType: 'Contact', PermissionsRead: true })] })(s)),
+      query: (s) => Promise.resolve((/^SELECT Id FROM Contact (ORDER BY SystemModstamp \w+ )?LIMIT/.test(s)
+        ? { records: [{ Id: '003x' }], totalSize: 1 }
+        : { records: [], totalSize: 0 }) as any),
+    }));
+    const f = r.findings.find((x) => x.id === 'guest-user-sharing-exposure')!;
+    expect(f.title).toBe('Guest users can read Account, Case, Contact or Opportunity records on 1 object(s)');
+    expect(f.affectedItems).toEqual([expect.objectContaining({ label: 'ContactShare', note: expect.stringContaining('UserRecordAccess confirms') })]);
+  });
+
+  // The fallback asks only where a guest can read the object, and not where the guest owns
+  // records (reported as guest-object-exposure-guest-owned), so one exposure is one finding.
+  it.each([
+    ['no guest Read on the object', [], 0],
+    ['the guest owns records', [perm({ SobjectType: 'Contact', PermissionsRead: true })], 2],
+  ])('does not ask UserRecordAccess when there is %s', async (_why, perms, owned) => {
+    const seen: string[] = [];
+    await check.run(makeCtx({
+      queryAll: (s) => { seen.push(s); return router({ users: [guest()], perms })(s); },
+      // A record to sample, so only the gate keeps the probe from asking.
+      query: (s) => Promise.resolve((/^SELECT Id FROM Contact (ORDER BY SystemModstamp \w+ )?LIMIT/.test(s)
+        ? { records: [{ Id: '003x' }], totalSize: 1 }
+        : { records: [], totalSize: /FROM Contact WHERE OwnerId/.test(s) ? owned : 0 }) as any),
+    }));
+    expect(seen.filter((s) => /FROM UserRecordAccess/.test(s) && /'003x'/.test(s))).toEqual([]);
+  });
+
+  it('does not ask UserRecordAccess where share rows already show the access', async () => {
+    const seen: string[] = [];
+    await check.run(makeCtx({
+      queryAll: (s) => { seen.push(s); return router({ users: [guest()], perms: [perm({ SobjectType: 'Account', PermissionsRead: true })] })(s); },
+      query: (s) => { seen.push(s); return Promise.resolve({ records: [], totalSize: /FROM AccountShare/.test(s) ? 2 : 0 } as any); },
+    }));
+    expect(seen.some((s) => s.startsWith('SELECT Id FROM Account '))).toBe(false);
+  });
+
+  // ObjectPermissions.ParentId holds permission set Ids; filtering it by profile Id matched nothing.
+  it('reads object permissions through the guests\' permission sets, never by profile Id', async () => {
+    const seen: string[] = [];
+    await check.run(makeCtx({
+      queryAll: (s) => {
+        seen.push(s);
+        if (/FROM PermissionSetAssignment/.test(s)) return Promise.resolve([{ AssigneeId: '005G', PermissionSetId: '0PSG' }]);
+        return router({ users: [guest()] })(s);
+      },
+    }));
+    expect(seen).toContain("SELECT AssigneeId, PermissionSetId FROM PermissionSetAssignment WHERE AssigneeId IN ('005G')");
+    const op = seen.find((s) => /FROM ObjectPermissions/.test(s))!;
+    expect(op).toContain("ParentId IN ('0PSG')");
+    expect(op).not.toContain('00eG');
   });
 });

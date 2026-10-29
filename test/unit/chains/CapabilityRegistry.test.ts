@@ -53,14 +53,26 @@ describe('CapabilityRegistry', () => {
     );
   });
 
-  it('grants unauth-foothold + bulk read to a public external OWD on User', () => {
-    expect(capabilitiesFor(f('guest-user-visibility-owd')).grants).toEqual(
-      expect.arrayContaining(['unauth-foothold', 'data-read-bulk']),
-    );
+  // The User external OWD reaches logged-in external users: the guest OWD is always Private.
+  it('grants low-trust-authenticated + bulk read, not unauth-foothold, to a public external OWD on User', () => {
+    const grants = capabilitiesFor(f('guest-user-visibility-owd')).grants;
+    expect(grants).toEqual(expect.arrayContaining(['low-trust-authenticated', 'data-read-bulk']));
+    expect(grants).not.toContain('unauth-foothold');
   });
 
-  it('grants read but NOT bulk read to a guest Read grant on the User object', () => {
-    const grants = capabilitiesFor(f('guest-user-visibility-object-read')).grants;
+  // Shared records are graded alike whatever the object or OWD; guest-owned records are the bulk sink.
+  it('grants records shared with guests read, not bulk read, and guest-owned records bulk read', () => {
+    for (const id of ['guest-object-exposure-guest-shared', 'guest-object-exposure-public-owd', 'guest-user-sharing-exposure']) {
+      const grants = capabilitiesFor(f(id)).grants;
+      expect({ id, grants }).toEqual({ id, grants: expect.arrayContaining(['unauth-foothold', 'data-read']) });
+      expect({ id, bulk: grants.includes('data-read-bulk') }).toEqual({ id, bulk: false });
+    }
+    expect(capabilitiesFor(f('guest-object-exposure-guest-owned')).grants).toContain('data-read-bulk');
+  });
+
+  // Guest member visibility shows a site's members, not the org's records.
+  it('grants unauth-foothold + read, not bulk read, to guest member visibility', () => {
+    const grants = capabilitiesFor(f('guest-site-options-member-visibility')).grants;
     expect(grants).toEqual(expect.arrayContaining(['unauth-foothold', 'data-read']));
     expect(grants).not.toContain('data-read-bulk');
   });

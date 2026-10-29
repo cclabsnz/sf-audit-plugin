@@ -11,6 +11,7 @@ overrides:
   fast-uri@3: ^3.1.9
   browserslist: ^4.28.7
   '@istanbuljs/load-nyc-config>js-yaml': ^4.1.1
+  jest-config>deepmerge: 4.1.1
 
 importers:
 
@@ -19,6 +20,12 @@ importers:
       '@cclabsnz/sf-core':
         specifier: ^0.12.0
         version: 0.12.0(@salesforce/core@9.4.0)
+      '@fontsource-variable/source-sans-3':
+        specifier: ^5.3.1
+        version: 5.3.1
+      '@fontsource-variable/source-serif-4':
+        specifier: ^5.3.1
+        version: 5.3.1
       '@oclif/core':
         specifier: ^5
         version: 5.1.8
@@ -252,6 +259,12 @@ packages:
 
   '@emnapi/wasi-threads@1.2.1':
     resolution: {integrity: sha512-uTII7OYF+/Mes/MrcIOYp5yOtSMLBWSIoLPpcgwipoiKbli6k322tcoFsxoIIxPDqW01SQGAgko4EzZi2BNv2w==}
+
+  '@fontsource-variable/source-sans-3@5.3.1':
+    resolution: {integrity: sha512-u0p5Z/PM2e1uxYOMiodLM6NVzxHwULcB6Oi7QSr2WU/sdoLBFP/BeOZ3YYHeJ6rHsjPZA1nZweZVaV7sf2MAyQ==}
+
+  '@fontsource-variable/source-serif-4@5.3.1':
+    resolution: {integrity: sha512-4Rtay22SC4lMvw11r/+9kxANB6P3M0X8s1NudBC2v0J1KU2y3DcMoNcT3lBoZ/CqLirzf+StlO6UlJilyrvaUg==}
 
   '@inquirer/ansi@2.0.9':
     resolution: {integrity: sha512-0Ywt3S8tqM6TWUcsRlBFQ1x+X3/o8kktX0ZiKAnByYb9GFDknnOhse1PVtfiD2BXPI8ar+BWx9PV9R0lQIcygw==}
@@ -1436,8 +1449,8 @@ packages:
       babel-plugin-macros:
         optional: true
 
-  deepmerge@4.3.1:
-    resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
+  deepmerge@4.1.1:
+    resolution: {integrity: sha512-+qO5WbNBKBaZez95TffdUDnGIo4+r5kmsX8aOb7PDHvXsTbghAmleuxjs6ytNaf5Eg4FGBXDS5vqO61TRi6BMg==}
     engines: {node: '>=0.10.0'}
 
   delayed-stream@1.0.0:
@@ -2956,6 +2969,10 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
+  '@fontsource-variable/source-sans-3@5.3.1': {}
+
+  '@fontsource-variable/source-serif-4@5.3.1': {}
+
   '@inquirer/ansi@2.0.9': {}
 
   '@inquirer/confirm@6.3.3(@types/node@26.6.5)':
@@ -4084,7 +4101,7 @@ snapshots:
 
   dedent@1.7.2: {}
 
-  deepmerge@4.3.1: {}
+  deepmerge@4.1.1: {}
 
   delayed-stream@1.0.0: {}
 
@@ -4523,7 +4540,7 @@ snapshots:
       babel-jest: 30.5.2(@babel/core@7.29.7)
       chalk: 4.1.2
       ci-info: 4.4.0
-      deepmerge: 4.3.1
+      deepmerge: 4.1.1
       glob: 13.0.6
       graceful-fs: 4.2.11
       jest-circus: 30.5.2
