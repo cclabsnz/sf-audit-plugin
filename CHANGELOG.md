@@ -9,6 +9,11 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.22.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.22.0) — 2026-10-29
+
+The executive report is now a consulting-style deck that leads with what to do, with the threat
+model on its own slides.
+
 ### Changed
 
 - **The executive report is now a consulting-style deck.** Every slide's title states its conclusion, and a note under each exhibit says where its numbers come from. In order:
