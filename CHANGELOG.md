@@ -9,6 +9,13 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.24.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.24.0) — 2026-10-30
+
+Several checks were filtering on values the platform never writes, so they found nothing; they now
+find what they look for. Guest exposure is graded one way, Apex follows the API 67.0 sharing and
+user-mode defaults, and MFA registration reads every method. Some grades will fall where exposures
+are newly found, and some will rise where findings were overstated.
+
 ### Added
 
 - **An optional permission set for MFA registration**, `docs/permissionset/SF_Audit_MFA.permissionset-meta.xml`, separate from the read-only one. Salesforce grants "Manage MFA in API" only with user-management permissions, so it is meant for an audit user who is already an administrator.
