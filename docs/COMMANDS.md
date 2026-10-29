@@ -27,7 +27,7 @@ The audit itself. The [README](../README.md#usage) covers the common path; this 
 | `--scoring-config` | (none) | Path to a custom scoring config JSON file to override weights and grade thresholds |
 | `--prepared-for` | (none) | Client name for the executive report cover line |
 | `--branding` | (none) | Path to a `report-branding.json` to override CloudCounsel defaults (executive format) |
-| `--top` | `5` | Number of executive priorities to highlight (executive format) |
+| `--top` | `5` | Number of top actions to plot on the deck's "Where to act" slide, up to 10 (executive format). The action plan lists every action. |
 | `--frameworks` | `universal` | Compliance matrix scope (executive format): `universal` (OWASP/OWASP LLM/SOC 2/ISO 27001), `nz` (ISO/HISO/Privacy Act/NZISM), `all`, or a comma list (e.g. `owasp,owasp-llm,iso,nzism`, or `hipaa` / `gdpr` for a US healthcare or EU/UK engagement) |
 | `--resolve-domains` | `false` | Makes **outbound DNS queries from this machine** to verify CSP trusted domains still resolve (flags unresolvable / parked domains as exfiltration channels). Off by default; a default run contacts **only the target org** and never reaches out to any other host. |
 | `--no-history` | `false` | Do not archive this run to `~/.sf/audit-history/`. Implied in CI: `CI` set to anything but `false`/`0`, or `GITHUB_ACTIONS`, `TF_BUILD` or `JENKINS_URL` present |
