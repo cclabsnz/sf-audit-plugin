@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SharingRules xmlns="http://soap.sforce.com/2006/04/metadata">
+    <sharingGuestRules>
+        <fullName>SFA_Guest_Fixture_Public</fullName>
+        <accessLevel>Read</accessLevel>
+        <label>SFA Guest Fixture Public</label>
+        <sharedTo><guestUser>YOUR_SITE_NAME</guestUser></sharedTo>
+        <criteriaItems><field>Name</field><operation>startsWith</operation><value>Public</value></criteriaItems>
+        <includeHVUOwnedRecords>false</includeHVUOwnedRecords>
+    </sharingGuestRules>
+</SharingRules>

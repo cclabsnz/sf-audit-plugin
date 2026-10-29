@@ -4,9 +4,10 @@ import type { AuditContext } from '@cclabsnz/sf-core';
  * How records are shared with unauthenticated guest users, read from share tables.
  *
  * Since Winter '21 the only new way to share a record with a guest is a guest user sharing rule:
- * its rows carry RowCause 'GuestRule', and the parent or person-account access it implies
- * 'GuestParentImplicit' / 'GuestPersonImplicit' (picklist values read from a live org's
- * AccountShare). Those rows are counted whoever they name. Access granted before Winter '21 was not
+ * its rows carry RowCause 'GuestRule' and name the site's guest user group (Group Type
+ * 'GuestUserGroup'), not the guest user (seen on a live org, test/fixtures/org/guest-share); the
+ * parent or person-account access it implies carries 'GuestParentImplicit' / 'GuestPersonImplicit'
+ * (AccountShare picklist values). Those rows are counted whoever they name. Access granted before Winter '21 was not
  * removed: manual and Apex-managed shares to a guest user, and a guest's membership of a public
  * group or queue, still give access until someone cleans them up. So rows naming a guest user
  * (other than its ownership, which is reported on its own) or a group a guest belongs to count too.
