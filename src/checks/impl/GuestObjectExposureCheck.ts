@@ -165,9 +165,18 @@ export class GuestObjectExposureCheck implements SecurityCheck {
     const exposed: ExposedObject[] = [];
     for (const obj of readable) {
       const model = owd.get(obj) ?? 'Unknown';
-      // GuestUserAccessCheck reports guest shares on these four (guest-user-sharing-exposure),
-      // whatever their OWD: the same rows are not graded twice.
-      if (REPORTED_BY_GUEST_ACCESS.has(obj) && ((await guestShareCount(ctx, obj, principals)) ?? 0) > 0) continue;
+      // GuestUserAccessCheck owns guest reads on these four (guest-user-sharing-exposure: share
+      // rows, or UserRecordAccess when there are none), whatever their OWD, so they are not graded
+      // twice. Guest-owned records on them are reported here, and only here.
+      if (REPORTED_BY_GUEST_ACCESS.has(obj)) {
+        try {
+          const r = await ctx.soql.query<unknown>(`SELECT COUNT() FROM ${obj} WHERE OwnerId IN (${inIds})`);
+          if (r.totalSize > 0) exposed.push({ obj, count: r.totalSize, write: writable.has(obj), kind: 'owned', uiApi: null, confirmed: null });
+        } catch {
+          // No OwnerId: ownership cannot expose it.
+        }
+        continue;
+      }
       if (PUBLIC_OWD.has(model)) {
         exposed.push({ obj, owd: model, write: writable.has(obj), kind: 'public', uiApi: null, confirmed: null });
         continue;
@@ -184,7 +193,7 @@ export class GuestObjectExposureCheck implements SecurityCheck {
       }
       // Or if they are shared with guests: a guest sharing rule is what secure guest record access
       // leaves as the guest's way to a record it does not own, and legacy shares persist.
-      const shared = REPORTED_BY_GUEST_ACCESS.has(obj) ? 0 : await guestShareCount(ctx, obj, principals);
+      const shared = await guestShareCount(ctx, obj, principals);
       if (shared !== null && shared > 0) {
         exposed.push({ obj, count: shared, write: writable.has(obj), kind: 'shared', uiApi: null, confirmed: true });
       } else if ((await guestReadsSample(ctx, obj, guestIds)) === true) {
@@ -200,7 +209,7 @@ export class GuestObjectExposureCheck implements SecurityCheck {
       if (e.kind === 'shared') continue;
       // The external OWD does not reach guests, so on a public-OWD object a guest reads records the
       // same way as under a Private one: through shares. Those are graded as shared records.
-      const shared = e.kind === 'public' && !REPORTED_BY_GUEST_ACCESS.has(e.obj) ? await guestShareCount(ctx, e.obj, principals) : null;
+      const shared = e.kind === 'public' ? await guestShareCount(ctx, e.obj, principals) : null;
       if (shared !== null && shared > 0) {
         Object.assign(e, { kind: 'shared', count: shared, confirmed: true });
         continue;

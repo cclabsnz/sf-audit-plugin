@@ -95,9 +95,11 @@ describe('MfaRegistrationCheck', () => {
     ]);
     expect(r.findings[0].title).toBe('1 of 4 active user(s) have not registered any MFA method');
     expect(r.findings[0].detail).toContain('1 of the unregistered user(s) have only a verified phone number, email address or temporary code');
-    // The strength check sees every method, weak ones included.
+    // Only registered users go to the strength check, with every method they hold. A user with
+    // just a phone or email has no MFA method: graded "weak MFA", an admin who verified an email
+    // would rate worse than one who did nothing.
+    expect(cache.map((c: any) => c.userId).sort()).toEqual(['005auth', '005bio', '005key']);
     expect(cache.find((c: any) => c.userId === '005key').methods).toEqual(['FIDO2', 'SMS_OTP']);
-    expect(cache.find((c: any) => c.userId === '005sms').methods).toEqual(['SMS_OTP', 'EMAIL']);
     expect(cache.find((c: any) => c.userId === '005auth').methods).toEqual(['SALESFORCE_AUTHENTICATOR']);
   });
 

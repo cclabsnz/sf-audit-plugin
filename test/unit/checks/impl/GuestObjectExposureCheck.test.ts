@@ -349,4 +349,28 @@ describe('GuestObjectExposureCheck', () => {
         .toBe('Application__c (records shared with guests)');
     });
   });
+
+  // The group walk is bounded, so a deep or pathological tree cannot run away.
+  it('follows nested groups at most five levels out', async () => {
+    const ctx = makeCtx([
+      [{ Id: '005g', ProfileId: '00e', Username: 'guest@x' }],
+      [{ AssigneeId: '005g', PermissionSetId: '0PS1' }],
+      [{ ParentId: '0PS1', SobjectType: 'Application__c', PermissionsRead: true }],
+      [{ QualifiedApiName: 'Application__c', ExternalSharingModel: 'Private' }],
+    ]);
+    const answer = (ctx.soql.queryAll as any).getMockImplementation();
+    // A chain 005g -> 00G1 -> 00G2 -> ... -> 00G9.
+    (ctx.soql.queryAll as any).mockImplementation(async (soql: string) => {
+      const m = /FROM GroupMember WHERE UserOrGroupId IN \((.*)\)$/.exec(soql);
+      if (!m) return answer(soql);
+      return [...m[1].matchAll(/'([^']+)'/g)].flatMap((x) => {
+        const n = x[1] === '005g' ? 0 : Number(x[1].slice(3));
+        return n < 9 ? [{ GroupId: `00G${n + 1}` }] : [];
+      });
+    });
+    await check.run(ctx);
+    expect((ctx.soql.queryAll as any).mock.calls.filter((c: any) => /FROM GroupMember/.test(c[0]))).toHaveLength(5);
+    const shareQuery = (ctx.soql.query as any).mock.calls.map((c: any) => c[0]).find((q: string) => /__Share/.test(q));
+    expect(shareQuery).toMatch(/UserOrGroupId IN \('00G1', '00G2', '00G3', '00G4', '00G5'\)$/);
+  });
 });

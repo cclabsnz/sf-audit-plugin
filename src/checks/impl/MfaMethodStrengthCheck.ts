@@ -49,7 +49,7 @@ export class MfaMethodStrengthCheck implements SecurityCheck {
         detail:
           'MFA registration data was not gathered: either MfaRegistrationCheck did not run, or TwoFactorMethodsInfo could not be read (it needs "Manage MFA in API"; see PERMISSIONS.md). MFA method strength analysis cannot be performed without this data.',
         remediation:
-          'Ensure MfaRegistrationCheck runs before this check. Grant "Manage Multi-Factor Authentication in API" permission to the audit user.',
+          'Ensure MfaRegistrationCheck runs before this check, and that the audit user holds "Manage MFA in API" (optional: Salesforce grants it only with user-management permissions; see PERMISSIONS.md).',
       });
       return { findings };
     }

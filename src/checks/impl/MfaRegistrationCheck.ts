@@ -22,8 +22,7 @@ interface MethodsRecord {
 /**
  * TwoFactorMethodsInfo flags, mapped to the method names MfaMethodStrengthCheck grades. TwoFactorInfo
  * is not used: its Type picklist holds only 'TOTP', so it never shows Salesforce Authenticator,
- * security keys or built-in authenticators (a live org had 0 TwoFactorInfo rows and 10
- * TwoFactorMethodsInfo rows).
+ * security keys or built-in authenticators.
  */
 const METHOD_FLAGS: Array<[keyof MethodsRecord, string]> = [
   ['HasSecurityKey', 'FIDO2'],
@@ -95,14 +94,17 @@ export class MfaRegistrationCheck implements SecurityCheck {
         detail:
           'The TwoFactorMethodsInfo object was not accessible. The audit user most likely lacks the "Manage MFA in API" permission (PermissionsManageTwoFactor), which hides the object.',
         remediation:
-          'Grant the audit user "Manage MFA in API" through a permission set. Salesforce requires it to come with user-management permissions (Manage Users, View Setup and others) that a System Administrator already holds. Or review MFA registration manually in Setup → Identity → Identity Verification.',
+          'Grant the audit user "Manage MFA in API" through a permission set, or review MFA registration manually in Setup → Identity → Identity Verification. Salesforce grants it only with user-management permissions (Manage Users, Manage Internal Users, Manage Sharing, Manage Roles, Reset Passwords and others; PERMISSIONS.md lists them), so it suits an audit user who is already an administrator.',
         affectedItems: [{ label: 'Identity Verification Setup', url: setupUrl }],
       });
       return { findings };
     }
 
-    // Every user with any method goes to the cache, so the strength check sees weak-only users;
-    // only a qualifying method counts as registered.
+    // Only users with a qualifying method are registered, and only they go to the cache: a user
+    // with just a verified phone, email or temporary code has no MFA method, and is reported here
+    // as unregistered, not graded by the strength check as "weak MFA" (which would rate an admin
+    // who verified an email worse than one who did nothing). Their fallbacks still appear in the
+    // cached methods of registered users.
     const userMethodMap = new Map<string, { username: string; profileName: string; methods: string[] }>();
     for (const r of methodRecords) {
       const methods = [...new Set(METHOD_FLAGS.filter(([f]) => r[f] === true).map(([, m]) => m))];
@@ -119,7 +121,7 @@ export class MfaRegistrationCheck implements SecurityCheck {
       }
     }
 
-    ctx.cache.mfaRegistrations = [...userMethodMap.entries()].map(([userId, data]) => ({
+    ctx.cache.mfaRegistrations = [...userMethodMap.entries()].filter(([, data]) => data.methods.some((m) => QUALIFYING.has(m))).map(([userId, data]) => ({
       userId,
       username: data.username,
       profileName: data.profileName,
