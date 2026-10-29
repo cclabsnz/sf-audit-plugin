@@ -26,7 +26,7 @@ function makeCtx(opts: {
   } as any;
 }
 
-const group = (Id = '00GALL', Name = 'All Internal Users') => ({ Id, Name, Type: 'AllInternal' });
+const group = (Id = '00GALL', Name = 'All Internal Users') => ({ Id, Name, Type: 'Organization' });
 
 /** Return `cnt` shares on the named table, nothing elsewhere. */
 const sharesOn = (table: string, cnt: number, groupId = '00GALL'): Query => (s) =>
@@ -46,10 +46,11 @@ describe('PublicGroupSharingCheck', () => {
     expect(r.findings[0].passed).toBe(true);
   });
 
-  it('queries only for the AllInternal group type', async () => {
+  // All Internal Users is Type 'Organization'; there is no 'AllInternal' type.
+  it('queries the All Internal Users group by its real type', async () => {
     const ctx = makeCtx({});
     await check.run(ctx);
-    expect((ctx.soql.queryAll as any).mock.calls[0][0]).toMatch(/Type\s*=\s*'AllInternal'/i);
+    expect((ctx.soql.queryAll as any).mock.calls[0][0]).toMatch(/Type\s*=\s*'Organization'/);
   });
 
   it('flags sharing rules that target the group', async () => {

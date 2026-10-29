@@ -46,12 +46,12 @@ describe('ReleaseUpdatesCheck', () => {
       DueDate: new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10),
     });
 
-    it('queries ReleaseUpdate for updates not enabled (available, or enabled then revoked), not CriticalUpdate', async () => {
+    it('queries ReleaseUpdate for updates not enabled, not CriticalUpdate', async () => {
       const ctx = makeCtx([], true);
       await check.run(ctx);
       const q: string = (ctx.tooling.query as any).mock.calls[0][0];
       expect(q).toContain('FROM ReleaseUpdate');
-      expect(q).toContain("Status IN ('Invocable', 'Revoked')");
+      expect(q).toContain("Status = 'Invocable'");
       expect(q).not.toContain('CriticalUpdate');
     });
 

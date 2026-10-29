@@ -11,7 +11,14 @@
    "AccountSource": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Other",
+     "Partner Referral",
+     "Phone Inquiry",
+     "Purchased List",
+     "Web"
+    ]
    },
    "AnnualRevenue": {
     "filterable": true,
@@ -41,7 +48,20 @@
    "BillingGeocodeAccuracy": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Address",
+     "Block",
+     "City",
+     "County",
+     "ExtendedZip",
+     "NearAddress",
+     "Neighborhood",
+     "State",
+     "Street",
+     "Unknown",
+     "Zip"
+    ]
    },
    "BillingLatitude": {
     "filterable": true,
@@ -86,7 +106,17 @@
    "CleanStatus": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Acknowledged",
+     "Different",
+     "Inactive",
+     "Matched",
+     "NotFound",
+     "Pending",
+     "SelectMatch",
+     "Skipped"
+    ]
    },
    "CreatedById": {
     "filterable": true,
@@ -138,7 +168,41 @@
    "Industry": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Agriculture",
+     "Apparel",
+     "Banking",
+     "Biotechnology",
+     "Chemicals",
+     "Communications",
+     "Construction",
+     "Consulting",
+     "Education",
+     "Electronics",
+     "Energy",
+     "Engineering",
+     "Entertainment",
+     "Environmental",
+     "Finance",
+     "Food & Beverage",
+     "Government",
+     "Healthcare",
+     "Hospitality",
+     "Insurance",
+     "Machinery",
+     "Manufacturing",
+     "Media",
+     "Not For Profit",
+     "Other",
+     "Recreation",
+     "Retail",
+     "Shipping",
+     "Technology",
+     "Telecommunications",
+     "Transportation",
+     "Utilities"
+    ]
    },
    "IsCustomerPortal": {
     "filterable": true,
@@ -252,7 +316,13 @@
    "Ownership": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Other",
+     "Private",
+     "Public",
+     "Subsidiary"
+    ]
    },
    "ParentId": {
     "filterable": true,
@@ -278,7 +348,12 @@
    "Rating": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Cold",
+     "Hot",
+     "Warm"
+    ]
    },
    "ShippingAddress": {
     "filterable": true,
@@ -303,7 +378,20 @@
    "ShippingGeocodeAccuracy": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Address",
+     "Block",
+     "City",
+     "County",
+     "ExtendedZip",
+     "NearAddress",
+     "Neighborhood",
+     "State",
+     "Street",
+     "Unknown",
+     "Zip"
+    ]
    },
    "ShippingLatitude": {
     "filterable": true,
@@ -368,7 +456,16 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Channel Partner / Reseller",
+     "Customer - Channel",
+     "Customer - Direct",
+     "Installation Partner",
+     "Other",
+     "Prospect",
+     "Technology Partner"
+    ]
    },
    "Website": {
     "filterable": true,
@@ -385,7 +482,12 @@
    "AccountAccessLevel": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "All",
+     "Edit",
+     "Read"
+    ]
    },
    "AccountId": {
     "filterable": true,
@@ -401,12 +503,22 @@
    "CaseAccessLevel": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "ContactAccessLevel": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "Id": {
     "filterable": true,
@@ -437,12 +549,49 @@
    "OpportunityAccessLevel": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "RowCause": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ALMAssignmentSharing",
+     "AcademicAccessManagement",
+     "CompliantDataSharing",
+     "GuestParentImplicit",
+     "GuestPersonImplicit",
+     "GuestRule",
+     "ImplicitChild",
+     "ImplicitParent",
+     "ImplicitPerson",
+     "LSC4CEAutoShare",
+     "LearningAssignment",
+     "LearningAssignmentImplicit",
+     "LearningItemAssignment",
+     "Manual",
+     "MfgTargetShare",
+     "MktTacticAssigneeSharing",
+     "ObligationAssigneeShare",
+     "Owner",
+     "RcmPolicy",
+     "ReviewAssigneeShare",
+     "Rule",
+     "SharingRecordCollection",
+     "SurveyShare",
+     "Team",
+     "Territory",
+     "Territory2AssociationManual",
+     "Territory2Forecast",
+     "Territory2SplitsForecast",
+     "TerritoryManual",
+     "TerritoryRule"
+    ]
    },
    "UserOrGroupId": {
     "filterable": true,
@@ -533,7 +682,12 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Active",
+     "Deleted",
+     "Inactive"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -555,7 +709,15 @@
    "ControllerType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "0",
+     "1",
+     "2",
+     "3",
+     "4",
+     "5"
+    ]
    },
    "CreatedById": {
     "filterable": true,
@@ -711,7 +873,12 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Active",
+     "Deleted",
+     "Inactive"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -834,7 +1001,32 @@
    "PolicyOutcome": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Block",
+     "EndSession",
+     "Error",
+     "ExemptNoAction",
+     "FailedInvalidPassword",
+     "FailedPasswordLockout",
+     "FreezeUser",
+     "MeteringBlock",
+     "MeteringNoAction",
+     "NoAction",
+     "Notified",
+     "StepUpInitiated",
+     "TwoFAAutomatedSuccess",
+     "TwoFADenied",
+     "TwoFAFailedGeneralError",
+     "TwoFAFailedInvalidCode",
+     "TwoFAFailedTooManyAttempts",
+     "TwoFAInProgress",
+     "TwoFAInitiated",
+     "TwoFANoAction",
+     "TwoFARecoverableError",
+     "TwoFAReportedDenied",
+     "TwoFASucceeded"
+    ]
    },
    "QueriedEntities": {
     "filterable": false,
@@ -917,7 +1109,11 @@
    "CanvasAccessMethod": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Get",
+     "Post"
+    ]
    },
    "CanvasEnabled": {
     "filterable": true,
@@ -1069,7 +1265,11 @@
    "MobilePlatform": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "android",
+     "ios"
+    ]
    },
    "MobileStartUrl": {
     "filterable": true,
@@ -1104,7 +1304,15 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ConnectedApplication",
+     "ExternalClientApplication",
+     "Network",
+     "ServiceProvider",
+     "TabSet",
+     "UIBundle"
+    ]
    },
    "UserSortOrder": {
     "filterable": true,
@@ -1174,7 +1382,18 @@
    "JobType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ApexToken",
+     "BatchApex",
+     "BatchApexWorker",
+     "Future",
+     "Queueable",
+     "ScheduledApex",
+     "SharingRecalculation",
+     "TestRequest",
+     "TestWorker"
+    ]
    },
    "LastProcessed": {
     "filterable": true,
@@ -1204,7 +1423,16 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Aborted",
+     "Completed",
+     "Failed",
+     "Holding",
+     "Preparing",
+     "Processing",
+     "Queued"
+    ]
    },
    "TotalJobItems": {
     "filterable": true,
@@ -1272,7 +1500,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -1308,7 +1556,13 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Community",
+     "Org",
+     "Portal",
+     "Site"
+    ]
    },
    "Url": {
     "filterable": true,
@@ -1500,7 +1754,29 @@
    "ProviderType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Apple",
+     "Bitbucket",
+     "CommerceCloudAccountManager",
+     "Confluence3LO",
+     "Custom",
+     "Evergreen",
+     "Facebook",
+     "GitHub",
+     "Google",
+     "HubSpot",
+     "Janrain",
+     "LinkedIn",
+     "Microsoft",
+     "MicrosoftACS",
+     "MuleSoft",
+     "MuleSoftAnypointPlatform",
+     "OpenIdConnect",
+     "Salesforce",
+     "Slack",
+     "Twitter"
+    ]
    },
    "RegistrationHandlerId": {
     "filterable": true,
@@ -1673,7 +1949,12 @@
    "Origin": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Email",
+     "Phone",
+     "Web"
+    ]
    },
    "OwnerId": {
     "filterable": true,
@@ -1701,12 +1982,26 @@
    "Priority": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "High",
+     "Low",
+     "Medium"
+    ]
    },
    "Reason": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Breakdown",
+     "Equipment Complexity",
+     "Equipment Design",
+     "Feedback",
+     "Installation",
+     "Other",
+     "Performance"
+    ]
    },
    "SourceId": {
     "filterable": true,
@@ -1724,7 +2019,13 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Closed",
+     "Escalated",
+     "New",
+     "Working"
+    ]
    },
    "Subject": {
     "filterable": true,
@@ -1759,14 +2060,26 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Electrical",
+     "Electronic",
+     "Mechanical",
+     "Other",
+     "Structural"
+    ]
    }
   },
   "CaseShare": {
    "CaseAccessLevel": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "All",
+     "Edit",
+     "Read"
+    ]
    },
    "CaseId": {
     "filterable": true,
@@ -1808,7 +2121,39 @@
    "RowCause": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ALMAssignmentSharing",
+     "AcademicAccessManagement",
+     "CompliantDataSharing",
+     "GuestParentImplicit",
+     "GuestPersonImplicit",
+     "GuestRule",
+     "ImplicitChild",
+     "ImplicitParent",
+     "ImplicitPerson",
+     "LSC4CEAutoShare",
+     "LearningAssignment",
+     "LearningAssignmentImplicit",
+     "LearningItemAssignment",
+     "Manual",
+     "MfgTargetShare",
+     "MktTacticAssigneeSharing",
+     "ObligationAssigneeShare",
+     "Owner",
+     "RcmPolicy",
+     "ReviewAssigneeShare",
+     "Rule",
+     "SharingRecordCollection",
+     "SurveyShare",
+     "Team",
+     "Territory",
+     "Territory2AssociationManual",
+     "Territory2Forecast",
+     "Territory2SplitsForecast",
+     "TerritoryManual",
+     "TerritoryRule"
+    ]
    },
    "UserOrGroupId": {
     "filterable": true,
@@ -1864,7 +2209,17 @@
    "MobileSessionTimeout": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "1",
+     "10",
+     "120",
+     "180",
+     "240",
+     "30",
+     "5",
+     "60"
+    ]
    },
    "MobileStartUrl": {
     "filterable": true,
@@ -1879,7 +2234,20 @@
    "NamedUserUvidTimeout": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "1",
+     "10",
+     "120",
+     "15",
+     "240",
+     "30",
+     "480",
+     "5",
+     "60",
+     "720",
+     "90"
+    ]
    },
    "OptionsAllowAdminApprovedUsersOnly": {
     "filterable": true,
@@ -1919,7 +2287,14 @@
    "PinLength": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "4",
+     "5",
+     "6",
+     "7",
+     "8"
+    ]
    },
    "RefreshTokenValidityPeriod": {
     "filterable": true,
@@ -1939,7 +2314,20 @@
    "UvidTimeout": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "1",
+     "10",
+     "120",
+     "15",
+     "240",
+     "30",
+     "480",
+     "5",
+     "60",
+     "720",
+     "90"
+    ]
    }
   },
   "Contact": {
@@ -1972,12 +2360,28 @@
    "CleanStatus": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Acknowledged",
+     "Different",
+     "Inactive",
+     "Matched",
+     "NotFound",
+     "Pending",
+     "SelectMatch",
+     "Skipped"
+    ]
    },
    "ContactSource": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Auto Create",
+     "Email Message",
+     "Meeting Digest",
+     "Seller Home"
+    ]
    },
    "CreatedById": {
     "filterable": true,
@@ -2125,7 +2529,14 @@
    "LeadSource": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Other",
+     "Partner Referral",
+     "Phone Inquiry",
+     "Purchased List",
+     "Web"
+    ]
    },
    "MailingAddress": {
     "filterable": true,
@@ -2150,7 +2561,20 @@
    "MailingGeocodeAccuracy": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Address",
+     "Block",
+     "City",
+     "County",
+     "ExtendedZip",
+     "NearAddress",
+     "Neighborhood",
+     "State",
+     "Street",
+     "Unknown",
+     "Zip"
+    ]
    },
    "MailingLatitude": {
     "filterable": true,
@@ -2226,7 +2650,20 @@
    "OtherGeocodeAccuracy": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Address",
+     "Block",
+     "City",
+     "County",
+     "ExtendedZip",
+     "NearAddress",
+     "Neighborhood",
+     "State",
+     "Street",
+     "Unknown",
+     "Zip"
+    ]
    },
    "OtherLatitude": {
     "filterable": true,
@@ -2298,7 +2735,15 @@
    "Salutation": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Dr.",
+     "Mr.",
+     "Mrs.",
+     "Ms.",
+     "Mx.",
+     "Prof."
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -2315,7 +2760,12 @@
    "ContactAccessLevel": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "All",
+     "Edit",
+     "Read"
+    ]
    },
    "ContactId": {
     "filterable": true,
@@ -2357,7 +2807,39 @@
    "RowCause": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ALMAssignmentSharing",
+     "AcademicAccessManagement",
+     "CompliantDataSharing",
+     "GuestParentImplicit",
+     "GuestPersonImplicit",
+     "GuestRule",
+     "ImplicitChild",
+     "ImplicitParent",
+     "ImplicitPerson",
+     "LSC4CEAutoShare",
+     "LearningAssignment",
+     "LearningAssignmentImplicit",
+     "LearningItemAssignment",
+     "Manual",
+     "MfgTargetShare",
+     "MktTacticAssigneeSharing",
+     "ObligationAssigneeShare",
+     "Owner",
+     "RcmPolicy",
+     "ReviewAssigneeShare",
+     "Rule",
+     "SharingRecordCollection",
+     "SurveyShare",
+     "Team",
+     "Territory",
+     "Territory2AssociationManual",
+     "Territory2Forecast",
+     "Territory2SplitsForecast",
+     "TerritoryManual",
+     "TerritoryRule"
+    ]
    },
    "UserOrGroupId": {
     "filterable": true,
@@ -2684,7 +3166,15 @@
    "MalwareScanStatus": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Clean",
+     "Failed",
+     "Malicious",
+     "NotScanned",
+     "Scheduled",
+     "Skipped"
+    ]
    },
    "OwnerId": {
     "filterable": true,
@@ -2705,17 +3195,30 @@
    "PublishStatus": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "P",
+     "R",
+     "U"
+    ]
    },
    "SharingOption": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "A",
+     "R"
+    ]
    },
    "SharingPrivacy": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "N",
+     "P"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -2759,7 +3262,14 @@
    "ContentLocation": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "E",
+     "L",
+     "S",
+     "SCS",
+     "SfDrive"
+    ]
    },
    "ContentModifiedById": {
     "filterable": true,
@@ -3099,7 +3609,15 @@
    "MalwareScanStatus": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Clean",
+     "Failed",
+     "Malicious",
+     "NotScanned",
+     "Scheduled",
+     "Skipped"
+    ]
    },
    "NegativeRatingCount": {
     "filterable": true,
@@ -3114,7 +3632,11 @@
    "Origin": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "C",
+     "H"
+    ]
    },
    "OwnerId": {
     "filterable": true,
@@ -3140,7 +3662,12 @@
    "PublishStatus": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "P",
+     "R",
+     "U"
+    ]
    },
    "RatingCount": {
     "filterable": true,
@@ -3155,12 +3682,20 @@
    "SharingOption": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "A",
+     "R"
+    ]
    },
    "SharingPrivacy": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "N",
+     "P"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -3233,7 +3768,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -3331,7 +3886,54 @@
    "LoginType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AJAX Toolkit",
+     "Apex Office Toolkit",
+     "AppExchange",
+     "AppStore",
+     "Application",
+     "Certificate-based login",
+     "Chatter Communities External User",
+     "Chatter Communities External User Third Party SSO",
+     "Community",
+     "Customer Service Portal",
+     "Customer Service Portal Third-Party SSO",
+     "DB Replication",
+     "DataJunction",
+     "Employee Login to Community",
+     "Excel Integration",
+     "HOTP YubiKey",
+     "Help And Training",
+     "Lightning Login",
+     "Networks Portal API Only",
+     "Offline Client",
+     "Order Center",
+     "Other Apex API",
+     "Outlook Integration",
+     "Partner Portal",
+     "Partner Portal Third-Party SSO",
+     "Partner Product",
+     "Passwordless Login",
+     "Passwordless Login via Passkeys",
+     "Remote Access 2.0",
+     "Remote Access Client",
+     "SAML Chatter Communities External User SSO",
+     "SAML Customer Service Portal SSO",
+     "SAML Idp Initiated SSO",
+     "SAML Partner Portal SSO",
+     "SAML Sfdc Initiated SSO",
+     "SAML Site SSO",
+     "Sales Anywhere",
+     "Salesforce Outlook Integration",
+     "Salesforce.com Website",
+     "Self-Service",
+     "Signup",
+     "Sync",
+     "SysAdmin Switch",
+     "Third Party SSO",
+     "Validate"
+    ]
    },
    "LoginUrl": {
     "filterable": true,
@@ -3352,7 +3954,32 @@
    "PolicyOutcome": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Block",
+     "EndSession",
+     "Error",
+     "ExemptNoAction",
+     "FailedInvalidPassword",
+     "FailedPasswordLockout",
+     "FreezeUser",
+     "MeteringBlock",
+     "MeteringNoAction",
+     "NoAction",
+     "Notified",
+     "StepUpInitiated",
+     "TwoFAAutomatedSuccess",
+     "TwoFADenied",
+     "TwoFAFailedGeneralError",
+     "TwoFAFailedInvalidCode",
+     "TwoFAFailedTooManyAttempts",
+     "TwoFAInProgress",
+     "TwoFAInitiated",
+     "TwoFANoAction",
+     "TwoFARecoverableError",
+     "TwoFAReportedDenied",
+     "TwoFASucceeded"
+    ]
    },
    "Score": {
     "filterable": true,
@@ -3415,7 +4042,15 @@
    "Context": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "All",
+     "Communities",
+     "FieldServiceMobileExtension",
+     "LEX",
+     "LightningOut",
+     "VisualForce"
+    ]
    },
    "CreatedById": {
     "filterable": true,
@@ -3496,7 +4131,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -3534,7 +4189,12 @@
    "BackgroundDirection": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Diagonal",
+     "LeftToRight",
+     "TopToBottom"
+    ]
    },
    "BackgroundEnd": {
     "filterable": true,
@@ -3549,12 +4209,36 @@
    "ChartTheme": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "dark",
+     "light"
+    ]
    },
    "ColorPalette": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Default",
+     "accessible",
+     "bluegrass",
+     "branding",
+     "colorSafe",
+     "dusk",
+     "earth",
+     "fire",
+     "gray",
+     "heat",
+     "justice",
+     "nightfall",
+     "pond",
+     "sunrise",
+     "tropic",
+     "unity",
+     "water",
+     "watermelon"
+    ]
    },
    "CreatedById": {
     "filterable": true,
@@ -3648,12 +4332,22 @@
    "LeftSize": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Medium",
+     "Narrow",
+     "Wide"
+    ]
    },
    "MiddleSize": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Medium",
+     "Narrow",
+     "Wide"
+    ]
    },
    "NamespacePrefix": {
     "filterable": true,
@@ -3674,7 +4368,12 @@
    "RightSize": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Medium",
+     "Narrow",
+     "Wide"
+    ]
    },
    "RunningUserId": {
     "filterable": true,
@@ -3715,7 +4414,12 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "LoggedInUser",
+     "MyTeamUser",
+     "SpecifiedUser"
+    ]
    }
   },
   "Document": {
@@ -3895,12 +4599,28 @@
    "DomainType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DNS"
+    ]
    },
    "HttpsOption": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "CdnPartner",
+     "Community",
+     "CommunityAlt",
+     "ExternalHttps",
+     "LegacyDomain",
+     "NoHttps",
+     "OrgDomain",
+     "SalesforceApp",
+     "Sites",
+     "SitesAlt",
+     "SitesRuntime"
+    ]
    },
    "Id": {
     "filterable": true,
@@ -4028,7 +4748,13 @@
    "AddressInactiveAction": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Bounce",
+     "Discard",
+     "Requeue",
+     "UseSystemDefault"
+    ]
    },
    "ApexClassId": {
     "filterable": true,
@@ -4038,17 +4764,36 @@
    "AttachmentOption": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "All",
+     "BinaryOnly",
+     "NoContent",
+     "None",
+     "TextOnly"
+    ]
    },
    "AuthenticationFailureAction": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Bounce",
+     "Discard",
+     "Requeue",
+     "UseSystemDefault"
+    ]
    },
    "AuthorizationFailureAction": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Bounce",
+     "Discard",
+     "Requeue",
+     "UseSystemDefault"
+    ]
    },
    "AuthorizedSenders": {
     "filterable": true,
@@ -4079,7 +4824,13 @@
    "FunctionInactiveAction": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Bounce",
+     "Discard",
+     "Requeue",
+     "UseSystemDefault"
+    ]
    },
    "FunctionName": {
     "filterable": true,
@@ -4135,7 +4886,13 @@
    "OverLimitAction": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Bounce",
+     "Discard",
+     "Requeue",
+     "UseSystemDefault"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -4197,7 +4954,12 @@
    "FontSize": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Large",
+     "Medium",
+     "Small"
+    ]
    },
    "Height": {
     "filterable": true,
@@ -4319,7 +5081,11 @@
    "DeploymentStatus": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Deployed",
+     "InDevelopment"
+    ]
    },
    "DetailUrl": {
     "filterable": true,
@@ -4359,7 +5125,14 @@
    "ExternalSharingModel": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ControlledByCampaign",
+     "ControlledByLeadOrContact",
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "HasSubtypes": {
     "filterable": true,
@@ -4394,7 +5167,14 @@
    "InternalSharingModel": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ControlledByCampaign",
+     "ControlledByLeadOrContact",
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "IsApexTriggerable": {
     "filterable": true,
@@ -4615,7 +5395,89 @@
    "EventType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "API",
+     "ApexCallout",
+     "ApexExecution",
+     "ApexPageInline",
+     "ApexRestApi",
+     "ApexSoap",
+     "ApexTrigger",
+     "ApexUnexpectedException",
+     "ApiTotalUsage",
+     "AsyncReportRun",
+     "Attachment",
+     "AuraRequest",
+     "BlockedRedirections",
+     "BulkApi",
+     "BulkApi2",
+     "BulkApiRequest",
+     "CSPViolation",
+     "ChangeSetOperation",
+     "CompositeApi",
+     "CompositeApiSubrequest",
+     "ConcurrentLongRunningApexLimit",
+     "Console",
+     "ContentDistribution",
+     "ContentDocumentLink",
+     "ContentTransfer",
+     "ContinuationCallout",
+     "CorsViolation",
+     "Dashboard",
+     "DatabaseSave",
+     "DocumentAttachmentDownloads",
+     "ExternalCrossOrgCallout",
+     "ExternalCustomApexCallout",
+     "ExternalDataSourceCallout",
+     "ExternalODataCallout",
+     "FlowExecution",
+     "GraphQlQueryExecution",
+     "GroupMembership",
+     "HostnameRedirects",
+     "InsecureExternalAssets",
+     "InsufficientAccess",
+     "InvocableAction",
+     "KnowledgeArticleView",
+     "LightningError",
+     "LightningInteraction",
+     "LightningLogger",
+     "LightningPageView",
+     "LightningPerformance",
+     "Login",
+     "LoginAs",
+     "Logout",
+     "MetadataApiOperation",
+     "MultiBlockReport",
+     "NamedCredential",
+     "OneCommerceUsage",
+     "PackageInstall",
+     "PermissionUpdate",
+     "PlatformEncryption",
+     "Pricing",
+     "QueuedExecution",
+     "Report",
+     "ReportExport",
+     "RestApi",
+     "RowLock",
+     "SalesforceLoginAs",
+     "Sandbox",
+     "Search",
+     "SearchClick",
+     "Sites",
+     "TimeBasedWorkflow",
+     "TransactionSecurity",
+     "UITracking",
+     "URI",
+     "UiTelemetryNavigationTiming",
+     "UiTelemetryResourceTiming",
+     "UniqueQuery",
+     "VisualforceRequest",
+     "WaveChange",
+     "WaveDownload",
+     "WaveInteraction",
+     "WavePerformance"
+    ]
    },
    "Id": {
     "filterable": true,
@@ -4625,7 +5487,11 @@
    "Interval": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Daily",
+     "Hourly"
+    ]
    },
    "IsDeleted": {
     "filterable": true,
@@ -4729,7 +5595,13 @@
    "DistributionState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AutoInstalled",
+     "Local",
+     "Managed",
+     "Packaged"
+    ]
    },
    "IconUrl": {
     "filterable": true,
@@ -4754,7 +5626,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -4780,7 +5672,11 @@
    "ManagedType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Global",
+     "Local"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -4824,7 +5720,12 @@
    "BusinessStatus": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Active",
+     "DeprecateCandidate",
+     "Hidden"
+    ]
    },
    "ComplianceGroup": {
     "filterable": true,
@@ -5069,7 +5970,14 @@
    "SecurityClassification": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Confidential",
+     "Internal",
+     "MissionCritical",
+     "Public",
+     "Restricted"
+    ]
    },
    "ServiceDataTypeId": {
     "filterable": true,
@@ -5141,7 +6049,13 @@
    "AccessType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Hidden",
+     "Public",
+     "PublicInternal",
+     "Shared"
+    ]
    },
    "CreatedById": {
     "filterable": true,
@@ -5213,7 +6127,19 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ActionCadence",
+     "AnalyticAssetCollection",
+     "Capstone",
+     "Dashboard",
+     "Document",
+     "Email",
+     "EmailTemplate",
+     "Macro",
+     "QuickText",
+     "Report"
+    ]
    }
   },
   "GenAiFunctionDefinition": {
@@ -5256,7 +6182,32 @@
    "InvocationTargetType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "apex",
+     "apexRest",
+     "api",
+     "auraEnabled",
+     "byot",
+     "cdpMlPrediction",
+     "commerce",
+     "createCatalogItemRequest",
+     "decisionTableAction",
+     "executeIntegrationProcedure",
+     "externalConnector",
+     "externalService",
+     "flow",
+     "generatePromptResponse",
+     "mcpTool",
+     "namedQuery",
+     "platformMcpTool",
+     "quickAction",
+     "retriever",
+     "runExpressionSet",
+     "slack",
+     "standardInvocableAction",
+     "stub"
+    ]
    },
    "IsConfirmationRequired": {
     "filterable": true,
@@ -5281,7 +6232,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -5413,7 +6384,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -5444,7 +6435,16 @@
    "PlannerType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AiCopilot__AgileAppDev",
+     "AiCopilot__ReAct",
+     "AiCopilot__SequentialPlannerIntentClassifier",
+     "Atlas__ConcurrentMultiAgentOrchestration",
+     "Atlas__VoiceAgent",
+     "BYOP__waiiplanner",
+     "SentOS__SearchAgent"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -5567,7 +6567,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -5626,7 +6646,11 @@
    "PluginType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "APICustomTopic",
+     "Topic"
+    ]
    },
    "Scope": {
     "filterable": false,
@@ -5815,7 +6839,27 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AllCustomerPortal",
+     "ChannelProgramGroup",
+     "CollaborationGroup",
+     "DataAnalytics",
+     "Dynamic",
+     "Manager",
+     "ManagerAndSubordinatesInternal",
+     "Organization",
+     "PRMOrganization",
+     "Participant",
+     "Queue",
+     "Regular",
+     "Role",
+     "RoleAndSubordinates",
+     "RoleAndSubordinatesInternal",
+     "SharingRecordCollGroup",
+     "Territory",
+     "TerritoryAndSubordinates"
+    ]
    }
   },
   "GroupMember": {
@@ -5918,7 +6962,32 @@
    "PolicyOutcome": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Block",
+     "EndSession",
+     "Error",
+     "ExemptNoAction",
+     "FailedInvalidPassword",
+     "FailedPasswordLockout",
+     "FreezeUser",
+     "MeteringBlock",
+     "MeteringNoAction",
+     "NoAction",
+     "Notified",
+     "StepUpInitiated",
+     "TwoFAAutomatedSuccess",
+     "TwoFADenied",
+     "TwoFAFailedGeneralError",
+     "TwoFAFailedInvalidCode",
+     "TwoFAFailedTooManyAttempts",
+     "TwoFAInProgress",
+     "TwoFAInitiated",
+     "TwoFANoAction",
+     "TwoFARecoverableError",
+     "TwoFAReportedDenied",
+     "TwoFASucceeded"
+    ]
    },
    "RequestedEntities": {
     "filterable": false,
@@ -6011,7 +7080,17 @@
    "CleanStatus": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Acknowledged",
+     "Different",
+     "Inactive",
+     "Matched",
+     "NotFound",
+     "Pending",
+     "SelectMatch",
+     "Skipped"
+    ]
    },
    "Company": {
     "filterable": true,
@@ -6131,7 +7210,20 @@
    "GeocodeAccuracy": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Address",
+     "Block",
+     "City",
+     "County",
+     "ExtendedZip",
+     "NearAddress",
+     "Neighborhood",
+     "State",
+     "Street",
+     "Unknown",
+     "Zip"
+    ]
    },
    "Id": {
     "filterable": true,
@@ -6152,7 +7244,41 @@
    "Industry": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Agriculture",
+     "Apparel",
+     "Banking",
+     "Biotechnology",
+     "Chemicals",
+     "Communications",
+     "Construction",
+     "Consulting",
+     "Education",
+     "Electronics",
+     "Energy",
+     "Engineering",
+     "Entertainment",
+     "Environmental",
+     "Finance",
+     "Food & Beverage",
+     "Government",
+     "Healthcare",
+     "Hospitality",
+     "Insurance",
+     "Machinery",
+     "Manufacturing",
+     "Media",
+     "Not For Profit",
+     "Other",
+     "Recreation",
+     "Retail",
+     "Shipping",
+     "Technology",
+     "Telecommunications",
+     "Transportation",
+     "Utilities"
+    ]
    },
    "IsConverted": {
     "filterable": true,
@@ -6228,7 +7354,14 @@
    "LeadSource": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Other",
+     "Partner Referral",
+     "Phone Inquiry",
+     "Purchased List",
+     "Web"
+    ]
    },
    "Longitude": {
     "filterable": true,
@@ -6291,12 +7424,25 @@
    "Rating": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Cold",
+     "Hot",
+     "Warm"
+    ]
    },
    "Salutation": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Dr.",
+     "Mr.",
+     "Mrs.",
+     "Ms.",
+     "Mx.",
+     "Prof."
+    ]
    },
    "State": {
     "filterable": true,
@@ -6311,7 +7457,13 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Closed - Converted",
+     "Closed - Not Converted",
+     "Open - Not Contacted",
+     "Working - Contacted"
+    ]
    },
    "Street": {
     "filterable": true,
@@ -6364,7 +7516,12 @@
    "LeadAccessLevel": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "All",
+     "Edit",
+     "Read"
+    ]
    },
    "LeadId": {
     "filterable": true,
@@ -6380,7 +7537,39 @@
    "RowCause": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ALMAssignmentSharing",
+     "AcademicAccessManagement",
+     "CompliantDataSharing",
+     "GuestParentImplicit",
+     "GuestPersonImplicit",
+     "GuestRule",
+     "ImplicitChild",
+     "ImplicitParent",
+     "ImplicitPerson",
+     "LSC4CEAutoShare",
+     "LearningAssignment",
+     "LearningAssignmentImplicit",
+     "LearningItemAssignment",
+     "Manual",
+     "MfgTargetShare",
+     "MktTacticAssigneeSharing",
+     "ObligationAssigneeShare",
+     "Owner",
+     "RcmPolicy",
+     "ReviewAssigneeShare",
+     "Rule",
+     "SharingRecordCollection",
+     "SurveyShare",
+     "Team",
+     "Territory",
+     "Territory2AssociationManual",
+     "Territory2Forecast",
+     "Territory2SplitsForecast",
+     "TerritoryManual",
+     "TerritoryRule"
+    ]
    },
    "UserOrGroupId": {
     "filterable": true,
@@ -6475,7 +7664,32 @@
    "PolicyOutcome": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Block",
+     "EndSession",
+     "Error",
+     "ExemptNoAction",
+     "FailedInvalidPassword",
+     "FailedPasswordLockout",
+     "FreezeUser",
+     "MeteringBlock",
+     "MeteringNoAction",
+     "NoAction",
+     "Notified",
+     "StepUpInitiated",
+     "TwoFAAutomatedSuccess",
+     "TwoFADenied",
+     "TwoFAFailedGeneralError",
+     "TwoFAFailedInvalidCode",
+     "TwoFAFailedTooManyAttempts",
+     "TwoFAInProgress",
+     "TwoFAInitiated",
+     "TwoFANoAction",
+     "TwoFARecoverableError",
+     "TwoFAReportedDenied",
+     "TwoFASucceeded"
+    ]
    },
    "Score": {
     "filterable": true,
@@ -6563,7 +7777,46 @@
    "CipherSuite": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AES128-GCM-SHA256",
+     "AES128-SHA",
+     "AES128-SHA256",
+     "AES256-GCM-SHA384",
+     "AES256-SHA",
+     "AES256-SHA256",
+     "DES-CBC3-SHA",
+     "DHE-RSA-AES128-GCM-SHA256",
+     "DHE-RSA-AES128-SHA",
+     "DHE-RSA-AES256-GCM-SHA384",
+     "DHE-RSA-AES256-SHA",
+     "DHE-RSA-DES-CBC3-SHA",
+     "ECDH-ECDSA-AES128-GCM-SHA256",
+     "ECDH-ECDSA-AES128-SHA256",
+     "ECDH-ECDSA-AES256-GCM-SHA384",
+     "ECDH-ECDSA-AES256-SHA384",
+     "ECDH-RSA-AES128-GCM-SHA256",
+     "ECDH-RSA-AES128-SHA256",
+     "ECDH-RSA-AES256-GCM-SHA384",
+     "ECDH-RSA-AES256-SHA384",
+     "ECDHE-ECDSA-AES128-GCM-SHA256",
+     "ECDHE-ECDSA-AES128-SHA256",
+     "ECDHE-ECDSA-AES256-GCM-SHA384",
+     "ECDHE-ECDSA-AES256-SHA384",
+     "ECDHE-RSA-AES128-CBC-SHA",
+     "ECDHE-RSA-AES128-GCM-SHA256",
+     "ECDHE-RSA-AES128-SHA",
+     "ECDHE-RSA-AES128-SHA256",
+     "ECDHE-RSA-AES256-CBC-SHA",
+     "ECDHE-RSA-AES256-GCM-SHA384",
+     "ECDHE-RSA-AES256-SHA",
+     "ECDHE-RSA-AES256-SHA384",
+     "ECDHE-RSA-DES-CBC3-SHA",
+     "TLS_AES_128_GCM_SHA256",
+     "TLS_AES_256_GCM_SHA384",
+     "TLS_CHACHA20_POLY1305_SHA256",
+     "Unknown"
+    ]
    },
    "ClientVersion": {
     "filterable": false,
@@ -6599,7 +7852,33 @@
    "LoginSubType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Enterprise-Managed Authorization Token Exchange",
+     "Internal Salesforce Authentication",
+     "OAuth Client Credentials",
+     "OAuth Device",
+     "OAuth JWT Bearer",
+     "OAuth OTP Login",
+     "OAuth Refresh Token",
+     "OAuth Refresh Token for Hybrid Apps",
+     "OAuth SAML Bearer Assertion",
+     "OAuth Token Exchange",
+     "OAuth Token Exchange for Hybrid Apps",
+     "OAuth User-Agent",
+     "OAuth User-Agent for Hybrid Apps",
+     "OAuth User-Agent with ID Token",
+     "OAuth Username-Password",
+     "OAuth Web Server",
+     "OAuth Web Server for Hybrid Apps",
+     "SOAP API",
+     "SOAP API (Mobile)",
+     "SOAP API (Networks Portal)",
+     "SOAP API (Portal)",
+     "SOAP API (Self-Service)",
+     "UI Password Reset",
+     "UI Username-Password"
+    ]
    },
    "LoginTime": {
     "filterable": true,
@@ -6609,7 +7888,54 @@
    "LoginType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AJAX Toolkit",
+     "Apex Office Toolkit",
+     "AppExchange",
+     "AppStore",
+     "Application",
+     "Certificate-based login",
+     "Chatter Communities External User",
+     "Chatter Communities External User Third Party SSO",
+     "Community",
+     "Customer Service Portal",
+     "Customer Service Portal Third-Party SSO",
+     "DB Replication",
+     "DataJunction",
+     "Employee Login to Community",
+     "Excel Integration",
+     "HOTP YubiKey",
+     "Help And Training",
+     "Lightning Login",
+     "Networks Portal API Only",
+     "Offline Client",
+     "Order Center",
+     "Other Apex API",
+     "Outlook Integration",
+     "Partner Portal",
+     "Partner Portal Third-Party SSO",
+     "Partner Product",
+     "Passwordless Login",
+     "Passwordless Login via Passkeys",
+     "Remote Access 2.0",
+     "Remote Access Client",
+     "SAML Chatter Communities External User SSO",
+     "SAML Customer Service Portal SSO",
+     "SAML Idp Initiated SSO",
+     "SAML Partner Portal SSO",
+     "SAML Sfdc Initiated SSO",
+     "SAML Site SSO",
+     "Sales Anywhere",
+     "Salesforce Outlook Integration",
+     "Salesforce.com Website",
+     "Self-Service",
+     "Signup",
+     "Sync",
+     "SysAdmin Switch",
+     "Third Party SSO",
+     "Validate"
+    ]
    },
    "LoginUrl": {
     "filterable": true,
@@ -6649,7 +7975,14 @@
    "TlsProtocol": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "TLS 1.0",
+     "TLS 1.1",
+     "TLS 1.2",
+     "TLS 1.3",
+     "Unknown"
+    ]
    },
    "UserId": {
     "filterable": true,
@@ -6688,7 +8021,12 @@
    "ConsentType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DoubleOptIn",
+     "ExplicitOptIn",
+     "ImplicitOptIn"
+    ]
    },
    "ConversationEndResponse": {
     "filterable": false,
@@ -6714,7 +8052,13 @@
    "DefaultApplication": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DefaultResponse",
+     "DigitalEngagement",
+     "IgnoreMessage",
+     "MarketingCloudEngagement"
+    ]
    },
    "DefaultResponse": {
     "filterable": false,
@@ -6795,7 +8139,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -6816,7 +8180,10 @@
    "LinkingPreference": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Contact"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -6826,7 +8193,34 @@
    "MessageType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Alexa",
+     "AppleBusinessChat",
+     "Custom",
+     "Email",
+     "EmbeddedMessaging",
+     "ExternalVoice",
+     "Facebook",
+     "GoogleChat",
+     "GoogleHome",
+     "InternalCopilot",
+     "Line",
+     "MsCopilot",
+     "Omega",
+     "Phone",
+     "PstnVoice",
+     "Rcs",
+     "SipVoice",
+     "Slack",
+     "Text",
+     "Voice",
+     "VoiceIntegrationPilot",
+     "WeChat",
+     "WebChat",
+     "WhatsApp",
+     "WhatsAppVoice"
+    ]
    },
    "MessagingPlatformKey": {
     "filterable": true,
@@ -6851,7 +8245,11 @@
    "PlatformType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Enhanced",
+     "Standard"
+    ]
    },
    "RoutingConfigurationId": {
     "filterable": true,
@@ -6867,7 +8265,11 @@
    "RoutingType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "OmniQueue",
+     "OmniSkills"
+    ]
    },
    "SessionHandlerId": {
     "filterable": true,
@@ -7105,7 +8507,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -7136,7 +8558,13 @@
    "PrincipalType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Anonymous",
+     "NamedCustomPrincipal",
+     "NamedUser",
+     "PerUser"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -7545,7 +8973,12 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DownForMaintenance",
+     "Live",
+     "UnderConstruction"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -7814,12 +9247,27 @@
    "ForecastCategory": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "BestCase",
+     "Closed",
+     "Forecast",
+     "MostLikely",
+     "Omitted",
+     "Pipeline"
+    ]
    },
    "ForecastCategoryName": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Best Case",
+     "Closed",
+     "Commit",
+     "Omitted",
+     "Pipeline"
+    ]
    },
    "HasOpenActivity": {
     "filterable": false,
@@ -7927,7 +9375,14 @@
    "LeadSource": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Other",
+     "Partner Referral",
+     "Phone Inquiry",
+     "Purchased List",
+     "Web"
+    ]
    },
    "Name": {
     "filterable": true,
@@ -7974,7 +9429,19 @@
    "StageName": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Closed Lost",
+     "Closed Won",
+     "Id. Decision Makers",
+     "Needs Analysis",
+     "Negotiation/Review",
+     "Perception Analysis",
+     "Proposal/Price Quote",
+     "Prospecting",
+     "Qualification",
+     "Value Proposition"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -7989,7 +9456,13 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Existing Customer - Downgrade",
+     "Existing Customer - Replacement",
+     "Existing Customer - Upgrade",
+     "New Customer"
+    ]
    }
   },
   "OpportunityShare": {
@@ -8022,7 +9495,12 @@
    "OpportunityAccessLevel": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "All",
+     "Edit",
+     "Read"
+    ]
    },
    "OpportunityId": {
     "filterable": true,
@@ -8038,7 +9516,39 @@
    "RowCause": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ALMAssignmentSharing",
+     "AcademicAccessManagement",
+     "CompliantDataSharing",
+     "GuestParentImplicit",
+     "GuestPersonImplicit",
+     "GuestRule",
+     "ImplicitChild",
+     "ImplicitParent",
+     "ImplicitPerson",
+     "LSC4CEAutoShare",
+     "LearningAssignment",
+     "LearningAssignmentImplicit",
+     "LearningItemAssignment",
+     "Manual",
+     "MfgTargetShare",
+     "MktTacticAssigneeSharing",
+     "ObligationAssigneeShare",
+     "Owner",
+     "RcmPolicy",
+     "ReviewAssigneeShare",
+     "Rule",
+     "SharingRecordCollection",
+     "SurveyShare",
+     "Team",
+     "Territory",
+     "Territory2AssociationManual",
+     "Territory2Forecast",
+     "Territory2SplitsForecast",
+     "TerritoryManual",
+     "TerritoryRule"
+    ]
    },
    "UserOrGroupId": {
     "filterable": true,
@@ -8114,7 +9624,12 @@
    "Purpose": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DefaultNoreply",
+     "UserSelection",
+     "UserSelectionAndDefaultNoReply"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -8167,32 +9682,70 @@
    "DefaultAccountAccess": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ControlledByCampaign",
+     "ControlledByLeadOrContact",
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "DefaultCalendarAccess": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AllowEdits",
+     "HideDetails",
+     "HideDetailsInsert",
+     "ShowDetails",
+     "ShowDetailsInsert"
+    ]
    },
    "DefaultCampaignAccess": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "All",
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "DefaultCaseAccess": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Edit",
+     "None",
+     "Read",
+     "ReadEditTransfer"
+    ]
    },
    "DefaultContactAccess": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ControlledByParent",
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "DefaultLeadAccess": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Edit",
+     "None",
+     "Read",
+     "ReadEditTransfer"
+    ]
    },
    "DefaultLocaleSidKey": {
     "filterable": true,
@@ -8202,12 +9755,24 @@
    "DefaultOpportunityAccess": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ControlledByCampaign",
+     "ControlledByLeadOrContact",
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "DefaultPricebookAccess": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "None",
+     "Read",
+     "ReadSelect"
+    ]
    },
    "Division": {
     "filterable": true,
@@ -8227,7 +9792,20 @@
    "GeocodeAccuracy": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Address",
+     "Block",
+     "City",
+     "County",
+     "ExtendedZip",
+     "NearAddress",
+     "Neighborhood",
+     "State",
+     "Street",
+     "Unknown",
+     "Zip"
+    ]
    },
    "Id": {
     "filterable": true,
@@ -8252,7 +9830,27 @@
    "LanguageLocaleKey": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -8308,7 +9906,17 @@
    "OrganizationType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Base Edition",
+     "Contact Manager Edition",
+     "Developer Edition",
+     "Enterprise Edition",
+     "Personal Edition",
+     "Professional Edition",
+     "Team Edition",
+     "Unlimited Edition"
+    ]
    },
    "Phone": {
     "filterable": true,
@@ -8403,7 +10011,14 @@
    "UiSkin": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "PortalDefault",
+     "Theme1",
+     "Theme2",
+     "Theme3",
+     "Webstore"
+    ]
    },
    "UsesStartDateAsFiscalYearName": {
     "filterable": true,
@@ -8460,7 +10075,12 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Active",
+     "Free",
+     "Trial"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -9363,6 +10983,11 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsCreateSalesforcePages": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsCreateTask": {
     "filterable": true,
     "aggregatable": false,
@@ -9474,6 +11099,11 @@
     "type": "boolean"
    },
    "PermissionsDeleteTopics": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsDeploySalesforcePages": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -10899,6 +12529,11 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsSendMobileAppInboxMessage": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsSendMobileAppMessage": {
     "filterable": true,
     "aggregatable": false,
@@ -10940,6 +12575,16 @@
     "type": "boolean"
    },
    "PermissionsSimpleCsvDataImportUser": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsSkillManager": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsSkillUser": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -11024,12 +12669,22 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsTableauCreateDataApp": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsTableauCreateVisualization": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
    },
    "PermissionsTableauCreateWorkspace": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsTableauDeleteDataApp": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -11045,6 +12700,11 @@
     "type": "boolean"
    },
    "PermissionsTableauViewDashboard": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsTableauViewDataApp": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -11869,6 +13529,11 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsViewSalesforcePages": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsViewSecurityCommandCenter": {
     "filterable": true,
     "aggregatable": false,
@@ -11948,7 +13613,15 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Group",
+     "Integration",
+     "Profile",
+     "Regular",
+     "Session",
+     "Standard"
+    ]
    }
   },
   "PermissionSetAssignment": {
@@ -12056,7 +13729,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -12087,7 +13780,13 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Failed",
+     "Outdated",
+     "Updated",
+     "Updating"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -12267,7 +13966,11 @@
    "Visibility": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DefaultOff",
+     "DefaultOn"
+    ]
    }
   },
   "Profile": {
@@ -13138,6 +14841,11 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsCreateSalesforcePages": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsCreateTask": {
     "filterable": true,
     "aggregatable": false,
@@ -13249,6 +14957,11 @@
     "type": "boolean"
    },
    "PermissionsDeleteTopics": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsDeploySalesforcePages": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -14663,6 +16376,11 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsSendMobileAppInboxMessage": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsSendMobileAppMessage": {
     "filterable": true,
     "aggregatable": false,
@@ -14704,6 +16422,16 @@
     "type": "boolean"
    },
    "PermissionsSimpleCsvDataImportUser": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsSkillManager": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsSkillUser": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -14788,12 +16516,22 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsTableauCreateDataApp": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsTableauCreateVisualization": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
    },
    "PermissionsTableauCreateWorkspace": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsTableauDeleteDataApp": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -14809,6 +16547,11 @@
     "type": "boolean"
    },
    "PermissionsTableauViewDashboard": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsTableauViewDataApp": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -15633,6 +17376,11 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsViewSalesforcePages": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsViewSecurityCommandCenter": {
     "filterable": true,
     "aggregatable": false,
@@ -15707,7 +17455,17 @@
    "UserType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "CsnOnly",
+     "CspLitePortal",
+     "CustomerSuccess",
+     "Guest",
+     "PowerCustomerSuccess",
+     "PowerPartner",
+     "SelfService",
+     "Standard"
+    ]
    }
   },
   "Report": {
@@ -15745,7 +17503,13 @@
    "Format": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Matrix",
+     "MultiBlock",
+     "Summary",
+     "Tabular"
+    ]
    },
    "Id": {
     "filterable": true,
@@ -15882,7 +17646,32 @@
    "PolicyOutcome": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Block",
+     "EndSession",
+     "Error",
+     "ExemptNoAction",
+     "FailedInvalidPassword",
+     "FailedPasswordLockout",
+     "FreezeUser",
+     "MeteringBlock",
+     "MeteringNoAction",
+     "NoAction",
+     "Notified",
+     "StepUpInitiated",
+     "TwoFAAutomatedSuccess",
+     "TwoFADenied",
+     "TwoFAFailedGeneralError",
+     "TwoFAFailedInvalidCode",
+     "TwoFAFailedTooManyAttempts",
+     "TwoFAInProgress",
+     "TwoFAInitiated",
+     "TwoFANoAction",
+     "TwoFARecoverableError",
+     "TwoFAReportedDenied",
+     "TwoFASucceeded"
+    ]
    },
    "Report": {
     "filterable": true,
@@ -16002,12 +17791,21 @@
    "IdentityLocation": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Attribute",
+     "SubjectNameId"
+    ]
    },
    "IdentityMapping": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "FederationId",
+     "UserId",
+     "Username"
+    ]
    },
    "IsDeleted": {
     "filterable": true,
@@ -16022,7 +17820,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -16088,7 +17906,11 @@
    "RequestSignatureMethod": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "RSA-SHA1",
+     "RSA-SHA256"
+    ]
    },
    "SamlJitHandlerId": {
     "filterable": true,
@@ -16104,7 +17926,11 @@
    "SingleLogoutBinding": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "PostBinding",
+     "RedirectBinding"
+    ]
    },
    "SingleLogoutUrl": {
     "filterable": true,
@@ -16124,7 +17950,11 @@
    "Version": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "SAML1_1",
+     "SAML2_0"
+    ]
    }
   },
   "SessionHijackingEventStore": {
@@ -16212,7 +18042,32 @@
    "PolicyOutcome": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Block",
+     "EndSession",
+     "Error",
+     "ExemptNoAction",
+     "FailedInvalidPassword",
+     "FailedPasswordLockout",
+     "FreezeUser",
+     "MeteringBlock",
+     "MeteringNoAction",
+     "NoAction",
+     "Notified",
+     "StepUpInitiated",
+     "TwoFAAutomatedSuccess",
+     "TwoFADenied",
+     "TwoFAFailedGeneralError",
+     "TwoFAFailedInvalidCode",
+     "TwoFAFailedTooManyAttempts",
+     "TwoFAInProgress",
+     "TwoFAInitiated",
+     "TwoFANoAction",
+     "TwoFARecoverableError",
+     "TwoFAReportedDenied",
+     "TwoFASucceeded"
+    ]
    },
    "PreviousIp": {
     "filterable": true,
@@ -16395,7 +18250,25 @@
    "SetupEntityType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ApexClass",
+     "ApexPage",
+     "ConnectedApplication",
+     "CustomEntityDefinition",
+     "CustomPermission",
+     "ExternalClientApplication",
+     "ExternalCredentialParameter",
+     "ExternalDataSource",
+     "FlowDefinition",
+     "MessagingChannel",
+     "NamedCredential",
+     "Network",
+     "OrgWideEmailAddress",
+     "ServicePresenceStatus",
+     "StandardInvocableActionType",
+     "TabSet"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -16439,12 +18312,22 @@
    "ArchiveStatus": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "NotArchived",
+     "TemporarilyArchived"
+    ]
    },
    "ClickjackProtectionLevel": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AllowAllFraming",
+     "External",
+     "NoFraming",
+     "SameOriginOnly"
+    ]
    },
    "CreatedById": {
     "filterable": true,
@@ -16688,12 +18571,22 @@
    "SiteType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ChatterNetwork",
+     "ChatterNetworkPicasso",
+     "Siteforce",
+     "Visualforce"
+    ]
    },
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Active",
+     "Inactive"
+    ]
    },
    "Subdomain": {
     "filterable": true,
@@ -16725,7 +18618,11 @@
    "CacheControl": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Private",
+     "Public"
+    ]
    },
    "ContentType": {
     "filterable": true,
@@ -16846,12 +18743,37 @@
    "EventName": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AdminSetupEvent",
+     "ApiAnomalyEventStore",
+     "ApiEvent",
+     "BulkApiResultEventStore",
+     "CredentialStuffingEventStore",
+     "FileEventStore",
+     "GuestUserAnomalyEventStore",
+     "ListViewEvent",
+     "LoginAnomalyEventStore",
+     "LoginAsEvent",
+     "LoginEvent",
+     "PermissionSetEventStore",
+     "ReportAnomalyEventStore",
+     "ReportEvent",
+     "SessionHijackingEventStore",
+     "UniversalAnomalyEventStore"
+    ]
    },
    "EventType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AccessResource",
+     "AuditTrail",
+     "DataExport",
+     "Entity",
+     "Login"
+    ]
    },
    "ExecutionUserId": {
     "filterable": true,
@@ -16877,7 +18799,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -16913,7 +18855,11 @@
    "State": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Disabled",
+     "Enabled"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -16923,7 +18869,11 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "CustomApexPolicy",
+     "CustomConditionBuilderPolicy"
+    ]
    }
   },
   "User": {
@@ -17023,7 +18973,13 @@
    "DefaultGroupNotificationFrequency": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "D",
+     "N",
+     "P",
+     "W"
+    ]
    },
    "DelegatedApproverId": {
     "filterable": true,
@@ -17038,7 +18994,12 @@
    "DigestFrequency": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "D",
+     "N",
+     "W"
+    ]
    },
    "Division": {
     "filterable": true,
@@ -17053,7 +19014,19 @@
    "EmailEncodingKey": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Big5",
+     "Big5-HKSCS",
+     "EUC-JP",
+     "GB2312",
+     "ISO-2022-JP",
+     "ISO-8859-1",
+     "Shift_JIS",
+     "UTF-8",
+     "ks_c_5601-1987",
+     "x-SJIS_0213"
+    ]
    },
    "EmailPreferencesAutoBcc": {
     "filterable": true,
@@ -17078,7 +19051,33 @@
    "EndDay": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "0",
+     "1",
+     "10",
+     "11",
+     "12",
+     "13",
+     "14",
+     "15",
+     "16",
+     "17",
+     "18",
+     "19",
+     "2",
+     "20",
+     "21",
+     "22",
+     "23",
+     "3",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8",
+     "9"
+    ]
    },
    "Extension": {
     "filterable": true,
@@ -17113,7 +19112,20 @@
    "GeocodeAccuracy": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Address",
+     "Block",
+     "City",
+     "County",
+     "ExtendedZip",
+     "NearAddress",
+     "Neighborhood",
+     "State",
+     "Street",
+     "Unknown",
+     "Zip"
+    ]
    },
    "HasUserVerifiedEmail": {
     "filterable": true,
@@ -17174,7 +19186,27 @@
    "LanguageLocaleKey": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastLoginDate": {
     "filterable": true,
@@ -17296,7 +19328,13 @@
    "PortalRole": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Executive",
+     "Manager",
+     "PersonAccount",
+     "Worker"
+    ]
    },
    "PostalCode": {
     "filterable": true,
@@ -17352,7 +19390,33 @@
    "StartDay": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "0",
+     "1",
+     "10",
+     "11",
+     "12",
+     "13",
+     "14",
+     "15",
+     "16",
+     "17",
+     "18",
+     "19",
+     "2",
+     "20",
+     "21",
+     "22",
+     "23",
+     "3",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8",
+     "9"
+    ]
    },
    "State": {
     "filterable": true,
@@ -17948,7 +20012,17 @@
    "UserType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "CsnOnly",
+     "CspLitePortal",
+     "CustomerSuccess",
+     "Guest",
+     "PowerCustomerSuccess",
+     "PowerPartner",
+     "SelfService",
+     "Standard"
+    ]
    }
   },
   "UserLogin": {
@@ -18805,6 +20879,11 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsCreateSalesforcePages": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsCreateTask": {
     "filterable": true,
     "aggregatable": false,
@@ -18916,6 +20995,11 @@
     "type": "boolean"
    },
    "PermissionsDeleteTopics": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsDeploySalesforcePages": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -20330,6 +22414,11 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsSendMobileAppInboxMessage": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsSendMobileAppMessage": {
     "filterable": true,
     "aggregatable": false,
@@ -20371,6 +22460,16 @@
     "type": "boolean"
    },
    "PermissionsSimpleCsvDataImportUser": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsSkillManager": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsSkillUser": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -20455,12 +22554,22 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsTableauCreateDataApp": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsTableauCreateVisualization": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
    },
    "PermissionsTableauCreateWorkspace": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsTableauDeleteDataApp": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -20476,6 +22585,11 @@
     "type": "boolean"
    },
    "PermissionsTableauViewDashboard": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsTableauViewDataApp": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -21300,6 +23414,11 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsViewSalesforcePages": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsViewSecurityCommandCenter": {
     "filterable": true,
     "aggregatable": false,
@@ -21390,7 +23509,15 @@
    "MaxAccessLevel": {
     "filterable": false,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "All",
+     "Delete",
+     "Edit",
+     "None",
+     "Read",
+     "Transfer"
+    ]
    },
    "RecordId": {
     "filterable": true,
@@ -21407,12 +23534,22 @@
    "CaseAccessForAccountOwner": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "ContactAccessForAccountOwner": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "DeveloperName": {
     "filterable": true,
@@ -21458,7 +23595,12 @@
    "OpportunityAccessForAccountOwner": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "ParentRoleId": {
     "filterable": true,
@@ -21484,12 +23626,23 @@
    "PortalRole": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Executive",
+     "Manager",
+     "PersonAccount",
+     "Worker"
+    ]
    },
    "PortalType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "CustomerPortal",
+     "None",
+     "Partner"
+    ]
    },
    "RollupDescription": {
     "filterable": true,
@@ -21575,7 +23728,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "Metadata": {
     "filterable": false,
@@ -21595,7 +23758,12 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Active",
+     "Deleted",
+     "Inactive"
+    ]
    },
    "SymbolTable": {
     "filterable": false,
@@ -21778,7 +23946,15 @@
    "ControllerType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "0",
+     "1",
+     "2",
+     "3",
+     "4",
+     "5"
+    ]
    },
    "CreatedById": {
     "filterable": true,
@@ -21840,7 +24016,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "Markup": {
     "filterable": false,
@@ -21955,7 +24141,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "Metadata": {
     "filterable": false,
@@ -21975,7 +24171,12 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Active",
+     "Deleted",
+     "Inactive"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -22079,7 +24280,18 @@
    "JobType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ApexToken",
+     "BatchApex",
+     "BatchApexWorker",
+     "Future",
+     "Queueable",
+     "ScheduledApex",
+     "SharingRecalculation",
+     "TestRequest",
+     "TestWorker"
+    ]
    },
    "LastProcessed": {
     "filterable": true,
@@ -22109,7 +24321,16 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Aborted",
+     "Completed",
+     "Failed",
+     "Holding",
+     "Preparing",
+     "Processing",
+     "Queued"
+    ]
    },
    "TotalJobItems": {
     "filterable": true,
@@ -22300,7 +24521,17 @@
    "MobileSessionTimeout": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "1",
+     "10",
+     "120",
+     "180",
+     "240",
+     "30",
+     "5",
+     "60"
+    ]
    },
    "MobileStartUrl": {
     "filterable": true,
@@ -22315,7 +24546,20 @@
    "NamedUserUvidTimeout": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "1",
+     "10",
+     "120",
+     "15",
+     "240",
+     "30",
+     "480",
+     "5",
+     "60",
+     "720",
+     "90"
+    ]
    },
    "OptionsAllowAdminApprovedUsersOnly": {
     "filterable": true,
@@ -22355,7 +24599,14 @@
    "PinLength": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "4",
+     "5",
+     "6",
+     "7",
+     "8"
+    ]
    },
    "RefreshTokenValidityPeriod": {
     "filterable": true,
@@ -22370,12 +24621,26 @@
    "SessionPolicyAction": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Block",
+     "RaiseSessionLevel",
+     "StepUpMFA"
+    ]
    },
    "SessionTimeout": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "120",
+     "15",
+     "240",
+     "30",
+     "480",
+     "60",
+     "720"
+    ]
    },
    "StartUrl": {
     "filterable": true,
@@ -22390,7 +24655,20 @@
    "UvidTimeout": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "1",
+     "10",
+     "120",
+     "15",
+     "240",
+     "30",
+     "480",
+     "5",
+     "60",
+     "720",
+     "90"
+    ]
    },
    "Version": {
     "filterable": true,
@@ -22412,7 +24690,15 @@
    "Context": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "All",
+     "Communities",
+     "FieldServiceMobileExtension",
+     "LEX",
+     "LightningOut",
+     "VisualForce"
+    ]
    },
    "CreatedById": {
     "filterable": true,
@@ -22493,7 +24779,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -22514,7 +24820,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -22562,7 +24878,11 @@
    "ElementType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Float",
+     "Text"
+    ]
    },
    "EntityDefinitionId": {
     "filterable": true,
@@ -22614,17 +24934,39 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MaskChar": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "X",
+     "asterisk"
+    ]
    },
    "MaskType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "all",
+     "creditCard",
+     "lastFour",
+     "nino",
+     "sin",
+     "ssn"
+    ]
    },
    "Metadata": {
     "filterable": false,
@@ -22654,7 +24996,13 @@
    "SummaryOperation": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "count",
+     "max",
+     "min",
+     "sum"
+    ]
    },
    "TableEnumOrId": {
     "filterable": true,
@@ -22723,7 +25071,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -22744,7 +25112,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "NamespacePrefix": {
     "filterable": true,
@@ -22754,24 +25132,63 @@
    "SharingModel": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ControlledByParent",
+     "Edit",
+     "None",
+     "Read"
+    ]
    }
   },
   "DebugLevel": {
    "ApexCode": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "ApexProfiling": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "Callout": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "CreatedById": {
     "filterable": true,
@@ -22792,12 +25209,34 @@
    "DataAccess": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "Database": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "DeveloperName": {
     "filterable": true,
@@ -22817,7 +25256,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -22843,12 +25302,34 @@
    "Nba": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "System": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -22858,22 +25339,66 @@
    "Validation": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "Visualforce": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "Wave": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "Workflow": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    }
   },
   "DelegateGroup": {
@@ -23101,7 +25626,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "Metadata": {
     "filterable": false,
@@ -23143,7 +25678,11 @@
    "AuthMethod": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "CommunitiesLogin",
+     "CustomLogin"
+    ]
    },
    "BrandingId": {
     "filterable": true,
@@ -23159,7 +25698,11 @@
    "ClientVersion": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "WebV1",
+     "WebV2"
+    ]
    },
    "CreatedById": {
     "filterable": true,
@@ -23180,12 +25723,25 @@
    "DeploymentFeature": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "EmbeddedMessaging",
+     "FieldService",
+     "Flows",
+     "LiveAgent",
+     "None"
+    ]
    },
    "DeploymentType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "API",
+     "InternalCopilot",
+     "Mobile",
+     "Web"
+    ]
    },
    "DeveloperName": {
     "filterable": true,
@@ -23225,7 +25781,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -23246,7 +25822,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -23294,7 +25880,11 @@
    "DeploymentStatus": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Deployed",
+     "InDevelopment"
+    ]
    },
    "Description": {
     "filterable": true,
@@ -23339,7 +25929,14 @@
    "ExternalSharingModel": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ControlledByCampaign",
+     "ControlledByLeadOrContact",
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "FullName": {
     "filterable": false,
@@ -23379,7 +25976,14 @@
    "InternalSharingModel": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ControlledByCampaign",
+     "ControlledByLeadOrContact",
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "IsActivityTrackable": {
     "filterable": true,
@@ -23645,7 +26249,13 @@
    "DistributionState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AutoInstalled",
+     "Local",
+     "Managed",
+     "Packaged"
+    ]
    },
    "IconUrl": {
     "filterable": true,
@@ -23670,7 +26280,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -23696,12 +26326,26 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "ManagedType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Global",
+     "Local"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -23733,7 +26377,17 @@
    "AuthenticationProtocol": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AwsSv4",
+     "Basic",
+     "Custom",
+     "Jwt",
+     "JwtExchange",
+     "NoAuthentication",
+     "Oauth",
+     "Password"
+    ]
    },
    "CreatedById": {
     "filterable": true,
@@ -23779,7 +26433,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -23800,7 +26474,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -23868,7 +26552,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -23889,7 +26593,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -23947,7 +26661,29 @@
    "RegistrationProviderType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AgentActionOutputs",
+     "AgentToAgent",
+     "Anypoint",
+     "AnypointPublic",
+     "ApexRest",
+     "AuraEnabled",
+     "CodeExtension",
+     "Commerce",
+     "ContextDef",
+     "Custom",
+     "CustomExternalConnector",
+     "DocumentProcessing",
+     "ExternalConnector",
+     "Heroku",
+     "IntegProcd",
+     "ModelContextProtocol",
+     "MuleSoft",
+     "NamedQuery",
+     "SchemaInferred",
+     "Standard"
+    ]
    },
    "Schema": {
     "filterable": false,
@@ -23962,7 +26698,15 @@
    "SchemaType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AgentToAgent",
+     "InterpretedConnectivity",
+     "JsonSchema",
+     "ModelContextProtocol",
+     "OpenApi",
+     "OpenApi3"
+    ]
    },
    "SchemaUploadFileExtension": {
     "filterable": true,
@@ -23997,7 +26741,11 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Complete",
+     "Incomplete"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -24050,7 +26798,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -24071,7 +26839,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -24115,7 +26893,12 @@
    "BusinessStatus": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Active",
+     "DeprecateCandidate",
+     "Hidden"
+    ]
    },
    "ComplianceGroup": {
     "filterable": true,
@@ -24380,7 +27163,14 @@
    "SecurityClassification": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Confidential",
+     "Internal",
+     "MissionCritical",
+     "Public",
+     "Restricted"
+    ]
    },
    "ValueTypeId": {
     "filterable": true,
@@ -24398,7 +27188,11 @@
    "AccessType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "NamespaceRestricted",
+     "Open"
+    ]
    },
    "ApiVersion": {
     "filterable": true,
@@ -24491,7 +27285,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -24511,17 +27315,87 @@
    "ProcessType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ActionCadenceAutolaunchedFlow",
+     "ActionCadenceStepFlow",
+     "ActionPlan",
+     "ActionableEventManagementFlow",
+     "ActivityObjectMatchingFlow",
+     "AgxBackgroundFlow",
+     "AgxDataRetrievalFlow",
+     "AgxOrchestrationFlow",
+     "AgxOverviewFlow",
+     "AgxScreenFlow",
+     "Appointments",
+     "ApprovalWorkflow",
+     "AutoApprovalEvaluationFlow",
+     "AutoLaunchedFlow",
+     "CadenceStepReviewCriteriaFlow",
+     "CartAsyncFlow",
+     "CheckoutFlow",
+     "ContactRequestFlow",
+     "CustomEvent",
+     "CustomerLifecycle",
+     "DataCaptureFlow",
+     "DcvrFrameworkDataCaptureFlow",
+     "DigitalForm",
+     "EvaluationFlow",
+     "FSCLending",
+     "FieldServiceMobile",
+     "FieldServiceWeb",
+     "Flow",
+     "IdentityUserRegistrationFlow",
+     "IndicatorResultFlow",
+     "IndividualObjectLinkingFlow",
+     "InvocableProcess",
+     "Journey",
+     "JourneyBuilderIntegration",
+     "LoginFlow",
+     "LoyaltyManagementFlow",
+     "ManagedContentAuthoringWorkflow",
+     "ManagedContentFlow",
+     "OrchestrationFlow",
+     "Orchestrator",
+     "PromptFlow",
+     "RecommendationStrategy",
+     "RoutingFlow",
+     "ServiceCatalogItemFlow",
+     "StageManagementEvaluationFlow",
+     "Survey",
+     "SurveyEnrich",
+     "TransactionSecurityFlow",
+     "UnifiedSchedulingFlow",
+     "UserProvisioningFlow",
+     "Workflow"
+    ]
    },
    "ProgressStatus": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Canceled",
+     "Completed",
+     "Draft",
+     "Error",
+     "Finishing",
+     "InProgress",
+     "PreparingData",
+     "Scheduled",
+     "UnderReview"
+    ]
    },
    "RunInMode": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DefaultMode",
+     "SystemModeWithSharing",
+     "SystemModeWithoutSharing",
+     "UserMode"
+    ]
    },
    "SourceTemplate": {
     "filterable": true,
@@ -24531,7 +27405,14 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Active",
+     "Draft",
+     "InvalidDraft",
+     "Obsolete",
+     "UnderReview"
+    ]
    },
    "TimeZoneSidKey": {
     "filterable": true,
@@ -24632,7 +27513,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -24700,7 +27591,32 @@
    "InvocationTargetType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "apex",
+     "apexRest",
+     "api",
+     "auraEnabled",
+     "byot",
+     "cdpMlPrediction",
+     "commerce",
+     "createCatalogItemRequest",
+     "decisionTableAction",
+     "executeIntegrationProcedure",
+     "externalConnector",
+     "externalService",
+     "flow",
+     "generatePromptResponse",
+     "mcpTool",
+     "namedQuery",
+     "platformMcpTool",
+     "quickAction",
+     "retriever",
+     "runExpressionSet",
+     "slack",
+     "standardInvocableAction",
+     "stub"
+    ]
    },
    "IsConfirmationRequired": {
     "filterable": true,
@@ -24725,7 +27641,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -24751,7 +27687,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -24872,7 +27818,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -24893,7 +27859,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -24908,7 +27884,16 @@
    "PlannerType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AiCopilot__AgileAppDev",
+     "AiCopilot__ReAct",
+     "AiCopilot__SequentialPlannerIntentClassifier",
+     "Atlas__ConcurrentMultiAgentOrchestration",
+     "Atlas__VoiceAgent",
+     "BYOP__waiiplanner",
+     "SentOS__SearchAgent"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -24962,7 +27947,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "PlannerId": {
     "filterable": true,
@@ -25036,7 +28031,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -25062,7 +28077,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -25105,7 +28130,11 @@
    "PluginType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "APICustomTopic",
+     "Topic"
+    ]
    },
    "Scope": {
     "filterable": false,
@@ -25174,7 +28203,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "PluginId": {
     "filterable": true,
@@ -25282,7 +28321,27 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AllCustomerPortal",
+     "ChannelProgramGroup",
+     "CollaborationGroup",
+     "DataAnalytics",
+     "Dynamic",
+     "Manager",
+     "ManagerAndSubordinatesInternal",
+     "Organization",
+     "PRMOrganization",
+     "Participant",
+     "Queue",
+     "Regular",
+     "Role",
+     "RoleAndSubordinates",
+     "RoleAndSubordinatesInternal",
+     "SharingRecordCollGroup",
+     "Territory",
+     "TerritoryAndSubordinates"
+    ]
    }
   },
   "InstalledSubscriberPackage": {
@@ -25369,7 +28428,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -25390,7 +28469,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -25499,7 +28588,19 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "ApexDebuggerSession",
+     "Calendar",
+     "Document",
+     "FlowTestResult",
+     "IdeaComment",
+     "Queue",
+     "ReleaseUpdateStep",
+     "ReleaseUpdateStepLog",
+     "SelfServiceUser",
+     "User"
+    ]
    },
    "Username": {
     "filterable": true,
@@ -25547,7 +28648,11 @@
    "CalloutStatus": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Disabled",
+     "Enabled"
+    ]
    },
    "CertificateId": {
     "filterable": true,
@@ -25645,7 +28750,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -25666,7 +28791,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -25681,7 +28816,13 @@
    "NamedCredentialType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Legacy",
+     "PrivateEndpoint",
+     "SecuredEndpoint",
+     "Standard"
+    ]
    },
    "NamespacePrefix": {
     "filterable": true,
@@ -25722,12 +28863,28 @@
    "PrincipalType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Anonymous",
+     "NamedCustomPrincipal",
+     "NamedUser",
+     "PerUser"
+    ]
    },
    "Protocol": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AwsSv4",
+     "Basic",
+     "Custom",
+     "Jwt",
+     "JwtExchange",
+     "NoAuthentication",
+     "Oauth",
+     "Password"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -25818,7 +28975,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "Name": {
     "filterable": true,
@@ -26635,6 +29802,11 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsCreateSalesforcePages": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsCreateTask": {
     "filterable": true,
     "aggregatable": false,
@@ -26746,6 +29918,11 @@
     "type": "boolean"
    },
    "PermissionsDeleteTopics": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsDeploySalesforcePages": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -28171,6 +31348,11 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsSendMobileAppInboxMessage": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsSendMobileAppMessage": {
     "filterable": true,
     "aggregatable": false,
@@ -28212,6 +31394,16 @@
     "type": "boolean"
    },
    "PermissionsSimpleCsvDataImportUser": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsSkillManager": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsSkillUser": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -28296,12 +31488,22 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsTableauCreateDataApp": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsTableauCreateVisualization": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
    },
    "PermissionsTableauCreateWorkspace": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsTableauDeleteDataApp": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -28317,6 +31519,11 @@
     "type": "boolean"
    },
    "PermissionsTableauViewDashboard": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "PermissionsTableauViewDataApp": {
     "filterable": true,
     "aggregatable": false,
     "type": "boolean"
@@ -29141,6 +32348,11 @@
     "aggregatable": false,
     "type": "boolean"
    },
+   "PermissionsViewSalesforcePages": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
    "PermissionsViewSecurityCommandCenter": {
     "filterable": true,
     "aggregatable": false,
@@ -29220,7 +32432,15 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Group",
+     "Integration",
+     "Profile",
+     "Regular",
+     "Session",
+     "Standard"
+    ]
    }
   },
   "PermissionSetAssignment": {
@@ -29328,7 +32548,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -29349,7 +32589,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -29364,7 +32614,13 @@
    "Status": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Failed",
+     "Outdated",
+     "Updated",
+     "Updating"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -29468,7 +32724,11 @@
    "Visibility": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DefaultOff",
+     "DefaultOn"
+    ]
    }
   },
   "Profile": {
@@ -29619,7 +32879,16 @@
    "Status": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Complete",
+     "Info",
+     "Invocable",
+     "Invoked",
+     "Nascent",
+     "Pending",
+     "Revocable"
+    ]
    },
    "StepStage": {
     "filterable": true,
@@ -29698,7 +32967,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "Metadata": {
     "filterable": false,
@@ -29756,7 +33035,13 @@
    "EnforcementType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "D360_Restrict",
+     "FieldRestrict",
+     "Restrict",
+     "Scoping"
+    ]
    },
    "FullName": {
     "filterable": false,
@@ -29781,7 +33066,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -29802,7 +33107,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -29832,7 +33147,31 @@
    "TargetEntity": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Account",
+     "AuthSession",
+     "Case",
+     "Contact",
+     "Contract",
+     "E0_Probe__c",
+     "E0_Probe__c",
+     "Event",
+     "Event",
+     "IdentityResolution",
+     "Lead",
+     "LoginHistory",
+     "MarketSegment",
+     "MarketSegmentActivation",
+     "MktCalculatedInsight",
+     "Opportunity",
+     "ProcessInstanceStep",
+     "ProcessInstanceWorkitem",
+     "Task",
+     "Task",
+     "User",
+     "VerificationHistory"
+    ]
    },
    "UserCriteria": {
     "filterable": false,
@@ -29891,7 +33230,12 @@
    "RiskType": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "HIGH_RISK",
+     "MEDIUM_RISK",
+     "MEETS_STANDARD"
+    ]
    },
    "SecurityHealthCheckId": {
     "filterable": true,
@@ -29917,7 +33261,13 @@
    "SettingRiskCategory": {
     "filterable": true,
     "aggregatable": false,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "HIGH_RISK",
+     "INFORMATIONAL",
+     "LOW_RISK",
+     "MEDIUM_RISK"
+    ]
    },
    "StandardValue": {
     "filterable": true,
@@ -29944,7 +33294,11 @@
    "CacheControl": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Private",
+     "Public"
+    ]
    },
    "ContentType": {
     "filterable": true,
@@ -30001,7 +33355,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "Metadata": {
     "filterable": false,
@@ -30028,17 +33392,50 @@
    "ApexCode": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "ApexProfiling": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "Callout": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "CreatedById": {
     "filterable": true,
@@ -30059,12 +33456,34 @@
    "DataAccess": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "Database": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "DebugLevelId": {
     "filterable": true,
@@ -30111,12 +33530,29 @@
    "LogType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "CLASS_TRACING",
+     "DEVELOPER_LOG",
+     "PROFILING",
+     "USER_DEBUG"
+    ]
    },
    "Nba": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "StartDate": {
     "filterable": true,
@@ -30126,7 +33562,18 @@
    "System": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -30149,22 +33596,66 @@
    "Validation": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "Visualforce": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "Wave": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    },
    "Workflow": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "DEBUG",
+     "ERROR",
+     "FINE",
+     "FINER",
+     "FINEST",
+     "INFO",
+     "INTERNAL",
+     "NONE",
+     "WARN"
+    ]
    }
   },
   "TransactionSecurityPolicy": {
@@ -30223,12 +33714,37 @@
    "EventName": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AdminSetupEvent",
+     "ApiAnomalyEventStore",
+     "ApiEvent",
+     "BulkApiResultEventStore",
+     "CredentialStuffingEventStore",
+     "FileEventStore",
+     "GuestUserAnomalyEventStore",
+     "ListViewEvent",
+     "LoginAnomalyEventStore",
+     "LoginAsEvent",
+     "LoginEvent",
+     "PermissionSetEventStore",
+     "ReportAnomalyEventStore",
+     "ReportEvent",
+     "SessionHijackingEventStore",
+     "UniversalAnomalyEventStore"
+    ]
    },
    "EventType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "AccessResource",
+     "AuditTrail",
+     "DataExport",
+     "Entity",
+     "Login"
+    ]
    },
    "ExecutionUserId": {
     "filterable": true,
@@ -30270,7 +33786,27 @@
    "Language": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "da",
+     "de",
+     "en_US",
+     "es",
+     "es_MX",
+     "fi",
+     "fr",
+     "it",
+     "ja",
+     "ko",
+     "nl_NL",
+     "no",
+     "pt_BR",
+     "ru",
+     "sv",
+     "th",
+     "zh_CN",
+     "zh_TW"
+    ]
    },
    "LastModifiedById": {
     "filterable": true,
@@ -30291,7 +33827,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "MasterLabel": {
     "filterable": true,
@@ -30316,7 +33862,11 @@
    "State": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Disabled",
+     "Enabled"
+    ]
    },
    "SystemModstamp": {
     "filterable": true,
@@ -30326,7 +33876,11 @@
    "Type": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "CustomApexPolicy",
+     "CustomConditionBuilderPolicy"
+    ]
    }
   },
   "User": {
@@ -30365,12 +33919,22 @@
    "CaseAccessForAccountOwner": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "ContactAccessForAccountOwner": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "DeveloperName": {
     "filterable": true,
@@ -30416,7 +33980,12 @@
    "OpportunityAccessForAccountOwner": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Edit",
+     "None",
+     "Read"
+    ]
    },
    "ParentRoleId": {
     "filterable": true,
@@ -30437,12 +34006,23 @@
    "PortalRole": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "Executive",
+     "Manager",
+     "PersonAccount",
+     "Worker"
+    ]
    },
    "PortalType": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "CustomerPortal",
+     "None",
+     "Partner"
+    ]
    },
    "RollupDescription": {
     "filterable": true,
@@ -30522,7 +34102,17 @@
    "ManageableState": {
     "filterable": true,
     "aggregatable": true,
-    "type": "picklist"
+    "type": "picklist",
+    "values": [
+     "beta",
+     "deleted",
+     "deprecated",
+     "deprecatedEditable",
+     "installed",
+     "installedEditable",
+     "released",
+     "unmanaged"
+    ]
    },
    "Metadata": {
     "filterable": false,

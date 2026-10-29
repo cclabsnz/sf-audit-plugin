@@ -1,6 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { guestPrincipals, guestShareCount } from '../support/guestShares.js';
 
 interface UserRecord {
   Id: string;
@@ -17,14 +18,10 @@ interface ObjectPermissionRecord {
   PermissionsRead: boolean;
 }
 
-interface SharingCountRecord {
-  UserOrGroupId: string;
-  cnt: number;
-}
-
 const STANDARD_OBJECTS = ['Account', 'Contact', 'Case', 'Lead', 'Opportunity'] as const;
 const HEALTH_CLOUD_OBJECTS = ['CarePlan__c', 'CareTeamMember__c', 'EhrPatient__c'] as const;
-const SHARE_TABLES = ['AccountShare', 'CaseShare', 'ContactShare', 'OpportunityShare'] as const;
+// The standard objects whose guest shares this check reports; GuestObjectExposureCheck covers the rest.
+const SHARED_OBJECTS = ['Account', 'Case', 'Contact', 'Opportunity'] as const;
 
 export class GuestUserAccessCheck implements SecurityCheck {
   readonly id = 'guest-user-access';
@@ -126,33 +123,18 @@ export class GuestUserAccessCheck implements SecurityCheck {
       // Skip on error
     }
 
-    // Check sharing rules targeting guest users.
-    // One query per share table (not per user) using GROUP BY — reduces N×4 to 4 queries.
+    // Share rows giving guests access: guest user sharing rules (and the parent access they imply),
+    // and legacy manual, Apex and group shares that Winter '21 did not remove (support/guestShares).
     interface SharingExposure {
       shareTable: string;
       count: number;
     }
     const sharingExposures: SharingExposure[] = [];
-    const userIdList = guestUsers.map((u) => `'${u.Id}'`).join(', ');
-
-    // Sharing rules write RowCause 'Rule'; guest user sharing rules write 'GuestRule'. There is no
-    // 'SharingRule' value: a filter on it matches no row and hid every guest sharing rule.
-    for (const shareTable of SHARE_TABLES) {
-      try {
-        const result = await ctx.soql.query<SharingCountRecord>(
-          `SELECT UserOrGroupId, COUNT(Id) cnt
-           FROM ${shareTable}
-           WHERE UserOrGroupId IN (${userIdList})
-             AND RowCause IN ('Rule', 'GuestRule')
-           GROUP BY UserOrGroupId`
-        );
-        const totalCount = result.records.reduce((sum, r) => sum + (r.cnt ?? 0), 0);
-        if (totalCount > 0) {
-          sharingExposures.push({ shareTable, count: totalCount });
-        }
-      } catch {
-        // Object may not be accessible — skip silently
-      }
+    const principals = await guestPrincipals(ctx, guestUsers.map((u) => u.Id));
+    for (const obj of SHARED_OBJECTS) {
+      // Null: the share table could not be read (or the object is not shareable in this org).
+      const count = await guestShareCount(ctx, obj, principals);
+      if (count !== null && count > 0) sharingExposures.push({ shareTable: `${obj}Share`, count });
     }
 
     // Emit findings based on what was found
@@ -206,16 +188,16 @@ export class GuestUserAccessCheck implements SecurityCheck {
         id: 'guest-user-sharing-exposure',
         category: this.category,
         riskLevel: 'HIGH',
-        title: `${count} object sharing rule(s) expose records to guest users`,
+        title: `${count} share row(s) give guest users access to Account, Case, Contact or Opportunity records`,
         affectedItems: sharingExposures.map((e) => ({
           label: e.shareTable,
           url: `${baseUrl}/lightning/setup/SecuritySharing/page`,
-          note: `${e.count} sharing rule(s): review and remove guest-targeting rules`,
+          note: `${e.count} share row(s) giving guests access: review the guest sharing rules and legacy shares`,
         })),
         detail:
-          'Sharing rules targeting guest users can expose internal records to unauthenticated visitors.',
+          'Records on these objects are shared with guest users: by guest user sharing rules (and the parent access they imply), or by manual, Apex-managed or public-group shares made before Winter \'21, which the platform did not remove. Any unauthenticated visitor to the site can read the shared records.',
         remediation:
-          'Review and remove sharing rules that grant guest users access to Salesforce records. Use Experience Cloud sites with explicit data access controls instead.',
+          'Confirm the shared records are meant to be public. If not, narrow or remove the guest user sharing rules (Setup → Sharing Settings), delete manual and Apex shares to the guest user, and remove the guest user from public groups and queues.',
       });
     }
 

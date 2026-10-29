@@ -75,9 +75,12 @@ const byPrefixes = (active: Finding[], prefixes: readonly string[]): Finding[] =
 export const GUEST_EXPOSURE = [
   'guest-user-read-access', 'guest-user-write-access', 'guest-user-sharing-exposure',
   'guest-executable-apex-unprotected', 'guest-executable-apex-exposed', 'guest-executable-apex-system-mode',
-  'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
+  'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned', 'guest-object-exposure-guest-shared',
   'guest-api-access-enabled', 'guest-api-hard-delete',
-  'guest-user-visibility-view-all-users', 'guest-user-visibility-owd', 'guest-user-visibility-object-read',
+  // Not 'guest-user-visibility-owd': the User external OWD reaches logged-in external users, not guests.
+  // Not 'guest-site-options-member-visibility': a site's member list is no foothold into org data,
+  // and this list also gates the low-trust chains (LOW_TRUST_ENTRY).
+  'guest-user-visibility-view-all-users', 'guest-user-visibility-object-read',
   'guest-record-access-policy-not-enforced',
   'inbound-email-handler-unauthenticated-execution',
 ];
@@ -85,7 +88,7 @@ export const GUEST_EXPOSURE = [
 // Ways in for a low-trust principal: external users with public sharing, social sign-on,
 // self-registration, or a confirmed guest exposure. RULE-072.
 export const LOW_TRUST_ENTRY = [
-  'sharing-model-external-read', 'sharing-model-external-write',
+  'sharing-model-external-read', 'sharing-model-external-write', 'guest-user-visibility-owd',
   'auth-providers-social', 'experience-cloud-site-self-registration',
   ...GUEST_EXPOSURE,
 ];
@@ -104,9 +107,9 @@ export const NON_ADMIN_ESCALATION = [
 export const UNAUTH_EXFIL_STEPS = [
   'guest-user-read-access', 'guest-user-write-access', 'guest-user-sharing-exposure', 'guest-user-baseline',
   'guest-executable-apex-unprotected', 'guest-executable-apex-exposed', 'guest-executable-apex-system-mode',
-  'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
+  'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned', 'guest-object-exposure-guest-shared',
   'guest-api-access-enabled', 'guest-api-hard-delete', 'classic-sites-active',
-  'guest-user-visibility-view-all-users', 'guest-user-visibility-owd', 'guest-user-visibility-object-read',
+  'guest-user-visibility-view-all-users', 'guest-user-visibility-object-read', 'guest-site-options-member-visibility',
   // Not 'sharing-model-external-*': since Winter '21 guest record access is always secured, so the
   // external OWD reaches logged-in portal users, not guests. Those findings drive the low-trust chains.
   // Not 'portal-exposed-apex-without-sharing' or 'flows-*-without-sharing' either: they flag any
@@ -125,7 +128,9 @@ export const UNAUTH_EXFIL_STEPS = [
 // reach no record on their own: secure guest record access leaves the guest nothing to read.
 export const UNAUTH_RECORD_REACH = [
   'guest-user-sharing-exposure', 'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
+  'guest-object-exposure-guest-shared',
   // Not 'guest-user-visibility-owd': the guest OWD is Private on every object, User included.
+  // Not 'guest-site-options-member-visibility': it shows a site's members, not business records.
   'guest-user-visibility-view-all-users',
   'guest-executable-apex-unprotected',
   // Secure guest record access is what makes the rest of this list necessary: with it off, legacy
@@ -142,9 +147,11 @@ export const GUEST_TRAFFIC = ['guest-traffic-anomaly-recon', 'guest-traffic-anom
 // A readable User roster counts as an exposed surface in its own right — recon against an org
 // that leaks its staff list is the same incident. The object-level Read grant is excluded: on
 // its own it is not a confirmed exposure, and this chain asserts one already in progress.
+// Records shared with guests are left out: a site publishes those on purpose, and they are reads,
+// not the bulk surface this chain needs.
 export const GUEST_BULK_SURFACE = [
-  'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
-  'guest-user-visibility-view-all-users', 'guest-user-visibility-owd',
+  'guest-object-exposure-guest-owned',
+  'guest-user-visibility-view-all-users',
 ];
 
 // Admin powers: they widen what a takeover reaches but are not themselves the escalation.
@@ -258,6 +265,8 @@ export const SELF_REGISTRATION = ['experience-cloud-site-self-registration'];
 // licence, which generally has no report access at all, so including it would overstate reach.
 export const PORTAL_REACH = [
   'sharing-model-external-read', 'sharing-model-external-write',
+  // A public external OWD on User shows every logged-in external user the staff roster.
+  'guest-user-visibility-owd',
   'portal-exposed-apex-without-sharing',
   'flows-autolaunched-without-sharing', 'flows-screen-without-sharing',
   'apex-rest-without-sharing',

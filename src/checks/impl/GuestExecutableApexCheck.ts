@@ -2,7 +2,10 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 import { ApexRepository } from '@cclabsnz/sf-core';
-import { declaresWithoutSharing, effectiveSharing, parentClass, usesSystemMode } from '../support/apexAccess.js';
+import {
+  apexApiVersions, declaresWithoutSharing, effectiveSharing, enteredOnlyThroughAura, omittedSharingEnforced, parentClass,
+  usesSystemMode,
+} from '../support/apexAccess.js';
 
 interface GuestUser { Id: string; ProfileId: string; Username: string; }
 interface SetupAccess { SetupEntityId: string; ParentId: string; }
@@ -94,6 +97,8 @@ export class GuestExecutableApexCheck implements SecurityCheck {
      * anywhere on the path lifts CRUD/FLS for the guest (RULE-003).
      */
     const bodyOf = (n: string) => byName.get(n.toLowerCase())?.body;
+    const versions = await apexApiVersions(ctx);
+    const versionOf = (n: string) => versions.get(n.toLowerCase());
     // A class reaches what its SymbolTable references, and the class it extends: inherited methods
     // run with the parent's own sharing.
     const neighbours = (n: string): string[] => {
@@ -118,8 +123,9 @@ export class GuestExecutableApexCheck implements SecurityCheck {
       return { systemMode: systemModeAt };
     };
 
-    // spec/apex-access-mode.md. A guest call is an entry point: no keyword means without sharing,
-    // and inherited sharing means with sharing. SYSTEM_MODE bypasses CRUD/FLS only (RULE-003); a
+    // spec/apex-access-mode.md. A guest call is an entry point: no keyword means without sharing
+    // before API 67.0 and with sharing from it (RULE-007), or when only Aura/LWC calls can enter it
+    // (RULE-008), and inherited sharing means with sharing. SYSTEM_MODE bypasses CRUD/FLS only (RULE-003); a
     // helper declared without sharing bypasses sharing for whatever it does (RULE-004).
     const unprotected: { name: string; note: string }[] = [];
     const systemMode: { name: string; via?: string }[] = [];
@@ -139,8 +145,11 @@ export class GuestExecutableApexCheck implements SecurityCheck {
         });
         continue;
       }
-      if (keyword === 'none') {
-        unprotected.push({ name, note: 'No sharing declaration: runs without sharing when a guest calls it' });
+      if (keyword === 'none' && body && !omittedSharingEnforced(name, body, bodyOf, versionOf) && !enteredOnlyThroughAura(body)) {
+        unprotected.push({
+          name,
+          note: 'No sharing declaration, and not shown to be saved at API 67.0 or later (it and any keyword-less parent): runs without sharing when a guest enters it through REST, SOAP, remoting, a flow action or a Visualforce page',
+        });
         continue;
       }
       if (keyword === null || !body) {

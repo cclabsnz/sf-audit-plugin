@@ -7,11 +7,11 @@ function makeCtx(
   countTotalSize = 0,
   opts: { restGet?: (path: string) => Promise<unknown>; sampleId?: string } = {},
 ): AuditContext {
-  const queryAll = jest.fn() as any;
-  for (const r of queryAllSeq) queryAll.mockResolvedValueOnce(r);
-  // queryAll is also used by confirmGuestRead (UserRecordAccess) after the seeded
-  // sequence; default any further calls to empty so it degrades to "unconfirmed".
-  queryAll.mockResolvedValue([]);
+  // The seeded rows answer the check's queries in order; the guest groups and memberships are
+  // answered by text (none unless a test overrides it). Further calls, such as confirmGuestRead's
+  // UserRecordAccess after the sequence, get no rows so they degrade to "unconfirmed".
+  const seq = [...queryAllSeq];
+  const queryAll = jest.fn(async (soql: string) => (/FROM (GroupMember|Group) WHERE/.test(soql) ? [] : (seq.shift() ?? []))) as any;
   const query = jest.fn() as any;
   query.mockImplementation(async (soql: string) => {
     if (opts.sampleId && /SELECT Id FROM /i.test(soql) && /LIMIT \d+/i.test(soql)) {
@@ -73,6 +73,11 @@ describe('GuestObjectExposureCheck', () => {
       ],
       12,
     );
+    // The guest owns records; no guest sharing rule shares any.
+    const ownerOnly = ctx.soql.query as any;
+    const base = ownerOnly.getMockImplementation();
+    ownerOnly.mockImplementation(async (soql: string) =>
+      (/__Share\b/.test(soql) ? { totalSize: 0, done: true, records: [] } : base(soql)));
     const r = await check.run(ctx);
     expect(r.findings.find((x) => x.id === 'guest-object-exposure-guest-owned')!.riskLevel).toBe('CRITICAL');
     expect(r.findings.some((x) => x.id === 'guest-object-exposure-public-owd-unconfirmed')).toBe(false);
@@ -91,7 +96,7 @@ describe('GuestObjectExposureCheck', () => {
       { sampleId: 'a01x' },
     );
     const r = await check.run(ctx);
-    expect(r.findings.find((x) => x.id === 'guest-object-exposure-public-owd')!.riskLevel).toBe('CRITICAL');
+    expect(r.findings.find((x) => x.id === 'guest-object-exposure-public-owd')!.riskLevel).toBe('HIGH');
     const q = (ctx.soql.queryAll as any).mock.calls.map((c: any) => c[0]).find((x: string) => /UserRecordAccess/.test(x));
     expect(q).toMatch(/RecordId IN \(/);
   });
@@ -111,7 +116,7 @@ describe('GuestObjectExposureCheck', () => {
       { sampleId: 'a01x' },
     );
     const r = await check.run(ctx);
-    expect(r.findings.find((x) => x.id === 'guest-object-exposure-public-owd')!.riskLevel).toBe('CRITICAL');
+    expect(r.findings.find((x) => x.id === 'guest-object-exposure-public-owd')!.riskLevel).toBe('HIGH');
   });
 
   it('says so when the UserRecordAccess probe fails, rather than claiming there was no record', async () => {
@@ -125,7 +130,11 @@ describe('GuestObjectExposureCheck', () => {
       0,
       { sampleId: 'a01x' },
     );
-    (ctx.soql.queryAll as any).mockRejectedValueOnce(new Error('INVALID_TYPE'));
+    const answer = (ctx.soql.queryAll as any).getMockImplementation();
+    (ctx.soql.queryAll as any).mockImplementation(async (soql: string) => {
+      if (/FROM UserRecordAccess/.test(soql)) throw new Error('INVALID_TYPE');
+      return answer(soql);
+    });
     const r = await check.run(ctx);
     const f = r.findings.find((x) => x.id === 'guest-object-exposure-public-owd-unconfirmed')!;
     expect(f.affectedItems![0].note).toContain('could not be queried');
@@ -162,7 +171,7 @@ describe('GuestObjectExposureCheck', () => {
     expect(r.findings.some((f) => f.id === 'guest-object-exposure-ok' && f.passed)).toBe(true);
   });
 
-  it('keeps a public-OWD object CRITICAL when object-info models it, and surfaces UserRecordAccess confirmation', async () => {
+  it('reports a public-OWD object HIGH when object-info models it, and surfaces UserRecordAccess confirmation', async () => {
     const ctx = makeCtx(
       [
         [{ Id: '005g', ProfileId: '00e', Username: 'guest@x' }],
@@ -177,7 +186,8 @@ describe('GuestObjectExposureCheck', () => {
     const r = await check.run(ctx);
     const f = r.findings.find((x) => x.id === 'guest-object-exposure-public-owd');
     expect(f).toBeDefined();
-    expect(f!.riskLevel).toBe('CRITICAL');
+    // HIGH like records shared under a Private OWD: the external OWD does not reach guests.
+    expect(f!.riskLevel).toBe('HIGH');
     expect(f!.affectedItems?.[0].note).toContain('CONFIRMED');
     // Not the sharing-only tier.
     expect(r.findings.some((x) => x.id === 'guest-object-exposure-sharing-only')).toBe(false);
@@ -205,5 +215,133 @@ describe('GuestObjectExposureCheck', () => {
     expect(f!.affectedItems?.[0].label).toContain('Calendar');
     // Must NOT be reported as a CRITICAL bulk-read surface.
     expect(r.findings.some((x) => x.id === 'guest-object-exposure-public-owd')).toBe(false);
+  });
+
+  // A guest user sharing rule shares records with the guest even under a Private external OWD.
+  describe('guest sharing rules', () => {
+    const seq = (owd: string) => [
+      [{ Id: '005g', ProfileId: '00e', Username: 'guest@x' }],
+      [{ AssigneeId: '005g', PermissionSetId: '0PS1' }],
+      [{ ParentId: '0PS1', SobjectType: 'Application__c', PermissionsRead: true }],
+      [{ QualifiedApiName: 'Application__c', ExternalSharingModel: owd }],
+    ];
+    // owned: COUNT by OwnerId; shared: COUNT on the share table (null = the query fails).
+    const withCounts = (ctx: AuditContext, owned: number, shared: number | null, sampleId?: string) => {
+      (ctx.soql as any).query = jest.fn(async (soql: string) => {
+        if (/Share WHERE/.test(soql)) {
+          if (shared === null) throw new Error('INVALID_TYPE');
+          return { totalSize: shared, done: true, records: [] };
+        }
+        if (/OwnerId IN/.test(soql)) return { totalSize: owned, done: true, records: [] };
+        if (sampleId && /LIMIT 200/.test(soql)) return { totalSize: 1, done: true, records: [{ Id: sampleId }] };
+        return { totalSize: 0, done: true, records: [] };
+      });
+      return ctx;
+    };
+
+    // HIGH, not CRITICAL: a guest sharing rule is how a site publishes records on purpose.
+    it('reports records shared with guests under a Private OWD as HIGH', async () => {
+      const ctx = withCounts(makeCtx(seq('Private')), 0, 7);
+      const r = await check.run(ctx);
+      const f = r.findings.find((x) => x.id === 'guest-object-exposure-guest-shared')!;
+      expect(f.riskLevel).toBe('HIGH');
+      expect(f.affectedItems![0].label).toBe('Application__c: 7 guest share row(s)');
+      expect(r.findings.some((x) => x.id === 'guest-object-exposure-ok')).toBe(false);
+      const shareQuery = (ctx.soql.query as any).mock.calls.map((c: any) => c[0]).find((q: string) => /__Share/.test(q));
+      expect(shareQuery).toBe(
+        "SELECT COUNT() FROM Application__Share WHERE RowCause IN ('GuestRule', 'GuestParentImplicit', 'GuestPersonImplicit') OR (UserOrGroupId IN ('005g') AND RowCause != 'Owner')",
+      );
+    });
+
+    // Guest user groups (whose membership GroupMember does not list) and legacy group membership.
+    it('counts shares to a guest user group and to a public group or queue a guest belongs to', async () => {
+      const ctx = withCounts(makeCtx(seq('Private')), 0, 1);
+      const answer = (ctx.soql.queryAll as any).getMockImplementation();
+      (ctx.soql.queryAll as any).mockImplementation(async (soql: string) => {
+        if (soql === "SELECT Id FROM Group WHERE Type = 'GuestUserGroup'") return [{ Id: '00GS' }];
+        if (/FROM GroupMember WHERE UserOrGroupId IN \('005g'\)/.test(soql)) return [{ GroupId: '00GQ' }];
+        return answer(soql);
+      });
+      await check.run(ctx);
+      const shareQuery = (ctx.soql.query as any).mock.calls.map((c: any) => c[0]).find((q: string) => /__Share/.test(q));
+      expect(shareQuery).toMatch(/ OR UserOrGroupId IN \('00GS', '00GQ'\)$/);
+    });
+
+    it('reads a standard object\'s share table by its own name', async () => {
+      const ctx = makeCtx([
+        ...seq('Private').slice(0, 2),
+        [{ ParentId: '0PS1', SobjectType: 'Lead', PermissionsRead: true }],
+        [{ QualifiedApiName: 'Lead', ExternalSharingModel: 'Private' }],
+      ]);
+      await check.run(ctx);
+      const calls = (ctx.soql.query as any).mock.calls.map((c: any) => c[0] as string);
+      expect(calls.some((q: string) => /FROM LeadShare WHERE/.test(q))).toBe(true);
+    });
+
+    // GuestUserAccessCheck reports these four as guest-user-sharing-exposure; counting them here
+    // too would grade the same share rows twice.
+    it('leaves Account, Case, Contact and Opportunity shares to the guest-access check', async () => {
+      const ctx = withCounts(makeCtx([
+        ...seq('Private').slice(0, 2),
+        [{ ParentId: '0PS1', SobjectType: 'Account', PermissionsRead: true }],
+        [{ QualifiedApiName: 'Account', ExternalSharingModel: 'Private' }],
+      ]), 0, 5);
+      const r = await check.run(ctx);
+      expect(r.findings.some((x) => x.id === 'guest-object-exposure-guest-shared')).toBe(false);
+    });
+
+    it.each(['Read', 'Private'])('leaves guest-shared Account to the guest-access check under a %s OWD', async (owd) => {
+      const ctx = withCounts(makeCtx([
+        ...seq(owd).slice(0, 2),
+        [{ ParentId: '0PS1', SobjectType: 'Account', PermissionsRead: true }],
+        [{ QualifiedApiName: 'Account', ExternalSharingModel: owd }],
+        [{ RecordId: 'a01x', HasReadAccess: true }],
+      ]), 0, 5, 'a01x');
+      const r = await check.run(ctx);
+      expect(r.findings.filter((x) => /guest-shared|public-owd$/.test(x.id))).toEqual([]);
+    });
+
+    // A parent-controlled object's share table shows nothing, but the guest may still read records.
+    it('asks UserRecordAccess when the share table shows no guest rows', async () => {
+      const ctx = withCounts(makeCtx([...seq('Private'), [{ RecordId: 'a01x', HasReadAccess: true }]]), 0, 0, 'a01x');
+      const r = await check.run(ctx);
+      expect(r.findings.find((x) => x.id === 'guest-object-exposure-guest-shared')!.affectedItems![0].note)
+        .toContain('CONFIRMED via UserRecordAccess');
+    });
+
+    it('falls back to UserRecordAccess when the share table cannot be read', async () => {
+      const ctx = withCounts(makeCtx([...seq('Private'), [{ RecordId: 'a01x', HasReadAccess: true }]]), 0, null, 'a01x');
+      const r = await check.run(ctx);
+      const f = r.findings.find((x) => x.id === 'guest-object-exposure-guest-shared')!;
+      expect(f.affectedItems![0].label).toBe('Application__c');
+      expect(f.affectedItems![0].note).toContain('CONFIRMED via UserRecordAccess');
+    });
+
+    it('passes a Private object with no guest-owned or guest-shared records', async () => {
+      const r = await check.run(withCounts(makeCtx(seq('Private')), 0, 0));
+      expect(r.findings.map((x) => x.id)).toEqual(['guest-object-exposure-ok']);
+    });
+
+    it('prefers guest ownership when the guest owns records too', async () => {
+      const r = await check.run(withCounts(makeCtx(seq('Private')), 3, 7));
+      expect(r.findings.map((x) => x.id)).toEqual(['guest-object-exposure-guest-owned']);
+    });
+
+    // The external OWD does not reach guests, so share rows on a public-OWD object are graded as
+    // on a Private one.
+    it('grades guest share rows on a public-OWD object as shared records', async () => {
+      const ctx = withCounts(makeCtx([...seq('Read'), [{ RecordId: 'a01x', HasReadAccess: false }]]), 0, 4, 'a01x');
+      const r = await check.run(ctx);
+      expect(r.findings.map((x) => x.id)).toEqual(['guest-object-exposure-guest-shared']);
+      expect(r.findings[0].affectedItems![0].label).toBe('Application__c: 4 guest share row(s)');
+    });
+
+    it('drops a guest-shared object the UI API does not model to the sharing-only tier', async () => {
+      const ctx = withCounts(makeCtx(seq('Private'), 0, { restGet: async () => { throw new Error('404'); } }), 0, 2);
+      const r = await check.run(ctx);
+      expect(r.findings.some((x) => x.id === 'guest-object-exposure-guest-shared')).toBe(false);
+      expect(r.findings.find((x) => x.id === 'guest-object-exposure-sharing-only')!.affectedItems![0].label)
+        .toBe('Application__c (records shared with guests)');
+    });
   });
 });

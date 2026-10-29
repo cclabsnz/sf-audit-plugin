@@ -55,6 +55,11 @@ async function describe(path) {
     for (const f of d.fields ?? []) {
       if (f.name.includes('__')) continue;
       fields[f.name] = { filterable: Boolean(f.filterable), aggregatable: Boolean(f.aggregatable), type: f.type };
+      // Picklist values let the schema guard flag a filter on a value the platform never writes
+      // (RowCause = 'SharingRule' matched nothing, silently, and hid every sharing rule).
+      const values = (f.picklistValues ?? []).map((p) => p.value).filter((v) => typeof v === 'string');
+      // Long lists (countries, states, time zones) are not what checks filter on and would bloat the snapshot.
+      if (f.type === 'picklist' && values.length > 0 && values.length <= 100) fields[f.name].values = values.sort();
       // A lookup is queried through its relationship name (Assignee.Username); record where it points.
       const to = (f.referenceTo ?? []).filter((t) => !t.includes("__"));
       if (f.relationshipName && to.length) fields[f.name].relationship = { name: f.relationshipName, to };

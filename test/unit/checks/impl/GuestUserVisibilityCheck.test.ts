@@ -72,11 +72,15 @@ describe('GuestUserVisibilityCheck', () => {
     expect(f!.affectedItems?.[0].label).toContain('Guest PS');
   });
 
-  it('flags a public external OWD on User as HIGH', async () => {
+  // Secure guest record access keeps the guest OWD Private on every object, User included, so a
+  // public external OWD reaches logged-in external users, not guests.
+  it('flags a public external OWD on User as MEDIUM, reaching logged-in external users', async () => {
     const r = await check.run(makeCtx({ guests: GUEST, psa: [psa()], entity: entity('Read') }));
     const f = r.findings.find((x) => x.id === 'guest-user-visibility-owd');
     expect(f).toBeDefined();
-    expect(f!.riskLevel).toBe('HIGH');
+    expect(f!.riskLevel).toBe('MEDIUM');
+    expect(f!.title).toContain('logged-in external users');
+    expect(f!.detail).toContain('does not reach unauthenticated guests');
     expect(f!.affectedItems?.[0].note).toContain('Read');
   });
 
@@ -141,5 +145,31 @@ describe('GuestUserVisibilityCheck', () => {
       makeCtx({ guests: GUEST, psa: [psa({ PermissionsViewAllUsers: true })], entityThrow: true }),
     );
     expect(r.findings.some((f) => f.id === 'guest-user-visibility-view-all-users')).toBe(true);
+  });
+
+  // The User external OWD reaches logged-in external users, so it does not wait for a guest user.
+  it('reports a public User external OWD when the org has no guest user', async () => {
+    const r = await check.run(makeCtx({ guests: [], entity: entity('Read') }));
+    expect(r.findings.map((f) => f.id).sort()).toEqual(['guest-user-visibility-none', 'guest-user-visibility-owd']);
+  });
+
+  // Nobody is reached without an external user or a site; unreadable counts are treated as present.
+  it('does not report a public User external OWD when there is no external user and no site', async () => {
+    const ctx = makeCtx({ guests: [], entity: entity('Read') });
+    (ctx.soql.query as any).mockResolvedValue({ records: [], totalSize: 0, done: true });
+    const r = await check.run(ctx);
+    expect(r.findings.map((f) => f.id)).toEqual(['guest-user-visibility-none']);
+    const qs = (ctx.soql.query as any).mock.calls.map((c: any) => c[0] as string);
+    expect(qs).toEqual(expect.arrayContaining([
+      "SELECT COUNT() FROM User WHERE IsActive = true AND UserType IN ('PowerCustomerSuccess', 'CustomerSuccess', 'PowerPartner', 'CspLitePortal', 'CsnOnly', 'SelfService')",
+      'SELECT COUNT() FROM Network',
+    ]));
+  });
+
+  it('reports it when an external user exists, with the counts', async () => {
+    const ctx = makeCtx({ guests: [], entity: entity('Read') });
+    (ctx.soql.query as any).mockImplementation(async (q: string) => ({ records: [], totalSize: /FROM User/.test(q) ? 3 : 0, done: true }));
+    const f = (await check.run(ctx)).findings.find((x) => x.id === 'guest-user-visibility-owd')!;
+    expect(f.affectedItems![0].note).toContain('3 active external user(s), 0 Experience Cloud site(s)');
   });
 });

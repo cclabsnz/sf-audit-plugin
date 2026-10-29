@@ -60,9 +60,13 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // control of a matching origin and a logged-in victim visiting it, and yields at most that user's
   // own session-scoped access.
   'escalation-perms-found':            { grants: ['priv-esc'], techniques: { 'priv-esc': ['T1098'] } },
-  // Guest bulk-read surface (UI-API reachable) — the confirmed exfiltration sink
-  'guest-object-exposure-public-owd':  { grants: ['unauth-foothold', 'data-read-bulk'] },
+  // Guest-owned records (UI-API reachable) are the confirmed bulk sink: form submissions nobody
+  // chose to publish. Records shared with guests are reach, not bulk: a guest sharing rule is how a
+  // site publishes records on purpose, so like 'guest-user-sharing-exposure' they need a step that
+  // reads in bulk, writes or runs code before the unauthenticated chain fires.
   'guest-object-exposure-guest-owned': { grants: ['unauth-foothold', 'data-read-bulk'] },
+  'guest-object-exposure-public-owd':  { grants: ['unauth-foothold', 'data-read'] },
+  'guest-object-exposure-guest-shared': { grants: ['unauth-foothold', 'data-read'] },
   // Observed guest recon in EventLogFile — an active unauthenticated foothold
   'guest-traffic-anomaly-recon':       { grants: ['unauth-foothold'], techniques: { 'unauth-foothold': [] } },
   'guest-traffic-anomaly-anonymizer':  { grants: ['unauth-foothold'], techniques: { 'unauth-foothold': [] } },
@@ -70,11 +74,17 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'guest-api-access-enabled':          { grants: ['unauth-foothold', 'data-read-bulk'] },
   'guest-api-hard-delete':             { grants: ['unauth-foothold', 'data-write'], techniques: { 'data-write': ['T1485'] } },
   // Guest enumeration of other USERS. The staff roster is the targeting asset behind credential
-  // stuffing and phishing at named admins, and both of the first two paths expose every User record
-  // on their own, so both are bulk reads. The object-level Read grant is not: it makes User
-  // queryable but still needs a sharing path before it returns anyone else's record.
+  // stuffing and phishing at named admins. View All Users exposes every User record, so it is a bulk
+  // read; it can no longer be granted to guests since Winter '21, so it is found only where an old
+  // grant survived. A live site's guest member visibility exposes that site's members, not the org's
+  // records, and the object-level Read grant makes User queryable but still needs a sharing path:
+  // both are reads, not bulk reads.
   'guest-user-visibility-view-all-users': { grants: ['unauth-foothold', 'data-read-bulk'], techniques: { 'data-read-bulk': ['T1087.004', 'T1213.004'] } },
-  'guest-user-visibility-owd':            { grants: ['unauth-foothold', 'data-read-bulk'], techniques: { 'data-read-bulk': ['T1087.004', 'T1213.004'] } },
+  'guest-site-options-member-visibility': { grants: ['unauth-foothold', 'data-read'], techniques: { 'data-read': ['T1087.004'] } },
+  // The User external OWD reaches logged-in external users, not guests: secure guest record access
+  // keeps the guest OWD Private on every object. Like 'sharing-model-external-read', it is what an
+  // external account is worth.
+  'guest-user-visibility-owd':            { grants: ['low-trust-authenticated', 'data-read-bulk'], techniques: { 'data-read-bulk': ['T1087.004', 'T1213.004'] } },
   'guest-user-visibility-object-read':    { grants: ['unauth-foothold', 'data-read'], techniques: { 'data-read': ['T1087.004', 'T1213.004'] } },
   // Classic Visualforce sites — a second unauthenticated foothold surface
   'classic-sites-active':              { grants: ['unauth-foothold'], techniques: { 'unauth-foothold': [] } },

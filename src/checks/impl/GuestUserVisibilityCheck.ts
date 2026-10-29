@@ -25,7 +25,11 @@ interface ObjectPermission {
   PermissionsRead: boolean;
 }
 
-// External sharing models that expose every User record to external (portal/guest) users.
+// User types of logged-in external (portal, community, partner) users, as UserType's picklist has them.
+const EXTERNAL_USER_TYPES = ['PowerCustomerSuccess', 'CustomerSuccess', 'PowerPartner', 'CspLitePortal', 'CsnOnly', 'SelfService'];
+
+// External sharing models that expose every User record to logged-in external (portal/community)
+// users. Not to guests: secure guest record access keeps the guest OWD Private on every object.
 const PUBLIC_OWD = new Set(['Read', 'ReadWrite', 'ReadSelect']);
 
 /**
@@ -34,13 +38,15 @@ const PUBLIC_OWD = new Set(['Read', 'ReadWrite', 'ReadSelect']);
  * not in their fixed object lists and is rarely surfaced by a guest profile's
  * ObjectPermissions.
  *
- * Three independent paths reach the same outcome, so all three are graded:
+ * Three paths are graded:
  *   - "View All Users" on a guest profile/permission set: total bypass of User
  *     sharing, every User record readable regardless of OWD (CRITICAL).
- *   - A public EXTERNAL org-wide default on `User` (Read/ReadWrite): every User
- *     record is visible to portal and guest users by sharing alone (HIGH).
  *   - An explicit Read grant on `User` in a guest permission set, which combined
  *     with any sharing path turns the roster into a queryable directory (HIGH).
+ *   - A public EXTERNAL org-wide default on `User` (Read/ReadWrite). Since Winter '21
+ *     secure guest record access keeps the guest OWD Private on every object, User
+ *     included, so this shows every User record to logged-in portal and community
+ *     users, not to guests (MEDIUM).
  *
  * The INTERNAL sharing model is reported for context but never graded: `User`
  * ships as Public Read Only in every org, so grading it would fire on every audit.
@@ -57,13 +63,61 @@ export class GuestUserVisibilityCheck implements SecurityCheck {
   readonly name = 'Guest Visibility of Other Users';
   readonly category = 'Access Control';
   readonly description =
-    'Checks whether unauthenticated guests can see other User records — via View All Users, a public external OWD on User, or a guest Read grant on the User object';
+    'Checks whether unauthenticated guests can see other User records — via View All Users or a guest Read grant on the User object — and whether a public external OWD on User shows the roster to logged-in external users';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const baseUrl = ctx.orgInfo.instanceUrl;
     const sharingUrl = `${baseUrl}/lightning/setup/SecuritySharing/page`;
     const permSetUrl = `${baseUrl}/lightning/setup/PermSets/home`;
+
+    // The external org-wide default on User reaches logged-in external users, not guests, so it is
+    // graded whether or not the org has a guest user.
+    let userEntity: EntityDef | undefined;
+    try {
+      const defs = await ctx.soql.queryAll<EntityDef>(
+        "SELECT QualifiedApiName, InternalSharingModel, ExternalSharingModel FROM EntityDefinition WHERE QualifiedApiName = 'User'",
+      );
+      userEntity = defs.find((d) => d.QualifiedApiName === 'User');
+    } catch {
+      // OWD unreadable — the other two signals are still graded below.
+    }
+
+    const external = userEntity?.ExternalSharingModel ?? null;
+    const internal = userEntity?.InternalSharingModel ?? null;
+    // Nobody is reached without an external user or a site to sign up on. Unreadable counts are
+    // treated as present, so an access gap never hides the finding.
+    const countOr = async (q: string): Promise<number | null> => {
+      try {
+        return (await ctx.soql.query<unknown>(q)).totalSize;
+      } catch {
+        return null;
+      }
+    };
+    const externalUsers = external && PUBLIC_OWD.has(external)
+      ? await countOr(`SELECT COUNT() FROM User WHERE IsActive = true AND UserType IN (${EXTERNAL_USER_TYPES.map((t) => `'${t}'`).join(', ')})`)
+      : 0;
+    const sites = external && PUBLIC_OWD.has(external) ? await countOr('SELECT COUNT() FROM Network') : 0;
+    const reachesSomeone = externalUsers !== 0 || sites !== 0;
+    if (external && PUBLIC_OWD.has(external) && reachesSomeone) {
+      findings.push({
+        id: 'guest-user-visibility-owd',
+        category: this.category,
+        riskLevel: 'MEDIUM',
+        title: `The User object has a public external org-wide default (${external}): logged-in external users can see every user`,
+        detail:
+          'The external org-wide default on User controls what logged-in portal and community users can see of other users. Set to Read or Read/Write, every User record in the org is visible to any external user by sharing alone, turning each portal or community account into a directory of internal staff. It does not reach unauthenticated guests: since Winter \'21 secure guest record access keeps the guest org-wide default Private on every object, User included. Where self-registration is on, anyone who signs up gets the directory.',
+        remediation:
+          'Set the User object\'s Default External Access to Private in Setup → Sharing Settings. Where portal users legitimately need to see each other, grant it narrowly with sharing sets or user sharing rules rather than an open default.',
+        affectedItems: [
+          {
+            label: 'User',
+            url: sharingUrl,
+            note: `External OWD: ${external}${internal ? ` (internal: ${internal})` : ''}; ${externalUsers ?? 'unknown number of'} active external user(s), ${sites ?? 'unknown number of'} Experience Cloud site(s)`,
+          },
+        ],
+      });
+    }
 
     let guests: GuestUser[];
     try {
@@ -115,7 +169,7 @@ export class GuestUserVisibilityCheck implements SecurityCheck {
         riskLevel: 'CRITICAL',
         title: `${viewAll.length} guest permission grant(s) include "View All Users"`,
         detail:
-          '"View All Users" lets the holder read every User record in the org regardless of the sharing model. On a guest user this hands an unauthenticated visitor the full staff roster — usernames, email addresses, roles, manager relationships and phone numbers — which is a ready-made target list for credential stuffing, phishing and social engineering against named administrators.',
+          '"View All Users" lets the holder read every User record in the org regardless of the sharing model. It can no longer be granted to guests since Winter \'21, so this is a grant that survived from before. On a guest user it hands an unauthenticated visitor the full staff roster — usernames, email addresses, roles, manager relationships and phone numbers — which is a ready-made target list for credential stuffing, phishing and social engineering against named administrators.',
         remediation:
           'Remove "View All Users" from the guest profile and from every permission set assigned to a guest user. Guests must never hold org-wide user visibility.',
         affectedItems: viewAll.slice(0, 30).map((p) => ({
@@ -123,39 +177,6 @@ export class GuestUserVisibilityCheck implements SecurityCheck {
           url: permSetUrl,
           note: 'View All Users granted: remove immediately',
         })),
-      });
-    }
-
-    // 2. External org-wide default on User.
-    let userEntity: EntityDef | undefined;
-    try {
-      const defs = await ctx.soql.queryAll<EntityDef>(
-        "SELECT QualifiedApiName, InternalSharingModel, ExternalSharingModel FROM EntityDefinition WHERE QualifiedApiName = 'User'",
-      );
-      userEntity = defs.find((d) => d.QualifiedApiName === 'User');
-    } catch {
-      // OWD unreadable — the other two signals are still graded below.
-    }
-
-    const external = userEntity?.ExternalSharingModel ?? null;
-    const internal = userEntity?.InternalSharingModel ?? null;
-    if (external && PUBLIC_OWD.has(external)) {
-      findings.push({
-        id: 'guest-user-visibility-owd',
-        category: this.category,
-        riskLevel: 'HIGH',
-        title: `The User object has a public external org-wide default (${external})`,
-        detail:
-          'The external org-wide default on User controls what portal and guest users can see of other users. Set to Read or Read/Write, every User record in the org is visible to any external or unauthenticated visitor by sharing alone — no permission grant required — turning the site into a directory of internal staff.',
-        remediation:
-          'Set the User object\'s Default External Access to Private in Setup → Sharing Settings. Where portal users legitimately need to see each other, grant it narrowly with sharing sets or user sharing rules rather than an open default.',
-        affectedItems: [
-          {
-            label: 'User',
-            url: sharingUrl,
-            note: `External OWD: ${external}${internal ? ` (internal: ${internal})` : ''} — ${guests.length} active guest user(s)`,
-          },
-        ],
       });
     }
 
@@ -180,7 +201,7 @@ export class GuestUserVisibilityCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${userRead.length} guest permission grant(s) give Read access to the User object`,
         detail:
-          'A guest permission set or profile grants Read on the User object. Object-level read is what makes User queryable at all for a guest; combined with any sharing path that exposes records — a public external OWD, a user sharing rule, or guest member visibility on an Experience site — it turns the User table into an enumerable directory reachable over the UI API.',
+          'A guest permission set or profile grants Read on the User object. Object-level read is what makes User queryable at all for a guest; combined with any path that exposes other users to a guest — guest member visibility on an Experience site, or a legacy View All Users grant — it turns the User table into an enumerable directory reachable over the UI API.',
         remediation:
           'Remove Read on the User object from guest profiles and guest permission sets. Where site components must show a name, expose it through Apex that returns only the specific fields required.',
         affectedItems: userRead.slice(0, 30).map((p) => ({

@@ -100,7 +100,7 @@ describe('named chain wording and step roles', () => {
   // portal users, not guests: they must not be steps of the chain that needs no account.
   it('unauth-bulk-exfil does not count external sharing defaults as an unauthenticated step', () => {
     const chains = new ChainEngine().correlate([
-      f('guest-object-exposure-public-owd'), f('sharing-model-external-read'), f('sharing-model-external-write'), f('guest-user-read-access'),
+      f('guest-object-exposure-guest-owned'), f('sharing-model-external-read'), f('sharing-model-external-write'), f('guest-user-read-access'),
     ]);
     const c = chains.find((x) => x.id === 'unauth-bulk-exfil')!;
     expect(c.steps.map((s) => s.findingId)).not.toContain('sharing-model-external-read');

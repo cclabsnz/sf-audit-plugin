@@ -62,7 +62,10 @@ export class GuestSiteOptionsCheck implements SecurityCheck {
     }
 
     const fileSites = networks.filter((n) => n.OptionsGuestFileAccessEnabled);
-    const memberSites = networks.filter((n) => n.OptionsGuestMemberVisibility);
+    // Only a live site serves guests; on a site under construction or taken down the setting
+    // waits for go-live, so it is reported apart and feeds no attack chain.
+    const memberSites = networks.filter((n) => n.OptionsGuestMemberVisibility && n.Status === 'Live');
+    const idleMemberSites = networks.filter((n) => n.OptionsGuestMemberVisibility && n.Status !== 'Live');
 
     if (fileSites.length > 0) {
       findings.push({
@@ -86,9 +89,9 @@ export class GuestSiteOptionsCheck implements SecurityCheck {
         id: 'guest-site-options-member-visibility',
         category: this.category,
         riskLevel: 'MEDIUM',
-        title: `${memberSites.length} site(s) let guest users see other members`,
+        title: `${memberSites.length} live site(s) let guest users see other members`,
         detail:
-          'Guest member visibility exposes other site members (User records, names, profile data) to unauthenticated visitors, leaking member identities and enabling enumeration.',
+          'Guest member visibility exposes the site\'s members (their User records: names and profile data) to unauthenticated visitors, leaking member identities and enabling enumeration. It reaches the site\'s members, not the org\'s business records. Since Winter \'21 it is the only way a guest sees other users: View All Users can no longer be granted to guests.',
         remediation: 'Disable "Let guest users see other members of this site" unless member directories must be public.',
         affectedItems: memberSites.map((n) => ({
           label: n.Name,
@@ -98,7 +101,23 @@ export class GuestSiteOptionsCheck implements SecurityCheck {
       });
     }
 
-    if (fileSites.length === 0 && memberSites.length === 0) {
+    if (idleMemberSites.length > 0) {
+      findings.push({
+        id: 'guest-site-options-member-visibility-not-live',
+        category: this.category,
+        riskLevel: 'LOW',
+        title: `${idleMemberSites.length} site(s) that are not live would let guest users see other members`,
+        detail: 'Guest member visibility is on for these sites, but they are not live, so no guest reaches them yet. Going live would expose the site\'s members to unauthenticated visitors.',
+        remediation: 'Disable "Let guest users see other members of this site" before the site goes live, unless member directories must be public.',
+        affectedItems: idleMemberSites.map((n) => ({
+          label: n.Name,
+          url: setupUrl,
+          note: `Status: ${n.Status}; guest member visibility enabled`,
+        })),
+      });
+    }
+
+    if (fileSites.length === 0 && memberSites.length === 0 && idleMemberSites.length === 0) {
       findings.push({
         id: 'guest-site-options-ok',
         category: this.category,

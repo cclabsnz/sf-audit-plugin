@@ -81,4 +81,86 @@ describe('GuestExecutableApexCheck', () => {
     expect(sea).toContain("'0PSP0000000AbCdEAA'");
     expect(sea).not.toContain('00eP');
   });
+
+  // spec RULE-007: from API 67.0 an omitted sharing keyword means with sharing.
+  describe('API 67.0 sharing default', () => {
+    const guest = { Id: '005g', ProfileId: '00eP0000000AbCdEAA', Username: 'guest@site' };
+    const run = (classes: Array<{ name: string; body: string; v: number }>) => {
+      const ctx = makeCtx(
+        {
+          guestUsers: [guest],
+          setupAccess: [{ SetupEntityId: '01pA0000000AbCdEAA', ParentId: '0PSP0000000AbCdEAA' }],
+          apexNames: [{ Id: '01pA0000000AbCdEAA', Name: classes[0].name }],
+        },
+        classes.map(({ name, body }) => ({ name, body })),
+      );
+      (ctx.soql.queryAll as any).mockResolvedValueOnce(classes.map((c) => ({ Name: c.name, ApiVersion: c.v })));
+      return check.run(ctx);
+    };
+    const ids = (r: { findings: Array<{ id: string }> }) => r.findings.map((f) => f.id);
+
+    it('treats a keyword-less class at 67.0 as with sharing', async () => {
+      const r = await run([{ name: 'Ctl', body: 'public class Ctl { }', v: 67 }]);
+      expect(ids(r)).not.toContain('guest-executable-apex-unprotected');
+      expect(ids(r)).toContain('guest-executable-apex-exposed');
+    });
+
+    it('keeps a keyword-less class below 67.0 unprotected', async () => {
+      const r = await run([{ name: 'Ctl', body: 'public class Ctl { }', v: 66 }]);
+      expect(r.findings.find((f) => f.id === 'guest-executable-apex-unprotected')!.affectedItems![0].note)
+        .toContain('not shown to be saved at API 67.0 or later');
+    });
+
+    it('keeps it unprotected when a keyword-less parent is below 67.0', async () => {
+      const r = await run([
+        { name: 'Ctl', body: 'public class Ctl extends Base { }', v: 67 },
+        { name: 'Base', body: 'public virtual class Base { }', v: 60 },
+      ]);
+      expect(ids(r)).toContain('guest-executable-apex-unprotected');
+    });
+
+    // RULE-007: a 67.0 keyword-less class is judged like a with-sharing one, helpers included.
+    it('still follows a 67.0 class into a without-sharing helper', async () => {
+      const ctx = makeCtx(
+        {
+          guestUsers: [guest],
+          setupAccess: [{ SetupEntityId: '01pA0000000AbCdEAA', ParentId: '0PSP0000000AbCdEAA' }],
+          apexNames: [{ Id: '01pA0000000AbCdEAA', Name: 'Ctl' }],
+        },
+        [
+          { name: 'Ctl', body: 'public class Ctl { void f(){ Helper.go(); } }', symbolTable: { externalReferences: [{ name: 'Helper' }] } } as any,
+          { name: 'Helper', body: 'public without sharing class Helper { }' },
+        ],
+      );
+      (ctx.soql.queryAll as any).mockResolvedValueOnce([{ Name: 'Ctl', ApiVersion: 67 }, { Name: 'Helper', ApiVersion: 67 }]);
+      const f = (await check.run(ctx)).findings.find((x) => x.id === 'guest-executable-apex-unprotected')!;
+      expect(f.affectedItems![0].note).toBe('Reaches "Helper", which is declared "without sharing"');
+    });
+
+    // spec RULE-008: an Aura/LWC call into a keyword-less class runs with sharing.
+    it('does not call a keyword-less class reached only from Aura unprotected, whatever its version', async () => {
+      const r = await run([{ name: 'Ctl', body: 'public class Ctl { @AuraEnabled public static void go() {} }', v: 50 }]);
+      expect(ids(r)).not.toContain('guest-executable-apex-unprotected');
+      expect(ids(r)).toContain('guest-executable-apex-exposed');
+    });
+
+    it('keeps it unprotected when it is also a Visualforce controller', async () => {
+      const r = await run([{ name: 'Ctl', body: 'public class Ctl { @AuraEnabled public static void go() {} public PageReference save() { return null; } }', v: 50 }]);
+      expect(r.findings.find((f) => f.id === 'guest-executable-apex-unprotected')!.affectedItems![0].note)
+        .toContain('REST, SOAP, remoting, a flow action or a Visualforce page');
+    });
+
+    it('keeps the old default when versions cannot be read', async () => {
+      const ctx = makeCtx(
+        {
+          guestUsers: [guest],
+          setupAccess: [{ SetupEntityId: '01pA0000000AbCdEAA', ParentId: '0PSP0000000AbCdEAA' }],
+          apexNames: [{ Id: '01pA0000000AbCdEAA', Name: 'Ctl' }],
+        },
+        [{ name: 'Ctl', body: 'public class Ctl { }' }],
+      );
+      (ctx.soql.queryAll as any).mockRejectedValueOnce(new Error('INVALID_TYPE'));
+      expect(ids(await check.run(ctx))).toContain('guest-executable-apex-unprotected');
+    });
+  });
 });

@@ -1,6 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { guestPrincipals, guestShareCount } from '../support/guestShares.js';
 
 interface GuestUser {
   Id: string;
@@ -31,6 +32,9 @@ interface RecordAccess {
   HasReadAccess: boolean;
 }
 
+// Objects whose guest shares GuestUserAccessCheck already reports as guest-user-sharing-exposure.
+const REPORTED_BY_GUEST_ACCESS = new Set(['Account', 'Case', 'Contact', 'Opportunity']);
+
 // Public external sharing models. Since Winter '21 secure guest record access is always enforced,
 // so these open records to logged-in external users but not to guests: record sharing gives a guest
 // a record only through a guest sharing rule or ownership. (Guest-callable Apex or Flow running
@@ -50,7 +54,7 @@ interface ExposedObject {
   owd?: string;
   count?: number;
   write: boolean;
-  kind: 'public' | 'owned';
+  kind: 'public' | 'owned' | 'shared';
   uiApi: boolean | null;
   confirmed: boolean | null | 'failed';
 }
@@ -63,7 +67,10 @@ interface ExposedObject {
  *   - public external OWD (Read/ReadWrite) AND UserRecordAccess confirms the guest reads a
  *     live record (secure guest record access means the OWD alone grants guests nothing), OR
  *   - Private OWD but the guest OWNS records (public-form submissions) => those
- *     records are still readable, because an owner can always read its own records.
+ *     records are still readable, because an owner can always read its own records, OR
+ *   - Private OWD but records are shared with guests (a guest user sharing rule, or a legacy
+ *     manual, Apex or group share), read from the object's share table and, when it shows none or
+ *     cannot be read, from UserRecordAccess on a sample.
  *
  * Sharing-model readability is necessary but not sufficient: the Experience Cloud
  * UI API (GraphQL) can only return objects it MODELS. Objects like Calendar,
@@ -161,9 +168,13 @@ export class GuestObjectExposureCheck implements SecurityCheck {
       // Proceed without OWD: objects fall through to the ownership check below.
     }
 
+    const principals = await guestPrincipals(ctx, guestIds);
     const exposed: ExposedObject[] = [];
     for (const obj of readable) {
       const model = owd.get(obj) ?? 'Unknown';
+      // GuestUserAccessCheck reports guest shares on these four (guest-user-sharing-exposure),
+      // whatever their OWD: the same rows are not graded twice.
+      if (REPORTED_BY_GUEST_ACCESS.has(obj) && ((await guestShareCount(ctx, obj, principals)) ?? 0) > 0) continue;
       if (PUBLIC_OWD.has(model)) {
         exposed.push({ obj, owd: model, write: writable.has(obj), kind: 'public', uiApi: null, confirmed: null });
         continue;
@@ -171,15 +182,36 @@ export class GuestObjectExposureCheck implements SecurityCheck {
       // Private or Unknown OWD: records are still exposed if the guest OWNS them.
       try {
         const r = await ctx.soql.query<unknown>(`SELECT COUNT() FROM ${obj} WHERE OwnerId IN (${inIds})`);
-        if (r.totalSize > 0) exposed.push({ obj, count: r.totalSize, write: writable.has(obj), kind: 'owned', uiApi: null, confirmed: null });
+        if (r.totalSize > 0) {
+          exposed.push({ obj, count: r.totalSize, write: writable.has(obj), kind: 'owned', uiApi: null, confirmed: null });
+          continue;
+        }
       } catch {
         // Object has no OwnerId / does not support COUNT — not an ownership-bypass surface.
+      }
+      // Or if they are shared with guests: a guest sharing rule is what secure guest record access
+      // leaves as the guest's way to a record it does not own, and legacy shares persist.
+      const shared = REPORTED_BY_GUEST_ACCESS.has(obj) ? 0 : await guestShareCount(ctx, obj, principals);
+      if (shared !== null && shared > 0) {
+        exposed.push({ obj, count: shared, write: writable.has(obj), kind: 'shared', uiApi: null, confirmed: true });
+      } else if ((await this.confirmGuestRead(ctx, obj, guestIds)) === true) {
+        // No share row seen (no share table, a parent-controlled object, or a path the table does
+        // not show), but the guest reads a sampled record.
+        exposed.push({ obj, write: writable.has(obj), kind: 'shared', uiApi: null, confirmed: true });
       }
     }
 
     // Grade each sharing-readable object by ACTUAL UI-API reachability + ground-truth read.
     for (const e of exposed) {
       e.uiApi = await this.isUiApiModeled(ctx, e.obj);
+      if (e.kind === 'shared') continue;
+      // The external OWD does not reach guests, so on a public-OWD object a guest reads records the
+      // same way as under a Private one: through shares. Those are graded as shared records.
+      const shared = e.kind === 'public' && !REPORTED_BY_GUEST_ACCESS.has(e.obj) ? await guestShareCount(ctx, e.obj, principals) : null;
+      if (shared !== null && shared > 0) {
+        Object.assign(e, { kind: 'shared', count: shared, confirmed: true });
+        continue;
+      }
       e.confirmed = await this.confirmGuestRead(ctx, e.obj, guestIds);
       // An unconfirmed public-OWD object can still hold records the guest owns, which it always reads.
       if (e.kind === 'public' && e.confirmed !== true) {
@@ -197,6 +229,7 @@ export class GuestObjectExposureCheck implements SecurityCheck {
     const reachablePublic = publicOwd.filter((e) => e.confirmed === true);
     const unconfirmedPublic = publicOwd.filter((e) => e.confirmed !== true);
     const reachableOwned = exposed.filter((e) => e.kind === 'owned' && e.uiApi !== false);
+    const reachableShared = exposed.filter((e) => e.kind === 'shared' && e.uiApi !== false);
     const sharingOnly = exposed.filter((e) => e.uiApi === false);
 
     const uiApiNote =
@@ -206,13 +239,15 @@ export class GuestObjectExposureCheck implements SecurityCheck {
       findings.push({
         id: 'guest-object-exposure-public-owd',
         category: this.category,
-        riskLevel: 'CRITICAL',
+        // Graded like guest-object-exposure-guest-shared: the external OWD does not reach guests, so
+        // these records reach them through sharing, which a site may intend.
+        riskLevel: 'HIGH',
         title: `${reachablePublic.length} object(s) with records confirmed readable by unauthenticated guests`,
         detail:
-          'The guest profile can read these objects, their external org-wide default is Read or ReadWrite, the UI API models them, and UserRecordAccess confirms the guest user can read live records. Secure guest record access means the OWD alone does not grant guests access, so a guest sharing rule (or guest ownership) is sharing these records. Any unauthenticated visitor can enumerate and page through the records it reaches. ' +
+          'The guest profile can read these objects, their external org-wide default is Read or ReadWrite, the UI API models them, and UserRecordAccess confirms the guest user can read live records. Secure guest record access means the OWD alone does not grant guests access, so something shares these records with guests that the share table does not show (or could not be read for). Any unauthenticated visitor can page through the records it reaches. That is the intent when the records are a public dataset; confirm they are. ' +
           uiApiNote,
         remediation:
-          'Remove or narrow the guest sharing rules on these objects, and remove Read from the guest profile/permission sets unless a specific public dataset is intended. Then verify no guest-accessible Apex returns the data.',
+          'Confirm the records guests can read are meant to be public. If not, find what shares them (guest sharing rules, manual or Apex shares, public group membership) and remove it, and remove Read from the guest profile/permission sets unless a specific public dataset is intended.',
         affectedItems: reachablePublic.map((e) => ({
           label: `${e.obj} (external OWD: ${e.owd}${e.write ? ', guest Create permission too' : ''})`,
           url: `${baseUrl}/lightning/setup/SecuritySharing/page`,
@@ -255,6 +290,28 @@ export class GuestObjectExposureCheck implements SecurityCheck {
         })),
       });
     }
+    if (reachableShared.length > 0) {
+      findings.push({
+        id: 'guest-object-exposure-guest-shared',
+        category: this.category,
+        // HIGH, not CRITICAL: a guest sharing rule is the platform's documented way to publish
+        // records to a site, and nothing here says whether the records are meant to be public.
+        riskLevel: 'HIGH',
+        title: `${reachableShared.length} object(s) share records with unauthenticated guests`,
+        detail:
+          'The guest profile can read these objects, their external org-wide default is not public, and records are still shared with guests: the object\'s share table holds guest user sharing rule rows, or legacy manual, Apex or group shares naming a guest user (access granted before Winter \'21 was not removed), or UserRecordAccess confirms the guest reads a sampled record. The UI API models the object, so any unauthenticated visitor can page through the shared records. That is the intent when the records are a public dataset; confirm they are. ' +
+          uiApiNote,
+        remediation:
+          'Confirm each object\'s shared records are meant to be public. If not, narrow or remove the guest user sharing rules (Setup → Sharing Settings), delete manual and Apex shares to the guest user, and remove the guest user from public groups and queues. Remove Read from the guest profile/permission sets unless a public dataset is intended.',
+        affectedItems: reachableShared.map((e) => ({
+          label: `${e.obj}${e.count !== undefined ? `: ${e.count} guest share row(s)` : ''}${e.write ? ' (guest Create permission too)' : ''}`,
+          url: `${baseUrl}/lightning/setup/SecuritySharing/page`,
+          note: e.count !== undefined
+            ? 'Share rows giving guests access found in the share table; UI-API-modelled (GraphQL-reachable)'
+            : this.evidenceNote(e),
+        })),
+      });
+    }
     if (sharingOnly.length > 0) {
       findings.push({
         id: 'guest-object-exposure-sharing-only',
@@ -262,11 +319,11 @@ export class GuestObjectExposureCheck implements SecurityCheck {
         riskLevel: 'MEDIUM',
         title: `${sharingOnly.length} object(s) readable in the sharing model but NOT reachable via the UI API`,
         detail:
-          'The guest can read these objects in the sharing model (object permission + public OWD or guest ownership), but the UI API `object-info` endpoint does not model them, so they are NOT pullable through the guest GraphQL vector (this is the tier that Calendar, AuthSession, OauthToken and similar system objects fall into). This is a defense-in-depth grant to tighten, not an active bulk-exfiltration surface.',
+          'The guest can read these objects in the sharing model (object permission plus guest ownership, records shared with guests, or a public OWD), but the UI API `object-info` endpoint does not model them, so they are NOT pullable through the guest GraphQL vector (this is the tier that Calendar, AuthSession, OauthToken and similar system objects fall into). This is a defense-in-depth grant to tighten, not an active bulk-exfiltration surface.',
         remediation:
           'Remove Read from the guest profile/permission sets for these objects unless specifically required. Because they are not UI-API-modelled they are lower priority than the CRITICAL findings, but a stripped guest profile should not hold these grants at all.',
         affectedItems: sharingOnly.map((e) => ({
-          label: `${e.obj} (${e.kind === 'public' ? `external OWD: ${e.owd}` : `${e.count} guest-owned`}${e.write ? ', guest Create permission too' : ''})`,
+          label: `${e.obj} (${e.kind === 'public' ? `external OWD: ${e.owd}` : e.kind === 'owned' ? `${e.count} guest-owned` : 'records shared with guests'}${e.write ? ', guest Create permission too' : ''})`,
           url: `${baseUrl}/lightning/setup/SecuritySharing/page`,
           note: 'Sharing-readable; UI API object-info = not modelled (not GraphQL-reachable)',
         })),
@@ -335,7 +392,7 @@ export class GuestObjectExposureCheck implements SecurityCheck {
       detail:
         readableCount === 0
           ? 'Guest profiles grant Read on no business objects, so there is no UI-API bulk-read surface.'
-          : `Guest profiles can read ${readableCount} object(s), but all have a Private external OWD with no guest-owned records, so no records are bulk-readable.`,
+          : `Guest profiles can read ${readableCount} object(s), but all have a Private external OWD with no guest-owned records and no records shared with guests, so no records are bulk-readable.`,
       remediation: 'Continue to review guest object permissions and record ownership as forms and sites change.',
     };
   }

@@ -29,7 +29,9 @@ export class PublicGroupSharingCheck implements SecurityCheck {
     const sharingRulesUrl = `${baseUrl}/lightning/setup/SecuritySharing/page`;
 
     const groups = await ctx.soql.queryAll<GroupRecord>(
-      "SELECT Id, Name, Type FROM Group WHERE Type = 'AllInternal'"
+      // The All Internal Users group is the one Group of Type 'Organization' (DeveloperName
+      // AllInternalUsers). There is no 'AllInternal' type: a filter on it matched nothing.
+      "SELECT Id, Name, Type FROM Group WHERE Type = 'Organization'"
     );
 
     if (groups.length === 0) {

@@ -124,11 +124,11 @@ describe('GuestUserAccessCheck', () => {
     expect(JSON.stringify(f.affectedItems)).toContain('b@x.com');
   });
 
-  it('flags sharing rules that target a guest user', async () => {
+  it('flags share rows that give a guest user access', async () => {
     const r = await check.run(makeCtx({
       queryAll: router({ users: [guest()] }),
       query: (s) => Promise.resolve(
-        /FROM AccountShare/i.test(s) ? { records: [{ UserOrGroupId: '005G', cnt: 3 }] } : { records: [] },
+        (/FROM AccountShare/i.test(s) ? { records: [], totalSize: 3 } : { records: [], totalSize: 0 }) as any,
       ),
     }));
     const f = r.findings.find((x) => x.id === 'guest-user-sharing-exposure');
@@ -138,14 +138,21 @@ describe('GuestUserAccessCheck', () => {
   });
 
   // 'SharingRule' is not a RowCause value; it matched nothing and hid every guest sharing rule.
-  it('only counts sharing rows written by sharing rules or guest sharing rules', async () => {
+  // Guest rule rows count whoever they name; legacy manual, Apex and group shares count when they
+  // name a guest user or a group it belongs to.
+  it('counts guest rule rows and legacy shares naming a guest or its groups', async () => {
     const seen: string[] = [];
     await check.run(makeCtx({
-      queryAll: router({ users: [guest()] }),
-      query: (s) => { seen.push(s); return Promise.resolve({ records: [] }); },
+      queryAll: (s) => (/FROM GroupMember/.test(s) ? Promise.resolve([{ GroupId: '00GQ' }]) : router({ users: [guest()] })(s)),
+      query: (s) => { seen.push(s); return Promise.resolve({ records: [], totalSize: 0 } as any); },
     }));
-    expect(seen.length).toBeGreaterThan(0);
-    for (const s of seen) expect(s).toMatch(/RowCause IN \('Rule', 'GuestRule'\)/);
+    expect(seen.map((s) => /FROM (\w+)/.exec(s)![1])).toEqual(['AccountShare', 'CaseShare', 'ContactShare', 'OpportunityShare']);
+    for (const s of seen) {
+      expect(s).toContain("RowCause IN ('GuestRule', 'GuestParentImplicit', 'GuestPersonImplicit')");
+      expect(s).toContain("(UserOrGroupId IN ('005G') AND RowCause != 'Owner')");
+      expect(s).toContain("UserOrGroupId IN ('00GQ')");
+      expect(s).not.toMatch(/'SharingRule'/);
+    }
   });
 
   it('falls back to the baseline finding when guests exist but hold no access', async () => {

@@ -307,7 +307,7 @@ describe('RULE-116 chain steps follow the ATT&CK tactic order', () => {
 
   it('a group role shows the capability the step contributes, when its finding grants it', () => {
     const c = allChains().find((x) => x.id === 'active-guest-exfil')!;
-    const exposure = c.steps.find((s) => s.findingId === 'guest-object-exposure-public-owd')!;
+    const exposure = c.steps.find((s) => s.findingId === 'guest-object-exposure-guest-owned')!;
     expect(exposure.capability).toBe('data-read-bulk');
     expect(exposure.techniques).toEqual(['T1213.004']);
   });
