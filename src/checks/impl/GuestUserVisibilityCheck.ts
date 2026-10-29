@@ -19,11 +19,6 @@ interface EntityDef {
   InternalSharingModel: string | null;
   ExternalSharingModel: string | null;
 }
-interface ObjectPermission {
-  ParentId: string;
-  SobjectType: string;
-  PermissionsRead: boolean;
-}
 
 // User types of logged-in external (portal, community, partner) users, as UserType's picklist has them.
 const EXTERNAL_USER_TYPES = ['PowerCustomerSuccess', 'CustomerSuccess', 'PowerPartner', 'CspLitePortal', 'CsnOnly', 'SelfService'];
@@ -41,8 +36,9 @@ const PUBLIC_OWD = new Set(['Read', 'ReadWrite', 'ReadSelect']);
  * Three paths are graded:
  *   - "View All Users" on a guest profile/permission set: total bypass of User
  *     sharing, every User record readable regardless of OWD (CRITICAL).
- *   - An explicit Read grant on `User` in a guest permission set, which combined
- *     with any sharing path turns the roster into a queryable directory (HIGH).
+ *   (Not a Read grant on `User` in a guest permission set: User takes no object
+ *   permissions, so ObjectPermissions never has a User row; a live org had none
+ *   among all its permission sets.)
  *   - A public EXTERNAL org-wide default on `User` (Read/ReadWrite). Since Winter '21
  *     secure guest record access keeps the guest OWD Private on every object, User
  *     included, so this shows every User record to logged-in portal and community
@@ -63,7 +59,7 @@ export class GuestUserVisibilityCheck implements SecurityCheck {
   readonly name = 'Guest Visibility of Other Users';
   readonly category = 'Access Control';
   readonly description =
-    'Checks whether unauthenticated guests can see other User records — via View All Users or a guest Read grant on the User object — and whether a public external OWD on User shows the roster to logged-in external users';
+    'Checks whether unauthenticated guests can see other User records — via View All Users — and whether a public external OWD on User shows the roster to logged-in external users';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
@@ -158,7 +154,6 @@ export class GuestUserVisibilityCheck implements SecurityCheck {
     }
 
     const guestById = new Map(guests.map((g) => [g.Id, g]));
-    const labelById = new Map(psa.filter((p) => p.PermissionSet).map((p) => [p.PermissionSetId, p.PermissionSet!.Label]));
 
     // 1. "View All Users" — bypasses User sharing entirely.
     const viewAll = psa.filter((p) => p.PermissionSet?.PermissionsViewAllUsers);
@@ -180,38 +175,6 @@ export class GuestUserVisibilityCheck implements SecurityCheck {
       });
     }
 
-    // 3. Explicit Read grant on the User object in a guest permission set.
-    const psIds = [...new Set(psa.map((p) => p.PermissionSetId))];
-    let userRead: ObjectPermission[] = [];
-    if (psIds.length > 0) {
-      try {
-        const psIn = psIds.map((i) => `'${i}'`).join(', ');
-        userRead = await ctx.soql.queryAll<ObjectPermission>(
-          `SELECT ParentId, SobjectType, PermissionsRead FROM ObjectPermissions
-           WHERE ParentId IN (${psIn}) AND SobjectType = 'User' AND PermissionsRead = true`,
-        );
-      } catch {
-        // Object permissions unreadable — the other two signals still stand.
-      }
-    }
-    if (userRead.length > 0) {
-      findings.push({
-        id: 'guest-user-visibility-object-read',
-        category: this.category,
-        riskLevel: 'HIGH',
-        title: `${userRead.length} guest permission grant(s) give Read access to the User object`,
-        detail:
-          'A guest permission set or profile grants Read on the User object. Object-level read is what makes User queryable at all for a guest; combined with any path that exposes other users to a guest — guest member visibility on an Experience site, or a legacy View All Users grant — it turns the User table into an enumerable directory reachable over the UI API.',
-        remediation:
-          'Remove Read on the User object from guest profiles and guest permission sets. Where site components must show a name, expose it through Apex that returns only the specific fields required.',
-        affectedItems: userRead.slice(0, 30).map((p) => ({
-          label: labelById.get(p.ParentId) ?? p.ParentId,
-          url: permSetUrl,
-          note: 'Read on User granted: remove from guest permissions',
-        })),
-      });
-    }
-
     if (findings.length === 0) {
       findings.push({
         id: 'guest-user-visibility-ok',
@@ -220,7 +183,7 @@ export class GuestUserVisibilityCheck implements SecurityCheck {
         passed: true,
         title: `${guests.length} active guest user(s); no user-enumeration path found`,
         detail:
-          `No guest holds "View All Users", the User object's external org-wide default is ${external ?? 'not publicly readable'}, and no guest permission set grants Read on User.${internal ? ` The internal model is ${internal}, which is the platform default and is not graded here.` : ''} One control is not API-readable: the "Portal User Visibility" and "Community User Visibility" checkboxes in Sharing Settings are exposed to no read API this plugin uses, so that leg needs manual confirmation.`,
+          `No guest holds "View All Users", the User object's external org-wide default is ${external ?? 'not publicly readable'}.${internal ? ` The internal model is ${internal}, which is the platform default and is not graded here.` : ''} One control is not API-readable: the "Portal User Visibility" and "Community User Visibility" checkboxes in Sharing Settings are exposed to no read API this plugin uses, so that leg needs manual confirmation.`,
         remediation:
           'In Setup → Sharing Settings, confirm the portal/community user visibility checkboxes are off unless a member directory is intended, and keep the User external default Private as sites are added. The per-site equivalent ("Let guest users see other members") is covered by the Experience Cloud Guest Site Options check.',
         affectedItems: [{ label: 'Sharing Settings', url: sharingUrl, note: 'Manual verification of user visibility checkboxes' }],

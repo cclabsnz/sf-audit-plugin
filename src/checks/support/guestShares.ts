@@ -57,16 +57,34 @@ export async function guestPrincipals(ctx: AuditContext, guestIds: string[]): Pr
 const MAX_GROUP_DEPTH = 5;
 
 /**
+ * Up to 200 record Ids to probe: the 100 most recently changed and the 100 least recently changed,
+ * so a share whose criteria match only new (or only old) records is not missed by an unordered
+ * sample that happens to read one end. Falls back to an unordered sample when the object cannot be
+ * ordered by SystemModstamp.
+ */
+async function sampleIds(ctx: AuditContext, obj: string): Promise<string[]> {
+  try {
+    const [newest, oldest] = await Promise.all([
+      ctx.soql.query<{ Id: string }>(`SELECT Id FROM ${obj} ORDER BY SystemModstamp DESC LIMIT 100`),
+      ctx.soql.query<{ Id: string }>(`SELECT Id FROM ${obj} ORDER BY SystemModstamp ASC LIMIT 100`),
+    ]);
+    return [...new Set([...(newest.records ?? []), ...(oldest.records ?? [])].map((r) => r.Id))];
+  } catch {
+    const sample = await ctx.soql.query<{ Id: string }>(`SELECT Id FROM ${obj} LIMIT 200`);
+    return (sample.records ?? []).map((r) => r.Id);
+  }
+}
+
+/**
  * Ground-truth read confirmation via UserRecordAccess on up to 200 sample records (the most one
- * UserRecordAccess query takes), so a share matching only some records is likelier to show.
- * UserRecordAccess takes one user per query, and each site has its own guest user with its own
- * guest sharing rules, so every guest user is asked. True when any guest reads any sampled record;
- * null when the object has no record to sample; 'failed' when either query fails.
+ * UserRecordAccess query takes), from both ends of the object's history. UserRecordAccess takes one
+ * user per query, and each site has its own guest user with its own guest sharing rules, so every
+ * guest user is asked. True when any guest reads any sampled record; null when the object has no
+ * record to sample; 'failed' when a query fails.
  */
 export async function guestReadsSample(ctx: AuditContext, obj: string, guestIds: string[]): Promise<boolean | null | 'failed'> {
   try {
-    const sample = await ctx.soql.query<{ Id: string }>(`SELECT Id FROM ${obj} LIMIT 200`);
-    const ids = (sample.records ?? []).map((r) => r.Id);
+    const ids = await sampleIds(ctx, obj);
     if (ids.length === 0) return null;
     const inIds = quote(ids);
     for (const guestId of guestIds) {

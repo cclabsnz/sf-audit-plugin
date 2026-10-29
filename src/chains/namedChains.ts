@@ -80,7 +80,7 @@ export const GUEST_EXPOSURE = [
   // Not 'guest-user-visibility-owd': the User external OWD reaches logged-in external users, not guests.
   // Not 'guest-site-options-member-visibility': a site's member list is no foothold into org data,
   // and this list also gates the low-trust chains (LOW_TRUST_ENTRY).
-  'guest-user-visibility-view-all-users', 'guest-user-visibility-object-read',
+  'guest-user-visibility-view-all-users',
   'guest-record-access-policy-not-enforced',
   'inbound-email-handler-unauthenticated-execution',
 ];
@@ -109,7 +109,7 @@ export const UNAUTH_EXFIL_STEPS = [
   'guest-executable-apex-unprotected', 'guest-executable-apex-exposed', 'guest-executable-apex-system-mode',
   'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned', 'guest-object-exposure-guest-shared',
   'guest-api-access-enabled', 'guest-api-hard-delete', 'classic-sites-active',
-  'guest-user-visibility-view-all-users', 'guest-user-visibility-object-read', 'guest-site-options-member-visibility',
+  'guest-user-visibility-view-all-users', 'guest-site-options-member-visibility',
   // Not 'sharing-model-external-*': since Winter '21 guest record access is always secured, so the
   // external OWD reaches logged-in portal users, not guests. Those findings drive the low-trust chains.
   // Not 'portal-exposed-apex-without-sharing' or 'flows-*-without-sharing' either: they flag any
@@ -145,8 +145,7 @@ export const UNAUTH_EXFIL_WIDENERS = ['data-cloud-data-space-default-overshared'
 
 export const GUEST_TRAFFIC = ['guest-traffic-anomaly-recon', 'guest-traffic-anomaly-anonymizer'];
 // A readable User roster counts as an exposed surface in its own right — recon against an org
-// that leaks its staff list is the same incident. The object-level Read grant is excluded: on
-// its own it is not a confirmed exposure, and this chain asserts one already in progress.
+// that leaks its staff list is the same incident.
 // Records shared with guests are left out: a site publishes those on purpose, and they are reads,
 // not the bulk surface this chain needs.
 export const GUEST_BULK_SURFACE = [

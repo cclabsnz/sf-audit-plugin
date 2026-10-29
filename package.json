@@ -116,7 +116,8 @@
       "brace-expansion": "^5.0.11",
       "fast-uri@3": "^3.1.9",
       "browserslist": "^4.28.7",
-      "@istanbuljs/load-nyc-config>js-yaml": "^4.1.1"
+      "@istanbuljs/load-nyc-config>js-yaml": "^4.1.1",
+      "jest-config>deepmerge": "4.1.1"
     }
   }
 }

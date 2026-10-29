@@ -36,7 +36,7 @@ const org: RowSource = (_api, q) => {
   if (/FROM GroupMember/.test(q)) return [{ GroupId: '00Gxx0000000001AAA' }];
   if (/FROM Group WHERE Type = 'Organization'/.test(q)) return [{ Id: '00Gxx0000000002AAA', Name: null, Type: 'Organization' }];
   // No guest-owned or guest-shared Lead, so the check goes on to sample and ask UserRecordAccess.
-  if (q.startsWith('SELECT Id FROM Lead LIMIT')) return [{ Id: '00Qxx0000000001AAA' }];
+  if (q.startsWith('SELECT Id FROM Lead ORDER BY SystemModstamp')) return [{ Id: '00Qxx0000000001AAA' }];
   if (/FROM SetupEntityAccess/.test(q)) return [{ SetupEntityId: CLASS_ID, ParentId: '0PSxx0000000001AAA' }];
   if (/FROM ApexClass WHERE Id IN/.test(q)) return [{ Id: CLASS_ID, Name: 'SiteCtl' }];
   if (/FROM ApexClass WHERE NamespacePrefix = null/.test(q)) return [{ Name: 'SiteCtl', ApiVersion: 66 }, { Name: 'Api', ApiVersion: 66 }];
@@ -66,6 +66,7 @@ const EXPECTED: Array<[string, RegExp]> = [
   ['guest share rows on a guest-readable object', /^SELECT COUNT\(\) FROM LeadShare WHERE RowCause IN \('GuestRule', 'GuestParentImplicit', 'GuestPersonImplicit'\) OR \(UserOrGroupId IN \('005xx0000000001AAA'\) AND RowCause != 'Owner'\) OR UserOrGroupId IN \('00Gxx0000000001AAA'\)$/],
   ['guest share rows on the four standard objects', /^SELECT COUNT\(\) FROM OpportunityShare WHERE RowCause IN/],
   ['guest-owned records', /^SELECT COUNT\(\) FROM Lead WHERE OwnerId IN/],
+  ['the newest and oldest records to sample', /^SELECT Id FROM Lead ORDER BY SystemModstamp (DESC|ASC) LIMIT 100$/],
   ['UserRecordAccess confirmation', /^SELECT RecordId, HasReadAccess FROM UserRecordAccess WHERE UserId = '005xx0000000001AAA' AND RecordId IN/],
   ['Apex class API versions', /^SELECT Name, ApiVersion FROM ApexClass WHERE NamespacePrefix = null$/],
   ['guest class access through permission sets', /FROM SetupEntityAccess WHERE SetupEntityType = 'ApexClass' AND ParentId IN/],

@@ -92,18 +92,12 @@ describe('GuestUserVisibilityCheck', () => {
     expect(r.findings.some((f) => f.id === 'guest-user-visibility-ok' && f.passed)).toBe(true);
   });
 
-  it('flags a guest Read grant on the User object as HIGH', async () => {
-    const r = await check.run(
-      makeCtx({
-        guests: GUEST,
-        psa: [psa()],
-        objPerms: [{ ParentId: '0PS1', SobjectType: 'User', PermissionsRead: true }],
-      }),
-    );
-    const f = r.findings.find((x) => x.id === 'guest-user-visibility-object-read');
-    expect(f).toBeDefined();
-    expect(f!.riskLevel).toBe('HIGH');
-    expect(f!.affectedItems?.[0].label).toContain('Guest PS');
+  // User takes no object permissions: ObjectPermissions never holds a User row (a live org had
+  // none among all its permission sets), so a "guest Read on User" query could never fire.
+  it('does not look for an object permission on User', async () => {
+    const ctx = makeCtx({ guests: GUEST, psa: [psa()] });
+    await check.run(ctx);
+    expect((ctx.soql.queryAll as any).mock.calls.map((c: any) => c[0] as string).filter((q: string) => /ObjectPermissions/.test(q))).toEqual([]);
   });
 
   it('reports every applicable finding at once', async () => {
@@ -112,13 +106,11 @@ describe('GuestUserVisibilityCheck', () => {
         guests: GUEST,
         psa: [psa({ PermissionsViewAllUsers: true })],
         entity: entity('ReadWrite'),
-        objPerms: [{ ParentId: '0PS1', SobjectType: 'User', PermissionsRead: true }],
       }),
     );
     const ids = r.findings.map((f) => f.id);
     expect(ids).toContain('guest-user-visibility-view-all-users');
     expect(ids).toContain('guest-user-visibility-owd');
-    expect(ids).toContain('guest-user-visibility-object-read');
     expect(ids).not.toContain('guest-user-visibility-ok');
   });
 

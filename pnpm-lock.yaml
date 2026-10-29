@@ -11,6 +11,7 @@ overrides:
   fast-uri@3: ^3.1.9
   browserslist: ^4.28.7
   '@istanbuljs/load-nyc-config>js-yaml': ^4.1.1
+  jest-config>deepmerge: 4.1.1
 
 importers:
 
@@ -1448,8 +1449,8 @@ packages:
       babel-plugin-macros:
         optional: true
 
-  deepmerge@4.3.1:
-    resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
+  deepmerge@4.1.1:
+    resolution: {integrity: sha512-+qO5WbNBKBaZez95TffdUDnGIo4+r5kmsX8aOb7PDHvXsTbghAmleuxjs6ytNaf5Eg4FGBXDS5vqO61TRi6BMg==}
     engines: {node: '>=0.10.0'}
 
   delayed-stream@1.0.0:
@@ -4100,7 +4101,7 @@ snapshots:
 
   dedent@1.7.2: {}
 
-  deepmerge@4.3.1: {}
+  deepmerge@4.1.1: {}
 
   delayed-stream@1.0.0: {}
 
@@ -4539,7 +4540,7 @@ snapshots:
       babel-jest: 30.5.2(@babel/core@7.29.7)
       chalk: 4.1.2
       ci-info: 4.4.0
-      deepmerge: 4.3.1
+      deepmerge: 4.1.1
       glob: 13.0.6
       graceful-fs: 4.2.11
       jest-circus: 30.5.2

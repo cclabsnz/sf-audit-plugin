@@ -131,11 +131,11 @@ describe('NAMED_CHAINS', () => {
   // A public external OWD on User reaches logged-in external users, not guests: it never joins the
   // unauthenticated chain, and a site's guest member visibility is the guest roster path instead.
   it('unauth-bulk-exfil fires for a guest with View All Users, without the User external OWD as a step', () => {
-    const findings = [f('guest-user-visibility-view-all-users'), f('guest-user-visibility-object-read'), f('guest-user-visibility-owd')];
+    const findings = [f('guest-user-visibility-view-all-users'), f('guest-user-read-access'), f('guest-user-visibility-owd')];
     const chain = NAMED_CHAINS.find((c) => c.id === 'unauth-bulk-exfil')!;
     const steps = chain.match(present(findings), findings);
     expect(steps!.map((s) => s.id)).toEqual(
-      expect.arrayContaining(['guest-user-visibility-view-all-users', 'guest-user-visibility-object-read']),
+      expect.arrayContaining(['guest-user-visibility-view-all-users', 'guest-user-read-access']),
     );
     expect(steps!.map((s) => s.id)).not.toContain('guest-user-visibility-owd');
   });
@@ -181,14 +181,14 @@ describe('NAMED_CHAINS', () => {
 
   // The guest OWD is Private on every object, User included, so the external OWD reaches no guest
   // record: a guest sharing rule supplies the reach, and guest API access the bulk path.
-  it('unauth-bulk-exfil counts a guest Read grant on User as a step alongside a bulk path', () => {
+  it('unauth-bulk-exfil needs record reach beside the User external OWD and a bulk path', () => {
     const chain0 = NAMED_CHAINS.find((c) => c.id === 'unauth-bulk-exfil')!;
-    const owdOnly = [f('guest-user-visibility-owd'), f('guest-user-visibility-object-read'), f('guest-api-access-enabled')];
+    const owdOnly = [f('guest-user-visibility-owd'), f('guest-user-read-access'), f('guest-api-access-enabled')];
     expect(chain0.match(present(owdOnly), owdOnly)).toBeNull();
     const findings = [...owdOnly, f('guest-user-sharing-exposure')];
-    const chain = NAMED_CHAINS.find((c) => c.id === 'unauth-bulk-exfil')!;
-    const steps = chain.match(present(findings), findings);
-    expect(steps!.map((s) => s.id)).toContain('guest-user-visibility-object-read');
+    const steps = chain0.match(present(findings), findings);
+    expect(steps!.map((s) => s.id)).toEqual(expect.arrayContaining(['guest-user-sharing-exposure', 'guest-api-access-enabled']));
+    expect(steps!.map((s) => s.id)).not.toContain('guest-user-visibility-owd');
   });
 
   it('active-guest-exfil fires when observed guest recon meets an enumerable user roster', () => {
@@ -201,10 +201,10 @@ describe('NAMED_CHAINS', () => {
     );
   });
 
-  // The object-level Read grant needs a sharing path to return anyone else's record, so it is not a
-  // confirmed exposure on its own and must not carry an "incident in progress" claim by itself.
-  it('active-guest-exfil does NOT fire on recon plus an object-read grant alone', () => {
-    const findings = [f('guest-traffic-anomaly-recon'), f('guest-user-visibility-object-read')];
+  // Guest object Read reaches no record on its own, so it must not carry an "incident in progress"
+  // claim by itself.
+  it('active-guest-exfil does NOT fire on recon plus guest object Read alone', () => {
+    const findings = [f('guest-traffic-anomaly-recon'), f('guest-user-read-access')];
     const chain = NAMED_CHAINS.find((c) => c.id === 'active-guest-exfil')!;
     expect(chain.match(present(findings), findings)).toBeNull();
   });

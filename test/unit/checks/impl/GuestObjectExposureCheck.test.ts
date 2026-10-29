@@ -233,7 +233,7 @@ describe('GuestObjectExposureCheck', () => {
           return { totalSize: shared, done: true, records: [] };
         }
         if (/OwnerId IN/.test(soql)) return { totalSize: owned, done: true, records: [] };
-        if (sampleId && /LIMIT 200/.test(soql)) return { totalSize: 1, done: true, records: [{ Id: sampleId }] };
+        if (sampleId && /^SELECT Id FROM \w+ (ORDER BY SystemModstamp \w+ )?LIMIT/.test(soql)) return { totalSize: 1, done: true, records: [{ Id: sampleId }] };
         return { totalSize: 0, done: true, records: [] };
       });
       return ctx;
@@ -372,5 +372,39 @@ describe('GuestObjectExposureCheck', () => {
     expect((ctx.soql.queryAll as any).mock.calls.filter((c: any) => /FROM GroupMember/.test(c[0]))).toHaveLength(5);
     const shareQuery = (ctx.soql.query as any).mock.calls.map((c: any) => c[0]).find((q: string) => /__Share/.test(q));
     expect(shareQuery).toMatch(/UserOrGroupId IN \('00G1', '00G2', '00G3', '00G4', '00G5'\)$/);
+  });
+
+  // An unordered sample reads one end of an object's history; a share matching only new records
+  // would read as "no guest read". Both ends are sampled, and an unorderable object still is.
+  describe('the UserRecordAccess sample', () => {
+    const base = () => makeCtx([
+      [{ Id: '005g', ProfileId: '00e', Username: 'guest@x' }],
+      [{ AssigneeId: '005g', PermissionSetId: '0PS1' }],
+      [{ ParentId: '0PS1', SobjectType: 'Application__c', PermissionsRead: true }],
+      [{ QualifiedApiName: 'Application__c', ExternalSharingModel: 'Read' }],
+    ]);
+    const urasked = (ctx: AuditContext) => (ctx.soql.queryAll as any).mock.calls.map((c: any) => c[0] as string).find((q: string) => /UserRecordAccess/.test(q));
+
+    it('takes the newest and the oldest records', async () => {
+      const ctx = base();
+      (ctx.soql.query as any).mockImplementation(async (q: string) => {
+        if (/ORDER BY SystemModstamp DESC LIMIT 100/.test(q)) return { totalSize: 1, done: true, records: [{ Id: 'a0new' }] };
+        if (/ORDER BY SystemModstamp ASC LIMIT 100/.test(q)) return { totalSize: 1, done: true, records: [{ Id: 'a0old' }] };
+        return { totalSize: 0, done: true, records: [] };
+      });
+      await check.run(ctx);
+      expect(urasked(ctx)).toContain("RecordId IN ('a0new', 'a0old')");
+    });
+
+    it('falls back to an unordered sample when the object cannot be ordered', async () => {
+      const ctx = base();
+      (ctx.soql.query as any).mockImplementation(async (q: string) => {
+        if (/ORDER BY/.test(q)) throw new Error('INVALID_FIELD');
+        if (q === 'SELECT Id FROM Application__c LIMIT 200') return { totalSize: 1, done: true, records: [{ Id: 'a0any' }] };
+        return { totalSize: 0, done: true, records: [] };
+      });
+      await check.run(ctx);
+      expect(urasked(ctx)).toContain("RecordId IN ('a0any')");
+    });
   });
 });

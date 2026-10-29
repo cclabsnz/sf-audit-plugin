@@ -58,9 +58,10 @@ Users, Manage Sharing, Manage Roles, Reset Passwords, Freeze Users, Manage Profi
 Sets, Assign Permission Sets and others. That is far more than a read-only audit needs, so it is
 not in `SF_Audit_ReadOnly`. Without it the check returns **inconclusive** and says why, and
 `mfa-method-strength` has nothing to grade. Grant it only where the audit runs as an
-administrator who already holds those permissions (one permission set adds just Manage MFA in API
-to a System Administrator), or review MFA registration in Setup → Identity → Identity
-Verification.
+administrator who already holds those permissions, using the separate
+[`SF_Audit_MFA`](docs/permissionset/SF_Audit_MFA.permissionset-meta.xml) permission set: on a
+System Administrator it adds just Manage MFA in API. Otherwise review MFA registration in Setup →
+Identity → Identity Verification. Preflight lists it as optional.
 
 - **View Event Log Files**, **View Setup and Configuration**: required by `sf audit incident collect`.
 - **Query All Files**: lets `incident collect` see files owned by guest users. Without it the report states the gap.

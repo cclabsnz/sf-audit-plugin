@@ -218,7 +218,7 @@ describe('GuestUserAccessCheck', () => {
       queryAll: (s) => (/FROM UserRecordAccess WHERE UserId = '005G'/.test(s) && /'003x'/.test(s)
         ? Promise.resolve([{ RecordId: '003x', HasReadAccess: true }])
         : router({ users: [guest()], perms: [perm({ SobjectType: 'Contact', PermissionsRead: true })] })(s)),
-      query: (s) => Promise.resolve((/SELECT Id FROM Contact LIMIT 200/.test(s)
+      query: (s) => Promise.resolve((/^SELECT Id FROM Contact (ORDER BY SystemModstamp \w+ )?LIMIT/.test(s)
         ? { records: [{ Id: '003x' }], totalSize: 1 }
         : { records: [], totalSize: 0 }) as any),
     }));
@@ -237,7 +237,7 @@ describe('GuestUserAccessCheck', () => {
     await check.run(makeCtx({
       queryAll: (s) => { seen.push(s); return router({ users: [guest()], perms })(s); },
       // A record to sample, so only the gate keeps the probe from asking.
-      query: (s) => Promise.resolve((s === 'SELECT Id FROM Contact LIMIT 200'
+      query: (s) => Promise.resolve((/^SELECT Id FROM Contact (ORDER BY SystemModstamp \w+ )?LIMIT/.test(s)
         ? { records: [{ Id: '003x' }], totalSize: 1 }
         : { records: [], totalSize: /FROM Contact WHERE OwnerId/.test(s) ? owned : 0 }) as any),
     }));
@@ -250,7 +250,7 @@ describe('GuestUserAccessCheck', () => {
       queryAll: (s) => { seen.push(s); return router({ users: [guest()], perms: [perm({ SobjectType: 'Account', PermissionsRead: true })] })(s); },
       query: (s) => { seen.push(s); return Promise.resolve({ records: [], totalSize: /FROM AccountShare/.test(s) ? 2 : 0 } as any); },
     }));
-    expect(seen.some((s) => s === 'SELECT Id FROM Account LIMIT 200')).toBe(false);
+    expect(seen.some((s) => s.startsWith('SELECT Id FROM Account '))).toBe(false);
   });
 
   // ObjectPermissions.ParentId holds permission set Ids; filtering it by profile Id matched nothing.

@@ -77,12 +77,6 @@ describe('CapabilityRegistry', () => {
     expect(grants).not.toContain('data-read-bulk');
   });
 
-  it('grants read but NOT bulk read to a guest Read grant on the User object', () => {
-    const grants = capabilitiesFor(f('guest-user-visibility-object-read')).grants;
-    expect(grants).toEqual(expect.arrayContaining(['unauth-foothold', 'data-read']));
-    expect(grants).not.toContain('data-read-bulk');
-  });
-
   it('grants code-exec and priv-esc to escalation permissions on an integration account', () => {
     const grants = capabilitiesFor(f('integration-least-privilege-escalation-permissions')).grants;
     expect(grants).toEqual(expect.arrayContaining(['code-exec', 'priv-esc']));

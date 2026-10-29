@@ -20,7 +20,7 @@ function org(opts: { owd: string; shareRows: number; owned: number }): AuditCont
   const query = jest.fn(async (q: string) => {
     if (/FROM ContactShare/.test(q)) return { records: [], totalSize: opts.shareRows, done: true };
     if (/FROM Contact WHERE OwnerId/.test(q)) return { records: [], totalSize: opts.owned, done: true };
-    if (q === 'SELECT Id FROM Contact LIMIT 200') return { records: [{ Id: '003x' }], totalSize: 1, done: true };
+    if (/^SELECT Id FROM Contact (ORDER BY SystemModstamp \w+ )?LIMIT/.test(q)) return { records: [{ Id: '003x' }], totalSize: 1, done: true };
     return { records: [], totalSize: 0, done: true };
   });
   return {

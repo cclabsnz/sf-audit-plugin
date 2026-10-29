@@ -177,6 +177,8 @@ export function validate(api: Api, query: string, childContext = false): void {
       for (const lit of c[3].matchAll(/'((?:[^'\\]|\\.)*)'/g)) {
         // SOQL compares picklist values without regard to case.
         const value = lit[1].toLowerCase();
+        // Custom and namespaced values are not in the snapshot (capture-schema drops them).
+        if (value.includes('__')) continue;
         if (!f.values.some((v) => v.toLowerCase() === value) && !SEEN_LIVE.has(value)) {
           throw apiError('UNKNOWN_PICKLIST_VALUE', `'${lit[1]}' is not a value of picklist ${object}.${c[1]}: the filter matches nothing`);
         }

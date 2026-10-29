@@ -77,15 +77,13 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   // stuffing and phishing at named admins. View All Users exposes every User record, so it is a bulk
   // read; it can no longer be granted to guests since Winter '21, so it is found only where an old
   // grant survived. A live site's guest member visibility exposes that site's members, not the org's
-  // records, and the object-level Read grant makes User queryable but still needs a sharing path:
-  // both are reads, not bulk reads.
+  // records: a read, not a bulk read.
   'guest-user-visibility-view-all-users': { grants: ['unauth-foothold', 'data-read-bulk'], techniques: { 'data-read-bulk': ['T1087.004', 'T1213.004'] } },
   'guest-site-options-member-visibility': { grants: ['unauth-foothold', 'data-read'], techniques: { 'data-read': ['T1087.004'] } },
   // The User external OWD reaches logged-in external users, not guests: secure guest record access
   // keeps the guest OWD Private on every object. Like 'sharing-model-external-read', it is what an
   // external account is worth.
   'guest-user-visibility-owd':            { grants: ['low-trust-authenticated', 'data-read-bulk'], techniques: { 'data-read-bulk': ['T1087.004', 'T1213.004'] } },
-  'guest-user-visibility-object-read':    { grants: ['unauth-foothold', 'data-read'], techniques: { 'data-read': ['T1087.004', 'T1213.004'] } },
   // Classic Visualforce sites — a second unauthenticated foothold surface
   'classic-sites-active':              { grants: ['unauth-foothold'], techniques: { 'unauth-foothold': [] } },
   // Mass data-export capability — a bulk-read sink for an authenticated actor

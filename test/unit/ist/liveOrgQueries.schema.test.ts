@@ -55,6 +55,11 @@ describe('the schema validator itself', () => {
   });
   it('rejects an unknown value behind a relationship path', () =>
     rejects('soql', "SELECT Id FROM GroupMember WHERE Group.Type = 'AllInternal'", /'AllInternal' is not a value/));
+  // Custom and namespaced values are not in the snapshot, so they are not judged.
+  it('does not judge a custom or namespaced value, and does judge a standard one, on the same picklist', () => {
+    expect(() => validate('soql', "SELECT Id FROM ObjectPermissions WHERE SobjectType = 'Application__c'")).not.toThrow();
+    rejects('soql', "SELECT Id FROM ObjectPermissions WHERE SobjectType = 'User'", /'User' is not a value of picklist ObjectPermissions.SobjectType/);
+  });
   it('accepts real picklist values', () =>
     expect(() => validate('soql', "SELECT COUNT() FROM AccountShare WHERE RowCause IN ('Rule', 'GuestRule', 'GuestParentImplicit') AND RowCause != 'Owner'")).not.toThrow());
   it('accepts a valid multi-hop path', () =>
