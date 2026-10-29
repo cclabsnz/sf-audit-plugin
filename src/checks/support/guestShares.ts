@@ -34,15 +34,50 @@ export async function guestPrincipals(ctx: AuditContext, guestIds: string[]): Pr
   } catch {
     // Not readable: shares naming a guest user group are then found only through UserRecordAccess.
   }
-  try {
-    const rows = await ctx.soql.queryAll<{ GroupId: string }>(
-      `SELECT GroupId FROM GroupMember WHERE UserOrGroupId IN (${quote(guestIds)})`,
-    );
-    for (const r of rows ?? []) if (r?.GroupId) groups.add(r.GroupId);
-  } catch {
-    // Not readable: legacy group membership is then found only through UserRecordAccess.
+  // A group that contains a group a guest belongs to gives the guest its access too, so membership
+  // is followed outwards until no new group appears (bounded, in case of a cycle or a deep tree).
+  let frontier = [...guestIds, ...groups];
+  for (let depth = 0; depth < MAX_GROUP_DEPTH && frontier.length > 0; depth++) {
+    let rows: Array<{ GroupId: string }>;
+    try {
+      rows = await ctx.soql.queryAll<{ GroupId: string }>(
+        `SELECT GroupId FROM GroupMember WHERE UserOrGroupId IN (${quote(frontier)})`,
+      );
+    } catch {
+      break; // Not readable: legacy group membership is then found only through UserRecordAccess.
+    }
+    frontier = [...new Set((rows ?? []).map((r) => r?.GroupId).filter((g): g is string => Boolean(g) && !groups.has(g)))];
+    for (const g of frontier) groups.add(g);
   }
   return { users: guestIds, groups: [...groups] };
+}
+
+/** How many levels of nested public groups are followed. */
+const MAX_GROUP_DEPTH = 5;
+
+/**
+ * Ground-truth read confirmation via UserRecordAccess on up to 200 sample records (the most one
+ * UserRecordAccess query takes), so a share matching only some records is likelier to show.
+ * UserRecordAccess takes one user per query, and each site has its own guest user with its own
+ * guest sharing rules, so every guest user is asked. True when any guest reads any sampled record;
+ * null when the object has no record to sample; 'failed' when either query fails.
+ */
+export async function guestReadsSample(ctx: AuditContext, obj: string, guestIds: string[]): Promise<boolean | null | 'failed'> {
+  try {
+    const sample = await ctx.soql.query<{ Id: string }>(`SELECT Id FROM ${obj} LIMIT 200`);
+    const ids = (sample.records ?? []).map((r) => r.Id);
+    if (ids.length === 0) return null;
+    const inIds = quote(ids);
+    for (const guestId of guestIds) {
+      const access = await ctx.soql.queryAll<{ RecordId: string; HasReadAccess: boolean }>(
+        `SELECT RecordId, HasReadAccess FROM UserRecordAccess WHERE UserId = '${guestId}' AND RecordId IN (${inIds})`,
+      );
+      if (access.some((a) => a.HasReadAccess === true)) return true;
+    }
+    return false;
+  } catch {
+    return 'failed';
+  }
 }
 
 /** The WHERE condition matching every share row that gives a guest user access to a record. */

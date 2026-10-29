@@ -1,10 +1,9 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { apexApiVersions, effectiveSharing, omittedSharingEnforced } from '../support/apexAccess.js';
+import { apexApiVersions, declaresWithoutSharing, effectiveSharing, omittedSharingEnforced } from '../support/apexAccess.js';
 
 const REST_RESOURCE_RE = /@RestResource\s*\(\s*urlMapping\s*=/i;
-const WITHOUT_SHARING_RE = /\bwithout\s+sharing\b/i;
 const IS_TEST_RE = /@IsTest\b/i;
 
 export class ApexRestEndpointCheck implements SecurityCheck {
@@ -71,7 +70,9 @@ export class ApexRestEndpointCheck implements SecurityCheck {
     const sharingOf = (c: { name: string; body: string }) => effectiveSharing(c.name, c.body, lookup);
 
     // Flag endpoints declared (or inheriting) without sharing — REST callers bypass record-level access
-    const withoutSharing = restClasses.filter((c) => WITHOUT_SHARING_RE.test(c.body) || sharingOf(c) === 'without');
+    // Read from code, not text: "without sharing" in a comment or string runs nothing. An inner class
+    // declared without sharing counts, as in the guest Apex check: the endpoint can call into it.
+    const withoutSharing = restClasses.filter((c) => declaresWithoutSharing(c.body) || sharingOf(c) === 'without');
     if (withoutSharing.length > 0) {
       findings.push({
         id: 'apex-rest-without-sharing',

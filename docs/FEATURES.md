@@ -364,7 +364,7 @@ Report section builders used by the executive deck (src/report):
 Check support, src/checks/support:
 
 - src/checks/support/apexAccess.ts: `apexCode`, `codeWithoutStrings`, `classDeclarations`, `sharingKeyword`, `parentClass`, `effectiveSharing`, `omittedSharingEnforced` (+ `OMITTED_SHARING_ENFORCED_FROM`), `apexApiVersions`, `enteredOnlyThroughAura`, `usesSystemMode`, `declaresWithoutSharing`, constants `SYSTEM_MODE`, `DML_AS_SYSTEM`, `DML_AS_USER`. Use for any with/without sharing or SYSTEM_MODE reasoning.
-- src/checks/support/guestShares.ts: `guestPrincipals`, `guestShareWhere`, `shareTableOf`, `guestShareCount`, `GUEST_ROW_CAUSES`. Use for any guest share-table query.
+- src/checks/support/guestShares.ts: `guestPrincipals` (guest users, guest user groups, and the public groups and queues they are in, nested), `guestShareWhere`, `shareTableOf`, `guestShareCount`, `guestReadsSample` (UserRecordAccess on up to 200 sampled records, per guest user), `GUEST_ROW_CAUSES`. Use for any question of what guests can read.
 - src/checks/support/integrationAccounts.ts: `resolveIntegrationAccounts`, `truncationDisclosure`, `SERVICE_LIKE_CLAUSES`. Use to find integration and service accounts.
 - src/checks/support/agentGraph.ts: `loadAgentGraph` (Agentforce planners, topics, actions as the Tooling API exposes them).
 - src/checks/support/missingObject.ts: `isMissingObjectError`, `queryIfPresent` (absent object means empty; permission errors still throw).

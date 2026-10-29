@@ -56,4 +56,12 @@ describe('GuestSiteOptionsCheck', () => {
     );
     expect(r.findings.some((f) => f.id === 'guest-site-options-ok' && f.passed)).toBe(true);
   });
+
+  it('reports guest file access on a site that is not live apart, at LOW', async () => {
+    const r = await check.run(
+      makeCtx([{ Id: '0DB', Name: 'Portal', Status: 'DownForMaintenance', OptionsGuestFileAccessEnabled: true, OptionsGuestMemberVisibility: false }]),
+    );
+    expect(r.findings.map((x) => x.id)).toEqual(['guest-site-options-file-access-not-live']);
+    expect(r.findings[0].riskLevel).toBe('LOW');
+  });
 });

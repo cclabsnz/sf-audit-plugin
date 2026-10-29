@@ -1,7 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { guestPrincipals, guestShareCount } from '../support/guestShares.js';
+import { guestPrincipals, guestReadsSample, guestShareCount } from '../support/guestShares.js';
 
 interface UserRecord {
   Id: string;
@@ -125,16 +125,20 @@ export class GuestUserAccessCheck implements SecurityCheck {
 
     // Share rows giving guests access: guest user sharing rules (and the parent access they imply),
     // and legacy manual, Apex and group shares that Winter '21 did not remove (support/guestShares).
+    // When the share table shows none (Contact controlled by its parent, a share the table does not
+    // show) or cannot be read, UserRecordAccess on a sample is asked instead.
     interface SharingExposure {
       shareTable: string;
-      count: number;
+      count?: number;
     }
     const sharingExposures: SharingExposure[] = [];
-    const principals = await guestPrincipals(ctx, guestUsers.map((u) => u.Id));
+    const guestIds = guestUsers.map((u) => u.Id);
+    const principals = await guestPrincipals(ctx, guestIds);
     for (const obj of SHARED_OBJECTS) {
       // Null: the share table could not be read (or the object is not shareable in this org).
       const count = await guestShareCount(ctx, obj, principals);
       if (count !== null && count > 0) sharingExposures.push({ shareTable: `${obj}Share`, count });
+      else if ((await guestReadsSample(ctx, obj, guestIds)) === true) sharingExposures.push({ shareTable: `${obj}Share` });
     }
 
     // Emit findings based on what was found
@@ -183,16 +187,21 @@ export class GuestUserAccessCheck implements SecurityCheck {
     }
 
     if (sharingExposures.length > 0) {
-      const count = sharingExposures.reduce((sum, e) => sum + e.count, 0);
+      const count = sharingExposures.reduce((sum, e) => sum + (e.count ?? 0), 0);
+      const confirmedOnly = sharingExposures.filter((e) => e.count === undefined).length;
       findings.push({
         id: 'guest-user-sharing-exposure',
         category: this.category,
         riskLevel: 'HIGH',
-        title: `${count} share row(s) give guest users access to Account, Case, Contact or Opportunity records`,
+        title: count > 0
+          ? `${count} share row(s) give guest users access to Account, Case, Contact or Opportunity records${confirmedOnly > 0 ? `, and guests read records on ${confirmedOnly} more object(s)` : ''}`
+          : `Guest users can read Account, Case, Contact or Opportunity records on ${confirmedOnly} object(s)`,
         affectedItems: sharingExposures.map((e) => ({
           label: e.shareTable,
           url: `${baseUrl}/lightning/setup/SecuritySharing/page`,
-          note: `${e.count} share row(s) giving guests access: review the guest sharing rules and legacy shares`,
+          note: e.count !== undefined
+            ? `${e.count} share row(s) giving guests access: review the guest sharing rules and legacy shares`
+            : 'No share row seen, but UserRecordAccess confirms a guest user reads a sampled record',
         })),
         detail:
           'Records on these objects are shared with guest users: by guest user sharing rules (and the parent access they imply), or by manual, Apex-managed or public-group shares made before Winter \'21, which the platform did not remove. Any unauthenticated visitor to the site can read the shared records.',

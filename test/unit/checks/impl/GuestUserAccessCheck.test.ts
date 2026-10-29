@@ -146,8 +146,9 @@ describe('GuestUserAccessCheck', () => {
       queryAll: (s) => (/FROM GroupMember/.test(s) ? Promise.resolve([{ GroupId: '00GQ' }]) : router({ users: [guest()] })(s)),
       query: (s) => { seen.push(s); return Promise.resolve({ records: [], totalSize: 0 } as any); },
     }));
-    expect(seen.map((s) => /FROM (\w+)/.exec(s)![1])).toEqual(['AccountShare', 'CaseShare', 'ContactShare', 'OpportunityShare']);
-    for (const s of seen) {
+    const shares = seen.filter((s) => /FROM \w+Share /.test(s));
+    expect(shares.map((s) => /FROM (\w+)/.exec(s)![1])).toEqual(['AccountShare', 'CaseShare', 'ContactShare', 'OpportunityShare']);
+    for (const s of shares) {
       expect(s).toContain("RowCause IN ('GuestRule', 'GuestParentImplicit', 'GuestPersonImplicit')");
       expect(s).toContain("(UserOrGroupId IN ('005G') AND RowCause != 'Owner')");
       expect(s).toContain("UserOrGroupId IN ('00GQ')");
@@ -202,5 +203,20 @@ describe('GuestUserAccessCheck', () => {
       query: () => Promise.reject(new Error('no such object')),
     }));
     expect(r.findings.some((x) => x.id === 'guest-user-baseline')).toBe(true);
+  });
+
+  // A share the table does not show (Contact controlled by its parent) still lets the guest read.
+  it('asks UserRecordAccess when the share table shows no guest rows', async () => {
+    const r = await check.run(makeCtx({
+      queryAll: (s) => (/FROM UserRecordAccess WHERE UserId = '005G'/.test(s) && /'003x'/.test(s)
+        ? Promise.resolve([{ RecordId: '003x', HasReadAccess: true }])
+        : router({ users: [guest()] })(s)),
+      query: (s) => Promise.resolve((/SELECT Id FROM Contact LIMIT 200/.test(s)
+        ? { records: [{ Id: '003x' }], totalSize: 1 }
+        : { records: [], totalSize: 0 }) as any),
+    }));
+    const f = r.findings.find((x) => x.id === 'guest-user-sharing-exposure')!;
+    expect(f.title).toBe('Guest users can read Account, Case, Contact or Opportunity records on 1 object(s)');
+    expect(f.affectedItems).toEqual([expect.objectContaining({ label: 'ContactShare', note: expect.stringContaining('UserRecordAccess confirms') })]);
   });
 });

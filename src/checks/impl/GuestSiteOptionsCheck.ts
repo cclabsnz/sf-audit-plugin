@@ -61,9 +61,10 @@ export class GuestSiteOptionsCheck implements SecurityCheck {
       return { findings };
     }
 
-    const fileSites = networks.filter((n) => n.OptionsGuestFileAccessEnabled);
-    // Only a live site serves guests; on a site under construction or taken down the setting
-    // waits for go-live, so it is reported apart and feeds no attack chain.
+    // Only a live site serves guests; on a site under construction or taken down a setting waits
+    // for go-live, so it is reported apart and feeds no attack chain.
+    const fileSites = networks.filter((n) => n.OptionsGuestFileAccessEnabled && n.Status === 'Live');
+    const idleFileSites = networks.filter((n) => n.OptionsGuestFileAccessEnabled && n.Status !== 'Live');
     const memberSites = networks.filter((n) => n.OptionsGuestMemberVisibility && n.Status === 'Live');
     const idleMemberSites = networks.filter((n) => n.OptionsGuestMemberVisibility && n.Status !== 'Live');
 
@@ -72,7 +73,7 @@ export class GuestSiteOptionsCheck implements SecurityCheck {
         id: 'guest-site-options-file-access',
         category: this.category,
         riskLevel: 'HIGH',
-        title: `${fileSites.length} site(s) allow guest users to access files`,
+        title: `${fileSites.length} live site(s) allow guest users to access files`,
         detail:
           'Guest file access lets unauthenticated visitors read public files (ContentVersion/ContentDocument/Attachment). Combined with the UI API, file IDs can be enumerated and content downloaded via the file servlet (/sfc/servlet.shepherd/version/download).',
         remediation: 'Disable guest file access (Network setting "Let guest users access public files") unless a specific public file library is intended.',
@@ -101,6 +102,22 @@ export class GuestSiteOptionsCheck implements SecurityCheck {
       });
     }
 
+    if (idleFileSites.length > 0) {
+      findings.push({
+        id: 'guest-site-options-file-access-not-live',
+        category: this.category,
+        riskLevel: 'LOW',
+        title: `${idleFileSites.length} site(s) that are not live would let guest users access files`,
+        detail: 'Guest file access is on for these sites, but they are not live, so no guest reaches them yet. Going live would let unauthenticated visitors read the site\'s public files.',
+        remediation: 'Disable "Let guest users access public files" before the site goes live, unless a public file library is intended.',
+        affectedItems: idleFileSites.map((n) => ({
+          label: n.Name,
+          url: setupUrl,
+          note: `Status: ${n.Status}; guest file access enabled`,
+        })),
+      });
+    }
+
     if (idleMemberSites.length > 0) {
       findings.push({
         id: 'guest-site-options-member-visibility-not-live',
@@ -117,7 +134,7 @@ export class GuestSiteOptionsCheck implements SecurityCheck {
       });
     }
 
-    if (fileSites.length === 0 && memberSites.length === 0 && idleMemberSites.length === 0) {
+    if (fileSites.length === 0 && memberSites.length === 0 && idleFileSites.length === 0 && idleMemberSites.length === 0) {
       findings.push({
         id: 'guest-site-options-ok',
         category: this.category,

@@ -253,18 +253,23 @@ describe('GuestObjectExposureCheck', () => {
       );
     });
 
-    // Guest user groups (whose membership GroupMember does not list) and legacy group membership.
-    it('counts shares to a guest user group and to a public group or queue a guest belongs to', async () => {
+    // Guest user groups (whose membership GroupMember does not list), legacy group membership, and
+    // groups that contain those groups, followed outwards.
+    it('counts shares to a guest user group and to every public group or queue a guest is in, nested', async () => {
       const ctx = withCounts(makeCtx(seq('Private')), 0, 1);
       const answer = (ctx.soql.queryAll as any).getMockImplementation();
+      const memberOf: Record<string, string[]> = { '005g': ['00GQ'], '00GQ': ['00GN'], '00GN': ['00GQ'] };
       (ctx.soql.queryAll as any).mockImplementation(async (soql: string) => {
         if (soql === "SELECT Id FROM Group WHERE Type = 'GuestUserGroup'") return [{ Id: '00GS' }];
-        if (/FROM GroupMember WHERE UserOrGroupId IN \('005g'\)/.test(soql)) return [{ GroupId: '00GQ' }];
+        const m = /FROM GroupMember WHERE UserOrGroupId IN \((.*)\)$/.exec(soql);
+        if (m) return [...m[1].matchAll(/'([^']+)'/g)].flatMap((x) => (memberOf[x[1]] ?? []).map((GroupId) => ({ GroupId })));
         return answer(soql);
       });
       await check.run(ctx);
       const shareQuery = (ctx.soql.query as any).mock.calls.map((c: any) => c[0]).find((q: string) => /__Share/.test(q));
-      expect(shareQuery).toMatch(/ OR UserOrGroupId IN \('00GS', '00GQ'\)$/);
+      expect(shareQuery).toMatch(/ OR UserOrGroupId IN \('00GS', '00GQ', '00GN'\)$/);
+      // The cycle back to 00GQ ends the walk.
+      expect((ctx.soql.queryAll as any).mock.calls.filter((c: any) => /FROM GroupMember/.test(c[0]))).toHaveLength(3);
     });
 
     it('reads a standard object\'s share table by its own name', async () => {

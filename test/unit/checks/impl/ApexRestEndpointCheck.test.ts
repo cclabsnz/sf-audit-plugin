@@ -53,4 +53,17 @@ describe('ApexRestEndpointCheck', () => {
     ));
     expect(noDecl(r)).toEqual(['Ep']);
   });
+
+  // Read from code: "without sharing" in a comment or string runs nothing.
+  it('does not take "without sharing" in a comment or string as the declaration', async () => {
+    const body = REST('Ep').replace('global class Ep {', "global with sharing class Ep { // was without sharing\n String s = 'without sharing';");
+    const r = await new ApexRestEndpointCheck().run(ctxWith([{ name: 'Ep', body }], { Ep: 60 }));
+    expect(r.findings.some((f) => f.id === 'apex-rest-without-sharing')).toBe(false);
+  });
+
+  it('still reports an inner class declared without sharing', async () => {
+    const body = REST('Ep').replace('global class Ep {', 'global with sharing class Ep { without sharing class Inner { }');
+    const r = await new ApexRestEndpointCheck().run(ctxWith([{ name: 'Ep', body }], { Ep: 60 }));
+    expect(r.findings.some((f) => f.id === 'apex-rest-without-sharing')).toBe(true);
+  });
 });

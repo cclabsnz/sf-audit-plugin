@@ -1,7 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
-import { guestPrincipals, guestShareCount } from '../support/guestShares.js';
+import { guestPrincipals, guestReadsSample, guestShareCount } from '../support/guestShares.js';
 
 interface GuestUser {
   Id: string;
@@ -23,13 +23,6 @@ interface ObjectPermission {
 interface EntityDef {
   QualifiedApiName: string;
   ExternalSharingModel: string | null;
-}
-interface RecordId {
-  Id: string;
-}
-interface RecordAccess {
-  RecordId: string;
-  HasReadAccess: boolean;
 }
 
 // Objects whose guest shares GuestUserAccessCheck already reports as guest-user-sharing-exposure.
@@ -194,7 +187,7 @@ export class GuestObjectExposureCheck implements SecurityCheck {
       const shared = REPORTED_BY_GUEST_ACCESS.has(obj) ? 0 : await guestShareCount(ctx, obj, principals);
       if (shared !== null && shared > 0) {
         exposed.push({ obj, count: shared, write: writable.has(obj), kind: 'shared', uiApi: null, confirmed: true });
-      } else if ((await this.confirmGuestRead(ctx, obj, guestIds)) === true) {
+      } else if ((await guestReadsSample(ctx, obj, guestIds)) === true) {
         // No share row seen (no share table, a parent-controlled object, or a path the table does
         // not show), but the guest reads a sampled record.
         exposed.push({ obj, write: writable.has(obj), kind: 'shared', uiApi: null, confirmed: true });
@@ -212,7 +205,7 @@ export class GuestObjectExposureCheck implements SecurityCheck {
         Object.assign(e, { kind: 'shared', count: shared, confirmed: true });
         continue;
       }
-      e.confirmed = await this.confirmGuestRead(ctx, e.obj, guestIds);
+      e.confirmed = await guestReadsSample(ctx, e.obj, guestIds);
       // An unconfirmed public-OWD object can still hold records the guest owns, which it always reads.
       if (e.kind === 'public' && e.confirmed !== true) {
         try {
@@ -348,30 +341,6 @@ export class GuestObjectExposureCheck implements SecurityCheck {
     } catch {
       // 404 / UNSUPPORTED_OBJECT => the UI API does not model this object.
       return false;
-    }
-  }
-
-  /**
-   * Ground-truth read confirmation via UserRecordAccess on up to 200 sample records (the most one
-   * UserRecordAccess query takes), so a guest sharing rule matching only some records is likelier to
-   * show. UserRecordAccess takes one user per query, and each site has its own guest user with its
-   * own guest sharing rules, so every guest user is asked. True when any guest reads any sampled record.
-   */
-  private async confirmGuestRead(ctx: AuditContext, obj: string, guestIds: string[]): Promise<boolean | null | 'failed'> {
-    try {
-      const sample = await ctx.soql.query<RecordId>(`SELECT Id FROM ${obj} LIMIT 200`);
-      const ids = (sample.records ?? []).map((r) => r.Id);
-      if (ids.length === 0) return null;
-      const inIds = ids.map((i) => `'${i}'`).join(', ');
-      for (const guestId of guestIds) {
-        const access = await ctx.soql.queryAll<RecordAccess>(
-          `SELECT RecordId, HasReadAccess FROM UserRecordAccess WHERE UserId = '${guestId}' AND RecordId IN (${inIds})`,
-        );
-        if (access.some((a) => a.HasReadAccess === true)) return true;
-      }
-      return false;
-    } catch {
-      return 'failed';
     }
   }
 
