@@ -94,7 +94,7 @@ export class ApexCrudFLSCheck implements SecurityCheck {
         detail:
           `Apex classes declared "without sharing" bypass record-level visibility AND have no field-level or object-level permission checks, meaning any user who triggers the code can read or write any record and field regardless of their assigned permissions. This is the most exploited Salesforce access control vulnerability. OWASP Salesforce Top 10 ranks CRUD/FLS bypass as the #1 risk.`,
         remediation:
-          'Refactor to use "with sharing" where possible. Add `Security.stripInaccessible()` before DML and `Schema.SObjectType.[Object].fields.[Field].isAccessible()` before displaying fields. Where "without sharing" is required for a technical reason, document the justification and tighten the scope.',
+          'Enforce object and field permissions with `WITH USER_MODE`, or `Security.stripInaccessible()` before DML and `Schema.SObjectType.[Object].fields.[Field].isAccessible()` before displaying fields. "with sharing" alone does not do this: it enforces record sharing only. Declare "with sharing" too where possible, and where "without sharing" is required for a technical reason, document the justification and tighten the scope.',
         affectedItems: withoutSharingNoFls.slice(0, 30).map((n) => ({
           label: n,
           url: apexClassesUrl,

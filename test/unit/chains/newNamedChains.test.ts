@@ -95,6 +95,32 @@ describe('undetected-compromise', () => {
   });
 });
 
+describe('named chain wording and step roles', () => {
+  // Guest record access is always secured (Winter '21), so external sharing defaults reach logged-in
+  // portal users, not guests: they must not be steps of the chain that needs no account.
+  it('unauth-bulk-exfil does not count external sharing defaults as an unauthenticated step', () => {
+    const chains = new ChainEngine().correlate([
+      f('guest-object-exposure-public-owd'), f('sharing-model-external-read'), f('sharing-model-external-write'), f('guest-user-read-access'),
+    ]);
+    const c = chains.find((x) => x.id === 'unauth-bulk-exfil')!;
+    expect(c.steps.map((s) => s.findingId)).not.toContain('sharing-model-external-read');
+    expect(c.steps.map((s) => s.findingId)).not.toContain('sharing-model-external-write');
+  });
+
+  it('cred-theft-pivot is rated no higher than its pattern-matched secret', () => {
+    expect(NAMED_CHAINS.find((c) => c.id === 'cred-theft-pivot')!.severity).toBe('HIGH');
+  });
+
+  it('self-registration-foothold tells one story: its break point is a finding and its remediation leads with it', () => {
+    const def = NAMED_CHAINS.find((c) => c.id === 'self-registration-foothold')!;
+    expect(def.narrative).not.toMatch(/not a finding/);
+    expect(def.remediation).not.toMatch(/Decide which half/);
+    expect(def.remediation.startsWith('Turn self-registration off')).toBe(true);
+    expect(def.remediation).not.toMatch(/approval step/);
+    expect(def.abuseCase.breakPointText).toBe('Turn off self-registration on the site.');
+  });
+});
+
 describe('newly modelled capabilities', () => {
   it.each([
     ['separation-of-duties-self-escalation', 'org-takeover'],
