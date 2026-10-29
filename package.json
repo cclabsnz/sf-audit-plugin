@@ -47,6 +47,8 @@
   },
   "dependencies": {
     "@cclabsnz/sf-core": "^0.12.0",
+    "@fontsource-variable/source-sans-3": "^5.3.1",
+    "@fontsource-variable/source-serif-4": "^5.3.1",
     "@oclif/core": "^5",
     "@salesforce/core": "^9.3.0",
     "@salesforce/sf-plugins-core": "^13",

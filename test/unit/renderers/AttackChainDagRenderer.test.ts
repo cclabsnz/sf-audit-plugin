@@ -230,6 +230,7 @@ describe('AttackChainDagRenderer', () => {
       findings: [],
       attackChains: [{
         ...sampleChain,
+        abuseCase: { actor: 'an outsider', goal: 'read data', breakPoint: 'Fix the Apex.' },
         steps: [{ ...sampleChain.steps[0], title: '"><svg onload=alert(1)>' }, sampleChain.steps[1]],
       }],
     });
@@ -241,11 +242,16 @@ describe('AttackChainDagRenderer', () => {
       expect(html.indexOf('<svg class="attack-chain-dag"')).toBeGreaterThan(html.indexOf('<div class="attack-chain'));
     });
 
-    it('ClientReportRenderer embeds the light diagram in the scenario card under the strict CSP', () => {
+    // The executive report draws steps as text in attack order rather than an SVG, so a step title
+    // is never truncated.
+    it('ClientReportRenderer lists every step in full, in order, with the break point marked, under the strict CSP', () => {
       const html = new ClientReportRenderer({ branding: DEFAULT_BRANDING, topN: 5, frameworks: ['OWASP'] }).render(result());
-      expect(html).toContain('dag-arrow-unauth-bulk-exfil-light');
+      const steps = html.slice(html.indexOf('<ol class="steps"'), html.indexOf('</ol>', html.indexOf('<ol class="steps"')));
+      expect(steps.indexOf('&quot;&gt;&lt;svg onload=alert(1)&gt;')).toBeGreaterThan(-1);
+      expect(steps.indexOf('Portal exposed apex without sharing')).toBeGreaterThan(steps.indexOf('&quot;&gt;&lt;svg onload'));
+      expect(steps).toMatch(/<li class="step cut">.*Portal exposed apex without sharing.*BREAK POINT/s);
       expect(html).not.toContain('<svg onload');
-      expect(html).not.toMatch(/<script|<foreignObject/i);
+      expect(html).not.toMatch(/<svg|<script|<foreignObject/i);
     });
   });
 });

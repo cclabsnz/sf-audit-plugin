@@ -9,6 +9,19 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Changed
+
+- **The executive report is now a consulting-style deck.** Every slide's title states its conclusion, and a note under each exhibit says where its numbers come from. In order:
+  - **Cover**: grade and health score, kept small.
+  - **Executive summary**: situation, complication and resolution.
+  - **Where to act**: the actions placed on risk removed against effort.
+  - **Action plan**: ranked actions in three waves (start now, next 30 days, this quarter). For each, what it breaks, the findings it closes, effort, and an owner to agree.
+  - **Threat model**: a MITRE ATT&CK slide (findings per tactic, and the tactics each attack chain reaches) and a STRIDE and LINDDUN heatmap.
+  - **Attack scenarios**: one slide per named attack chain, and one for the potential chains.
+  - **Appendix and sign-off**: roadmap, compliance, findings, and a sign-off page.
+- **Actions are computed, not listed.** Each named chain's break point becomes the action that breaks it (chains sharing a break point share it). Every other open critical or high finding becomes an action per check. Actions are ranked by the risk they remove, with a broken chain counting double.
+- **It prints one slide per landscape A4 page.** Every printed page names its client, date and page. Fonts are Source Serif 4 and Source Sans 3, embedded so the report never fetches anything. A firm's own colours and fonts still apply when it has set them.
+
 ## [v1.21.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.21.1) — 2026-10-28
 
 ### Fixed
