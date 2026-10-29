@@ -36,16 +36,25 @@ export class MfaRegistrationCheck implements SecurityCheck {
     );
     const totalActiveUsers = countResult.records[0]?.expr0 ?? 0;
 
+    // Same population as the count: active, unfrozen standard users. Frozen users are dropped from
+    // the registrations below client-side; a semi-join on TwoFactorInfo has not been tested against a
+    // live org. Like the count, this reads UserLogin outside the TwoFactorInfo error handling.
+    const frozen = new Set(
+      (await ctx.soql.queryAll<{ UserId: string }>(`SELECT UserId FROM UserLogin WHERE IsFrozen = true`))
+        .map((r) => r.UserId),
+    );
+
     let twoFactorRecords: TwoFactorRecord[] = [];
     try {
-      twoFactorRecords = await ctx.soql.queryAll<TwoFactorRecord>(
+      // queryAll pages through every row, so a large org is not cut off at a fixed limit and its
+      // remaining users counted as unregistered.
+      twoFactorRecords = (await ctx.soql.queryAll<TwoFactorRecord>(
         `SELECT UserId, User.Username, User.Profile.Name, Type
          FROM TwoFactorInfo
          WHERE User.IsActive = true
            AND User.UserType = 'Standard'
-         ORDER BY UserId
-         LIMIT 2000`
-      );
+         ORDER BY UserId`
+      )).filter((r) => !frozen.has(r.UserId));
     } catch {
       // Leave the cache unset: an empty list would read downstream as "nobody registered MFA".
       findings.push({

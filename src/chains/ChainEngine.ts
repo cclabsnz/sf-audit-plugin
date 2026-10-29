@@ -6,7 +6,7 @@ import type { Capability } from './Capability.js';
 import { SOURCE_CAPS, HIGH_IMPACT_SINKS } from './Capability.js';
 import { capabilitiesFor } from './CapabilityRegistry.js';
 import { orderStepsByTactic, techniquesForGrant } from '../threats/attack.js';
-import { NAMED_CHAINS, inGroup, type NamedChainDef } from './namedChains.js';
+import { NAMED_CHAINS, UNAUTH_EXFIL_STEPS, inGroup, type NamedChainDef } from './namedChains.js';
 
 const SEVERITY_ORDER: Record<RiskLevel, number> = {
   CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4,
@@ -145,8 +145,12 @@ export class ChainEngine {
       if (!present.has(src)) continue;
       const hasRealSource = active.some((f) => !SURFACE_ONLY.has(f.id) && (grantsByFinding.get(f) ?? []).includes(src));
       if (!hasRealSource) continue;
+      // A guest reaches only what the guest side grants: an internal user's View All Data or an
+      // admin's Author Apex is no sink for an unauthenticated foothold (as in unauth-bulk-exfil).
+      const reaches = (f: Finding): boolean => src !== 'unauth-foothold' || UNAUTH_EXFIL_STEPS.includes(f.id);
       for (const sink of HIGH_IMPACT_SINKS) {
         if (!present.has(sink)) continue;
+        if (!active.some((f) => reaches(f) && (grantsByFinding.get(f) ?? []).includes(sink))) continue;
         const key = `${src}->${sink}`;
         if (covered.has(key) || seen.has(key)) continue;
         seen.add(key);
@@ -155,7 +159,7 @@ export class ChainEngine {
         const members: Finding[] = [];
         for (const f of active) {
           const g = grantsByFinding.get(f) ?? [];
-          if (g.includes(src) || g.includes(sink) || g.includes('code-exec')) members.push(f);
+          if (g.includes(src) || (reaches(f) && (g.includes(sink) || g.includes('code-exec')))) members.push(f);
           if (members.length >= MAX_STEPS) break;
         }
         if (members.length === 0) continue;

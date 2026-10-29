@@ -71,7 +71,7 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 | Check | What it looks for |
 |-------|------------------|
 | Guest User Access | Object permissions and sharing rules granted to unauthenticated guests |
-| Guest Object Exposure (Bulk Read via UI API) | Auto-discovers guest-readable objects (incl. records exposed by guest ownership despite a Private OWD), then grades them by actual UI-API reachability: objects the UI API models are CRITICAL (GraphQL-pullable), objects readable only in the sharing model but not UI-API-modelled (Calendar, AuthSession, etc.) are separated as MEDIUM, with UserRecordAccess as ground-truth read confirmation |
+| Guest Object Exposure (Bulk Read via UI API) | Auto-discovers guest-readable objects (incl. records exposed by guest ownership despite a Private OWD), then grades them by actual reach: UI-API-modelled objects whose records the guest owns, or whose guest read `UserRecordAccess` confirms on up to 200 sampled records, are CRITICAL (GraphQL-pullable); a public external OWD without a confirmed read is MEDIUM, since secure guest record access (enforced since Winter '21) means the OWD alone gives guests nothing; objects readable only in the sharing model but not UI-API-modelled (Calendar, AuthSession, etc.) are MEDIUM |
 | Guest-Executable Apex | Apex that guest profiles can run: CRITICAL when it, or a helper it calls, runs without sharing; HIGH when it switches off CRUD/FLS with SYSTEM_MODE |
 | Experience Cloud Sites | Live sites with self-registration enabled and guest user presence |
 | Experience Cloud Guest Site Options | Guest file access and guest member visibility on Experience Cloud sites |

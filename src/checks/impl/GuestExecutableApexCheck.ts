@@ -54,12 +54,16 @@ export class GuestExecutableApexCheck implements SecurityCheck {
       return { findings };
     }
 
-    const profileIds = [...new Set(guests.map((g) => g.ProfileId))];
-    const profileList = profileIds.map((id) => `'${id}'`).join(', ');
-
-    const access = await ctx.soql.queryAll<SetupAccess>(
+    // SetupEntityAccess.ParentId is a permission set Id, never a profile Id: a profile's class access
+    // sits on the permission set it owns. The guests' assignments cover that one and any assigned set.
+    const guestList = guests.map((g) => `'${g.Id}'`).join(', ');
+    const assignments = await ctx.soql.queryAll<{ PermissionSetId: string }>(
+      `SELECT PermissionSetId FROM PermissionSetAssignment WHERE AssigneeId IN (${guestList})`,
+    );
+    const permSetIds = [...new Set(assignments.map((a) => a.PermissionSetId))];
+    const access = permSetIds.length === 0 ? [] : await ctx.soql.queryAll<SetupAccess>(
       `SELECT SetupEntityId, ParentId FROM SetupEntityAccess
-       WHERE SetupEntityType = 'ApexClass' AND ParentId IN (${profileList})`,
+       WHERE SetupEntityType = 'ApexClass' AND ParentId IN (${permSetIds.map((id) => `'${id}'`).join(', ')})`,
     );
 
     const classIds = [...new Set(access.map((a) => a.SetupEntityId))];

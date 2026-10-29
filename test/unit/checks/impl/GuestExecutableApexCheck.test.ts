@@ -8,6 +8,7 @@ function makeCtx(m: Mocks, apexBodies?: Array<{ name: string; body: string }>): 
   const soqlQueryAll = jest.fn() as any;
   soqlQueryAll
     .mockResolvedValueOnce(m.guestUsers)   // guest users
+    .mockResolvedValueOnce([{ PermissionSetId: '0PSP0000000AbCdEAA' }]) // their permission sets
     .mockResolvedValueOnce(m.setupAccess); // SetupEntityAccess
   const toolingQuery = jest.fn() as any;
   toolingQuery.mockResolvedValue(m.apexNames); // ApexClass id→name
@@ -33,7 +34,7 @@ describe('GuestExecutableApexCheck', () => {
     const ctx = makeCtx(
       {
         guestUsers: [{ Id: '005g', ProfileId: '00eP0000000AbCdEAA', Username: 'guest@site' }],
-        setupAccess: [{ SetupEntityId: '01pA0000000AbCdEAA', ParentId: '00eP0000000AbCdEAA' }],
+        setupAccess: [{ SetupEntityId: '01pA0000000AbCdEAA', ParentId: '0PSP0000000AbCdEAA' }],
         apexNames: [{ Id: '01pA0000000AbCdEAA', Name: 'PublicController' }],
       },
       [{ name: 'PublicController', body: 'public without sharing class PublicController { void f(){ [SELECT Id FROM Account]; } }' }],
@@ -48,7 +49,7 @@ describe('GuestExecutableApexCheck', () => {
   it('flags guest-executable classes (no body available) as HIGH exposed', async () => {
     const ctx = makeCtx({
       guestUsers: [{ Id: '005g', ProfileId: '00eP0000000AbCdEAA', Username: 'guest@site' }],
-      setupAccess: [{ SetupEntityId: '01pA0000000AbCdEAA', ParentId: '00eP0000000AbCdEAA' }],
+      setupAccess: [{ SetupEntityId: '01pA0000000AbCdEAA', ParentId: '0PSP0000000AbCdEAA' }],
       apexNames: [{ Id: '01pA0000000AbCdEAA', Name: 'SomeController' }],
     });
     const result = await check.run(ctx);
@@ -65,5 +66,19 @@ describe('GuestExecutableApexCheck', () => {
     });
     const result = await check.run(ctx);
     expect(result.findings.some((f) => f.id === 'guest-executable-apex-ok' && f.passed)).toBe(true);
+  });
+
+  // SetupEntityAccess.ParentId holds permission set Ids; filtering it by profile Id matches nothing.
+  it('reads class access through the guests\' permission sets, never by profile Id', async () => {
+    const ctx = makeCtx({
+      guestUsers: [{ Id: '005g', ProfileId: '00eP0000000AbCdEAA', Username: 'guest@site' }],
+      setupAccess: [], apexNames: [],
+    });
+    await check.run(ctx);
+    const calls = (ctx.soql.queryAll as any).mock.calls.map((c: any) => c[0] as string);
+    expect(calls[1]).toMatch(/FROM PermissionSetAssignment WHERE AssigneeId IN \('005g'\)/);
+    const sea = calls.find((q: string) => /SetupEntityAccess/.test(q))!;
+    expect(sea).toContain("'0PSP0000000AbCdEAA'");
+    expect(sea).not.toContain('00eP');
   });
 });

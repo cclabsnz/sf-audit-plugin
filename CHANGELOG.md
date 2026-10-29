@@ -9,6 +9,14 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Fixed
+
+- **Guest-executable Apex is found again.** The check read Apex class access by filtering `SetupEntityAccess.ParentId` on the guest profile Ids. That field holds permission set Ids, so in a real org it matched nothing and reported "Guest profiles cannot execute any Apex classes". It now reads the guest users' permission sets, both the one each guest profile owns and any assigned to the guest. Some orgs will see new `guest-executable-apex-*` findings and the unauthenticated bulk-exfiltration chain they open, so some grades may fall.
+- **The unauthenticated bulk-exfiltration chain needs the guest to reach the data itself.** The bulk read, write or code execution must now come from one of its guest-side steps. Before, an internal user's View All Data or an admin's Author Apex, together with any guest exposure, was enough to fire it. The potential-chain pass no longer pairs a guest foothold with those internal grants either.
+- **The same chain no longer counts Apex or Flow that is only shown to run without sharing.** `portal-exposed-apex-without-sharing` flags classes with `@AuraEnabled`, `@RemoteAction` or `@RestResource` methods that lack sharing enforcement, and `flows-*-without-sharing` flags flows by run mode. Neither shows that a guest can call them. Guest-callable Apex is counted through `guest-executable-apex-*`.
+- **A public external OWD on a guest-readable object is CRITICAL only when guest access is confirmed.** Secure guest record access has been enforced since Winter '21, so the external OWD alone gives guests nothing: record sharing gives a guest a record only through a guest sharing rule or ownership. `guest-object-exposure-public-owd` now needs `UserRecordAccess` to show that a guest user (every site's guest user is checked) can read one of up to 200 sampled records. An object whose records a guest user owns stays CRITICAL as `guest-object-exposure-guest-owned`. Otherwise the check reports the new MEDIUM finding `guest-object-exposure-public-owd-unconfirmed`, which feeds no attack chain and notes whether the probe ran.
+- **MFA registration covers the same users as the count.** Frozen users are now dropped from the registrations, as they already were from the count, and the 2000-row cap is gone.
+
 ## [v1.23.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.23.0) — 2026-10-29
 
 Attack chains and checks now match what the platform does. One chain is re-rated, so some grades may

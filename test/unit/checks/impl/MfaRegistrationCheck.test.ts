@@ -38,4 +38,28 @@ describe('MfaRegistrationCheck', () => {
     expect(finding.passed).toBeUndefined();
     expect(finding.title).not.toMatch(/All 0/);
   });
+  // Registrations must cover the same users as the count (active, unfrozen), all of them.
+  it('drops frozen users from registrations and reads every page', async () => {
+    const queryAll = (jest.fn() as any).mockImplementation(async (q: string) => {
+      if (/FROM UserLogin/.test(q)) return [{ UserId: '005frozen' }];
+      return [
+        { UserId: '005a', User: { Username: 'a', Profile: { Name: 'P' } }, Type: 'TOTP' },
+        { UserId: '005frozen', User: { Username: 'f', Profile: { Name: 'P' } }, Type: 'TOTP' },
+      ];
+    });
+    const ctx = {
+      soql: {
+        query: (jest.fn() as any).mockResolvedValue({ totalSize: 1, done: true, records: [{ expr0: 2 }] }),
+        queryAll,
+      },
+      tooling: {}, rest: {},
+      orgInfo: { id: 'o', name: 'n', type: 'DE', isSandbox: false, instance: 'NA1', instanceUrl: 'https://x.my.salesforce.com' },
+      cache: {} as any,
+    } as unknown as AuditContext;
+    const r = await new MfaRegistrationCheck().run(ctx);
+    expect((ctx.cache as any).mfaRegistrations.map((m: any) => m.userId)).toEqual(['005a']);
+    expect(r.findings[0].title).toBe('1 of 2 active user(s) have not registered any MFA method');
+    const tfa = queryAll.mock.calls.map((c: any) => c[0]).find((q: string) => /TwoFactorInfo/.test(q));
+    expect(tfa).not.toMatch(/LIMIT/);
+  });
 });

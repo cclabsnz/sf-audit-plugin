@@ -109,16 +109,18 @@ export const UNAUTH_EXFIL_STEPS = [
   'guest-user-visibility-view-all-users', 'guest-user-visibility-owd', 'guest-user-visibility-object-read',
   // Not 'sharing-model-external-*': since Winter '21 guest record access is always secured, so the
   // external OWD reaches logged-in portal users, not guests. Those findings drive the low-trust chains.
-  'portal-exposed-apex-without-sharing',
+  // Not 'portal-exposed-apex-without-sharing' or 'flows-*-without-sharing' either: they flag any
+  // @AuraEnabled class or any Flow, which a logged-in user may be the only one able to call. The
+  // guest-side counterpart is 'guest-executable-apex-*', read from the guest profile's class access.
   'field-level-security-high', 'field-level-security-medium',
-  // The guardrail whose absence lets guest-owned records defeat a Private OWD, and the Flow
-  // analogue of portal-exposed Apex running without sharing.
+  // The guardrail whose absence lets guest-owned records defeat a Private OWD.
   'guest-record-access-policy-not-enforced',
-  'flows-autolaunched-without-sharing', 'flows-screen-without-sharing',
   // An open inbound email handler grants unauth-foothold, so it must appear whenever it
   // is what opened the gate.
   'inbound-email-handler-unauthenticated-execution',
 ];
+// What a guest-side step must grant for the visitor to reach data or run code.
+const UNAUTH_EXFIL_REACH: readonly Capability[] = ['code-exec', 'data-read-bulk', 'data-write'];
 // Internal-only weaknesses that widen what a foothold reaches. They join as evidence but
 // never count toward the floor: without a guest-side step they describe no unauthenticated path.
 export const UNAUTH_EXFIL_WIDENERS = ['data-cloud-data-space-default-overshared', 'restriction-rules-inactive'];
@@ -310,8 +312,8 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     title: 'Unauthenticated bulk exfiltration',
     severity: 'CRITICAL',
     narrative:
-      'An unauthenticated guest foothold combines with guest-reachable code execution or public ' +
-      'external sharing to read business data in bulk without any login. In practice this is ' +
+      'An unauthenticated guest foothold combines with guest-reachable code execution or guest ' +
+      'record access to read business data in bulk without any login. In practice this is ' +
       'reached over the site\'s Aura endpoint (/s/sfsites/aura) with aura.token=null: ' +
       'RecordUiController/ACTION$executeGraphQL returns record data the guest user can see, and ' +
       'aura.ApexAction.execute invokes @AuraEnabled Apex — which, in a class that runs without ' +
@@ -319,14 +321,14 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       'No credentials are involved at any point, so login-based controls (MFA, IP ranges, SSO) ' +
       'never engage.',
     remediation:
-      'Remove guest object/sharing access, ensure no guest-invokable Apex runs without sharing, ' +
-      'and set external OWD to Private. Grant portal access only via sharing sets. Because the ' +
+      'Remove guest object permissions and guest sharing rules, and ensure no guest-invokable Apex ' +
+      'runs without sharing. Because the ' +
       'requests never reach a login page, tightening authentication does not mitigate this — the ' +
       'object permissions, sharing model and Apex sharing declarations are the controls that apply.',
     abuseCase: {
       actor: 'an unauthenticated site visitor',
       goal: 'read or change business data in bulk without logging in',
-      preconditions: [{ ids: GUEST_EXPOSURE }, { ids: UNAUTH_EXFIL_STEPS }, { ids: UNAUTH_EXFIL_WIDENERS }, { capabilities: ['unauth-foothold'] }, { capabilities: ['code-exec', 'data-read-bulk', 'data-write'] }],
+      preconditions: [{ ids: GUEST_EXPOSURE }, { ids: UNAUTH_EXFIL_STEPS }, { ids: UNAUTH_EXFIL_WIDENERS }, { capabilities: ['unauth-foothold'] }, { capabilities: UNAUTH_EXFIL_REACH }],
       breakPoint: 0,
       tactics: { entry: 'initial-access', goal: 'collection' },
       breakPointText:
@@ -334,12 +336,14 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     },
     match(present, active) {
       if (!has(present, 'unauth-foothold')) return null;
-      if (!hasAny(present, 'code-exec', 'data-read-bulk', 'data-write')) return null;
       // A surface and internal weaknesses are not a path: an unauthenticated visitor must be shown
       // to reach something.
       if (byIds(active, GUEST_EXPOSURE).length === 0) return null;
       const steps = byIds(active, UNAUTH_EXFIL_STEPS);
       if (steps.length < 2) return null;
+      // The bulk read, write or code execution must be the guest's own. An internal user's
+      // Modify All Data or an admin's Author Apex says nothing about what a visitor reaches.
+      if (!steps.some((s) => capabilitiesFor(s).grants.some((c) => UNAUTH_EXFIL_REACH.includes(c)))) return null;
       return [...steps, ...byIds(active, UNAUTH_EXFIL_WIDENERS)];
     },
   },

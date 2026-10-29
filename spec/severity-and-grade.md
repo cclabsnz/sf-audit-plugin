@@ -41,9 +41,10 @@ cites: INT-011
 
 ## RULE-071 Unauthenticated bulk exfiltration needs a confirmed guest exposure
 cites: INT-012, MN-056
-- When the findings include no guest exposure (guest object or record access, guest-executable Apex, a public external OWD, guest API access, guest user visibility, an unenforced guest record-access policy, or an unauthenticated email handler)
-- then `unauth-bulk-exfil` does not fire, however many surfaces exist (`guest-user-baseline`, `classic-sites-active`) or system-context flows and Apex the org runs
+- When the findings include no guest exposure (guest object or record access, guest-executable Apex, guest-readable records confirmed by `UserRecordAccess`, guest API access, guest user visibility, an unenforced guest record-access policy, or an unauthenticated email handler)
+- then `unauth-bulk-exfil` does not fire, however many surfaces exist (`guest-user-baseline`, `classic-sites-active`)
 - and when one is present, those surfaces still join the chain as steps
+- and the chain fires only when one of its guest-side steps grants bulk read, write or code execution: an internal user's View All Data, an admin's Author Apex, or Apex and Flow merely running without sharing (`portal-exposed-apex-without-sharing`, `flows-*-without-sharing`) neither open it nor join it, and the potential-chain pass does not pair a guest foothold with them either
 - and no potential chain starts from a surface alone: `guest-user-baseline` and `classic-sites-active` never supply its entry point
 
 ## RULE-072 Standard user to org takeover needs a low-trust entry and an escalation a non-admin can use

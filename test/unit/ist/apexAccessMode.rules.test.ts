@@ -36,11 +36,14 @@ const PROFILE = '00exx0000000001AAA';
  * Context for guest-executable-apex: one active guest user whose profile can execute exactly the
  * classes named in `guestClasses`. Queries are answered by content, not call order.
  */
+// The permission set the guest profile owns: SetupEntityAccess.ParentId holds this, never the profile Id.
+const GUEST_PERMSET = '0PSxx0000000001AAA';
 function guestCtx(guestClasses: string[], apexBodies: Body[]): AuditContext {
   const idOf = (n: string) => `01pxx${String(guestClasses.indexOf(n) + 1).padStart(10, '0')}AAA`;
   const queryAll = (jest.fn() as any).mockImplementation((q: string) => {
-    if (/SetupEntityAccess/i.test(q)) {
-      return Promise.resolve(guestClasses.map((n) => ({ SetupEntityId: idOf(n), ParentId: PROFILE })));
+    if (/PermissionSetAssignment/i.test(q)) return Promise.resolve([{ PermissionSetId: GUEST_PERMSET }]);
+    if (/SetupEntityAccess/i.test(q) && q.includes(GUEST_PERMSET)) {
+      return Promise.resolve(guestClasses.map((n) => ({ SetupEntityId: idOf(n), ParentId: GUEST_PERMSET })));
     }
     if (/FROM\s+User\b/i.test(q)) {
       return Promise.resolve([{ Id: '005xx0000000001AAA', ProfileId: PROFILE, Username: 'guest@acme.example' }]);

@@ -259,11 +259,12 @@ describe('RULE-116 chain steps follow the ATT&CK tactic order', () => {
     }
   });
 
+  // A low-trust source, not a guest one: a guest foothold pairs only with what the guest side grants.
   it('potential chains are ordered too', () => {
     const c = new ChainEngine()
-      .correlate(['hardcoded-credentials-found', 'guest-user-read-access'].map((id) => finding(id)))
+      .correlate(['hardcoded-credentials-found', 'auth-providers-social'].map((id) => finding(id)))
       .find((x) => x.confidence === 'potential')!;
-    expect(c.steps.map((s) => s.capability)).toEqual(['unauth-foothold', 'credential-theft']);
+    expect(c.steps.map((s) => s.capability)).toEqual(['low-trust-authenticated', 'credential-theft']);
   });
 
   it('credentials come before the egress that carries them out', () => {
