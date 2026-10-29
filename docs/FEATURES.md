@@ -90,7 +90,7 @@ this). Grouped by each check's declared `category`. Interface: src/checks/Securi
 | `enhanced-domains` | Enhanced Domains | Verifies Enhanced Domains is enabled | src/checks/impl/EnhancedDomainsCheck.ts |
 | `internal-user-mfa` | Internal User MFA Enforcement | Checks MFA enforcement for all active internal standard users | src/checks/impl/InternalUserMfaCheck.ts |
 | `auth-providers` | Auth Providers & External IdPs | Reviews configured Auth Providers and SAML SSO configurations | src/checks/impl/AuthProvidersCheck.ts |
-| `mfa-registration` | MFA Method Registration | Identifies active standard users who have not registered any MFA method in TwoFactorInfo | src/checks/impl/MfaRegistrationCheck.ts |
+| `mfa-registration` | MFA Method Registration | Identifies active standard users with no MFA method (authenticator app, Salesforce Authenticator, security key, built-in authenticator) in TwoFactorMethodsInfo; needs "Manage MFA in API" | src/checks/impl/MfaRegistrationCheck.ts |
 | `mfa-method-strength` | MFA Method Strength | Classifies registered MFA methods by strength (phishing-resistant / TOTP / weak) using Salesforce's guidance and NIST; flags admin users... | src/checks/impl/MfaMethodStrengthCheck.ts |
 
 ### Code Security

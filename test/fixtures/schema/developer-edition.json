@@ -18876,6 +18876,147 @@
     ]
    }
   },
+  "TwoFactorInfo": {
+   "CreatedById": {
+    "filterable": true,
+    "aggregatable": true,
+    "type": "reference",
+    "relationship": {
+     "name": "CreatedBy",
+     "to": [
+      "User"
+     ]
+    }
+   },
+   "CreatedDate": {
+    "filterable": true,
+    "aggregatable": true,
+    "type": "datetime"
+   },
+   "Id": {
+    "filterable": true,
+    "aggregatable": true,
+    "type": "id"
+   },
+   "IsDeleted": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "LastModifiedById": {
+    "filterable": true,
+    "aggregatable": true,
+    "type": "reference",
+    "relationship": {
+     "name": "LastModifiedBy",
+     "to": [
+      "User"
+     ]
+    }
+   },
+   "LastModifiedDate": {
+    "filterable": true,
+    "aggregatable": true,
+    "type": "datetime"
+   },
+   "SharedKey": {
+    "filterable": false,
+    "aggregatable": true,
+    "type": "string"
+   },
+   "SystemModstamp": {
+    "filterable": true,
+    "aggregatable": true,
+    "type": "datetime"
+   },
+   "Type": {
+    "filterable": true,
+    "aggregatable": true,
+    "type": "picklist",
+    "values": [
+     "TOTP"
+    ]
+   },
+   "UserId": {
+    "filterable": true,
+    "aggregatable": true,
+    "type": "reference",
+    "relationship": {
+     "name": "User",
+     "to": [
+      "User"
+     ]
+    }
+   }
+  },
+  "TwoFactorMethodsInfo": {
+   "ExternalId": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "string"
+   },
+   "HasBuiltInAuthenticator": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "HasSalesforceAuthenticator": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "HasSecurityKey": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "HasTempCode": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "HasTotp": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "HasU2F": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "HasUserVerifiedEmailAddress": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "HasUserVerifiedMobileNumber": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "HasVerifiedMobileNumber": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "boolean"
+   },
+   "Id": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "id"
+   },
+   "UserId": {
+    "filterable": true,
+    "aggregatable": false,
+    "type": "reference",
+    "relationship": {
+     "name": "User",
+     "to": [
+      "User"
+     ]
+    }
+   }
+  },
   "User": {
    "AboutMe": {
     "filterable": true,

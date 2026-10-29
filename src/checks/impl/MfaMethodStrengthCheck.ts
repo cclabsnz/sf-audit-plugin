@@ -47,7 +47,7 @@ export class MfaMethodStrengthCheck implements SecurityCheck {
         inconclusive: true,
         title: 'No MFA registration data available: MfaRegistrationCheck must run first',
         detail:
-          'MFA registration data was not gathered: either MfaRegistrationCheck did not run, or TwoFactorInfo could not be read. MFA method strength analysis cannot be performed without this data.',
+          'MFA registration data was not gathered: either MfaRegistrationCheck did not run, or TwoFactorMethodsInfo could not be read (it needs "Manage MFA in API"; see PERMISSIONS.md). MFA method strength analysis cannot be performed without this data.',
         remediation:
           'Ensure MfaRegistrationCheck runs before this check. Grant "Manage Multi-Factor Authentication in API" permission to the audit user.',
       });

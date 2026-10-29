@@ -50,7 +50,7 @@ export const AUDIT_PERMISSIONS: Readonly<Record<AuditPermission, PermissionSpec>
     field: 'PermissionsViewAllUsers',
     label: 'View All Users',
     impact:
-      'Enumerates every User, PermissionSetAssignment and TwoFactorInfo org-wide. Without it the user, ' +
+      'Enumerates every User and PermissionSetAssignment org-wide. Without it the user, ' +
       'admin and MFA checks under-count and miss accounts outside the role hierarchy.',
     cacheKeys: ['mfaRegistrations', 'effectivePermissions'],
   },
