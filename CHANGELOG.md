@@ -9,6 +9,11 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.23.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.23.0) — 2026-10-29
+
+Attack chains and checks now match what the platform does. One chain is re-rated, so some grades may
+rise.
+
 ### Changed
 
 - **`cred-theft-pivot` is rated HIGH, not CRITICAL.** Its secret is found by pattern match. Its egress steps are mostly the org's own registered endpoints, which give an attacker who holds the secret nothing new. Orgs where this chain fires no longer count it as a critical chain in the grade.
