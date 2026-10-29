@@ -60,7 +60,7 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 | Data Classification & Encryption | Field data classification usage and Shield Platform Encryption |
 | Encryption Coverage for Sensitive Fields | Fields classified PII/PHI (ComplianceGroup) that are NOT encrypted at rest with Shield |
 | Sandbox Data Masking | In sandboxes, populated PII fields (likely unmasked production data); advises running Data Mask |
-| Flows Without Sharing | Active flows running in system context without sharing enforcement |
+| Flows Without Sharing | Active autolaunched and screen flows set to run in system context without sharing (Default Mode is not flagged: a screen flow then runs as the user, and an autolaunched flow started by a user runs as that user, inheriting the caller's context from Apex or automation; record-, schedule- and platform-event-triggered flows always run without sharing, have no setting to change, and are out of scope) |
 | Content Distribution Links | Public file links missing expiry or passwords, and stale records |
 | Public Static Resources & Documents | Documents marked externally available (anonymous URL access) and static resources cached publicly |
 | Data Cloud Data Space Isolation | Default Data Space over-sharing to external integrations, partner users, or agent users, and unconstrained Data Share Targets |

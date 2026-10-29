@@ -45,6 +45,7 @@ cites: INT-012, MN-056
 - then `unauth-bulk-exfil` does not fire, however many surfaces exist (`guest-user-baseline`, `classic-sites-active`)
 - and when one is present, those surfaces still join the chain as steps
 - and the chain fires only when one of its guest-side steps grants bulk read, write or code execution: an internal user's View All Data, an admin's Author Apex, or Apex and Flow merely running without sharing (`portal-exposed-apex-without-sharing`, `flows-*-without-sharing`) neither open it nor join it, and the potential-chain pass does not pair a guest foothold with them either
+- and the chain fires only when one step shows the guest reaching records (`guest-user-sharing-exposure`, `guest-object-exposure-public-owd`, `guest-object-exposure-guest-owned`, `guest-user-visibility-view-all-users`, `guest-executable-apex-unprotected`, `guest-record-access-policy-not-enforced`): guest object permissions, guest API access, or guest-callable Apex not shown to bypass sharing reach no record on their own, and the potential-chain pass emits no guest-foothold chain without one of these either
 - and no potential chain starts from a surface alone: `guest-user-baseline` and `classic-sites-active` never supply its entry point
 
 ## RULE-072 Standard user to org takeover needs a low-trust entry and an escalation a non-admin can use

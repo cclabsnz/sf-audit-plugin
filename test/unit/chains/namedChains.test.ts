@@ -24,13 +24,15 @@ describe('NAMED_CHAINS', () => {
     );
   });
 
-  it('unauth-bulk-exfil fires for an API-enabled guest reaching a classic site surface', () => {
-    const findings = [f('guest-api-access-enabled'), f('classic-sites-active')];
+  // API access reaches no record on its own: secure guest record access leaves a guest nothing to
+  // read without a guest sharing rule, guest-owned records, or Apex that bypasses sharing.
+  it('unauth-bulk-exfil needs a step that reaches records, not API access to a site alone', () => {
     const chain = NAMED_CHAINS.find((c) => c.id === 'unauth-bulk-exfil')!;
-    const steps = chain.match(present(findings), findings);
-    expect(steps).not.toBeNull();
-    expect(steps!.map((s) => s.id)).toEqual(
-      expect.arrayContaining(['guest-api-access-enabled', 'classic-sites-active']),
+    const apiOnly = [f('guest-api-access-enabled'), f('classic-sites-active')];
+    expect(chain.match(present(apiOnly), apiOnly)).toBeNull();
+    const shared = [...apiOnly, f('guest-user-sharing-exposure')];
+    expect(chain.match(present(shared), shared)!.map((s) => s.id)).toEqual(
+      expect.arrayContaining(['guest-api-access-enabled', 'classic-sites-active', 'guest-user-sharing-exposure']),
     );
   });
 
@@ -125,8 +127,13 @@ describe('NAMED_CHAINS', () => {
     );
   });
 
+  // The guest OWD is Private on every object, User included, so the external OWD alone reaches no
+  // record: a guest sharing rule supplies the reach.
   it('unauth-bulk-exfil counts a guest Read grant on User as a step alongside a bulk path', () => {
-    const findings = [f('guest-user-visibility-owd'), f('guest-user-visibility-object-read')];
+    const chain0 = NAMED_CHAINS.find((c) => c.id === 'unauth-bulk-exfil')!;
+    const owdOnly = [f('guest-user-visibility-owd'), f('guest-user-visibility-object-read')];
+    expect(chain0.match(present(owdOnly), owdOnly)).toBeNull();
+    const findings = [...owdOnly, f('guest-user-sharing-exposure')];
     const chain = NAMED_CHAINS.find((c) => c.id === 'unauth-bulk-exfil')!;
     const steps = chain.match(present(findings), findings);
     expect(steps!.map((s) => s.id)).toContain('guest-user-visibility-object-read');

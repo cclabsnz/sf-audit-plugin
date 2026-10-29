@@ -119,6 +119,19 @@ export const UNAUTH_EXFIL_STEPS = [
   // is what opened the gate.
   'inbound-email-handler-unauthenticated-execution',
 ];
+// Steps that show a guest reaching records: a guest sharing rule, guest-owned or confirmed-readable
+// records, the User roster, or guest-callable Apex that runs without sharing. Object permissions,
+// API access, or guest-callable Apex not shown to bypass sharing (SYSTEM_MODE lifts CRUD/FLS only)
+// reach no record on their own: secure guest record access leaves the guest nothing to read.
+export const UNAUTH_RECORD_REACH = [
+  'guest-user-sharing-exposure', 'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
+  // Not 'guest-user-visibility-owd': the guest OWD is Private on every object, User included.
+  'guest-user-visibility-view-all-users',
+  'guest-executable-apex-unprotected',
+  // Secure guest record access is what makes the rest of this list necessary: with it off, legacy
+  // sharing and guest ownership reach records directly.
+  'guest-record-access-policy-not-enforced',
+];
 // What a guest-side step must grant for the visitor to reach data or run code.
 const UNAUTH_EXFIL_REACH: readonly Capability[] = ['code-exec', 'data-read-bulk', 'data-write'];
 // Internal-only weaknesses that widen what a foothold reaches. They join as evidence but
@@ -328,7 +341,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     abuseCase: {
       actor: 'an unauthenticated site visitor',
       goal: 'read or change business data in bulk without logging in',
-      preconditions: [{ ids: GUEST_EXPOSURE }, { ids: UNAUTH_EXFIL_STEPS }, { ids: UNAUTH_EXFIL_WIDENERS }, { capabilities: ['unauth-foothold'] }, { capabilities: UNAUTH_EXFIL_REACH }],
+      preconditions: [{ ids: GUEST_EXPOSURE }, { ids: UNAUTH_EXFIL_STEPS }, { ids: UNAUTH_EXFIL_WIDENERS }, { capabilities: ['unauth-foothold'] }, { capabilities: UNAUTH_EXFIL_REACH }, { ids: UNAUTH_RECORD_REACH }],
       breakPoint: 0,
       tactics: { entry: 'initial-access', goal: 'collection' },
       breakPointText:
@@ -344,6 +357,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       // The bulk read, write or code execution must be the guest's own. An internal user's
       // Modify All Data or an admin's Author Apex says nothing about what a visitor reaches.
       if (!steps.some((s) => capabilitiesFor(s).grants.some((c) => UNAUTH_EXFIL_REACH.includes(c)))) return null;
+      if (byIds(steps, UNAUTH_RECORD_REACH).length === 0) return null;
       return [...steps, ...byIds(active, UNAUTH_EXFIL_WIDENERS)];
     },
   },

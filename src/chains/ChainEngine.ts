@@ -6,7 +6,7 @@ import type { Capability } from './Capability.js';
 import { SOURCE_CAPS, HIGH_IMPACT_SINKS } from './Capability.js';
 import { capabilitiesFor } from './CapabilityRegistry.js';
 import { orderStepsByTactic, techniquesForGrant } from '../threats/attack.js';
-import { NAMED_CHAINS, UNAUTH_EXFIL_STEPS, inGroup, type NamedChainDef } from './namedChains.js';
+import { NAMED_CHAINS, UNAUTH_EXFIL_STEPS, UNAUTH_RECORD_REACH, inGroup, type NamedChainDef } from './namedChains.js';
 
 const SEVERITY_ORDER: Record<RiskLevel, number> = {
   CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4,
@@ -148,6 +148,8 @@ export class ChainEngine {
       // A guest reaches only what the guest side grants: an internal user's View All Data or an
       // admin's Author Apex is no sink for an unauthenticated foothold (as in unauth-bulk-exfil).
       const reaches = (f: Finding): boolean => src !== 'unauth-foothold' || UNAUTH_EXFIL_STEPS.includes(f.id);
+      // Nor is a guest path potential when no step shows the guest reaching a record.
+      if (src === 'unauth-foothold' && !active.some((f) => UNAUTH_RECORD_REACH.includes(f.id))) continue;
       for (const sink of HIGH_IMPACT_SINKS) {
         if (!present.has(sink)) continue;
         if (!active.some((f) => reaches(f) && (grantsByFinding.get(f) ?? []).includes(sink))) continue;

@@ -137,14 +137,15 @@ describe('GuestUserAccessCheck', () => {
     expect(f!.title).toContain('3');
   });
 
-  it('only counts sharing rows whose RowCause is SharingRule', async () => {
+  // 'SharingRule' is not a RowCause value; it matched nothing and hid every guest sharing rule.
+  it('only counts sharing rows written by sharing rules or guest sharing rules', async () => {
     const seen: string[] = [];
     await check.run(makeCtx({
       queryAll: router({ users: [guest()] }),
       query: (s) => { seen.push(s); return Promise.resolve({ records: [] }); },
     }));
     expect(seen.length).toBeGreaterThan(0);
-    for (const s of seen) expect(s).toMatch(/RowCause\s*=\s*'SharingRule'/i);
+    for (const s of seen) expect(s).toMatch(/RowCause IN \('Rule', 'GuestRule'\)/);
   });
 
   it('falls back to the baseline finding when guests exist but hold no access', async () => {

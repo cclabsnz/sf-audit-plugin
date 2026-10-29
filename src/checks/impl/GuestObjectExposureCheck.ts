@@ -141,7 +141,8 @@ export class GuestObjectExposureCheck implements SecurityCheck {
       findings.push(this.inconclusive('guest-object-exposure-objperms-inaccessible', 'Guest object permissions could not be queried'));
       return { findings };
     }
-    const writable = new Set(perms.filter((p) => p.PermissionsCreate || p.PermissionsEdit || p.PermissionsDelete).map((p) => p.SobjectType));
+    // Guests can hold only Read and Create object permissions since Winter '21.
+    const writable = new Set(perms.filter((p) => p.PermissionsCreate).map((p) => p.SobjectType));
     const readable = [...new Set(perms.map((p) => p.SobjectType))];
     if (readable.length === 0) {
       findings.push(this.ok(guests.length, 0));
@@ -213,7 +214,7 @@ export class GuestObjectExposureCheck implements SecurityCheck {
         remediation:
           'Remove or narrow the guest sharing rules on these objects, and remove Read from the guest profile/permission sets unless a specific public dataset is intended. Then verify no guest-accessible Apex returns the data.',
         affectedItems: reachablePublic.map((e) => ({
-          label: `${e.obj} (external OWD: ${e.owd}${e.write ? ', guest WRITE too' : ''})`,
+          label: `${e.obj} (external OWD: ${e.owd}${e.write ? ', guest Create permission too' : ''})`,
           url: `${baseUrl}/lightning/setup/SecuritySharing/page`,
           note: this.evidenceNote(e),
         })),
@@ -230,7 +231,7 @@ export class GuestObjectExposureCheck implements SecurityCheck {
         remediation:
           'Remove Read from the guest profile/permission sets unless a specific public dataset is intended, and review the guest sharing rules on these objects. Setting the external OWD to Private also limits what logged-in external users see.',
         affectedItems: unconfirmedPublic.map((e) => ({
-          label: `${e.obj} (external OWD: ${e.owd}${e.write ? ', guest WRITE too' : ''})`,
+          label: `${e.obj} (external OWD: ${e.owd}${e.write ? ', guest Create permission too' : ''})`,
           url: `${baseUrl}/lightning/setup/SecuritySharing/page`,
           note: this.evidenceNote(e),
         })),
@@ -246,9 +247,9 @@ export class GuestObjectExposureCheck implements SecurityCheck {
           'The guest user OWNS records in these objects (typically public-form submissions created as the guest user). An owner can always read its own records, so neither a Private OWD nor secure guest record access protects them, and the UI API models the object, so all guest-owned records are readable unauthenticated in bulk. ' +
           uiApiNote,
         remediation:
-          'Reparent guest-created records to a default or integration owner (enable "Assign records created by guest users to the default owner" and "Secure guest user record access"), and remove Read on these objects from the guest profile.',
+          'Reassign the records the guest user owns to an internal user or queue, and remove Read on these objects from the guest profile. Since Winter \'21 the platform assigns new guest-created records to the site\'s default record owner, so most of these predate that; Web-to-Case can still leave the site guest user as case owner, so check that an assignment rule or flow reassigns new cases.',
         affectedItems: reachableOwned.map((e) => ({
-          label: `${e.obj}: ${e.count} guest-owned record(s)${e.write ? ' (guest WRITE too)' : ''}`,
+          label: `${e.obj}: ${e.count} guest-owned record(s)${e.write ? ' (guest Create permission too)' : ''}`,
           url: `${baseUrl}/${e.obj}`,
           note: this.evidenceNote(e),
         })),
@@ -265,7 +266,7 @@ export class GuestObjectExposureCheck implements SecurityCheck {
         remediation:
           'Remove Read from the guest profile/permission sets for these objects unless specifically required. Because they are not UI-API-modelled they are lower priority than the CRITICAL findings, but a stripped guest profile should not hold these grants at all.',
         affectedItems: sharingOnly.map((e) => ({
-          label: `${e.obj} (${e.kind === 'public' ? `external OWD: ${e.owd}` : `${e.count} guest-owned`}${e.write ? ', guest WRITE too' : ''})`,
+          label: `${e.obj} (${e.kind === 'public' ? `external OWD: ${e.owd}` : `${e.count} guest-owned`}${e.write ? ', guest Create permission too' : ''})`,
           url: `${baseUrl}/lightning/setup/SecuritySharing/page`,
           note: 'Sharing-readable; UI API object-info = not modelled (not GraphQL-reachable)',
         })),

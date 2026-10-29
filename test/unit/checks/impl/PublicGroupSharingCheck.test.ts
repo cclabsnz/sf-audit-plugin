@@ -102,7 +102,8 @@ describe('PublicGroupSharingCheck', () => {
       query: (s) => { seen.push(s); return Promise.resolve({ records: [] }); },
     }));
     expect(seen).toHaveLength(ALL_TABLES.length);
-    for (const s of seen) expect(s).toMatch(/RowCause\s*=\s*'SharingRule'/i);
+    // 'SharingRule' is not a RowCause value; sharing rules write 'Rule'.
+    for (const s of seen) expect(s).toMatch(/RowCause = 'Rule'\s/);
   });
 
   /**

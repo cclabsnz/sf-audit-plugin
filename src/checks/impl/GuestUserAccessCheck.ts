@@ -135,13 +135,15 @@ export class GuestUserAccessCheck implements SecurityCheck {
     const sharingExposures: SharingExposure[] = [];
     const userIdList = guestUsers.map((u) => `'${u.Id}'`).join(', ');
 
+    // Sharing rules write RowCause 'Rule'; guest user sharing rules write 'GuestRule'. There is no
+    // 'SharingRule' value: a filter on it matches no row and hid every guest sharing rule.
     for (const shareTable of SHARE_TABLES) {
       try {
         const result = await ctx.soql.query<SharingCountRecord>(
           `SELECT UserOrGroupId, COUNT(Id) cnt
            FROM ${shareTable}
            WHERE UserOrGroupId IN (${userIdList})
-             AND RowCause = 'SharingRule'
+             AND RowCause IN ('Rule', 'GuestRule')
            GROUP BY UserOrGroupId`
         );
         const totalCount = result.records.reduce((sum, r) => sum + (r.cnt ?? 0), 0);

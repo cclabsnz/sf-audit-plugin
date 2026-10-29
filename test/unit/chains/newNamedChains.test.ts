@@ -117,6 +117,30 @@ describe('named chain wording and step roles', () => {
       .toContain('guest-executable-apex-unprotected');
   });
 
+  // Guest-callable code that keeps sharing reaches no record when nothing is shared to the guest.
+  it.each(['guest-executable-apex-exposed', 'guest-executable-apex-system-mode', 'guest-api-access-enabled'])(
+    'unauth-bulk-exfil does not fire on %s without a step that reaches records',
+    (id) => {
+      const guest = [f('guest-user-read-access'), f('guest-user-baseline'), f(id)];
+      expect(match('unauth-bulk-exfil', guest)).toBeNull();
+      expect(match('unauth-bulk-exfil', [...guest, f('guest-user-sharing-exposure')])).not.toBeNull();
+    },
+  );
+
+  // The potential-chain pass must not report, at HIGH, the guest path the named chain declined.
+  it.each([
+    [['guest-api-access-enabled', 'classic-sites-active']],
+    [['guest-api-hard-delete', 'guest-user-baseline']],
+    [['guest-user-write-access', 'guest-user-baseline']],
+  ])('no chain at all starts from a guest foothold for %j', (ids) => {
+    const chains = new ChainEngine().correlate(ids.map((id) => f(id)));
+    expect(chains.filter((c) => c.steps.some((s) => ids.includes(s.findingId)))).toEqual([]);
+  });
+
+  it('counts an unenforced secure guest record access setting as record reach', () => {
+    expect(match('unauth-bulk-exfil', [f('guest-record-access-policy-not-enforced'), f('guest-api-access-enabled')])).not.toBeNull();
+  });
+
   // Nor may the potential-chain pass pair the guest foothold with those internal grants instead.
   it.each([
     [['users-modify-all-data', 'users-author-apex']],

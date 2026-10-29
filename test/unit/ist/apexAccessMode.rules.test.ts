@@ -306,9 +306,10 @@ describe('RULE-006 The new findings are wired into attack-chain correlation', ()
     expect(grants).not.toContain('data-read-bulk');
   });
 
+  // Both keep sharing, so neither reaches a record by itself: they join beside a guest sharing rule.
   it('RULE-006: guest-executable-apex-system-mode is a step in unauth-bulk-exfil, like guest-executable-apex-exposed', () => {
     for (const id of ['guest-executable-apex-system-mode', 'guest-executable-apex-exposed']) {
-      const fs = [f('guest-user-baseline'), f('guest-user-read-access'), f(id)];
+      const fs = [f('guest-user-baseline'), f('guest-user-read-access'), f('guest-user-sharing-exposure'), f(id)];
       const steps = chain().match(present(fs), fs);
       expect(steps).not.toBeNull();
       expect(steps!.map((s) => s.id)).toContain(id);
