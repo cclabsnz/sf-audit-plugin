@@ -1,6 +1,6 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import { testApexPattern } from '@cclabsnz/sf-core';
-import { apexCode, codeWithoutStrings, DML_AS_USER, usesSystemMode } from '../support/apexAccess.js';
+import { apexApiVersions, apexCode, codeWithoutStrings, DML_AS_USER, OMITTED_SHARING_ENFORCED_FROM, usesSystemMode } from '../support/apexAccess.js';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
@@ -51,6 +51,11 @@ export class ApexCrudFLSCheck implements SecurityCheck {
     const withoutSharingNoFls: string[] = [];
     const withDmlNoFls: string[] = [];
     const systemMode: { name: string; withoutSharing: boolean }[] = [];
+    // From API 67.0 (Summer '26) SOQL, SOSL, DML and Database methods run in user mode unless they
+    // say otherwise, so a class saved at 67.0 or later enforces CRUD/FLS by default (spec RULE-009).
+    // SYSTEM_MODE is still reported above that default.
+    const versions = await apexApiVersions(ctx);
+    let userModeByDefault = 0;
 
     // apexBodies is pre-filtered by HardcodedCredentialsCheck, which excludes @IsTest classes
     // before populating the cache. There is deliberately no second guard here: a cache miss
@@ -72,6 +77,11 @@ export class ApexCrudFLSCheck implements SecurityCheck {
       if (!hasDml && !hasSoql) continue;
 
       if (testApexPattern(body, IS_BATCH_OR_SCHEDULED)) continue;
+
+      if ((versions.get(name.toLowerCase()) ?? 0) >= OMITTED_SHARING_ENFORCED_FROM) {
+        userModeByDefault++;
+        continue;
+      }
 
       // Enforcement must be code, not text: 'WITH USER_MODE' inside a debug string enforces nothing.
       const enforcementCode = codeWithoutStrings(raw);
@@ -146,7 +156,7 @@ export class ApexCrudFLSCheck implements SecurityCheck {
         riskLevel: 'LOW',
         passed: true,
         title: 'All scanned Apex classes with DML/SOQL include CRUD/FLS permission checks',
-        detail: 'No Apex classes were found performing DML or SOQL without corresponding object-level or field-level security checks. This scan covers non-test, non-batch classes in the org namespace.',
+        detail: `No Apex classes were found performing DML or SOQL without corresponding object-level or field-level security checks. This scan covers non-test, non-batch classes in the org namespace.${userModeByDefault > 0 ? ` ${userModeByDefault} class(es) saved at API 67.0 or later rely on user mode, the default for their queries and DML from that version.` : ''}`,
         remediation: 'Continue monitoring as new Apex classes are developed.',
       });
     }

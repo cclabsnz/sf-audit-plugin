@@ -75,9 +75,12 @@ const byPrefixes = (active: Finding[], prefixes: readonly string[]): Finding[] =
 export const GUEST_EXPOSURE = [
   'guest-user-read-access', 'guest-user-write-access', 'guest-user-sharing-exposure',
   'guest-executable-apex-unprotected', 'guest-executable-apex-exposed', 'guest-executable-apex-system-mode',
-  'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
+  'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned', 'guest-object-exposure-guest-shared',
   'guest-api-access-enabled', 'guest-api-hard-delete',
-  'guest-user-visibility-view-all-users', 'guest-user-visibility-owd', 'guest-user-visibility-object-read',
+  // Not 'guest-user-visibility-owd': the User external OWD reaches logged-in external users, not guests.
+  // Not 'guest-site-options-member-visibility': a site's member list is no foothold into org data,
+  // and this list also gates the low-trust chains (LOW_TRUST_ENTRY).
+  'guest-user-visibility-view-all-users',
   'guest-record-access-policy-not-enforced',
   'inbound-email-handler-unauthenticated-execution',
 ];
@@ -85,7 +88,7 @@ export const GUEST_EXPOSURE = [
 // Ways in for a low-trust principal: external users with public sharing, social sign-on,
 // self-registration, or a confirmed guest exposure. RULE-072.
 export const LOW_TRUST_ENTRY = [
-  'sharing-model-external-read', 'sharing-model-external-write',
+  'sharing-model-external-read', 'sharing-model-external-write', 'guest-user-visibility-owd',
   'auth-providers-social', 'experience-cloud-site-self-registration',
   ...GUEST_EXPOSURE,
 ];
@@ -104,32 +107,50 @@ export const NON_ADMIN_ESCALATION = [
 export const UNAUTH_EXFIL_STEPS = [
   'guest-user-read-access', 'guest-user-write-access', 'guest-user-sharing-exposure', 'guest-user-baseline',
   'guest-executable-apex-unprotected', 'guest-executable-apex-exposed', 'guest-executable-apex-system-mode',
-  'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
+  'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned', 'guest-object-exposure-guest-shared',
   'guest-api-access-enabled', 'guest-api-hard-delete', 'classic-sites-active',
-  'guest-user-visibility-view-all-users', 'guest-user-visibility-owd', 'guest-user-visibility-object-read',
+  'guest-user-visibility-view-all-users', 'guest-site-options-member-visibility',
   // Not 'sharing-model-external-*': since Winter '21 guest record access is always secured, so the
   // external OWD reaches logged-in portal users, not guests. Those findings drive the low-trust chains.
-  'portal-exposed-apex-without-sharing',
+  // Not 'portal-exposed-apex-without-sharing' or 'flows-*-without-sharing' either: they flag any
+  // @AuraEnabled class or any Flow, which a logged-in user may be the only one able to call. The
+  // guest-side counterpart is 'guest-executable-apex-*', read from the guest profile's class access.
   'field-level-security-high', 'field-level-security-medium',
-  // The guardrail whose absence lets guest-owned records defeat a Private OWD, and the Flow
-  // analogue of portal-exposed Apex running without sharing.
+  // The guardrail whose absence lets guest-owned records defeat a Private OWD.
   'guest-record-access-policy-not-enforced',
-  'flows-autolaunched-without-sharing', 'flows-screen-without-sharing',
   // An open inbound email handler grants unauth-foothold, so it must appear whenever it
   // is what opened the gate.
   'inbound-email-handler-unauthenticated-execution',
 ];
+// Steps that show a guest reaching records: a guest sharing rule, guest-owned or confirmed-readable
+// records, the User roster, or guest-callable Apex that runs without sharing. Object permissions,
+// API access, or guest-callable Apex not shown to bypass sharing (SYSTEM_MODE lifts CRUD/FLS only)
+// reach no record on their own: secure guest record access leaves the guest nothing to read.
+export const UNAUTH_RECORD_REACH = [
+  'guest-user-sharing-exposure', 'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
+  'guest-object-exposure-guest-shared',
+  // Not 'guest-user-visibility-owd': the guest OWD is Private on every object, User included.
+  // Not 'guest-site-options-member-visibility': it shows a site's members, not business records.
+  'guest-user-visibility-view-all-users',
+  'guest-executable-apex-unprotected',
+  // Secure guest record access is what makes the rest of this list necessary: with it off, legacy
+  // sharing and guest ownership reach records directly.
+  'guest-record-access-policy-not-enforced',
+];
+// What a guest-side step must grant for the visitor to reach data or run code.
+const UNAUTH_EXFIL_REACH: readonly Capability[] = ['code-exec', 'data-read-bulk', 'data-write'];
 // Internal-only weaknesses that widen what a foothold reaches. They join as evidence but
 // never count toward the floor: without a guest-side step they describe no unauthenticated path.
 export const UNAUTH_EXFIL_WIDENERS = ['data-cloud-data-space-default-overshared', 'restriction-rules-inactive'];
 
 export const GUEST_TRAFFIC = ['guest-traffic-anomaly-recon', 'guest-traffic-anomaly-anonymizer'];
 // A readable User roster counts as an exposed surface in its own right — recon against an org
-// that leaks its staff list is the same incident. The object-level Read grant is excluded: on
-// its own it is not a confirmed exposure, and this chain asserts one already in progress.
+// that leaks its staff list is the same incident.
+// Records shared with guests are left out: a site publishes those on purpose, and they are reads,
+// not the bulk surface this chain needs.
 export const GUEST_BULK_SURFACE = [
-  'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
-  'guest-user-visibility-view-all-users', 'guest-user-visibility-owd',
+  'guest-object-exposure-guest-owned',
+  'guest-user-visibility-view-all-users',
 ];
 
 // Admin powers: they widen what a takeover reaches but are not themselves the escalation.
@@ -243,6 +264,8 @@ export const SELF_REGISTRATION = ['experience-cloud-site-self-registration'];
 // licence, which generally has no report access at all, so including it would overstate reach.
 export const PORTAL_REACH = [
   'sharing-model-external-read', 'sharing-model-external-write',
+  // A public external OWD on User shows every logged-in external user the staff roster.
+  'guest-user-visibility-owd',
   'portal-exposed-apex-without-sharing',
   'flows-autolaunched-without-sharing', 'flows-screen-without-sharing',
   'apex-rest-without-sharing',
@@ -310,8 +333,8 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     title: 'Unauthenticated bulk exfiltration',
     severity: 'CRITICAL',
     narrative:
-      'An unauthenticated guest foothold combines with guest-reachable code execution or public ' +
-      'external sharing to read business data in bulk without any login. In practice this is ' +
+      'An unauthenticated guest foothold combines with guest-reachable code execution or guest ' +
+      'record access to read business data in bulk without any login. In practice this is ' +
       'reached over the site\'s Aura endpoint (/s/sfsites/aura) with aura.token=null: ' +
       'RecordUiController/ACTION$executeGraphQL returns record data the guest user can see, and ' +
       'aura.ApexAction.execute invokes @AuraEnabled Apex — which, in a class that runs without ' +
@@ -319,14 +342,14 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       'No credentials are involved at any point, so login-based controls (MFA, IP ranges, SSO) ' +
       'never engage.',
     remediation:
-      'Remove guest object/sharing access, ensure no guest-invokable Apex runs without sharing, ' +
-      'and set external OWD to Private. Grant portal access only via sharing sets. Because the ' +
+      'Remove guest object permissions and guest sharing rules, and ensure no guest-invokable Apex ' +
+      'runs without sharing. Because the ' +
       'requests never reach a login page, tightening authentication does not mitigate this — the ' +
       'object permissions, sharing model and Apex sharing declarations are the controls that apply.',
     abuseCase: {
       actor: 'an unauthenticated site visitor',
       goal: 'read or change business data in bulk without logging in',
-      preconditions: [{ ids: GUEST_EXPOSURE }, { ids: UNAUTH_EXFIL_STEPS }, { ids: UNAUTH_EXFIL_WIDENERS }, { capabilities: ['unauth-foothold'] }, { capabilities: ['code-exec', 'data-read-bulk', 'data-write'] }],
+      preconditions: [{ ids: GUEST_EXPOSURE }, { ids: UNAUTH_EXFIL_STEPS }, { ids: UNAUTH_EXFIL_WIDENERS }, { capabilities: ['unauth-foothold'] }, { capabilities: UNAUTH_EXFIL_REACH }, { ids: UNAUTH_RECORD_REACH }],
       breakPoint: 0,
       tactics: { entry: 'initial-access', goal: 'collection' },
       breakPointText:
@@ -334,12 +357,15 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     },
     match(present, active) {
       if (!has(present, 'unauth-foothold')) return null;
-      if (!hasAny(present, 'code-exec', 'data-read-bulk', 'data-write')) return null;
       // A surface and internal weaknesses are not a path: an unauthenticated visitor must be shown
       // to reach something.
       if (byIds(active, GUEST_EXPOSURE).length === 0) return null;
       const steps = byIds(active, UNAUTH_EXFIL_STEPS);
       if (steps.length < 2) return null;
+      // The bulk read, write or code execution must be the guest's own. An internal user's
+      // Modify All Data or an admin's Author Apex says nothing about what a visitor reaches.
+      if (!steps.some((s) => capabilitiesFor(s).grants.some((c) => UNAUTH_EXFIL_REACH.includes(c)))) return null;
+      if (byIds(steps, UNAUTH_RECORD_REACH).length === 0) return null;
       return [...steps, ...byIds(active, UNAUTH_EXFIL_WIDENERS)];
     },
   },

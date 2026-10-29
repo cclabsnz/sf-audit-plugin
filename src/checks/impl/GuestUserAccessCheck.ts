@@ -1,6 +1,7 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { guestPrincipals, guestReadsSample, guestShareCount } from '../support/guestShares.js';
 
 interface UserRecord {
   Id: string;
@@ -17,14 +18,10 @@ interface ObjectPermissionRecord {
   PermissionsRead: boolean;
 }
 
-interface SharingCountRecord {
-  UserOrGroupId: string;
-  cnt: number;
-}
-
 const STANDARD_OBJECTS = ['Account', 'Contact', 'Case', 'Lead', 'Opportunity'] as const;
 const HEALTH_CLOUD_OBJECTS = ['CarePlan__c', 'CareTeamMember__c', 'EhrPatient__c'] as const;
-const SHARE_TABLES = ['AccountShare', 'CaseShare', 'ContactShare', 'OpportunityShare'] as const;
+// The standard objects whose guest shares this check reports; GuestObjectExposureCheck covers the rest.
+const SHARED_OBJECTS = ['Account', 'Case', 'Contact', 'Opportunity'] as const;
 
 export class GuestUserAccessCheck implements SecurityCheck {
   readonly id = 'guest-user-access';
@@ -57,14 +54,24 @@ export class GuestUserAccessCheck implements SecurityCheck {
       return { findings };
     }
 
-    // Build profile → users map and unique profile ID list for batch queries
-    const profileUserMap = new Map<string, UserRecord[]>();
-    for (const user of guestUsers) {
-      const list = profileUserMap.get(user.ProfileId) ?? [];
-      list.push(user);
-      profileUserMap.set(user.ProfileId, list);
+    // ObjectPermissions.ParentId is a permission set Id, never a profile Id: a profile's object
+    // permissions sit on the permission set it owns. The guests' assignments cover that one and any
+    // permission set assigned to a guest. (Filtering ParentId on profile Ids matched nothing.)
+    const userById = new Map(guestUsers.map((u) => [u.Id, u]));
+    const guestsByPermSet = new Map<string, UserRecord[]>();
+    try {
+      const assignments = await ctx.soql.queryAll<{ AssigneeId: string; PermissionSetId: string }>(
+        `SELECT AssigneeId, PermissionSetId FROM PermissionSetAssignment WHERE AssigneeId IN (${guestUsers.map((u) => `'${u.Id}'`).join(', ')})`,
+      );
+      for (const a of assignments) {
+        const u = userById.get(a.AssigneeId);
+        if (!u) continue;
+        guestsByPermSet.set(a.PermissionSetId, [...(guestsByPermSet.get(a.PermissionSetId) ?? []), u]);
+      }
+    } catch {
+      // Unreadable: object access is then not judged (no read or write finding).
     }
-    const profileIds = [...profileUserMap.keys()];
+    const permSetIds = [...guestsByPermSet.keys()];
 
     // Determine which objects to check (include HC objects only if installed)
     const objectsToCheck: string[] = [...STANDARD_OBJECTS];
@@ -89,18 +96,20 @@ export class GuestUserAccessCheck implements SecurityCheck {
     const writeViolations: WriteViolation[] = [];
     const readViolations: ReadViolation[] = [];
 
-    // Single batch query: all profiles × all objects (replaces per-profile loop)
-    const profileIdList = profileIds.map((id) => `'${id}'`).join(', ');
+    // One batch query: every guest permission set × every object.
     const objectList = objectsToCheck.map((o) => `'${o}'`).join(', ');
-    try {
+    // Objects some guest can read, for the share-table fallback below; null when unknown.
+    let guestReadable: Set<string> | null = permSetIds.length === 0 ? new Set() : null;
+    if (permSetIds.length > 0) try {
       const perms = await ctx.soql.queryAll<ObjectPermissionRecord>(
         `SELECT ParentId, SobjectType, PermissionsCreate, PermissionsEdit, PermissionsDelete, PermissionsRead
          FROM ObjectPermissions
-         WHERE ParentId IN (${profileIdList})
+         WHERE ParentId IN (${permSetIds.map((id) => `'${id}'`).join(', ')})
            AND SobjectType IN (${objectList})`
       );
+      guestReadable = new Set(perms.filter((p) => p.PermissionsRead).map((p) => p.SobjectType));
       for (const perm of perms) {
-        const profileUsers = profileUserMap.get(perm.ParentId) ?? [];
+        const profileUsers = guestsByPermSet.get(perm.ParentId) ?? [];
         if (perm.PermissionsCreate || perm.PermissionsEdit || perm.PermissionsDelete) {
           for (const u of profileUsers) {
             writeViolations.push({
@@ -126,31 +135,31 @@ export class GuestUserAccessCheck implements SecurityCheck {
       // Skip on error
     }
 
-    // Check sharing rules targeting guest users.
-    // One query per share table (not per user) using GROUP BY — reduces N×4 to 4 queries.
+    // Share rows giving guests access: guest user sharing rules (and the parent access they imply),
+    // and legacy manual, Apex and group shares that Winter '21 did not remove (support/guestShares).
+    // When the share table shows none (Contact controlled by its parent, a share the table does not
+    // show) or cannot be read, UserRecordAccess on a sample is asked instead.
     interface SharingExposure {
       shareTable: string;
-      count: number;
+      count?: number;
     }
     const sharingExposures: SharingExposure[] = [];
-    const userIdList = guestUsers.map((u) => `'${u.Id}'`).join(', ');
-
-    for (const shareTable of SHARE_TABLES) {
-      try {
-        const result = await ctx.soql.query<SharingCountRecord>(
-          `SELECT UserOrGroupId, COUNT(Id) cnt
-           FROM ${shareTable}
-           WHERE UserOrGroupId IN (${userIdList})
-             AND RowCause = 'SharingRule'
-           GROUP BY UserOrGroupId`
-        );
-        const totalCount = result.records.reduce((sum, r) => sum + (r.cnt ?? 0), 0);
-        if (totalCount > 0) {
-          sharingExposures.push({ shareTable, count: totalCount });
-        }
-      } catch {
-        // Object may not be accessible — skip silently
+    const guestIds = guestUsers.map((u) => u.Id);
+    const guestIdList = guestIds.map((i) => `'${i}'`).join(', ');
+    const principals = await guestPrincipals(ctx, guestIds);
+    for (const obj of SHARED_OBJECTS) {
+      // Null: the share table could not be read (or the object is not shareable in this org).
+      const count = await guestShareCount(ctx, obj, principals);
+      if (count !== null && count > 0) {
+        sharingExposures.push({ shareTable: `${obj}Share`, count });
+        continue;
       }
+      // The fallback asks only where a guest can read the object (a read without object access is
+      // no exposure; unknown access is asked), and not where the guest owns records: owned records
+      // are always readable and are reported as guest-object-exposure-guest-owned.
+      if (guestReadable !== null && !guestReadable.has(obj)) continue;
+      if (await this.guestOwns(ctx, obj, guestIdList)) continue;
+      if ((await guestReadsSample(ctx, obj, guestIds)) === true) sharingExposures.push({ shareTable: `${obj}Share` });
     }
 
     // Emit findings based on what was found
@@ -199,21 +208,26 @@ export class GuestUserAccessCheck implements SecurityCheck {
     }
 
     if (sharingExposures.length > 0) {
-      const count = sharingExposures.reduce((sum, e) => sum + e.count, 0);
+      const count = sharingExposures.reduce((sum, e) => sum + (e.count ?? 0), 0);
+      const confirmedOnly = sharingExposures.filter((e) => e.count === undefined).length;
       findings.push({
         id: 'guest-user-sharing-exposure',
         category: this.category,
         riskLevel: 'HIGH',
-        title: `${count} object sharing rule(s) expose records to guest users`,
+        title: count > 0
+          ? `${count} share row(s) give guest users access to Account, Case, Contact or Opportunity records${confirmedOnly > 0 ? `, and guests read records on ${confirmedOnly} more object(s)` : ''}`
+          : `Guest users can read Account, Case, Contact or Opportunity records on ${confirmedOnly} object(s)`,
         affectedItems: sharingExposures.map((e) => ({
           label: e.shareTable,
           url: `${baseUrl}/lightning/setup/SecuritySharing/page`,
-          note: `${e.count} sharing rule(s): review and remove guest-targeting rules`,
+          note: e.count !== undefined
+            ? `${e.count} share row(s) giving guests access: review the guest sharing rules and legacy shares`
+            : 'No share row seen, but UserRecordAccess confirms a guest user reads a sampled record',
         })),
         detail:
-          'Sharing rules targeting guest users can expose internal records to unauthenticated visitors.',
+          'Records on these objects are shared with guest users: by guest user sharing rules (and the parent access they imply), or by manual, Apex-managed or public-group shares made before Winter \'21, which the platform did not remove. Any unauthenticated visitor to the site can read the shared records.',
         remediation:
-          'Review and remove sharing rules that grant guest users access to Salesforce records. Use Experience Cloud sites with explicit data access controls instead.',
+          'Confirm the shared records are meant to be public. If not, narrow or remove the guest user sharing rules (Setup → Sharing Settings), delete manual and Apex shares to the guest user, and remove the guest user from public groups and queues.',
       });
     }
 
@@ -237,5 +251,13 @@ export class GuestUserAccessCheck implements SecurityCheck {
     }
 
     return { findings };
+  }
+
+  private async guestOwns(ctx: AuditContext, obj: string, guestIdList: string): Promise<boolean> {
+    try {
+      return (await ctx.soql.query<unknown>(`SELECT COUNT() FROM ${obj} WHERE OwnerId IN (${guestIdList})`)).totalSize > 0;
+    } catch {
+      return false;
+    }
   }
 }

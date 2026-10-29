@@ -6,6 +6,7 @@ interface LoginHistoryRecord {
   Id: string;
   UserId: string;
   LoginType: string;
+  LoginSubType?: string;
   LoginTime: string;
 }
 
@@ -26,14 +27,16 @@ export class SsoEnforcementCheck implements SecurityCheck {
 
     try {
       // Single query: recent credential logins over the past 30 days.
-      // Presence of 'Username-Password' logins is direct evidence that SBS-AUTH-001
-      // (org-wide SSO enforcement) is not fully applied.
+      // Logins with Salesforce credentials are direct evidence that SBS-AUTH-001 (org-wide SSO
+      // enforcement) is not fully applied. LoginSubType records them, through the UI or the OAuth
+      // username-password flow; LoginType has no 'Username-Password' value, so a filter on it
+      // matched nothing and every org passed.
       const result = await ctx.soql.queryAll<LoginHistoryRecord>(
         // LoginHistory carries no Username field and no User relationship; names are resolved below.
-        `SELECT Id, UserId, LoginType, LoginTime
+        `SELECT Id, UserId, LoginType, LoginSubType, LoginTime
          FROM LoginHistory
          WHERE LoginTime > LAST_N_DAYS:30
-           AND LoginType = 'Username-Password'
+           AND LoginSubType IN ('UI Username-Password', 'OAuth Username-Password')
          ORDER BY LoginTime DESC
          LIMIT 300`
       );

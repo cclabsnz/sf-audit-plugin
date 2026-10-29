@@ -38,4 +38,73 @@ describe('MfaRegistrationCheck', () => {
     expect(finding.passed).toBeUndefined();
     expect(finding.title).not.toMatch(/All 0/);
   });
+  // Registrations must cover the same users as the count (active, unfrozen), all of them.
+  it('drops frozen users from registrations and reads every page', async () => {
+    const queryAll = (jest.fn() as any).mockImplementation(async (q: string) => {
+      if (/FROM UserLogin/.test(q)) return [{ UserId: '005frozen' }];
+      return [
+        { UserId: '005a', User: { Username: 'a', Profile: { Name: 'P' } }, HasTotp: true },
+        { UserId: '005frozen', User: { Username: 'f', Profile: { Name: 'P' } }, HasTotp: true },
+      ];
+    });
+    const ctx = {
+      soql: {
+        query: (jest.fn() as any).mockResolvedValue({ totalSize: 1, done: true, records: [{ expr0: 2 }] }),
+        queryAll,
+      },
+      tooling: {}, rest: {},
+      orgInfo: { id: 'o', name: 'n', type: 'DE', isSandbox: false, instance: 'NA1', instanceUrl: 'https://x.my.salesforce.com' },
+      cache: {} as any,
+    } as unknown as AuditContext;
+    const r = await new MfaRegistrationCheck().run(ctx);
+    expect((ctx.cache as any).mfaRegistrations.map((m: any) => m.userId)).toEqual(['005a']);
+    expect(r.findings[0].title).toBe('1 of 2 active user(s) have not registered any MFA method');
+    const tfa = queryAll.mock.calls.map((c: any) => c[0]).find((q: string) => /TwoFactorMethodsInfo/.test(q));
+    expect(tfa).not.toMatch(/LIMIT/);
+  });
+
+  // TwoFactorInfo's Type picklist holds only 'TOTP', so it never showed Salesforce Authenticator,
+  // security keys or built-in authenticators; TwoFactorMethodsInfo flags each method.
+  const run = async (rows: unknown[], active = 4) => {
+    const queryAll = (jest.fn() as any).mockImplementation(async (q: string) => (/FROM UserLogin/.test(q) ? [] : rows));
+    const ctx = {
+      soql: { query: (jest.fn() as any).mockResolvedValue({ totalSize: 1, done: true, records: [{ expr0: active }] }), queryAll },
+      tooling: {}, rest: {},
+      orgInfo: { id: 'o', name: 'n', type: 'DE', isSandbox: false, instance: 'NA1', instanceUrl: 'https://x.my.salesforce.com' },
+      cache: {} as any,
+    } as unknown as AuditContext;
+    const r = await new MfaRegistrationCheck().run(ctx);
+    return { r, cache: (ctx.cache as any).mfaRegistrations, query: queryAll.mock.calls.map((c: any) => c[0] as string).find((q: string) => /TwoFactorMethodsInfo/.test(q)) };
+  };
+  const u = (id: string, flags: Record<string, boolean>) => ({ UserId: id, User: { Username: id, Profile: { Name: 'P' } }, ...flags });
+
+  it('reads every method flag from TwoFactorMethodsInfo, not TwoFactorInfo', async () => {
+    const { query } = await run([]);
+    expect(query).toMatch(/FROM TwoFactorMethodsInfo/);
+    for (const f of ['HasTotp', 'HasSalesforceAuthenticator', 'HasU2F', 'HasSecurityKey', 'HasBuiltInAuthenticator', 'HasUserVerifiedMobileNumber', 'HasUserVerifiedEmailAddress', 'HasTempCode']) {
+      expect(query).toContain(f);
+    }
+  });
+
+  it('counts authenticator, security key and built-in methods as registered, and phone, email or temp code as not', async () => {
+    const { r, cache } = await run([
+      u('005auth', { HasSalesforceAuthenticator: true }),
+      u('005key', { HasSecurityKey: true, HasUserVerifiedMobileNumber: true }),
+      u('005bio', { HasBuiltInAuthenticator: true }),
+      u('005sms', { HasUserVerifiedMobileNumber: true, HasUserVerifiedEmailAddress: true }),
+    ]);
+    expect(r.findings[0].title).toBe('1 of 4 active user(s) have not registered any MFA method');
+    expect(r.findings[0].detail).toContain('1 of the unregistered user(s) have only a verified phone number, email address or temporary code');
+    // Only registered users go to the strength check, with every method they hold. A user with
+    // just a phone or email has no MFA method: graded "weak MFA", an admin who verified an email
+    // would rate worse than one who did nothing.
+    expect(cache.map((c: any) => c.userId).sort()).toEqual(['005auth', '005bio', '005key']);
+    expect(cache.find((c: any) => c.userId === '005key').methods).toEqual(['FIDO2', 'SMS_OTP']);
+    expect(cache.find((c: any) => c.userId === '005auth').methods).toEqual(['SALESFORCE_AUTHENTICATOR']);
+  });
+
+  it('leaves out users with no method at all', async () => {
+    const { cache } = await run([u('005none', {})], 1);
+    expect(cache).toEqual([]);
+  });
 });

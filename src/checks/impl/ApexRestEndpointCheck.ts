@@ -1,10 +1,9 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
+import { apexApiVersions, declaresWithoutSharing, effectiveSharing, omittedSharingEnforced } from '../support/apexAccess.js';
 
 const REST_RESOURCE_RE = /@RestResource\s*\(\s*urlMapping\s*=/i;
-const WITHOUT_SHARING_RE = /\bwithout\s+sharing\b/i;
-const NO_SHARING_DECLARED_RE = /\b(with|without|inherited)\s+sharing\b/i;
 const IS_TEST_RE = /@IsTest\b/i;
 
 export class ApexRestEndpointCheck implements SecurityCheck {
@@ -65,8 +64,15 @@ export class ApexRestEndpointCheck implements SecurityCheck {
       })),
     });
 
-    // Flag endpoints declared without sharing — REST callers bypass record-level access
-    const withoutSharing = restClasses.filter(({ body }) => WITHOUT_SHARING_RE.test(body));
+    // A class with no keyword takes its parent's sharing (spec MN-001).
+    const bodyByName = new Map(apexBodies.map((b) => [b.name.toLowerCase(), b.body ?? '']));
+    const lookup = (n: string) => bodyByName.get(n.toLowerCase());
+    const sharingOf = (c: { name: string; body: string }) => effectiveSharing(c.name, c.body, lookup);
+
+    // Flag endpoints declared (or inheriting) without sharing — REST callers bypass record-level access
+    // Read from code, not text: "without sharing" in a comment or string runs nothing. An inner class
+    // declared without sharing counts, as in the guest Apex check: the endpoint can call into it.
+    const withoutSharing = restClasses.filter((c) => declaresWithoutSharing(c.body) || sharingOf(c) === 'without');
     if (withoutSharing.length > 0) {
       findings.push({
         id: 'apex-rest-without-sharing',
@@ -85,9 +91,12 @@ export class ApexRestEndpointCheck implements SecurityCheck {
       });
     }
 
-    // Flag endpoints with no sharing declaration at all (inherits from caller — unpredictable)
-    const noSharingDeclaration = restClasses.filter(
-      ({ body }) => !WITHOUT_SHARING_RE.test(body) && !NO_SHARING_DECLARED_RE.test(body)
+    // Flag endpoints with no sharing declaration at all, unless compiled at API 67.0 or later,
+    // where an omitted keyword means with sharing (spec RULE-007).
+    const undeclared = restClasses.filter((c) => !withoutSharing.includes(c) && sharingOf(c) === 'none');
+    const versions = undeclared.length > 0 ? await apexApiVersions(ctx) : new Map<string, number>();
+    const noSharingDeclaration = undeclared.filter(
+      (c) => !omittedSharingEnforced(c.name, c.body, lookup, (n) => versions.get(n.toLowerCase())),
     );
     if (noSharingDeclaration.length > 0) {
       findings.push({
@@ -96,7 +105,7 @@ export class ApexRestEndpointCheck implements SecurityCheck {
         riskLevel: 'MEDIUM',
         title: `${noSharingDeclaration.length} REST endpoint class(es) have no sharing declaration`,
         detail:
-          `Apex classes with no sharing declaration inherit sharing mode from their caller, which is non-deterministic for REST API calls. In REST API contexts the caller is typically the integration user, whose sharing context may be broader than intended. Explicit "with sharing" is required for predictable, secure behaviour.`,
+          `These REST endpoint classes declare no sharing keyword and are not shown to be saved at API 67.0 or later (with every keyword-less parent; a version that could not be read counts as older). A REST call enters the class directly, so it runs without sharing, and every caller reaches records beyond its own sharing. From API 67.0 (Summer '26) an omitted keyword means with sharing, but only for classes saved at that version. Explicit "with sharing" is required for predictable, secure behaviour.`,
         remediation:
           'Add "with sharing" to all @RestResource classes to make sharing enforcement explicit and predictable.',
         affectedItems: noSharingDeclaration.map(({ name }) => ({

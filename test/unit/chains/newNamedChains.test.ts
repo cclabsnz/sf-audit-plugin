@@ -100,12 +100,68 @@ describe('named chain wording and step roles', () => {
   // portal users, not guests: they must not be steps of the chain that needs no account.
   it('unauth-bulk-exfil does not count external sharing defaults as an unauthenticated step', () => {
     const chains = new ChainEngine().correlate([
-      f('guest-object-exposure-public-owd'), f('sharing-model-external-read'), f('sharing-model-external-write'), f('guest-user-read-access'),
+      f('guest-object-exposure-guest-owned'), f('sharing-model-external-read'), f('sharing-model-external-write'), f('guest-user-read-access'),
     ]);
     const c = chains.find((x) => x.id === 'unauth-bulk-exfil')!;
     expect(c.steps.map((s) => s.findingId)).not.toContain('sharing-model-external-read');
     expect(c.steps.map((s) => s.findingId)).not.toContain('sharing-model-external-write');
   });
+
+  // The reach must come from a guest-side step: an internal user's bulk read says nothing about
+  // what a visitor without an account can take.
+  it('unauth-bulk-exfil does not borrow bulk read or write from internal users', () => {
+    const guest = [f('guest-user-read-access'), f('guest-user-baseline')];
+    expect(match('unauth-bulk-exfil', guest)).toBeNull();
+    expect(match('unauth-bulk-exfil', [...guest, f('users-modify-all-data'), f('users-author-apex')])).toBeNull();
+    expect(match('unauth-bulk-exfil', [...guest, f('guest-executable-apex-unprotected')])?.map((s) => s.id))
+      .toContain('guest-executable-apex-unprotected');
+  });
+
+  // Guest-callable code that keeps sharing reaches no record when nothing is shared to the guest.
+  it.each(['guest-executable-apex-exposed', 'guest-executable-apex-system-mode', 'guest-api-access-enabled'])(
+    'unauth-bulk-exfil does not fire on %s without a step that reaches records',
+    (id) => {
+      const guest = [f('guest-user-read-access'), f('guest-user-baseline'), f(id)];
+      expect(match('unauth-bulk-exfil', guest)).toBeNull();
+      expect(match('unauth-bulk-exfil', [...guest, f('guest-user-sharing-exposure')])).not.toBeNull();
+    },
+  );
+
+  // The potential-chain pass must not report, at HIGH, the guest path the named chain declined.
+  it.each([
+    [['guest-api-access-enabled', 'classic-sites-active']],
+    [['guest-api-hard-delete', 'guest-user-baseline']],
+    [['guest-user-write-access', 'guest-user-baseline']],
+  ])('no chain at all starts from a guest foothold for %j', (ids) => {
+    const chains = new ChainEngine().correlate(ids.map((id) => f(id)));
+    expect(chains.filter((c) => c.steps.some((s) => ids.includes(s.findingId)))).toEqual([]);
+  });
+
+  it('counts an unenforced secure guest record access setting as record reach', () => {
+    expect(match('unauth-bulk-exfil', [f('guest-record-access-policy-not-enforced'), f('guest-api-access-enabled')])).not.toBeNull();
+  });
+
+  // Nor may the potential-chain pass pair the guest foothold with those internal grants instead.
+  it.each([
+    [['users-modify-all-data', 'users-author-apex']],
+    [['users-view-all-data']],
+    [['portal-exposed-apex-without-sharing']],
+  ])('no chain pairs a guest foothold with %j', (internal) => {
+    const chains = new ChainEngine().correlate([f('guest-user-read-access'), f('guest-user-baseline'), ...internal.map((id) => f(id))]);
+    const guestChains = chains.filter((c) => c.steps.some((s) => s.findingId === 'guest-user-read-access'));
+    for (const c of guestChains) for (const id of internal) expect(c.steps.map((s) => s.findingId)).not.toContain(id);
+  });
+
+  // These flag any @AuraEnabled class or any Flow, which may be callable only by a logged-in user.
+  it.each(['portal-exposed-apex-without-sharing', 'flows-autolaunched-without-sharing', 'flows-screen-without-sharing'])(
+    'unauth-bulk-exfil neither fires on nor lists %s, which is not shown to be guest-reachable',
+    (id) => {
+      const guest = [f('guest-user-read-access'), f('guest-user-baseline')];
+      expect(match('unauth-bulk-exfil', [...guest, f(id)])).toBeNull();
+      const steps = match('unauth-bulk-exfil', [...guest, f('guest-executable-apex-unprotected'), f(id)])!;
+      expect(steps.map((s) => s.id)).not.toContain(id);
+    },
+  );
 
   it('cred-theft-pivot is rated no higher than its pattern-matched secret', () => {
     expect(NAMED_CHAINS.find((c) => c.id === 'cred-theft-pivot')!.severity).toBe('HIGH');

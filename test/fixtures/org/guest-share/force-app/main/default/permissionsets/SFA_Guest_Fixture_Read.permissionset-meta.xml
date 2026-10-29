@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>sf-audit test fixture: guest Read on SFA_Guest_Fixture__c. Safe to delete.</description>
+    <label>SFA Guest Fixture Read</label>
+    <objectPermissions>
+        <allowCreate>false</allowCreate><allowDelete>false</allowDelete><allowEdit>false</allowEdit><allowRead>true</allowRead>
+        <modifyAllRecords>false</modifyAllRecords><object>SFA_Guest_Fixture__c</object><viewAllRecords>false</viewAllRecords>
+    </objectPermissions>
+</PermissionSet>
