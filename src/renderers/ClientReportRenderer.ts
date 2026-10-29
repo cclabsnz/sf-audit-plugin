@@ -517,7 +517,7 @@ ${head}<div class="content">${s.body}</div>
     const cheap = big.filter((x) => x.a.effort !== 'project').map((x) => x.n);
     const costly = big.filter((x) => x.a.effort === 'project').map((x) => x.n);
     const headline = realMax === 0 ? 'None of these actions removes critical or high-severity risk'
-      : cheap.length && costly.length ? `Action${cheap.length === 1 ? '' : 's'} ${nums(cheap)} ${verb(cheap.length, 'is', 'are')} the cheapest large risk reduction${cheap.length === 1 ? '' : 's'}; ${nums(costly)} ${verb(costly.length, 'removes', 'remove')} as much but ${verb(costly.length, 'needs', 'need')} project funding`
+      : cheap.length && costly.length ? `Action${cheap.length === 1 ? '' : 's'} ${nums(cheap)} ${verb(cheap.length, 'is', 'are')} the cheapest large risk reduction${cheap.length === 1 ? '' : 's'}; ${nums(costly)} also ${verb(costly.length, 'removes', 'remove')} large risk but ${verb(costly.length, 'needs', 'need')} project funding`
         : cheap.length ? `Action${cheap.length === 1 ? '' : 's'} ${nums(cheap)} remove${cheap.length === 1 ? 's' : ''} the most risk for days of work or less`
           : `The largest risk reductions (${nums(costly)}) need project funding`;
     const key = shown.map((a, i) => `<li><span class="num w${a.wave}">${i + 1}</span><span>${esc(a.title)}</span><span class="e">${EFFORT_LABEL[a.effort]}</span></li>`).join('');
@@ -683,8 +683,23 @@ ${pts}<div class="yl"><span>Risk removed →</span></div><div class="xl"><span>U
 <div class="narr"><p>${esc(c.narrative)}</p></div>
 <div class="breaks"><p><strong>Breaks the chain:</strong> ${esc(c.abuseCase!.breakPoint)}</p></div>
 <div class="full"><p><strong>Full remediation:</strong> ${esc(c.remediation)}</p></div></div></div>`,
-      source: `Steps run in attack order. Steps marked ✂ are the break point: fixing all of them stops the chain. References point to the findings appendix.`,
+      source: `${this.ratingNote(c)}Steps run in attack order. Steps marked ✂ are the break point: fixing all of them stops the chain. References point to the findings appendix.`,
     };
+  }
+
+  /** Why a chain is rated above or below its steps, so the rating never looks like an error. */
+  private ratingNote(c: AttackChain): string {
+    const steps = c.steps.map((s) => s.severity).filter((x): x is RiskLevel => !!x);
+    if (!steps.length) return '';
+    const worst = steps.reduce((a, b) => (SEV_RANK[b] < SEV_RANK[a] ? b : a));
+    const chain = cap(c.severity.toLowerCase());
+    if (SEV_RANK[c.severity] < SEV_RANK[worst]) {
+      return `Rated ${chain} as a path; its steps are rated up to ${worst.toLowerCase()}. `;
+    }
+    if (SEV_RANK[c.severity] > SEV_RANK[worst]) {
+      return `Rated ${chain} as a path; its ${worst.toLowerCase()} step is also counted on its own in the findings and the grade. `;
+    }
+    return '';
   }
 
   private potentialSlide(list: Array<{ c: AttackChain; i: number }>): Slide {
@@ -802,6 +817,6 @@ ${this.footer(b)}`,
       ? ` · <a href="https://${esc(b.website.replace(/^https?:\/\//, ''))}">${esc(b.website.replace(/^https?:\/\//, ''))}</a>`
       : '';
     return `<footer><span class="lbl">Scope &amp; Liability</span>
-Read-only, point-in-time configuration review: not a penetration test, not a code audit. The grade is a prioritisation aid, not a certification. Validate findings before remediation. © ${new Date().getFullYear()} ${esc(b.firmName)} · ${esc(b.contact)}${site}<br>${toolCreditHtml('executive-report')}</footer>`;
+Read-only, point-in-time review of configuration, metadata, selected records and event logs, including pattern-based static checks of Apex and Flow: not a penetration test and not a code review. The grade is a prioritisation aid, not a certification. Confirm each finding in the org before changing production. © ${new Date().getFullYear()} ${esc(b.firmName)} · ${esc(b.contact)}${site}<br>${toolCreditHtml('executive-report')}</footer>`;
   }
 }

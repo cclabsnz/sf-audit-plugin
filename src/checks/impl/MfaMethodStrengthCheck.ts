@@ -60,9 +60,10 @@ export class MfaMethodStrengthCheck implements SecurityCheck {
         id: 'mfa-method-strength-none-registered',
         category: this.category,
         riskLevel: 'INFO',
-        passed: true,
-        title: 'No registered MFA methods to grade',
-        detail: 'No active internal user has a registered MFA method, so there is no method strength to assess. Missing registration itself is reported by the MFA registration check.',
+        // Nothing was graded, so it is no assurance about method strength (not passed); the data was
+        // read, so it is not inconclusive either. INFO carries no penalty under the default scoring.
+        title: 'MFA method strength not graded: no user has registered a method',
+        detail: 'No active internal user has a registered MFA method in Salesforce, so there is no method strength to assess. With single sign-on, MFA happens at the identity provider and this is expected; otherwise missing registration is reported by the MFA registration check.',
         remediation: 'None for method strength. Address MFA registration coverage first.',
       });
       return { findings };

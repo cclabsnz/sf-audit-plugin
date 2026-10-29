@@ -87,6 +87,22 @@ export class MfaRegistrationCheck implements SecurityCheck {
     const registeredCount = userMethodMap.size;
     const unregisteredCount = Math.max(0, totalActiveUsers - registeredCount);
 
+    // The audit user is itself an active standard user, so a count of 0 means the count could not
+    // see users, not that there are none: inconclusive, never a pass.
+    if (totalActiveUsers === 0) {
+      findings.push({
+        id: 'mfa-registration-no-users-visible',
+        category: this.category,
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'No active standard users were visible: MFA registration cannot be checked',
+        detail: 'The count of active, unfrozen standard users returned 0, although the audit user is one. The audit user may not be able to read User records.',
+        remediation: 'Grant the audit user "View Setup and Configuration" and "Manage Users" read access, then re-run, or review MFA registration manually in Setup → Identity → Identity Verification.',
+        affectedItems: [{ label: 'Identity Verification Setup', url: setupUrl }],
+      });
+      return { findings };
+    }
+
     if (unregisteredCount === 0) {
       findings.push({
         id: 'mfa-registration-ok',

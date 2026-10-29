@@ -162,7 +162,7 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'content-links-no-password':                  { grants: ['data-read'] },
 
   // Self-registration is how an attacker obtains the account that every external-sharing finding
-  // already assumes they have. On its own it is a supported feature and harmless; it earns a
+  // already assumes they have. On its own it gives an account only its own records; it earns a
   // capability because 'sharing-model-external-*' grants reach to whoever holds an account, and
   // this is the finding that says anyone may hold one.
   'experience-cloud-site-self-registration':    { grants: ['low-trust-authenticated'], techniques: { 'low-trust-authenticated': ['T1136.003', 'T1078.004'] } },

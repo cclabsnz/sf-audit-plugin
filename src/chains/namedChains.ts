@@ -107,7 +107,9 @@ export const UNAUTH_EXFIL_STEPS = [
   'guest-object-exposure-public-owd', 'guest-object-exposure-guest-owned',
   'guest-api-access-enabled', 'guest-api-hard-delete', 'classic-sites-active',
   'guest-user-visibility-view-all-users', 'guest-user-visibility-owd', 'guest-user-visibility-object-read',
-  'portal-exposed-apex-without-sharing', 'sharing-model-external-read', 'sharing-model-external-write',
+  // Not 'sharing-model-external-*': since Winter '21 guest record access is always secured, so the
+  // external OWD reaches logged-in portal users, not guests. Those findings drive the low-trust chains.
+  'portal-exposed-apex-without-sharing',
   'field-level-security-high', 'field-level-security-medium',
   // The guardrail whose absence lets guest-owned records defeat a Private OWD, and the Flow
   // analogue of portal-exposed Apex running without sharing.
@@ -403,7 +405,9 @@ export const NAMED_CHAINS: NamedChainDef[] = [
   {
     id: 'cred-theft-pivot',
     title: 'Credential theft to external pivot',
-    severity: 'CRITICAL',
+    // HIGH, not CRITICAL: the secret is found by pattern match, and the egress steps are mostly the
+    // org's own registered endpoints, which give an attacker holding the secret nothing they lack.
+    severity: 'HIGH',
     narrative:
       'Exposed secrets (hardcoded credentials, credentials in custom labels or settings, or enabled device or password OAuth flows) ' +
       'combine with an external egress path (named credential, remote site or Flow callout) to exfiltrate data to attacker infrastructure.',
@@ -729,12 +733,14 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       'login IP ranges and SSO all behave exactly as configured and none of them object, because ' +
       'nothing here is a bypass. What the attacker gets is decided entirely by the external OWD, ' +
       'the portal profile and whether the Apex or Flow reachable from the site enforces sharing. ' +
-      'Self-registration alone is a supported feature and not a finding; the sharing model alone ' +
-      'assumes an account the attacker may never obtain. The pair is the path.',
+      'Neither half makes the path on its own: a self-registered account with only its own records ' +
+      'reaches nothing, and the sharing model assumes an account the attacker may never obtain. ' +
+      'The pair is the path.',
     remediation:
-      'Decide which half to close, because either breaks the chain. Turning self-registration off, ' +
-      'or putting an approval step in front of it, restores the assumption every other control ' +
-      'depends on. Leaving it on means treating the self-registration profile as hostile input: ' +
+      'Turn self-registration off, or route it through a custom registration handler that approves ' +
+      'each account before it gets access: that restores the ' +
+      'assumption every other control depends on. If the site must stay open, close the other half ' +
+      'instead and treat the self-registration profile as hostile input: ' +
       'set external OWD to Private and grant through sharing sets rather than org-wide defaults, ' +
       'and make sure Apex and Flows reachable from the site run with sharing. Check what the ' +
       'self-registration handler assigns as the default profile and licence — the exposure is ' +

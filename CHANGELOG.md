@@ -9,6 +9,20 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Changed
+
+- **`cred-theft-pivot` is rated HIGH, not CRITICAL.** Its secret is found by pattern match. Its egress steps are mostly the org's own registered endpoints, which give an attacker who holds the secret nothing new. Orgs where this chain fires no longer count it as a critical chain in the grade.
+
+### Fixed
+
+- **The unauthenticated bulk-exfiltration chain no longer counts external sharing defaults as an unauthenticated step.** Guest record access has been secured since Winter '21, so the external OWD reaches logged-in portal users, not guests. Those findings stay in the low-trust chains, such as self-registration.
+- **The hardcoded-credential check no longer flags a value read at run time.** A credential parameter built from a stored value, such as `'client_secret=' + EncodingUtil.urlEncode(cfg.Secret__c, 'UTF-8')`, was matched as a hardcoded secret.
+- **The CRUD/FLS finding gives the CRUD/FLS remedy.** It now leads with `WITH USER_MODE` or `Security.stripInaccessible()`. Before, it led with "with sharing", which enforces record sharing only and duplicated the sharing finding's advice.
+- **The self-registration chain tells one story.** It no longer calls self-registration "not a finding" while making it the break point. Its remediation leads with turning self-registration off, or with a custom registration handler that approves accounts.
+- **Each attack-scenario slide states its chain's rating against its steps.** This covers a chain rated above its steps, and a chain whose critical step is also counted on its own in the grade.
+- **MFA results no longer read as assurance about nobody.** When no active standard user is visible, the registration check is now inconclusive instead of "All 0 users have registered". The audit user is itself one, so a count of 0 means the users could not be seen. When no one has registered a method, the method-strength check reports an informational "not graded" finding instead of a pass, and notes that this is expected with single sign-on.
+- **The executive scope statement matches what the audit reads.** It reads configuration, metadata, selected records and event logs, including pattern-based static checks of Apex and Flow. It is not a penetration test or a code review. Readers are asked to confirm each finding in the org.
+
 ## [v1.22.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.22.0) — 2026-10-29
 
 The executive report is now a consulting-style deck that leads with what to do, with the threat

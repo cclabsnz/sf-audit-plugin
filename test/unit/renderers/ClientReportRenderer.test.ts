@@ -51,6 +51,13 @@ describe('ClientReportRenderer', () => {
     expect(html).toContain('OWASP Top 10:2021');
   });
 
+  it('states the scope as what the audit reads, including static code checks, and asks for confirmation, not validation', () => {
+    const footer = r.render(makeResult()).slice(-2000);
+    expect(footer).toContain('review of configuration, metadata, selected records and event logs, including pattern-based static checks of Apex and Flow: not a penetration test and not a code review');
+    expect(footer).not.toContain('not a code audit');
+    expect(footer).not.toContain('Validate findings before remediation');
+  });
+
   it('credits the tool in the footer without naming the org', () => {
     const html = r.render(makeResult());
     const footer = html.slice(html.indexOf('<footer>'));
@@ -146,6 +153,15 @@ describe('ClientReportRenderer slides', () => {
     expect(html).toContain('addresses the critical exposure');
     expect(html).toContain('>P1</td>');
     expect(html).toContain('POTNARR');
+  });
+
+  it('explains a chain rated above or below its steps', () => {
+    const base = res();
+    const above = r.render({ ...base, attackChains: [{ ...base.attackChains![0], steps: [{ ...base.attackChains![0].steps[0], severity: 'HIGH' }] }] });
+    expect(above).toContain('Rated Critical as a path; its steps are rated up to high.');
+    const below = r.render({ ...base, attackChains: [{ ...base.attackChains![0], severity: 'HIGH' }] });
+    expect(below).toContain('Rated High as a path; its critical step is also counted on its own in the findings and the grade.');
+    expect(r.render(base)).not.toContain('Rated Critical as a path');
   });
 
   it('says a chain stays open when part of its break point is waived', () => {
