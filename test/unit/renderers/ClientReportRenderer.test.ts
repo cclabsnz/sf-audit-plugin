@@ -1,5 +1,5 @@
 import { ClientReportRenderer } from '../../../src/renderers/ClientReportRenderer.js';
-import { DEFAULT_BRANDING } from '@cclabsnz/sf-core';
+import { DEFAULT_BRANDING, esc } from '@cclabsnz/sf-core';
 import type { AuditResult } from '../../../src/findings/AuditResult.js';
 
 function makeResult(): AuditResult {
@@ -38,7 +38,7 @@ describe('ClientReportRenderer', () => {
     expect(html).toContain('CloudCounsel Limited');
     for (const kicker of ['Executive summary', 'Where to act', 'Action plan', 'Threat model · STRIDE and LINDDUN',
       'Appendix · Remediation roadmap', 'Appendix · Compliance coverage', 'Appendix · All findings', 'Issue and approval']) {
-      expect({ kicker, found: html.includes(`<div class="kicker">${kicker.replace('&', '&amp;')}</div>`) }).toEqual({ kicker, found: true });
+      expect({ kicker, found: html.includes(`<div class="kicker">${esc(kicker)}</div>`) }).toEqual({ kicker, found: true });
     }
     expect(html).toContain('Account takeover');
     expect(html).toContain('@font-face');
