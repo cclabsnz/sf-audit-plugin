@@ -1,6 +1,6 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import { testApexPattern } from '@cclabsnz/sf-core';
-import { apexCode, codeWithoutStrings, DML_AS_USER, usesSystemMode } from '../support/apexAccess.js';
+import { apexApiVersions, apexCode, codeWithoutStrings, DML_AS_USER, OMITTED_SHARING_ENFORCED_FROM, usesSystemMode } from '../support/apexAccess.js';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
@@ -51,6 +51,11 @@ export class ApexCrudFLSCheck implements SecurityCheck {
     const withoutSharingNoFls: string[] = [];
     const withDmlNoFls: string[] = [];
     const systemMode: { name: string; withoutSharing: boolean }[] = [];
+    // From API 67.0 (Summer '26) SOQL, SOSL, DML and Database methods run in user mode unless they
+    // say otherwise, so a class saved at 67.0 or later enforces CRUD/FLS by default (spec RULE-009).
+    // SYSTEM_MODE is still reported above that default.
+    const versions = await apexApiVersions(ctx);
+    let userModeByDefault = 0;
 
     // apexBodies is pre-filtered by HardcodedCredentialsCheck, which excludes @IsTest classes
     // before populating the cache. There is deliberately no second guard here: a cache miss
@@ -73,6 +78,11 @@ export class ApexCrudFLSCheck implements SecurityCheck {
 
       if (testApexPattern(body, IS_BATCH_OR_SCHEDULED)) continue;
 
+      if ((versions.get(name.toLowerCase()) ?? 0) >= OMITTED_SHARING_ENFORCED_FROM) {
+        userModeByDefault++;
+        continue;
+      }
+
       // Enforcement must be code, not text: 'WITH USER_MODE' inside a debug string enforces nothing.
       const enforcementCode = codeWithoutStrings(raw);
       const hasFls = testApexPattern(enforcementCode, HAS_FLS) || testApexPattern(enforcementCode, DML_AS_USER);
@@ -94,7 +104,7 @@ export class ApexCrudFLSCheck implements SecurityCheck {
         detail:
           `Apex classes declared "without sharing" bypass record-level visibility AND have no field-level or object-level permission checks, meaning any user who triggers the code can read or write any record and field regardless of their assigned permissions. This is the most exploited Salesforce access control vulnerability. OWASP Salesforce Top 10 ranks CRUD/FLS bypass as the #1 risk.`,
         remediation:
-          'Refactor to use "with sharing" where possible. Add `Security.stripInaccessible()` before DML and `Schema.SObjectType.[Object].fields.[Field].isAccessible()` before displaying fields. Where "without sharing" is required for a technical reason, document the justification and tighten the scope.',
+          'Enforce object and field permissions with `WITH USER_MODE`, or `Security.stripInaccessible()` before DML and `Schema.SObjectType.[Object].fields.[Field].isAccessible()` before displaying fields. "with sharing" alone does not do this: it enforces record sharing only. Declare "with sharing" too where possible, and where "without sharing" is required for a technical reason, document the justification and tighten the scope.',
         affectedItems: withoutSharingNoFls.slice(0, 30).map((n) => ({
           label: n,
           url: apexClassesUrl,
@@ -146,7 +156,7 @@ export class ApexCrudFLSCheck implements SecurityCheck {
         riskLevel: 'LOW',
         passed: true,
         title: 'All scanned Apex classes with DML/SOQL include CRUD/FLS permission checks',
-        detail: 'No Apex classes were found performing DML or SOQL without corresponding object-level or field-level security checks. This scan covers non-test, non-batch classes in the org namespace.',
+        detail: `No Apex classes were found performing DML or SOQL without corresponding object-level or field-level security checks. This scan covers non-test, non-batch classes in the org namespace.${userModeByDefault > 0 ? ` ${userModeByDefault} class(es) saved at API 67.0 or later rely on user mode, the default for their queries and DML from that version.` : ''}`,
         remediation: 'Continue monitoring as new Apex classes are developed.',
       });
     }

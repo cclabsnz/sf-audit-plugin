@@ -10,7 +10,8 @@ export type AuditPermission =
   | 'ViewAllUsers'
   | 'ViewHealthCheckScreen'
   | 'AuthorApex'
-  | 'ViewEventLogFiles';
+  | 'ViewEventLogFiles'
+  | 'ManageTwoFactor';
 
 export interface PermissionSpec {
   /** Field on UserPermissionAccess carrying the effective grant. */
@@ -50,9 +51,18 @@ export const AUDIT_PERMISSIONS: Readonly<Record<AuditPermission, PermissionSpec>
     field: 'PermissionsViewAllUsers',
     label: 'View All Users',
     impact:
-      'Enumerates every User, PermissionSetAssignment and TwoFactorInfo org-wide. Without it the user, ' +
+      'Enumerates every User and PermissionSetAssignment org-wide. Without it the user, ' +
       'admin and MFA checks under-count and miss accounts outside the role hierarchy.',
-    cacheKeys: ['mfaRegistrations', 'effectivePermissions'],
+    cacheKeys: ['effectivePermissions'],
+  },
+  ManageTwoFactor: {
+    field: 'PermissionsManageTwoFactor',
+    label: 'Manage MFA in API (optional)',
+    impact:
+      'Shows TwoFactorMethodsInfo, which records each user\'s MFA methods. Without it MFA registration and method ' +
+      'strength are inconclusive. Salesforce grants it only with user-management permissions, so it is optional ' +
+      'and not in the read-only permission set (PERMISSIONS.md).',
+    cacheKeys: ['mfaRegistrations'],
   },
   ViewHealthCheckScreen: {
     field: 'PermissionsViewHealthCheck',

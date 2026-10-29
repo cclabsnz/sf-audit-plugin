@@ -60,7 +60,7 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 | Data Classification & Encryption | Field data classification usage and Shield Platform Encryption |
 | Encryption Coverage for Sensitive Fields | Fields classified PII/PHI (ComplianceGroup) that are NOT encrypted at rest with Shield |
 | Sandbox Data Masking | In sandboxes, populated PII fields (likely unmasked production data); advises running Data Mask |
-| Flows Without Sharing | Active flows running in system context without sharing enforcement |
+| Flows Without Sharing | Active autolaunched and screen flows set to run in system context without sharing (Default Mode is not flagged: a screen flow then runs as the user, and an autolaunched flow started by a user runs as that user, inheriting the caller's context from Apex or automation; record-, schedule- and platform-event-triggered flows always run without sharing, have no setting to change, and are out of scope) |
 | Content Distribution Links | Public file links missing expiry or passwords, and stale records |
 | Public Static Resources & Documents | Documents marked externally available (anonymous URL access) and static resources cached publicly |
 | Data Cloud Data Space Isolation | Default Data Space over-sharing to external integrations, partner users, or agent users, and unconstrained Data Share Targets |
@@ -71,13 +71,13 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 | Check | What it looks for |
 |-------|------------------|
 | Guest User Access | Object permissions and sharing rules granted to unauthenticated guests |
-| Guest Object Exposure (Bulk Read via UI API) | Auto-discovers guest-readable objects (incl. records exposed by guest ownership despite a Private OWD), then grades them by actual UI-API reachability: objects the UI API models are CRITICAL (GraphQL-pullable), objects readable only in the sharing model but not UI-API-modelled (Calendar, AuthSession, etc.) are separated as MEDIUM, with UserRecordAccess as ground-truth read confirmation |
-| Guest-Executable Apex | Apex that guest profiles can run: CRITICAL when it, or a helper it calls, runs without sharing; HIGH when it switches off CRUD/FLS with SYSTEM_MODE |
+| Guest Object Exposure (Bulk Read via UI API) | Auto-discovers guest-readable objects (incl. records exposed by guest ownership despite a Private OWD), then grades them by actual reach: UI-API-modelled objects whose records the guest owns are CRITICAL (GraphQL-pullable form submissions); records shared with guests, whatever the OWD (guest sharing rules, and manual, Apex or group shares left from before Winter '21, read from the object's share table, or a guest read `UserRecordAccess` confirms on up to 200 sampled records), are HIGH, since a guest rule is how a site publishes records on purpose; a public external OWD without a confirmed read is MEDIUM, since secure guest record access (enforced since Winter '21) means the OWD alone gives guests nothing; objects readable only in the sharing model but not UI-API-modelled (Calendar, AuthSession, etc.) are MEDIUM |
+| Guest-Executable Apex | Apex that guest profiles can run: CRITICAL when it, or a helper it calls, runs without sharing; HIGH when it switches off CRUD/FLS with SYSTEM_MODE. A class with no sharing keyword counts as running without sharing unless it (and any keyword-less parent) is saved at API 67.0 or later, or can be entered only through `@AuraEnabled` methods |
 | Experience Cloud Sites | Live sites with self-registration enabled and guest user presence |
-| Experience Cloud Guest Site Options | Guest file access and guest member visibility on Experience Cloud sites |
+| Experience Cloud Guest Site Options | Guest file access and guest member visibility on live Experience Cloud sites; either setting on a site that is not live is reported apart, at LOW |
 | Secure Guest User Record Access | Verifies the "Secure guest user record access" enforcement is activated — the guardrail that stops guest-owned records defeating a Private OWD (complements Guest Object Exposure) |
 | Guest API & Bulk Access | Guest users granted API Enabled or Bulk API Hard Delete — programmatic bulk read/delete for unauthenticated visitors |
-| Guest Visibility of Other Users | Whether unauthenticated guests can enumerate other User records — "View All Users" on a guest permission grant, a public external org-wide default on `User`, or a guest Read grant on the User object. The internal OWD is reported but not graded (Public Read Only is the platform default), and the Sharing Settings user-visibility checkboxes are not API-readable, so a clean result carries a manual-verification note |
+| Guest Visibility of Other Users | Whether unauthenticated guests can enumerate other User records through "View All Users" on a guest permission grant, and whether a public external org-wide default on `User` shows every user to logged-in portal and community users (MEDIUM, only when external users or a site exist; it does not reach guests, whose OWD is Private on every object). There is no object-permission leg: User takes no object permissions. The internal OWD is reported but not graded (Public Read Only is the platform default), and the Sharing Settings user-visibility checkboxes are not API-readable, so a clean result carries a manual-verification note |
 | Classic Force.com Sites | Active classic (Visualforce) Sites and their guest users — an unauthenticated surface separate from Experience Cloud |
 | Experience Cloud CSP & Lightning Web Security | Advises verifying Strict CSP and Lightning Web Security on live sites (not reliably API-readable) |
 | CORS Allowlist | Wildcard or overly broad CORS allowlist origins |
@@ -87,9 +87,9 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 ## Apex & Code Security
 | Check | What it looks for |
 |-------|------------------|
-| Apex Sharing Declarations | Classes classified by the sharing keyword on their own declaration (with / without / inherited / omitted); @AuraEnabled, @RemoteAction and @RestResource classes without sharing are IDOR risks |
-| Apex CRUD/FLS Enforcement | DML or SOQL performed without CRUD/FLS permission checks; SYSTEM_MODE is reported on its own and never counts as enforcement, USER_MODE does |
-| Apex REST Endpoints | `@RestResource` classes running `without sharing` |
+| Apex Sharing Declarations | Classes classified by the sharing keyword on their own declaration (with / without / inherited / omitted); @AuraEnabled, @RemoteAction and @RestResource classes without sharing are IDOR risks. A class with no keyword saved at API 67.0 or later runs with sharing and is counted apart; an Aura/LWC call into a keyword-less class always runs with sharing |
+| Apex CRUD/FLS Enforcement | DML or SOQL performed without CRUD/FLS permission checks; SYSTEM_MODE is reported on its own and never counts as enforcement, USER_MODE does, and so does saving the class at API 67.0 or later, where user mode is the default |
+| Apex REST Endpoints | `@RestResource` classes running `without sharing`, declared or inherited, or with no sharing keyword below API 67.0 (from 67.0 an omitted keyword means with sharing) |
 | Visualforce XSS | `escape="false"` and unencoded merge fields in Visualforce markup |
 | Lightning Message Channels | Channels with `isExposed=true`, readable and writable by components in any namespace |
 | Hardcoded Credentials | Bearer tokens, Basic auth, API keys, and raw callout URLs in Apex |

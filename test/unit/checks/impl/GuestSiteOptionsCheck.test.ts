@@ -41,10 +41,27 @@ describe('GuestSiteOptionsCheck', () => {
     expect(f!.riskLevel).toBe('MEDIUM');
   });
 
+  // Only a live site serves guests; elsewhere the setting waits for go-live and feeds no chain.
+  it('reports member visibility on a site that is not live apart, at LOW', async () => {
+    const r = await check.run(
+      makeCtx([{ Id: '0DB', Name: 'Portal', Status: 'UnderConstruction', OptionsGuestFileAccessEnabled: false, OptionsGuestMemberVisibility: true }]),
+    );
+    expect(r.findings.map((x) => x.id)).toEqual(['guest-site-options-member-visibility-not-live']);
+    expect(r.findings[0].riskLevel).toBe('LOW');
+  });
+
   it('passes when both options are disabled', async () => {
     const r = await check.run(
       makeCtx([{ Id: '0DB', Name: 'Portal', Status: 'Live', OptionsGuestFileAccessEnabled: false, OptionsGuestMemberVisibility: false }]),
     );
     expect(r.findings.some((f) => f.id === 'guest-site-options-ok' && f.passed)).toBe(true);
+  });
+
+  it('reports guest file access on a site that is not live apart, at LOW', async () => {
+    const r = await check.run(
+      makeCtx([{ Id: '0DB', Name: 'Portal', Status: 'DownForMaintenance', OptionsGuestFileAccessEnabled: true, OptionsGuestMemberVisibility: false }]),
+    );
+    expect(r.findings.map((x) => x.id)).toEqual(['guest-site-options-file-access-not-live']);
+    expect(r.findings[0].riskLevel).toBe('LOW');
   });
 });

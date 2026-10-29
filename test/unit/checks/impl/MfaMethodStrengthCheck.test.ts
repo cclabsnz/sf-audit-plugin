@@ -37,11 +37,14 @@ describe('MfaMethodStrengthCheck', () => {
 
   // An empty list means nobody registered (mfa-registration reports that); only an unset cache
   // means the data was never gathered.
-  it('treats an empty registration list as nothing to grade, not as missing data', async () => {
+  // Nothing graded is no assurance (so not a pass), but the data was read (so not inconclusive).
+  it('treats an empty registration list as nothing to grade: informational, neither passed nor missing data', async () => {
     const r = await check.run(makeCtx([]));
     expect(r.findings[0].id).toBe('mfa-method-strength-none-registered');
-    expect(r.findings[0].passed).toBe(true);
+    expect(r.findings[0].riskLevel).toBe('INFO');
+    expect(r.findings[0].passed).toBeUndefined();
     expect(r.findings[0].inconclusive).toBeUndefined();
+    expect(r.findings[0].title).toBe('MFA method strength not graded: no user has registered a method');
   });
 
   // Classification follows NIST/Salesforce guidance: phishing-resistant beats TOTP beats
