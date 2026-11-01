@@ -9,6 +9,12 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.24.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.24.1) — 2026-11-01
+
+The threat model reads as the threats it found. Inventory lines no longer sit in the STRIDE view as
+open findings, and the MFA bypass chain fires only when a privileged user can actually sign in
+without a second factor, starting at initial access on the ATT&CK slide.
+
 ### Fixed
 
 - The threat view (Markdown Threat View, executive STRIDE heatmap and LINDDUN bars) no longer
