@@ -197,6 +197,16 @@ describe('RULE-104 the threat view reports coverage, not assurance (MN-058, INT-
     expect(v.stride.find((r) => r.category === 'I')?.findings).toEqual([]);
   });
 
+  // An inventory line ("0 scheduled jobs found") or a note is not an open threat, but its check still
+  // gathered evidence, so the category reads as covered.
+  it('INFO results are not listed as findings, and still count as coverage', () => {
+    const v = buildThreatView([f('sharing-model', 'INFO')]);
+    const i = v.stride.find((r) => r.category === 'I')!;
+    expect(i.findings).toEqual([]);
+    expect(i.status).toBe('no-findings');
+    expect(i.assessedChecks).toBe(1);
+  });
+
   it('shows LINDDUN only when a privacy-tagged check ran', () => {
     expect(buildThreatView([f('api-limits', 'LOW')]).linddun).toBeUndefined();
     expect(buildThreatView([f('sharing-model', 'LOW')]).linddun?.map((r) => r.category)).toEqual([...LINDDUN_CATEGORIES]);

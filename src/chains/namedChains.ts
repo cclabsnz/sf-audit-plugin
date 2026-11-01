@@ -619,7 +619,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       'permission set can export it en masse (Weekly Data Export, or API access combined with ' +
       'View/Modify All Data), and there is no monitoring that would record the export happening. ' +
       'Broad read plus bulk egress plus no audit trail is the insider-threat and post-credential-' +
-      'compromise path — and the missing third element is what makes it unreconstructable afterwards.',
+      'compromise path. The missing audit trail is what makes it impossible to reconstruct afterwards.',
     remediation:
       'Narrow the broad internal sharing, restrict Weekly Data Export and Bulk API access to a named ' +
       'few, and enable Event Monitoring (plus forwarding to a SIEM) so bulk reads are recorded and ' +

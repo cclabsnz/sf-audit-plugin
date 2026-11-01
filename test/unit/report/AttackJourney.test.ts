@@ -15,8 +15,12 @@ describe('buildAttackJourney', () => {
       f('b', ['T1078.004']),
       f('c', ['T1190'], { passed: true }),
       f('d', ['T1190'], { waived: true }),
+      f('e', ['T1567'], { riskLevel: 'INFO' }),
     ], []);
     expect(j.tactics.map((t) => t.tactic)).toEqual([...ATTACK_TACTIC_ORDER]);
+    // An INFO inventory line that grants access (named credentials: egress) still counts, so the
+    // bars agree with any chain row that shows the same step.
+    expect(j.tactics[at('exfiltration')].findings.map((x) => x.id)).toEqual(['e']);
     expect(j.tactics[at('initial-access')].findings.map((x) => x.id)).toEqual(['a', 'b']);
     // T1078.004 sits in four tactics; it counts once in each.
     for (const t of ['stealth', 'persistence', 'privilege-escalation']) {

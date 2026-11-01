@@ -9,6 +9,14 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Fixed
+
+- The threat view (Markdown Threat View, executive STRIDE heatmap and LINDDUN bars) no longer
+  counts INFO results as open findings. An inventory line such as "0 scheduled jobs
+  found" or "No certificates found" sat under a STRIDE category as if it were a threat. The heatmap
+  loses its Info column; the check still counts as coverage for its category (RULE-104).
+- The insider bulk-export chain narrative reads without an em dash.
+
 ## [v1.24.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.24.0) — 2026-10-30
 
 Several checks were filtering on values the platform never writes, so they found nothing; they now
