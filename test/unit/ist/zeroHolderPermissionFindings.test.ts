@@ -121,7 +121,8 @@ describe('RULE-040: zero holders is reported as inconclusive', () => {
 describe('RULE-041: a zero-holder finding never completes an attack chain', () => {
   const others: Record<string, string[]> = {
     'insider-bulk-exfil': ['data-export-weekly-export', 'event-monitoring-disabled'],
-    'mfa-bypass-admin': ['internal-user-mfa-gaps'],
+    // Org-wide, so it reaches whichever holder the test adds.
+    'mfa-bypass-admin': ['trusted-ip-broad-ranges'],
     'xss-to-privileged-session': ['visualforce-xss-escape-false', 'session-hardening-risks'],
     'soql-injection-read': ['soql-injection-risk'],
     'inbound-email-rce': ['inbound-email-handler-unauthenticated-execution'],
@@ -202,7 +203,7 @@ describe('RULE-042: a partial read gives lower bounds, not passes', () => {
 
   it('a capped read with holders still completes a chain', async () => {
     const { findings } = await runCheck({ rows: both(1), psaTotal: 12000 });
-    const chains = new ChainEngine().correlate([...findings, f('internal-user-mfa-gaps')]);
+    const chains = new ChainEngine().correlate([...findings, f('trusted-ip-broad-ranges')]);
     expect(chains.map((c) => c.id)).toContain('mfa-bypass-admin');
   });
 

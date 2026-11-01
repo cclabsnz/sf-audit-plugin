@@ -11,7 +11,7 @@ export type ThreatRowStatus = 'findings' | 'no-findings' | 'not-assessed-in-run'
 export interface ThreatRow<C extends string> {
   category: C;
   name: string;
-  /** Active findings in this category: not passed, inconclusive, not assessed or waived. */
+  /** Active findings in this category: not passed, inconclusive, not assessed, waived or INFO. */
   findings: Finding[];
   /** Checks in this run whose map entry names the category. */
   coveringChecks: number;
@@ -31,7 +31,9 @@ export interface ThreatView {
 export const PRIVACY_COST_OF_LOGGING =
   'The logging this fix adds records personal data: decide what it captures, how long it is kept and who can read it.';
 
-const isActive = (f: Finding): boolean => !f.passed && !f.inconclusive && !f.notAssessed && !f.waived;
+// INFO is an inventory line or a note, never an open threat (RULE-104).
+const isActive = (f: Finding): boolean =>
+  !f.passed && !f.inconclusive && !f.notAssessed && !f.waived && f.riskLevel !== 'INFO';
 
 /** The threat view (RULE-104): coverage per category, never a pass. */
 export function buildThreatView(findings: readonly Finding[]): ThreatView {

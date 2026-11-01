@@ -325,7 +325,7 @@ Named chains, all defined in src/chains/namedChains.ts (finding groups such as `
 
 Chain building blocks:
 
-- src/chains/Capability.ts: the `Capability` vocabulary, `ALL_CAPABILITIES`, `SOURCE_CAPS`, `HIGH_IMPACT_SINKS`.
+- src/chains/Capability.ts: the `Capability` vocabulary (11, including `valid-account` for weak MFA, which is neither a source nor a sink), `ALL_CAPABILITIES`, `SOURCE_CAPS`, `HIGH_IMPACT_SINKS`.
 - src/chains/CapabilityRegistry.ts: `CAPABILITY_REGISTRY` (finding id or prefix to granted/required capabilities) and `capabilitiesFor(finding)`. A new finding that should take part in chains gets an entry here.
 - src/chains/AttackChain.ts: `AttackChain`, `AttackChainStep`, `AttackChainAbuseCase` shapes.
 - src/chains/namedChains.ts: `NamedChainDef`, `FindingGroup`, `AbuseCaseDef`, `inGroup(finding, group)`.

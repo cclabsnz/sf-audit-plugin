@@ -306,3 +306,53 @@ describe('NAMED_CHAINS', () => {
     }
   });
 });
+
+// The MFA chain says an admin is taken over without a second factor, so the weakness must reach a
+// privileged user: org-wide (a trusted range), or naming one of the privileged users.
+describe('mfa-bypass-admin needs the weakness to reach a privileged user', () => {
+  const chain = NAMED_CHAINS.find((c) => c.id === 'mfa-bypass-admin')!;
+  const users = (id: string, items: { label: string; url?: string }[]): Finding => ({ ...f(id), affectedItems: items });
+  const admin = users('users-modify-all-data', [{ label: 'admin@x.com (System Administrator)', url: 'https://x/005xx0000000001AAA' }]);
+  const shadow = users('privileged-access-shadow-admins', [{ label: 'shadow@x.com', url: 'https://x/lightning/setup' }]);
+  const fire = (findings: Finding[]) => chain.match(present(findings), findings)?.map((s) => s.id) ?? null;
+
+  it('does not fire when only portal users lack MFA', () => {
+    expect(fire([users('mfa-portal-users-without-enforcement', [{ label: 'p@x.com', url: 'https://x/005xx0000000009AAA' }]), admin])).toBeNull();
+  });
+
+  it('does not fire when the internal users without MFA hold no privilege', () => {
+    expect(fire([users('internal-user-mfa-gaps', [{ label: 'rep@x.com', url: 'https://x/005xx0000000002AAA' }]), admin])).toBeNull();
+  });
+
+  it('fires when a privileged user lacks MFA, matched by record Id', () => {
+    expect(fire([users('internal-user-mfa-gaps', [{ label: 'renamed@x.com', url: 'https://x/005xx0000000001' }]), admin]))
+      .toEqual(['internal-user-mfa-gaps', 'users-modify-all-data']);
+  });
+
+  it('fires when a privileged user lacks MFA, matched by username', () => {
+    expect(fire([users('internal-user-mfa-gaps', [{ label: 'shadow@x.com', url: 'https://x/005xx0000000003AAA' }]), shadow]))
+      .toEqual(['internal-user-mfa-gaps', 'privileged-access-shadow-admins']);
+  });
+
+  it('matches a username against a privileged item labelled with its profile', () => {
+    const byName = users('users-view-all-data', [{ label: 'ops@x.com (Ops)', url: 'https://x/lightning/setup' }]);
+    expect(fire([users('internal-user-mfa-gaps', [{ label: 'ops@x.com' }]), byName]))
+      .toEqual(['internal-user-mfa-gaps', 'users-view-all-data']);
+  });
+
+  it('fires on a trusted range, which exempts every user, and on a capped user list', () => {
+    expect(fire([f('trusted-ip-broad-ranges'), admin])).toEqual(['trusted-ip-broad-ranges', 'users-modify-all-data']);
+    const capped = Array.from({ length: 50 }, (_, i) => ({ label: `u${i}@x.com` }));
+    expect(fire([users('internal-user-mfa-gaps', capped), admin])).toEqual(['internal-user-mfa-gaps', 'users-modify-all-data']);
+  });
+
+  it('does not fire on a capped portal list: no portal user is an admin', () => {
+    const capped = Array.from({ length: 50 }, (_, i) => ({ label: `p${i}@x.com` }));
+    expect(fire([users('mfa-portal-users-without-enforcement', capped), admin])).toBeNull();
+  });
+
+  it('starts at initial access: weak MFA is a valid account (T1078.004)', () => {
+    expect(capabilitiesFor(f('internal-user-mfa-gaps')).grants).toEqual(['valid-account']);
+    expect(chain.abuseCase?.tactics).toEqual({ entry: 'initial-access', goal: 'privilege-escalation' });
+  });
+});

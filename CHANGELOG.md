@@ -9,6 +9,29 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.24.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.24.1) — 2026-11-01
+
+The threat model reads as the threats it found. Inventory lines no longer sit in the STRIDE view as
+open findings, and the MFA bypass chain fires only when a privileged user can actually sign in
+without a second factor, starting at initial access on the ATT&CK slide.
+
+### Fixed
+
+- The threat view (Markdown Threat View, executive STRIDE heatmap and LINDDUN bars) no longer
+  counts INFO results as open findings. An inventory line such as "0 scheduled jobs
+  found" or "No certificates found" sat under a STRIDE category as if it were a threat. The heatmap
+  loses its Info column; the check still counts as coverage for its category (RULE-104).
+- The insider bulk-export chain narrative reads without an em dash.
+- **MFA bypass to privileged compromise** fires only when the MFA weakness reaches a privileged user:
+  a trusted IP range (which exempts everyone), or users without MFA that include an admin-level
+  holder (a full 50-user list counts, since the list stops there). Portal users without MFA no
+  longer fire it on their own, since a portal user is not an admin. Some grades rise where that
+  was the only path.
+- The same chain now starts at **Initial access** on the ATT&CK slide. Weak MFA grants a new
+  `valid-account` capability, mapped to T1078.004 Valid Accounts: Cloud Accounts, so the three MFA
+  findings now carry T1078.004 in every output (Markdown, HTML, JSON, SARIF). It is not an entry
+  point of a potential chain, so no other chain changes.
+
 ## [v1.24.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.24.0) — 2026-10-30
 
 Several checks were filtering on values the platform never writes, so they found nothing; they now

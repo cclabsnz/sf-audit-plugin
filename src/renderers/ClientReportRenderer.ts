@@ -27,6 +27,8 @@ const SEV_COLOR: Record<RiskLevel, string> = {
 };
 const SEV_RANK: Record<RiskLevel, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4 };
 const SEVERITIES: RiskLevel[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
+// The threat view holds no INFO results, so the heatmap has no Info column.
+const THREAT_LEVELS = SEVERITIES.filter((l) => l !== 'INFO');
 const EFFORT_LABEL = { quick: 'Under a day', moderate: 'Days', project: 'Weeks' } as const;
 const WAVE_LABEL = { 1: 'Start now', 2: 'Next 30 days', 3: 'This quarter' } as const;
 const WAVE_WHY = {
@@ -280,13 +282,13 @@ h3{font-size:19px;font-weight:650;line-height:1.3;margin:0}
 .jr .cc.pot .ln{border-top-style:dashed}
 .jr .cc .dt{position:relative;width:13px;height:13px;border-radius:50%;background:var(--c)}
 .tm{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:52px}
-.hm{display:grid;grid-template-columns:200px repeat(5,minmax(0,1fr)) 52px;gap:4px;align-items:center}
+.hm{display:grid;grid-template-columns:200px repeat(4,minmax(0,1fr)) 52px;gap:4px;align-items:center}
 .hm .h{font-size:11.5px;font-weight:700;color:var(--muted);text-align:center;padding-bottom:4px}
 .hm .h.t{text-align:right}
 .hm .n{font-size:14px;line-height:1.25}
 .hm .n b{display:inline-block;width:20px}
 .hm .c{height:46px;display:grid;place-items:center;font-size:14.5px;font-weight:700;background:#f6f7f8}
-.hm .none{grid-column:span 5;height:46px;display:flex;align-items:center;padding:0 12px;font-size:13px;color:var(--muted);background:#f6f7f8}
+.hm .none{grid-column:span 4;height:46px;display:flex;align-items:center;padding:0 12px;font-size:13px;color:var(--muted);background:#f6f7f8}
 .hm .tt{text-align:right;font-weight:700}
 .lb{display:grid;grid-template-columns:190px minmax(0,1fr) 30px;gap:12px;align-items:center;min-height:38px;border-bottom:1px solid #eef0f2;font-size:14px}
 .lb .segs{display:flex;gap:2px;height:12px}
@@ -378,7 +380,7 @@ h2.title{font-size:22px}
 .plan td[data-l]::before{content:attr(data-l);flex:none;width:58px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted)}
 .content{min-width:0}
 .jr{overflow-x:auto;grid-template-columns:150px repeat(15,48px)}
-.hm{grid-template-columns:120px repeat(5,minmax(0,1fr)) 34px}
+.hm{grid-template-columns:120px repeat(4,minmax(0,1fr)) 34px}
 .lb{grid-template-columns:120px minmax(0,1fr) 24px}
 .passed{grid-template-columns:minmax(0,1fr)}
 .sched:not(.approve),.sched:not(.approve) tbody,.sched:not(.approve) tr,.sched:not(.approve) td{display:block;width:100%}
@@ -610,7 +612,7 @@ ${pts}<div class="yl"><span>Risk removed →</span></div><div class="xl"><span>U
     }
 
     const view = buildThreatView(r.findings);
-    const sevCount = (row: ThreatRow<string>): number[] => SEVERITIES.map((l) => row.findings.filter((f) => f.riskLevel === l).length);
+    const sevCount = (row: ThreatRow<string>): number[] => THREAT_LEVELS.map((l) => row.findings.filter((f) => f.riskLevel === l).length);
     const shade = (n: number, crit: boolean): string => (!n ? '' : crit ? 'background:var(--crit);color:#fff'
       : `background:color-mix(in srgb,var(--accent) ${Math.round(16 + Math.min(n, 10) * 7)}%,var(--paper));${n >= 6 ? 'color:#fff' : ''}`);
     const stride = view.stride.map((row) => {
@@ -631,7 +633,7 @@ ${pts}<div class="yl"><span>Risk removed →</span></div><div class="xl"><span>U
     let privacy = '';
     if (view.linddun) {
       const bars = view.linddun.map((row) => {
-        const v = sevCount(row).slice(0, 4);
+        const v = sevCount(row);
         const segs = row.findings.length
           ? `<span class="segs">${v.map((n, i) => (n ? `<i style="width:${n * 22}px;background:${segColors[i]}"></i>` : '')).join('')}</span>`
           : `<span class="st">${esc(threatRowStatusText(row))}</span>`;
@@ -645,7 +647,7 @@ ${pts}<div class="yl"><span>Risk removed →</span></div><div class="xl"><span>U
     out.push({
       kicker: 'Threat model · STRIDE and LINDDUN', title: esc(headline),
       body: `<div class="tm"><div><h3 style="font-size:15px;margin-bottom:10px">Security threats (STRIDE) · open findings by severity <span class="muted" style="font-weight:400">(a finding counts in each category it touches)</span></h3>
-<div class="hm"><div class="h"></div>${SEVERITIES.map((l) => `<div class="h">${cap(l.toLowerCase())}</div>`).join('')}<div class="h t">Total</div>${stride}</div></div>${privacy}</div>`,
+<div class="hm"><div class="h"></div>${THREAT_LEVELS.map((l) => `<div class="h">${cap(l.toLowerCase())}</div>`).join('')}<div class="h t">Total</div>${stride}</div></div>${privacy}</div>`,
       source: `Each check is mapped to the STRIDE categories it guards and, where personal data is involved, to LINDDUN.${[...view.stride, ...(view.linddun ?? [])].some((row) => !row.findings.length) ? ' A row without findings is not assurance: it says how many checks covered it.' : ''}`,
     });
     return out;

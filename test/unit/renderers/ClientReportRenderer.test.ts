@@ -210,6 +210,16 @@ describe('ClientReportRenderer slides', () => {
     expect(tm).toMatch(/<b>D<\/b>Denial of service<\/div><div class="none">(no findings from|not assessed)/);
   });
 
+  // An inventory line ("No certificates found") is not an open threat: no Info column, no count.
+  it('leaves INFO results out of the threat heatmap', () => {
+    const base = res();
+    const info = base.findings.find((x) => x.id === 'f5')!;
+    const html = r.render({ ...base, findings: base.findings.map((x) => (x === info ? { ...x, threats: { stride: ['D'] } } : x)) });
+    const tm = html.slice(html.indexOf('Threat model · STRIDE'), html.indexOf('Attack scenario C1'));
+    expect(tm).not.toContain('<div class="h">Info</div>');
+    expect(tm).toMatch(/<b>D<\/b>Denial of service<\/div><div class="none">/);
+  });
+
   it('uses the firm\'s own colours and surfaces when it set them, and the deck\'s when it did not', () => {
     const own = new ClientReportRenderer({ branding: { ...DEFAULT_BRANDING, primary: '#123456', bg: '#101010', bgAlt: '#202020', border: '#303030' }, topN: 5, frameworks: [] }).render(res());
     expect(own).toContain('--accent:#123456;');

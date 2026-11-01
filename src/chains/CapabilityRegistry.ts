@@ -94,6 +94,11 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'login-access-policy-login-as-enabled': { grants: ['priv-esc', 'data-read-bulk'], techniques: { 'priv-esc': ['T1078.004'] } },
   // External federation an attacker could ride in on
   'auth-providers-social':             { grants: ['low-trust-authenticated'] },
+  // Weak MFA: a stolen or guessed password is enough to sign in as the user. The capability is not an
+  // entry point of a potential path; the MFA chain pairs it with the privileged users it reaches.
+  'trusted-ip-broad-ranges':              { grants: ['valid-account'] },
+  'internal-user-mfa-gaps':               { grants: ['valid-account'] },
+  'mfa-portal-users-without-enforcement': { grants: ['valid-account'] },
 
   // Toxic permission combinations held by one user. Capabilities follow each combo's own stated
   // outcome — see COMBOS in SeparationOfDutiesCheck, where the ids are defined.
