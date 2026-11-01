@@ -161,6 +161,7 @@ The ATT&CK table below is the draft. The verified mapping is pinned to Enterpris
 | `priv-esc` | T1098.003 Account Manipulation: Additional Cloud Roles; T1548 Abuse Elevation Control Mechanism |
 | `org-takeover` | T1098 Account Manipulation; T1136.003 Create Account: Cloud Account |
 | `external-egress` | T1567 Exfiltration Over Web Service |
+| `valid-account` | T1078.004 Valid Accounts: Cloud Accounts (weak MFA: a password alone signs in) |
 | detection gaps, `detects` (RULE-108) | T1562.008 Impair Defenses: Disable or Modify Cloud Logs |
 
 | STRIDE | Example checks (primary category); finding-level overrides in brackets |

@@ -233,6 +233,32 @@ export const DETECTION_BLIND_SPOTS = [
 export const EXPLOITABLE_ACCESS: readonly Capability[] = ['unauth-foothold', 'priv-esc', 'org-takeover'];
 
 export const MFA_WEAKNESS = ['trusted-ip-broad-ranges', 'internal-user-mfa-gaps', 'mfa-portal-users-without-enforcement'];
+// Org-wide: a trusted range exempts every user signing in from it, admins included.
+const MFA_WEAKNESS_ORG_WIDE = ['trusted-ip-broad-ranges'];
+// The internal-user MFA finding lists at most this many users, so a full list may leave a privileged
+// user out. Portal users never qualify this way: a portal user is not one of the admins.
+const MFA_USER_LIST_CAP = 50;
+const MFA_CAPPED_INTERNAL = 'internal-user-mfa-gaps';
+
+/** The user Ids (from a record link) and usernames a finding's affected items name. */
+function userKeys(f: Finding): Set<string> {
+  const keys = new Set<string>();
+  for (const item of f.affectedItems ?? []) {
+    const id = /\/(005[A-Za-z0-9]{12}(?:[A-Za-z0-9]{3})?)$/.exec(item.url ?? '')?.[1];
+    if (id) keys.add(id.slice(0, 15));
+    keys.add(item.label.replace(/ \(.*\)$/, ''));
+  }
+  return keys;
+}
+
+/** The MFA weaknesses that reach a privileged user: org-wide, or naming one of those users. */
+function weaknessReachingPrivileged(weakness: Finding[], targets: Finding[]): Finding[] {
+  const privileged = new Set(targets.flatMap((t) => [...userKeys(t)]));
+  return weakness.filter((w) =>
+    MFA_WEAKNESS_ORG_WIDE.includes(w.id)
+    || (w.id === MFA_CAPPED_INTERNAL && (w.affectedItems?.length ?? 0) >= MFA_USER_LIST_CAP)
+    || [...userKeys(w)].some((k) => privileged.has(k)));
+}
 export const PRIVILEGED_ACCOUNTS = [
   'users-modify-all-data', 'users-view-all-data', 'users-super-admin-combo',
   'privileged-access-shadow-admins', 'separation-of-duties-self-escalation',
@@ -679,22 +705,24 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     title: 'MFA bypass to privileged compromise',
     severity: 'HIGH',
     narrative:
-      'Weak MFA enforcement or trusted-IP MFA bypass combines with the presence of highly-privileged ' +
-      'accounts, so a credential-stuffing or phishing attacker can take over an admin without a second factor.',
+      'A privileged account signs in without a second factor: a trusted IP range exempts it from MFA, or ' +
+      'the account itself lacks MFA enforcement. A credential-stuffing or phishing attacker who has the ' +
+      'password can take over an admin.',
     remediation:
       'Enforce MFA for all internal users, remove trusted-IP MFA bypass ranges, and minimise privileged accounts.',
     abuseCase: {
       actor: 'a credential-stuffing or phishing attacker',
       goal: 'take over a privileged account without a second factor',
-      preconditions: [{ ids: MFA_WEAKNESS }, { ids: PRIVILEGED_ACCOUNTS }],
+      preconditions: [{ ids: MFA_WEAKNESS, role: 'valid-account' }, { ids: PRIVILEGED_ACCOUNTS }],
       breakPoint: 0,
-      tactics: { goal: 'privilege-escalation' },
+      tactics: { entry: 'initial-access', goal: 'privilege-escalation' },
       breakPointText:
         'Enforce MFA for every user and remove trusted-IP ranges that bypass it.',
     },
     match(_present, active) {
-      const weakness = byIds(active, MFA_WEAKNESS);
+      // A portal user without MFA is not an admin: the weakness must reach a privileged user.
       const targets = byIds(active, PRIVILEGED_ACCOUNTS);
+      const weakness = weaknessReachingPrivileged(byIds(active, MFA_WEAKNESS), targets);
       return weakness.length > 0 && targets.length > 0 ? [...weakness, ...targets] : null;
     },
   },

@@ -73,6 +73,7 @@ export const CAPABILITY_TECHNIQUES: Record<Capability, string[]> = {
   'priv-esc':                ['T1098.003'],
   'org-takeover':            ['T1098'],
   'external-egress':         ['T1567'],
+  'valid-account':           ['T1078.004'],
 };
 
 /**
