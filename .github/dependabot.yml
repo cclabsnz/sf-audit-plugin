@@ -34,3 +34,9 @@ updates:
       semver-major-days: 14
     commit-message:
       prefix: "chore(ci)"
+    # Every github/codeql-action step in a workflow must run the same version, so one PR
+    # bumps them all; bumped one at a time, each PR fails CodeQL.
+    groups:
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
