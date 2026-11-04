@@ -29,7 +29,7 @@ importers:
         version: 5.3.1
       '@oclif/core':
         specifier: ^5
-        version: 5.1.10
+        version: 5.1.11
       '@salesforce/core':
         specifier: ^9.3.0
         version: 9.4.4
@@ -505,8 +505,8 @@ packages:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
 
-  '@oclif/core@5.1.10':
-    resolution: {integrity: sha512-iO+Ga2ve3x0QDeqKVvVEYbb+YPVV7A0rbliCO+ZcUdZ/5Sfv+kHz2G247ExAw5aSAEXn9gX6H4jjON2mcJivqw==}
+  '@oclif/core@5.1.11':
+    resolution: {integrity: sha512-SIB9o3zofFA8CzjnCWbBWjdDNOKV7zYlKnDeE0V7+kHl89qzMPRNhrbAAh0+0HkUiVpiR6wIoL8yJI6QtoWsqg==}
     engines: {node: '>=22.0.0'}
 
   '@oclif/table@1.0.8':
@@ -3322,7 +3322,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.4
     optional: true
 
-  '@oclif/core@5.1.10':
+  '@oclif/core@5.1.11':
     dependencies:
       ansi-escapes: 4.3.2
       ansis: 3.17.0
@@ -3510,7 +3510,7 @@ snapshots:
     dependencies:
       '@inquirer/confirm': 6.3.5(@types/node@26.6.6)
       '@inquirer/password': 5.2.5(@types/node@26.6.6)
-      '@oclif/core': 5.1.10
+      '@oclif/core': 5.1.11
       '@oclif/table': 1.0.8
       '@salesforce/core': 9.4.4
       '@salesforce/kit': 4.0.8
