@@ -5,26 +5,35 @@
 # @cclabsnz/sf-audit
 
 [![CI](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/codeql.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/codeql.yml)
-[![Semgrep](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/semgrep.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/semgrep.yml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cclabsnz/sf-audit-plugin/badge)](https://securityscorecards.dev/viewer/?uri=github.com/cclabsnz/sf-audit-plugin)
-[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14149/badge)](https://www.bestpractices.dev/projects/14149)
 [![npm version](https://img.shields.io/npm/v/@cclabsnz/sf-audit)](https://www.npmjs.com/package/@cclabsnz/sf-audit)
-[![npm provenance](https://img.shields.io/badge/npm-signed%20provenance-brightgreen)](https://www.npmjs.com/package/@cclabsnz/sf-audit#provenance)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/cclabsnz/sf-audit-plugin/badge)](https://securityscorecards.dev/viewer/?uri=github.com/cclabsnz/sf-audit-plugin)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-A Salesforce CLI (`sf`) plugin that runs a complete, **read-only** security audit against any Salesforce org, risk-scores it with an A–F grade, and turns the result into a report your security team (or your client's) can act on.
+A read-only security audit for any Salesforce org, run from the Salesforce CLI (`sf`): 109 checks, an
+A–F grade, and a report your security team (or your client's) can act on.
 
-- **109 read-only checks** across identity, access, data (including Data Cloud and Shield), code, integrations (including inbound email handlers and package install handlers), monitoring, and Agentforce / GenAI. Apex findings say which control a class bypasses: record sharing, or CRUD/FLS
-- **Attack-chain correlation:** links individual findings into named, multi-step attack scenarios — nineteen modelled chains, plus an emergent pass for combinations nobody has named yet (see [Attack chains](#attack-chains))
-- **Compliance mapping:** every finding mapped to **source-verified** controls across 10 frameworks: 8 general baseline frameworks (OWASP Top 10, OWASP LLM Top 10, SOC 2, ISO/IEC 27001:2022, Security Benchmark for Salesforce, NZ Privacy Act 2020, HISO 10029, NZISM) plus 2 specialized jurisdictional packs (HIPAA Security Rule, GDPR)
-- **Outputs:** a technical `html` / `md` / `json` report, or a branded, client-ready **executive report** (print-to-PDF) with priorities, remediation roadmap, and a compliance coverage matrix
-- **History & diff:** archives each run and shows security-posture drift over time (skipped by default on CI runners, so they keep no org data)
-- **CI-ready:** `--format sarif` for GitHub code scanning, `--fail-on` to gate a pipeline, and [accepted-risk waivers](#accepting-a-risk) that expire
-- **Free event baseline:** `sf audit events pull` captures the org's free daily `EventLogFile` logs to local disk before the 1-day retention window drops them — no Event Monitoring / Shield add-on needed
-- **Connected-app least-privilege:** `sf audit apps` reads the `RestApi`, `BulkApi2`, `GraphQlQueryExecution` and `AuraRequest` EventLogFiles to see which objects each connected app actually uses, compares that against what its run-as user is granted (permission sets and profile), and reports the over-grant per object and read/write bit — plus a suggested least-privilege permission set, which `--emit-permset <dir>` writes as local `.permissionset-meta.xml` files (never deployed)
-- **Guest User Anomaly investigation:** `sf audit incident collect` saves the guest user's evidence for each anomaly wave, and `sf audit incident report` analyses it offline into a cited verdict: who it was, whether content came back, and whether anyone logged in ([walkthrough](https://www.softwareinsights.dev/posts/salesforce-guest-user-anomaly-investigation-sf-audit-incident/))
-- Strictly read-only (SOQL/Tooling/REST GETs + Metadata API reads); see [PERMISSIONS.md](PERMISSIONS.md) for the least-privilege access it needs
+<a href="https://www.softwareinsights.dev/samples/sf-audit/sample-report.html"><img src="https://www.softwareinsights.dev/samples/sf-audit/sample-report.png" width="720" alt="sf-audit HTML report for a fictional org: grade F at 77 out of 100 and why, 42 open findings by severity, and user, code, integration and governance metrics" /></a>
+
+*A sample report from a fictional org, produced by the real checks against synthetic data. Open the
+full [technical report](https://www.softwareinsights.dev/samples/sf-audit/sample-report.html) or the
+[executive report](https://www.softwareinsights.dev/samples/sf-audit/sample-executive-report.html).*
+
+```bash
+sf plugins install @cclabsnz/sf-audit   # warns that it is unsigned: answer y (see Installation)
+sf audit security --target-org <orgAlias>
+```
+
+That writes an HTML report to the current directory. **Safe to run against production:** it only
+uses SOQL, Tooling/REST GETs and Metadata API reads, and a test fails the build if a write call
+appears in the source ([PERMISSIONS.md](PERMISSIONS.md), [Trust & verification](#trust--verification)).
+
+- **Checks:** identity, access, data, guest exposure, integrations, code, monitoring and Agentforce. See [What It Checks](#what-it-checks)
+- **Attack chains:** findings linked into multi-step attack scenarios: nineteen named chains, plus a pass for combinations nobody has named yet
+- **Compliance:** every finding mapped to 10 frameworks, including SOC 2, ISO/IEC 27001, OWASP, NZISM, HIPAA and GDPR
+- **CI:** `--format sarif` for GitHub code scanning, `--fail-on` to gate a pipeline, and expiring [risk waivers](#accepting-a-risk)
+
+The plugin also has commands to capture the free daily event logs, check connected apps for least
+privilege, and investigate guest-user anomalies. See [Other commands](#other-commands).
 
 ## Installation
 
@@ -133,7 +142,9 @@ Every flag, more examples, and what the executive report contains:
 ## What It Checks
 
 **109 read-only checks** across ten domains. Every finding is risk-rated CRITICAL → INFO, mapped to
-compliance controls, and correlated into [attack chains](#attack-chains).
+compliance controls, and correlated into [attack chains](#attack-chains). Coverage includes Data
+Cloud and Shield, inbound email handlers and package install handlers, and Apex findings say which
+control a class bypasses: record sharing, or CRUD/FLS.
 
 | Domain | Checks |
 |--------|-------:|
@@ -194,7 +205,7 @@ All nineteen with severities and trigger conditions: **[docs/ATTACK-CHAINS.md](d
 
 ## Scope & Liability
 
-**What this tool is.** A read-only, point-in-time configuration review. Every check uses standard Salesforce SOQL, Tooling, and REST **GET** queries only: the tool performs no DML, no metadata deployments, and never modifies the target org or its data. It runs under the permissions of the authenticated `sf` user; checks that the user cannot access are reported as *inconclusive* rather than passing silently.
+**What this tool is.** A read-only, point-in-time configuration review. Every check uses standard Salesforce SOQL, Tooling, and REST **GET** queries and Metadata API reads only: the tool performs no DML, no metadata deployments, and never modifies the target org or its data. It runs under the permissions of the authenticated `sf` user; checks that the user cannot access are reported as *inconclusive* rather than passing silently.
 
 **What this tool is not.** It is **not** a penetration test, a dynamic/runtime security test, or a source-code audit of managed-package internals. It does not exploit vulnerabilities, attempt privilege escalation, or guarantee detection of every misconfiguration. The Health Score and A–F grade are **prioritisation aids**, not certifications, and do not represent compliance with, or accreditation under, any standard (OWASP, SOC 2, ISO 27001, HIPAA, GDPR, or otherwise). Compliance-framework tags indicate *relevance* to a control area only.
 
@@ -209,6 +220,11 @@ All nineteen with severities and trigger conditions: **[docs/ATTACK-CHAINS.md](d
 
 Because this tool authenticates against production orgs, "is it safe to run?" deserves a verifiable
 answer rather than a claim. Every guarantee below is something you can check yourself:
+
+[![CodeQL](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/codeql.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/codeql.yml)
+[![Semgrep](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/semgrep.yml/badge.svg)](https://github.com/cclabsnz/sf-audit-plugin/actions/workflows/semgrep.yml)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/14149/badge)](https://www.bestpractices.dev/projects/14149)
+[![npm provenance](https://img.shields.io/badge/npm-signed%20provenance-brightgreen)](https://www.npmjs.com/package/@cclabsnz/sf-audit#provenance)
 
 - **Read-only, enforced in CI** — a test statically fails the build if any write path appears in the source
 - **No network egress** — enforced the same way; reports are fully self-contained (fonts and Chart.js inlined)
@@ -287,7 +303,7 @@ Beyond the audit itself, the plugin ships five commands. Each is documented in
 | `sf audit events pull` | Capture the org's **free** daily `EventLogFile` logs to local disk before the ~1-day retention window drops them — no Event Monitoring / Shield add-on needed. Idempotent, safe to cron |
 | `sf audit timeline` | Reconstruct one actor's activity across every captured event type, entirely offline. Refuses to expand a shared identity or join on a blank field, and always reports capture coverage first |
 | `sf audit preflight` | Read the running user's effective permissions in one query and report which checks will produce a verdict and which will return inconclusive — **before** an audit is run |
-| `sf audit apps` | Read the API event logs to compare what each connected app actually *uses* against what its run-as user is *granted*, and suggest a least-privilege permission set. `--emit-permset <dir>` writes it as local `.permissionset-meta.xml` files for review; nothing is deployed |
+| `sf audit apps` | Read the `RestApi`, `BulkApi2`, `GraphQlQueryExecution` and `AuraRequest` event logs to compare what each connected app actually *uses* against what its run-as user is *granted*, per object and read/write, and suggest a least-privilege permission set. `--emit-permset <dir>` writes it as local `.permissionset-meta.xml` files for review; nothing is deployed |
 
 To triage captured logs for abuse patterns, pair `events pull` with the companion CLI
 **[sfelf-triage](https://github.com/cclabsnz/sfelf-triage)**, which reads this plugin's
@@ -297,11 +313,12 @@ To triage captured logs for abuse patterns, pair `events pull` with the companio
 
 `sf audit incident collect --target-org <alias>` finds Guest User Anomaly waves and saves a
 guest-filtered evidence bundle to `~/.sf/incidents/`. `sf audit incident report --bundle <dir>`
-analyses it offline and writes an HTML/Markdown/JSON report with evidence CSVs. Pass
+analyses it offline into a cited verdict (who it was, whether content came back, and whether anyone
+logged in) as an HTML/Markdown/JSON report with evidence CSVs. Pass
 `--ip-ranges` with provider range files you have downloaded to classify hosting; the plugin
 never fetches them. Use `--redact` before sharing beyond the client's security team. Bundles in
 `~/.sf/incidents` hold guest-traffic rows and linked-user details unencrypted, so handle them as
-sensitive data.
+sensitive data. A worked example: [investigating a Guest User Anomaly with sf-audit](https://www.softwareinsights.dev/posts/salesforce-guest-user-anomaly-investigation-sf-audit-incident/).
 
 ## Requirements
 
