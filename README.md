@@ -12,7 +12,7 @@
 A read-only security audit for any Salesforce org, run from the Salesforce CLI (`sf`): 109 checks, an
 A–F grade, and a report your security team (or your client's) can act on.
 
-<a href="https://www.softwareinsights.dev/samples/sf-audit/sample-report.html"><img src="https://www.softwareinsights.dev/images/salesforce-experience-cloud-guest-checklist/sample-report.png" width="720" alt="sf-audit HTML report for a fictional org: grade F at 77 out of 100, why it got that grade, 41 open findings by severity, and user and code metrics" /></a>
+<a href="https://www.softwareinsights.dev/samples/sf-audit/sample-report.html"><img src="https://www.softwareinsights.dev/samples/sf-audit/sample-report.png" width="720" alt="sf-audit HTML report for a fictional org: grade F at 77 out of 100 and why, 42 open findings by severity, and user, code, integration and governance metrics" /></a>
 
 *A sample report from a fictional org, produced by the real checks against synthetic data. Open the
 full [technical report](https://www.softwareinsights.dev/samples/sf-audit/sample-report.html) or the
