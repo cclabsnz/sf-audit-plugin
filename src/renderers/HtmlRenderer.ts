@@ -7,6 +7,10 @@ import { renderAttackChainDagSvg } from './AttackChainDagRenderer.js';
 import { coverageSummary, coverageAdvice } from '../findings/coverage.js';
 import { techniqueLabel } from '../threats/attack.js';
 import { unknownMetrics } from '../findings/unknownMetrics.js';
+import type { Finding } from '../findings/Finding.js';
+import type { AttackChain } from '../chains/AttackChain.js';
+import { buildActionPlan, planHeadline, EFFORT_LABEL, WAVE_LABEL, WAVE_WHY, type PlannedAction } from '../report/ActionPlan.js';
+import { DOMAINS, domainOf } from '../checks/domains.js';
 
 // The report is printed on white, in the executive report's palette. Every severity colour holds
 // at least 4.5:1 on white and under white text, so badges and counts stay legible when printed.
@@ -216,16 +220,68 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
   </div>`;
 }
 
+// ── Report structure helpers ─────────────────────────────────────────────────
+
+const SEV_ORDER: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4 };
+const OTHER_DOMAIN = 'Other checks';
+
+type Status = 'open' | 'info' | 'waived' | 'inconclusive' | 'passed';
+
+function statusOf(f: Finding): Status {
+  if (f.passed) return 'passed';
+  if (f.inconclusive || f.notAssessed) return 'inconclusive';
+  if (f.waived) return 'waived';
+  return f.riskLevel === 'INFO' ? 'info' : 'open';
+}
+
+/** Open findings first, worst first; then informational, waived, inconclusive and passed results. */
+const STATUS_ORDER: Record<Status, number> = { open: 0, info: 1, waived: 2, inconclusive: 3, passed: 4 };
+function byPriority(a: Finding, b: Finding): number {
+  return STATUS_ORDER[statusOf(a)] - STATUS_ORDER[statusOf(b)] || (SEV_ORDER[a.riskLevel] ?? 9) - (SEV_ORDER[b.riskLevel] ?? 9);
+}
+
+/** A stable, unique anchor per finding, so a ticket can link straight to it. */
+function findingAnchors(findings: Finding[]): Map<Finding, string> {
+  const used = new Set<string>();
+  const out = new Map<Finding, string>();
+  for (const f of findings) {
+    const base = `f-${String(f.id ?? 'finding').toLowerCase().replace(/[^a-z0-9_-]+/g, '-')}`;
+    let a = base;
+    for (let n = 2; used.has(a); n++) a = `${base}-${n}`;
+    used.add(a);
+    out.set(f, a);
+  }
+  return out;
+}
+
+/** Chain labels as the executive report prints them: C1… for named chains, P1… for potential ones. */
+function chainLabels(chains: AttackChain[]): string[] {
+  let c = 0, p = 0;
+  return chains.map((ch) => (ch.abuseCase ? `C${++c}` : `P${++p}`));
+}
+
+const slug = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const frameworkOf = (tag: string): string => tag.split(/[-.]/)[0];
+const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+function severityBadge(f: Finding): string {
+  const st = statusOf(f);
+  if (st === 'inconclusive') return '<span class="inconclusive-badge">? INCONCLUSIVE</span>';
+  if (st === 'passed') return `<span class="risk-badge" style="--sev:${PASS_COLOR}">✓ PASS</span>`;
+  const sev = `<span class="risk-badge${SOLID.has(f.riskLevel) ? ' solid' : ''}" style="--sev:${RISK_COLORS[f.riskLevel] ?? UNKNOWN_COLOR}">${esc(f.riskLevel)}</span>`;
+  return st === 'waived' ? `${sev}<span class="waived-mark">waived</span>` : sev;
+}
+
 // ── Main renderer ────────────────────────────────────────────────────────────
 
 export class HtmlRenderer implements AuditRenderer {
   readonly format = 'html';
   readonly fileExtension = '.html';
 
-  private renderAttackPaths(result: AuditResult): string {
+  private renderAttackPaths(result: AuditResult, labels: string[], anchorOfId: Map<string, string>): string {
     if (!result.attackChains || result.attackChains.length === 0) return '';
     const cards = result.attackChains
-      .map((c) => {
+      .map((c, ci) => {
         const conf = c.confidence === 'named' ? '' : ' (potential)';
         const dagSvg = renderAttackChainDagSvg(c, { theme: 'light' });
         const steps = c.steps
@@ -233,11 +289,13 @@ export class HtmlRenderer implements AuditRenderer {
             const technique = s.techniques?.length ? ` → ${esc(s.techniques.map(techniqueLabel).join(' · '))}` : '';
             const grants = s.capabilityInferred ? '' : `: grants <code>${esc(s.capability)}</code>${technique}`;
             const cut = s.breaksChain ? ' <strong>✂ break point</strong>' : '';
-            return `<li><strong>${esc(s.title ?? s.findingId)}</strong> (${esc(s.severity ?? '—')})${grants}${cut}</li>`;
+            const anchor = anchorOfId.get(s.findingId);
+            const name = `<strong>${esc(s.title ?? s.findingId)}</strong>`;
+            return `<li>${anchor ? `<a href="#${anchor}">${name}</a>` : name} (${esc(s.severity ?? '—')})${grants}${cut}</li>`;
           })
           .join('');
-        return `<div class="attack-chain severity-${c.severity.toLowerCase()}">
-  <h3><span class="risk-badge solid" style="--sev:${RISK_COLORS[c.severity] ?? UNKNOWN_COLOR}">${esc(c.severity)}</span> ${esc(c.title)}${conf}</h3>
+        return `<div class="attack-chain severity-${c.severity.toLowerCase()}" id="chain-${ci + 1}">
+  <h3><span class="risk-badge solid" style="--sev:${RISK_COLORS[c.severity] ?? UNKNOWN_COLOR}">${esc(c.severity)}</span> <span class="chain-label">${labels[ci]}</span> ${esc(c.title)}${conf}</h3>
   ${c.abuseCase ? `<p><strong>Abuse case:</strong> ${esc(c.abuseCase.actor)} wants to ${esc(c.abuseCase.goal)}.</p>` : ''}
   <p>${esc(c.narrative)}</p>
   ${dagSvg}
@@ -249,43 +307,179 @@ export class HtmlRenderer implements AuditRenderer {
 </div>`;
       })
       .join('\n');
-    return `<section class="attack-paths">
+    return `<section class="attack-paths" id="attack-paths">
   <h2>Attack Paths (${result.attackChains.length})</h2>
   <p class="subtitle">Combinations of findings that together enable an exploit more severe than any single finding.</p>
   ${cards}
 </section>`;
   }
 
+  /** Option A: the fixes, in the order to do them, each with the findings it closes. */
+  private renderPlan(plan: PlannedAction[], headline: string, labels: string[], anchorOf: Map<Finding, string>): string {
+    if (plan.length === 0) {
+      return `<section class="fix-first" id="fix-first">
+  <div class="kicker">Fix first</div>
+  <h2 class="sec-h">${esc(headline)}</h2>
+</section>`;
+    }
+    const chip = (i: number, kind: '' | 'part') =>
+      `<a class="chip${kind ? ' part' : ''}" href="#chain-${i + 1}">${kind ? 'part of ' : ''}${labels[i]}</a>`;
+    let last = 0;
+    const rows = plan.map((a, i) => {
+      const head = a.wave !== last
+        ? `<tr class="wave-h"><td colspan="5">${WAVE_LABEL[a.wave]} <span class="why">· ${WAVE_WHY[a.wave]}</span></td></tr>`
+        : '';
+      last = a.wave;
+      const breaks = [...a.breaks.map((c) => chip(c, '')), ...a.weakens.map((c) => chip(c, 'part'))].join('') || '<span class="none">—</span>';
+      const closes = a.fixes
+        .map((f) => `<li>${severityBadge(f)}<a href="#${anchorOf.get(f)}">${esc(f.title)}</a></li>`)
+        .join('');
+      return `${head}<tr>
+  <td class="n">${i + 1}</td>
+  <td class="act"><b>${esc(a.title)}</b><span class="why-line">${esc(a.detail ?? a.why)}</span><ul class="closes">${closes}</ul></td>
+  <td><div class="chips">${breaks}</div></td>
+  <td class="num">${a.fixes.length}</td>
+  <td class="effort">${EFFORT_LABEL[a.effort]}</td>
+</tr>`;
+    }).join('');
+    return `<section class="fix-first" id="fix-first">
+  <div class="kicker">Fix first</div>
+  <h2 class="sec-h">${esc(headline)}</h2>
+  <p class="subtitle">Each action lists the findings it closes and the attack chains it breaks. Effort is an estimate for planning, not a quote.</p>
+  <div class="tbl"><table class="plan">
+    <thead><tr><th></th><th>Action</th><th>Breaks</th><th class="num">Closes</th><th>Effort</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>
+</section>`;
+  }
+
+  /** Option C: one scorecard row per domain, then each domain's findings, with passed checks folded away. */
+  private renderDomains(result: AuditResult, card: (f: Finding) => string): string {
+    const groups = new Map<string, Finding[]>();
+    for (const d of DOMAINS) groups.set(d, []);
+    for (const f of result.findings) {
+      const d = domainOf(f.checkId) ?? OTHER_DOMAIN;
+      if (!groups.has(d)) groups.set(d, []);
+      groups.get(d)!.push(f);
+    }
+    const domains = [...groups.entries()]
+      .filter(([, fs]) => fs.length > 0)
+      .map(([name, fs]) => {
+        const open = fs.filter((f) => statusOf(f) === 'open').sort(byPriority);
+        const n = (l: string) => open.filter((f) => f.riskLevel === l).length;
+        return { name, fs: [...fs].sort(byPriority), open, worst: open[0]?.riskLevel, counts: { c: n('CRITICAL'), h: n('HIGH'), m: n('MEDIUM'), l: n('LOW') } };
+      })
+      .sort((a, b) => (SEV_ORDER[a.worst ?? 'INFO'] - SEV_ORDER[b.worst ?? 'INFO']) || b.open.length - a.open.length);
+
+    const claim = (d: (typeof domains)[number]): string => {
+      if (d.open.length) {
+        const parts = (['c', 'h', 'm', 'l'] as const)
+          .filter((k) => d.counts[k])
+          .map((k) => `${d.counts[k]} ${{ c: 'critical', h: 'high', m: 'medium', l: 'low' }[k]}`);
+        return `${parts.join(', ')} open. Worst: ${d.open[0].title}`;
+      }
+      const inc = d.fs.filter((f) => statusOf(f) === 'inconclusive').length;
+      const passed = d.fs.filter((f) => statusOf(f) === 'passed').length;
+      return inc ? `No open findings; ${plural(inc, 'check')} could not be assessed` : `No open findings; ${plural(passed, 'check')} passed`;
+    };
+    const mark = (d: (typeof domains)[number]): string => d.worst
+      ? `<span class="risk-badge${SOLID.has(d.worst) ? ' solid' : ''}" style="--sev:${RISK_COLORS[d.worst]}">${d.worst}</span>`
+      : `<span class="risk-badge" style="--sev:${PASS_COLOR}">✓ CLEAR</span>`;
+    const bar = (d: (typeof domains)[number]): string => {
+      const total = d.fs.length;
+      const seg = (k: string, count: number) => (count ? `<i class="b-${k}" style="width:${((count / total) * 100).toFixed(2)}%"></i>` : '');
+      const st = (s: Status) => d.fs.filter((f) => statusOf(f) === s).length;
+      return `<div class="bar" role="img" aria-label="${esc(d.name)}: ${d.open.length} open of ${total} results">${seg('c', d.counts.c)}${seg('h', d.counts.h)}${seg('m', d.counts.m)}${seg('l', d.counts.l)}${seg('u', st('info') + st('waived') + st('inconclusive'))}${seg('p', st('passed'))}</div>`;
+    };
+    const withIssues = domains.filter((d) => d.counts.c + d.counts.h > 0).length;
+    const scorecard = domains.map((d) => `<a class="dom-row" href="#d-${slug(d.name)}">
+  <span class="dom-name">${esc(d.name)}</span>
+  <span class="dom-claim">${mark(d)}<span>${esc(claim(d))}</span></span>
+  ${bar(d)}
+  <span class="dom-counts"><b>${d.open.length}</b> open · ${d.fs.filter((f) => statusOf(f) === 'passed').length} passed</span>
+</a>`).join('');
+    const sections = domains.map((d) => {
+      const shown = d.fs.filter((f) => statusOf(f) !== 'passed');
+      const passed = d.fs.filter((f) => statusOf(f) === 'passed');
+      return `<section class="domain" id="d-${slug(d.name)}">
+  <h3 class="dom-h">${esc(d.name)}</h3>
+  <p class="dom-sub">${esc(claim(d))}</p>
+  ${shown.map(card).join('')}
+  ${passed.length ? `<details class="passed-fold"><summary>${plural(passed.length, 'check')} passed</summary>${passed.map(card).join('')}</details>` : ''}
+</section>`;
+    }).join('\n');
+    return `<section class="by-domain" id="by-domain">
+  <div class="kicker">By domain</div>
+  <h2 class="sec-h">${withIssues ? `${withIssues} of ${domains.length} domains have critical or high findings` : `No domain has a critical or high finding`}</h2>
+  <div class="scorecard">${scorecard}</div>
+  <div class="bar-key" aria-hidden="true"><span><i class="b-c"></i>Critical</span><span><i class="b-h"></i>High</span><span><i class="b-m"></i>Medium</span><span><i class="b-l"></i>Low</span><span><i class="b-u"></i>Info, waived or inconclusive</span><span><i class="b-p"></i>Passed</span></div>
+  ${sections}
+</section>`;
+  }
+
+  /** Option D: every result in one table that can be regrouped and searched; links to the full finding. */
+  private renderTable(result: AuditResult, labels: string[], anchorOf: Map<Finding, string>): string {
+    const chainsOf = new Map<string, string[]>();
+    (result.attackChains ?? []).forEach((c, i) => {
+      for (const s of c.steps) {
+        const list = chainsOf.get(s.findingId) ?? [];
+        if (!list.includes(labels[i])) list.push(labels[i]);
+        chainsOf.set(s.findingId, list);
+      }
+    });
+    const rows = [...result.findings].sort(byPriority).map((f) => {
+      const st = statusOf(f);
+      const dom = domainOf(f.checkId) ?? OTHER_DOMAIN;
+      const chains = chainsOf.get(f.id) ?? [];
+      const fws = [...new Set((f.complianceTags ?? []).map(frameworkOf))];
+      const sevKey = st === 'open' ? f.riskLevel : st === 'info' ? 'INFO' : st.toUpperCase();
+      return `<tr data-sev="${esc(sevKey)}" data-dom="${esc(dom)}" data-ch="${esc(chains.join(' '))}" data-fw="${esc(fws.join(' '))}" data-st="${st}"${st === 'passed' ? ' hidden' : ''}>
+  <td>${severityBadge(f)}</td>
+  <td><a href="#${anchorOf.get(f)}">${esc(f.title)}</a><span class="row-dom">${esc(dom)}</span></td>
+  <td class="num">${f.affectedItems?.length ?? '—'}</td>
+  <td><div class="chips">${chains.map((l) => `<span class="chip">${l}</span>`).join('') || '<span class="none">—</span>'}</div></td>
+</tr>`;
+    }).join('');
+    const passed = result.findings.filter((f) => f.passed).length;
+    return `<section class="all-results" id="all-results">
+  <div class="kicker">Appendix</div>
+  <h2 class="sec-h">All ${plural(result.findings.length, 'result')}, in one table</h2>
+  <div class="tools">
+    <div class="seg" role="group" aria-label="Group by">
+      <button type="button" data-group="sev" aria-pressed="true">Severity</button><button type="button" data-group="dom" aria-pressed="false">Domain</button><button type="button" data-group="ch" aria-pressed="false">Attack chain</button><button type="button" data-group="fw" aria-pressed="false">Framework</button>
+    </div>
+    <label class="tool-check"><input type="checkbox" id="show-passed"> Include ${plural(passed, 'passed check')}</label>
+    <label class="tool-search" for="result-search">Search <input type="search" id="result-search" placeholder="guest, apex, SOC2…" autocomplete="off"></label>
+  </div>
+  <div class="tbl"><table class="results">
+    <thead><tr><th>Status</th><th>Finding</th><th class="num">Affected</th><th>Chains</th></tr></thead>
+    <tbody id="results-body">${rows}</tbody>
+  </table></div>
+  <p class="no-match" id="no-match" hidden>No result matches that search.</p>
+</section>`;
+  }
+
   render(result: AuditResult): string {
-    const levels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
-    const counts = Object.fromEntries(
-      levels.map((l) => [l, result.findings.filter((f) => f.riskLevel === l).length]),
-    ) as Record<string, number>;
+    const chains = result.attackChains ?? [];
+    const labels = chainLabels(chains);
+    const anchorOf = findingAnchors(result.findings);
+    const anchorOfId = new Map<string, string>();
+    for (const [f, a] of anchorOf) if (!anchorOfId.has(f.id)) anchorOfId.set(f.id, a);
+    const plan = buildActionPlan(result.findings, chains);
+    const openHigh = result.findings.filter((f) => statusOf(f) === 'open' && f.riskLevel === 'HIGH').length;
+    const headline = planHeadline(plan, chains, openHigh);
 
-    const filterButtons = [
-      `<button class="filter-btn active" data-filter="all">All (${result.findings.length})</button>`,
-      ...levels.map(
-        (l) => `<button class="filter-btn" data-filter="${l}" style="--accent:${RISK_COLORS[l]}">${l} (${counts[l]})</button>`,
-      ),
-    ].join('\n        ');
+    const attackPathsHtml = this.renderAttackPaths(result, labels, anchorOfId);
 
-    const attackPathsHtml = this.renderAttackPaths(result);
-
-    const findingsHtml = result.findings.length === 0
-      ? '<p class="no-findings">No findings.</p>'
-      : result.findings.map((f) => {
+    const card = (f: Finding): string => {
         const isInconclusive = !!f.inconclusive;
         const cardAccent = isInconclusive ? UNKNOWN_COLOR : (f.passed ? 'var(--hair)' : (RISK_COLORS[f.riskLevel] ?? UNKNOWN_COLOR));
-        const badgeHtml  = isInconclusive
-          ? `<span class="inconclusive-badge">? INCONCLUSIVE</span>`
-          : f.passed
-            ? `<span class="risk-badge" style="--sev:${PASS_COLOR}">✓ PASS</span>`
-            : `<span class="risk-badge${SOLID.has(f.riskLevel) ? ' solid' : ''}" style="--sev:${RISK_COLORS[f.riskLevel] ?? UNKNOWN_COLOR}">${esc(f.riskLevel)}</span>`;
+        const badgeHtml  = severityBadge(f);
         const tagsHtml = f.complianceTags?.length
           ? `<div class="compliance-tags">${f.complianceTags.map((t) => `<span class="compliance-tag">${esc(t)}</span>`).join('')}</div>`
           : '';
         return `
-      <details class="finding-card${isInconclusive ? ' is-inconclusive' : ''}" data-risk="${esc(f.riskLevel)}" style="--card-accent:${cardAccent}">
+      <details class="finding-card${isInconclusive ? ' is-inconclusive' : ''}" id="${anchorOf.get(f)}" data-risk="${esc(f.riskLevel)}" style="--card-accent:${cardAccent}">
         <summary class="finding-summary">
           ${badgeHtml}
           <span class="finding-title">${esc(f.title)}</span>
@@ -316,7 +510,15 @@ export class HtmlRenderer implements AuditRenderer {
           ${tagsHtml}
         </div>
       </details>`;
-      }).join('\n');
+    };
+
+    const bodyHtml = result.findings.length === 0
+      ? `<p class="no-findings">No findings.</p>
+  ${attackPathsHtml}`
+      : `${this.renderPlan(plan, headline, labels, anchorOf)}
+  ${attackPathsHtml}
+  ${this.renderDomains(result, card)}
+  ${this.renderTable(result, labels, anchorOf)}`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -430,10 +632,99 @@ ${deckFontFaceCss()}
   .prog-fill { height: 100%; }
 
   /* ── Section headings ── */
-  .attack-paths h2, .findings-h2 {
-    font-family: var(--serif); font-size: 1.75rem; font-weight: 600; line-height: 1.2; letter-spacing: -0.005em;
+  .attack-paths h2, .sec-h {
+    font-family: var(--serif); font-size: 1.75rem; font-weight: 600; line-height: 1.2; letter-spacing: -0.005em; text-wrap: balance; max-width: 34em;
   }
-  .attack-paths h2::after, .findings-h2::after { content: ''; display: block; width: 72px; height: 2px; background: var(--accent); margin: 0.9rem 0 0; }
+  .sec-h { margin-top: 0.35rem; }
+  .attack-paths h2::after, .sec-h::after { content: ''; display: block; width: 72px; height: 2px; background: var(--accent); margin: 0.9rem 0 0; }
+  .fix-first, .by-domain, .all-results { margin-bottom: 3rem; scroll-margin-top: 1rem; }
+  .sec-h + .subtitle, .sec-h + .scorecard, .sec-h + .tools, .sec-h + .tbl { margin-top: 1.1rem; }
+  .tbl { overflow-x: auto; }
+  .num { text-align: right; }
+  .none { color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { font-size: 0.72rem; font-weight: 700; padding: 0 5px; border: 1.25px solid var(--crit, #b91c1c); color: ${BAD}; white-space: nowrap; text-decoration: none; background: var(--paper); }
+  .chip.part { border-color: #c9ced3; color: var(--body); font-weight: 600; }
+  a.chip:hover { background: color-mix(in srgb, ${BAD} 8%, var(--paper)); }
+
+  /* ── Fix first (A) ── */
+  table.plan, table.results { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: var(--paper); box-shadow: var(--shadow); }
+  table.plan th, table.results th {
+    text-align: left; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+    padding: 0.85rem 0.75rem 0.5rem; border-bottom: 1.5px solid var(--ink); white-space: nowrap; background: var(--paper);
+    position: sticky; top: 0; z-index: 1;
+  }
+  table.plan td, table.results td { padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  table.plan tr.wave-h td { border-bottom: 0; padding: 1rem 0.75rem 0.2rem; font-size: 0.8rem; font-weight: 700; color: var(--accent); }
+  table.plan .why { font-weight: 400; color: var(--muted); }
+  table.plan .n { width: 2rem; color: var(--muted); font-weight: 700; }
+  table.plan .act b { display: block; color: var(--ink); font-weight: 650; }
+  table.plan .why-line { display: block; font-size: 0.82rem; color: var(--muted); margin-top: 0.1rem; max-width: 80ch; }
+  table.plan .effort { white-space: nowrap; color: var(--body); }
+  ul.closes { list-style: none; margin: 0.45rem 0 0; padding: 0; display: grid; gap: 0.25rem; }
+  ul.closes li { display: flex; gap: 0.5rem; align-items: baseline; font-size: 0.84rem; }
+  ul.closes .risk-badge { min-width: 4.4rem; font-size: 0.62rem; }
+  ul.closes a { color: var(--body); }
+  ul.closes a:hover { color: var(--accent); }
+  .chain-label { font-family: var(--sans); font-size: 0.8rem; font-weight: 700; color: var(--muted); margin-right: 0.15rem; }
+  .attack-chain { scroll-margin-top: 1rem; }
+  .attack-chain li a { color: inherit; }
+
+  /* ── By domain (C) ── */
+  .scorecard { background: var(--paper); box-shadow: var(--shadow); padding: 0.4rem 1.4rem; }
+  .dom-row {
+    display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 8.5rem; grid-template-areas: 'name bar counts' 'claim bar counts';
+    gap: 0.15rem 1.5rem; align-items: center; padding: 0.8rem 0; border-bottom: 1px solid var(--hair); color: inherit; text-decoration: none;
+    transition: background-color 150ms var(--ease);
+  }
+  .dom-row:last-child { border-bottom: 0; }
+  .dom-row:hover { background: #f6f7f8; }
+  .dom-row:hover .dom-claim span { color: var(--accent); }
+  .dom-name { grid-area: name; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .dom-claim { grid-area: claim; display: flex; gap: 0.6rem; align-items: baseline; font-weight: 600; color: var(--ink); font-size: 0.92rem; min-width: 0; }
+  .dom-claim .risk-badge { min-width: 4.9rem; }
+  .bar { grid-area: bar; display: flex; height: 12px; background: var(--hair); }
+  .bar i, .bar-key i { display: block; height: 100%; }
+  .b-c { background: ${RISK_COLORS.CRITICAL}; } .b-h { background: ${RISK_COLORS.HIGH}; } .b-m { background: ${RISK_COLORS.MEDIUM}; } .b-l { background: ${RISK_COLORS.LOW}; }
+  .b-u { background: #d4d8dc; } .b-p { background: repeating-linear-gradient(135deg, #b8dcc4 0 3px, #d7ece0 3px 6px); }
+  .dom-counts { grid-area: counts; text-align: right; font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+  .dom-counts b { color: var(--ink); }
+  .bar-key { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; margin: 0.7rem 0 2rem; font-size: 0.75rem; color: var(--muted); }
+  .bar-key span { display: inline-flex; align-items: center; gap: 0.35rem; }
+  .bar-key i { width: 12px; height: 9px; }
+  .domain { margin-top: 2rem; scroll-margin-top: 1rem; }
+  .dom-h { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; }
+  .dom-sub { color: var(--muted); font-size: 0.88rem; margin: 0.2rem 0 0.8rem; max-width: 90ch; }
+  .passed-fold { margin-top: 0.6rem; }
+  .passed-fold > summary {
+    cursor: pointer; list-style: none; font-size: 0.82rem; font-weight: 700; color: ${GOOD}; padding: 0.4rem 0;
+  }
+  .passed-fold > summary::-webkit-details-marker { display: none; }
+  .passed-fold > summary::before { content: '+ '; }
+  .passed-fold[open] > summary::before { content: '− '; }
+  .passed-fold > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .waived-mark { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); border: 1px dashed var(--muted); padding: 0.05rem 0.35rem; margin-left: 0.35rem; }
+
+  /* ── All results (D) ── */
+  .tools { display: flex; flex-wrap: wrap; gap: 0.6rem 1.25rem; align-items: center; margin-bottom: 0.8rem; }
+  .seg { display: inline-flex; border: 1.25px solid #cfd4d9; background: var(--paper); }
+  .seg button {
+    font: 700 0.78rem var(--sans); color: var(--body); background: transparent; border: 0; border-left: 1px solid #cfd4d9;
+    padding: 0.35rem 0.75rem; cursor: pointer; transition: background-color 150ms var(--ease), color 150ms var(--ease);
+  }
+  .seg button:first-child { border-left: 0; }
+  .seg button:hover { color: var(--accent); }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+  .seg button:focus-visible, .tools input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .tool-check, .tool-search { font-size: 0.82rem; color: var(--body); display: inline-flex; gap: 0.4rem; align-items: center; }
+  .tool-search input { font: 0.88rem var(--sans); border: 1.25px solid #cfd4d9; padding: 0.3rem 0.55rem; width: 15rem; max-width: 60vw; color: var(--ink); background: var(--paper); }
+  table.results tr.grp td { font-size: 0.78rem; font-weight: 700; color: var(--accent); padding-top: 1rem; border-bottom: 1px solid var(--accent); }
+  table.results td:nth-child(2) a { color: var(--ink); font-weight: 600; text-decoration: none; }
+  table.results td:nth-child(2) a:hover { color: var(--accent); text-decoration: underline; }
+  .row-dom { display: block; font-size: 0.76rem; color: var(--muted); }
+  .no-match { color: var(--muted); padding: 1rem 0; }
+  .finding-card { scroll-margin-top: 1rem; }
+  .finding-card:target { box-shadow: 0 0 0 2px var(--accent); }
   .subtitle { color: var(--muted); font-size: 0.9rem; margin: 0.9rem 0 1.25rem; max-width: 70ch; }
 
   /* ── Attack paths ── */
@@ -449,26 +740,6 @@ ${deckFontFaceCss()}
   .attack-chain ol { padding-left: 1.3rem; margin-bottom: 0.75rem; }
   .attack-chain li { margin-bottom: 0.3rem; }
   .attack-chain .remediation { border-left: 2px solid var(--accent); padding-left: 0.85rem; }
-
-  /* ── Findings ── */
-  .findings-h2 { margin-bottom: 1.25rem; }
-  .filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.1rem; }
-  .filter-btn {
-    font-family: var(--sans);
-    padding: 0.3rem 0.85rem;
-    border: 1.25px solid var(--hair);
-    background: var(--paper);
-    color: var(--body);
-    cursor: pointer;
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    transition: border-color 150ms var(--ease), color 150ms var(--ease), background-color 150ms var(--ease);
-  }
-  .filter-btn:hover { border-color: var(--accent, var(--ink)); color: var(--ink); }
-  .filter-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-  .filter-btn.active { background: var(--accent, var(--ink)); border-color: var(--accent, var(--ink)); color: #fff; }
-  .filter-btn[data-filter="all"] { --accent: var(--ink); }
 
   .finding-card {
     background: var(--paper);
@@ -555,7 +826,9 @@ ${deckFontFaceCss()}
   @media print {
     html, body { background: #fff; }
     .dash-score-panel, .dash-risk-panel, .kpi-card, .inv-card, .attack-chain { box-shadow: none; border: 1px solid var(--hair); }
-    .filters { display: none; }
+    .tools { display: none; }
+    table.plan th, table.results th { position: static; }
+    .passed-fold > .finding-card { break-inside: avoid; }
   }
   /* ── Responsive ── */
   @media (max-width: 680px) {
@@ -566,6 +839,9 @@ ${deckFontFaceCss()}
     .kpi-strip { grid-template-columns: repeat(2, 1fr); }
     .inv-grid { grid-template-columns: 1fr; }
     .finding-summary { flex-wrap: wrap; }
+    .dom-row { grid-template-columns: 1fr; grid-template-areas: 'name' 'claim' 'bar' 'counts'; }
+    .dom-counts { text-align: left; }
+    .scorecard { padding: 0.4rem 1rem; }
     .finding-category { display: none; }
   }
 </style>
@@ -585,31 +861,62 @@ ${deckFontFaceCss()}
 
   ${buildDashboard(result, openCounts(result))}
 
-  ${attackPathsHtml}
-
-  <h2 class="findings-h2">All findings (${result.findings.length})</h2>
-  <div class="filters">
-    ${filterButtons}
-  </div>
-
-  <div id="findings-list">
-    ${findingsHtml}
-  </div>
+  ${bodyHtml}
 
 <script>
-  const buttons = document.querySelectorAll('.filter-btn');
-  const cards   = document.querySelectorAll('.finding-card');
-
-  buttons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      buttons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const filter = btn.dataset.filter;
-      cards.forEach(card => {
-        card.style.display = (filter === 'all' || card.dataset.risk === filter) ? '' : 'none';
-      });
+(function () {
+  var body = document.getElementById('results-body');
+  if (!body) return;
+  var rows = Array.prototype.slice.call(body.querySelectorAll('tr[data-st]'));
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('.seg button'));
+  var search = document.getElementById('result-search');
+  var showPassed = document.getElementById('show-passed');
+  var noMatch = document.getElementById('no-match');
+  var group = 'sev';
+  var SEV = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO', 'WAIVED', 'INCONCLUSIVE', 'PASSED'];
+  function keys(row) {
+    var v = row.dataset[group] || '';
+    if (group === 'sev' || group === 'dom') return [v];
+    var list = v.split(' ').filter(Boolean);
+    return list.length ? list : [group === 'ch' ? 'Not on an attack chain' : 'No framework tag'];
+  }
+  function render() {
+    var term = search.value.trim().toLowerCase();
+    var groups = {}, order = [];
+    rows.forEach(function (row) {
+      var visible = (showPassed.checked || row.dataset.st !== 'passed') &&
+        (!term || row.textContent.toLowerCase().indexOf(term) >= 0 || (row.dataset.fw + ' ' + row.dataset.ch).toLowerCase().indexOf(term) >= 0);
+      if (!visible) return;
+      keys(row).forEach(function (k) { if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(row); });
+    });
+    if (group === 'sev') order.sort(function (a, b) { return SEV.indexOf(a) - SEV.indexOf(b); });
+    else order.sort(function (a, b) { return groups[b].length - groups[a].length || a.localeCompare(b, undefined, { numeric: true }); });
+    var frag = document.createDocumentFragment();
+    order.forEach(function (k) {
+      var head = document.createElement('tr');
+      head.className = 'grp';
+      var cell = document.createElement('td');
+      cell.colSpan = 4;
+      cell.textContent = k + ' · ' + groups[k].length;
+      head.appendChild(cell);
+      frag.appendChild(head);
+      groups[k].forEach(function (row) { var r = row.cloneNode(true); r.hidden = false; frag.appendChild(r); });
+    });
+    body.textContent = '';
+    body.appendChild(frag);
+    noMatch.hidden = order.length > 0;
+  }
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      group = b.dataset.group;
+      buttons.forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      render();
     });
   });
+  search.addEventListener('input', render);
+  showPassed.addEventListener('change', render);
+  render();
+})();
 </script>
   <div class="offline-footer">
     <strong>Offline-first audit:</strong> all analysis performed locally; no data is transmitted outside your Salesforce org. Generated by <a href="https://github.com/cclabsnz/sf-audit-plugin">sf-audit</a>, built by <a href="https://cloudcounsel.co.nz">CloudCounsel</a>.
