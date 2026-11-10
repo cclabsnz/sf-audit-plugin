@@ -61,47 +61,6 @@ function inventoryCard(title: string, rows: string[]): string {
   return `<div class="inv-card"><div class="inv-card-title">${esc(title)}</div>${rows.join('')}</div>`;
 }
 
-function buildScoreRing(score: number, grade: string, color: string): string {
-  return `
-    <div class="score-ring" style="background:conic-gradient(from -90deg, ${color} ${score}%, var(--hair) ${score}%)" aria-label="Health score ${score} out of 100, grade ${grade}">
-      <div class="score-inner">
-        <div class="score-num" style="color:${color}">${score}<span>/100</span></div>
-        <div class="score-grade" style="background:${color}">${esc(grade)}</div>
-      </div>
-    </div>`;
-}
-
-function buildDonutSvg(counts: Record<string, number>): string {
-  const levels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
-  const total = levels.reduce((s, l) => s + (counts[l] ?? 0), 0);
-  const cx = 60, cy = 60, R = 44;
-  const CIRC = 2 * Math.PI * R;
-
-  if (total === 0) {
-    return `<svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
-      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#e3e6e9" stroke-width="14" />
-      <text x="${cx}" y="${cy + 5}" text-anchor="middle" fill="${GOOD}" font-size="12" font-family="'Source Sans 3',system-ui,sans-serif">Clean</text>
-    </svg>`;
-  }
-
-  let offset = CIRC / 4; // Start from 12 o'clock
-  const arcs = levels.map(l => {
-    const count = counts[l] ?? 0;
-    if (count === 0) return '';
-    const dash = (count / total) * CIRC;
-    const arc = `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${RISK_COLORS[l]}" stroke-width="14" stroke-dasharray="${dash.toFixed(2)} ${CIRC.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}" />`;
-    offset -= dash;
-    return arc;
-  });
-
-  return `<svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
-    <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#e3e6e9" stroke-width="14" />
-    ${arcs.join('')}
-    <text x="${cx}" y="${cy - 3}" text-anchor="middle" fill="${DEFAULT_BRANDING.ink}" font-size="22" font-weight="600" font-family="'Source Serif 4',Georgia,serif">${total}</text>
-    <text x="${cx}" y="${cy + 15}" text-anchor="middle" fill="${DEFAULT_BRANDING.muted}" font-size="10" font-family="'Source Sans 3',system-ui,sans-serif">open findings</text>
-  </svg>`;
-}
-
 /** Open findings per severity: what the score and the executive report count (RULE-079). */
 function openCounts(result: AuditResult): Record<string, number> {
   const open = result.findings.filter((f) => !f.passed && !f.inconclusive && !f.notAssessed && !f.waived);
@@ -114,8 +73,12 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
   const m: OrgMetrics = result.metrics;
   const gradeColor = GRADE_COLOR[result.grade] ?? UNKNOWN_COLOR;
 
-  const gauge = buildScoreRing(result.healthScore, result.grade, gradeColor);
-  const donut = buildDonutSvg(counts);
+  const openTotal = (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).reduce((n, l) => n + (counts[l] ?? 0), 0);
+  const sevBar = openTotal
+    ? (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const)
+      .map((l) => (counts[l] ? `<i style="width:${((counts[l] / openTotal) * 100).toFixed(2)}%;background:${RISK_COLORS[l]}"></i>` : ''))
+      .join('')
+    : '';
 
   const kpiCards = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(l =>
     `<div class="kpi-card" style="--sev:${RISK_COLORS[l]}">
@@ -181,36 +144,29 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
     : '';
   const cov = result.coverage;
   const coverageLine = cov
-    ? `<div class="coverage${cov.gradeCapped ? ' is-capped' : ''}" >${esc(coverageSummary(cov))}${cov.notAssessed.length ? `<br>Not assessed: ${cov.notAssessed.map((id) => `<code>${esc(id)}</code>`).join(', ')}<br>${esc(coverageAdvice(cov))}` : ''}</div>`
+    ? `<div class="coverage${cov.gradeCapped ? ' is-capped' : ''}">${esc(coverageSummary(cov))}${cov.notAssessed.length
+      ? `<details class="cov-more"><summary>${cov.notAssessed.length} not assessed: why</summary><p>${cov.notAssessed.map((id) => `<code>${esc(id)}</code>`).join(', ')}</p><p>${esc(coverageAdvice(cov))}</p></details>`
+      : ''}</div>`
     : '';
 
   return `
   ${waivedBanner}
   <div class="dashboard">
-    <div class="dash-top">
-      <div class="dash-score-panel">
-        <div class="gauge-wrap">
-          ${gauge}
+    <div class="verdict">
+      <div class="verdict-grade" role="group" aria-label="Health score ${result.healthScore} out of 100, grade ${esc(result.grade)}">
+        <div class="grade-mark" style="--g:${gradeColor}">${esc(result.grade)}</div>
+        <div class="grade-text">
+          <div class="score-line"><span class="score-num" style="color:${gradeColor}">${result.healthScore}</span><span class="score-of">/100 health score</span></div>
+          ${gradeReasonLine}
+          ${coverageLine}
         </div>
-        ${gradeReasonLine}
-        ${coverageLine}
       </div>
-      <div class="dash-risk-panel">
-        <div class="donut-wrap">
-          ${donut}
-          <div class="donut-legend">
-            ${(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map(l =>
-              `<div class="legend-row">
-                <span class="legend-dot" style="background:${RISK_COLORS[l]}"></span>
-                <span>${l}</span>
-                <span class="legend-count">${counts[l] ?? 0}</span>
-              </div>`,
-            ).join('')}
-          </div>
-        </div>
+      <div class="verdict-sev">
+        <div class="open-total"><b class="open-n">${openTotal}</b> open findings</div>
+        <div class="sev-bar" role="img" aria-label="${openTotal} open findings by severity">${sevBar}</div>
+        <div class="kpi-strip">${kpiCards}</div>
       </div>
     </div>
-    <div class="kpi-strip">${kpiCards}</div>
     <div class="inv-grid">
       ${usersCard}
       ${codeCard}
@@ -294,8 +250,14 @@ export class HtmlRenderer implements AuditRenderer {
             return `<li>${anchor ? `<a href="#${anchor}">${name}</a>` : name} (${esc(s.severity ?? '—')})${grants}${cut}</li>`;
           })
           .join('');
-        return `<div class="attack-chain severity-${c.severity.toLowerCase()}" id="chain-${ci + 1}">
-  <h3><span class="risk-badge solid" style="--sev:${RISK_COLORS[c.severity] ?? UNKNOWN_COLOR}">${esc(c.severity)}</span> <span class="chain-label">${labels[ci]}</span> ${esc(c.title)}${conf}</h3>
+        const gist = c.abuseCase ? `Break it: ${esc(c.abuseCase.breakPoint)}` : `${c.steps.length} steps; possible but unproven`;
+        return `<details class="attack-chain severity-${c.severity.toLowerCase()}" id="chain-${ci + 1}">
+  <summary class="chain-sum">
+    <span class="risk-badge solid" style="--sev:${RISK_COLORS[c.severity] ?? UNKNOWN_COLOR}">${esc(c.severity)}</span>
+    <span class="chain-text"><h3><span class="chain-label">${labels[ci]}</span> ${esc(c.title)}${conf}</h3><span class="chain-gist">${gist}</span></span>
+    <span class="chevron">›</span>
+  </summary>
+  <div class="chain-body">
   ${c.abuseCase ? `<p><strong>Abuse case:</strong> ${esc(c.abuseCase.actor)} wants to ${esc(c.abuseCase.goal)}.</p>` : ''}
   <p>${esc(c.narrative)}</p>
   ${dagSvg}
@@ -304,18 +266,19 @@ export class HtmlRenderer implements AuditRenderer {
     ? `<p class="remediation"><strong>Breaks the chain:</strong> ${esc(c.abuseCase.breakPoint)}</p>
   <p class="remediation"><strong>Remediation:</strong> ${esc(c.remediation)}</p>`
     : `<p class="remediation"><strong>Recommended fixes:</strong> ${esc(c.remediation)}</p>`}
-</div>`;
+  </div>
+</details>`;
       })
       .join('\n');
     return `<section class="attack-paths" id="attack-paths">
   <h2>Attack Paths (${result.attackChains.length})</h2>
-  <p class="subtitle">Combinations of findings that together enable an exploit more severe than any single finding.</p>
+  <p class="subtitle">Combinations of findings that together enable an exploit more severe than any single finding. Open a path for its steps, diagram and fix.</p>
   ${cards}
 </section>`;
   }
 
   /** Option A: the fixes, in the order to do them, each with the findings it closes. */
-  private renderPlan(plan: PlannedAction[], headline: string, labels: string[], anchorOf: Map<Finding, string>): string {
+  private renderPlan(plan: PlannedAction[], headline: string, labels: string[], chainSev: string[], anchorOf: Map<Finding, string>): string {
     if (plan.length === 0) {
       return `<section class="fix-first" id="fix-first">
   <div class="kicker">Fix first</div>
@@ -323,14 +286,15 @@ export class HtmlRenderer implements AuditRenderer {
 </section>`;
     }
     const chip = (i: number, kind: '' | 'part') =>
-      `<a class="chip${kind ? ' part' : ''}" href="#chain-${i + 1}">${kind ? 'part of ' : ''}${labels[i]}</a>`;
+      `<a class="chip ${kind ? 'part' : chainSev[i]}" href="#chain-${i + 1}">${kind ? 'part of ' : ''}${labels[i]}</a>`;
     let last = 0;
     const rows = plan.map((a, i) => {
       const head = a.wave !== last
         ? `<tr class="wave-h"><td colspan="5">${WAVE_LABEL[a.wave]} <span class="why">· ${WAVE_WHY[a.wave]}</span></td></tr>`
         : '';
       last = a.wave;
-      const breaks = [...a.breaks.map((c) => chip(c, '')), ...a.weakens.map((c) => chip(c, 'part'))].join('') || '<span class="none">—</span>';
+      const partOf = [...new Set([...a.weakens, ...a.inChains])].filter((c) => !a.breaks.includes(c));
+      const breaks = [...a.breaks.map((c) => chip(c, '')), ...partOf.map((c) => chip(c, 'part'))].join('') || '<span class="none">—</span>';
       const closes = a.fixes
         .map((f) => `<li>${severityBadge(f)}<a href="#${anchorOf.get(f)}">${esc(f.title)}</a></li>`)
         .join('');
@@ -376,7 +340,7 @@ export class HtmlRenderer implements AuditRenderer {
         const parts = (['c', 'h', 'm', 'l'] as const)
           .filter((k) => d.counts[k])
           .map((k) => `${d.counts[k]} ${{ c: 'critical', h: 'high', m: 'medium', l: 'low' }[k]}`);
-        return `${parts.join(', ')} open. Worst: ${d.open[0].title}`;
+        return `${parts.join(', ')} open|Worst: ${d.open[0].title}`;
       }
       const inc = d.fs.filter((f) => statusOf(f) === 'inconclusive').length;
       const passed = d.fs.filter((f) => statusOf(f) === 'passed').length;
@@ -394,7 +358,7 @@ export class HtmlRenderer implements AuditRenderer {
     const withIssues = domains.filter((d) => d.counts.c + d.counts.h > 0).length;
     const scorecard = domains.map((d) => `<a class="dom-row" href="#d-${slug(d.name)}">
   <span class="dom-name">${esc(d.name)}</span>
-  <span class="dom-claim">${mark(d)}<span>${esc(claim(d))}</span></span>
+  <span class="dom-claim">${mark(d)}<span>${(() => { const [head, worst] = claim(d).split('|'); return `<b>${esc(head)}</b>${worst ? `<span class="worst">${esc(worst)}</span>` : ''}`; })()}</span></span>
   ${bar(d)}
   <span class="dom-counts"><b>${d.open.length}</b> open · ${d.fs.filter((f) => statusOf(f) === 'passed').length} passed</span>
 </a>`).join('');
@@ -403,7 +367,7 @@ export class HtmlRenderer implements AuditRenderer {
       const passed = d.fs.filter((f) => statusOf(f) === 'passed');
       return `<section class="domain" id="d-${slug(d.name)}">
   <h3 class="dom-h">${esc(d.name)}</h3>
-  <p class="dom-sub">${esc(claim(d))}</p>
+  <p class="dom-sub">${esc(claim(d).replace('|', '. '))}</p>
   ${shown.map(card).join('')}
   ${passed.length ? `<details class="passed-fold"><summary>${plural(passed.length, 'check')} passed</summary>${passed.map(card).join('')}</details>` : ''}
 </section>`;
@@ -418,12 +382,12 @@ export class HtmlRenderer implements AuditRenderer {
   }
 
   /** Option D: every result in one table that can be regrouped and searched; links to the full finding. */
-  private renderTable(result: AuditResult, labels: string[], anchorOf: Map<Finding, string>): string {
+  private renderTable(result: AuditResult, labels: string[], chainSev: string[], anchorOf: Map<Finding, string>): string {
     const chainsOf = new Map<string, string[]>();
     (result.attackChains ?? []).forEach((c, i) => {
       for (const s of c.steps) {
         const list = chainsOf.get(s.findingId) ?? [];
-        if (!list.includes(labels[i])) list.push(labels[i]);
+        if (!list.includes(`${labels[i]}|${chainSev[i]}`)) list.push(`${labels[i]}|${chainSev[i]}`);
         chainsOf.set(s.findingId, list);
       }
     });
@@ -433,11 +397,11 @@ export class HtmlRenderer implements AuditRenderer {
       const chains = chainsOf.get(f.id) ?? [];
       const fws = [...new Set((f.complianceTags ?? []).map(frameworkOf))];
       const sevKey = st === 'open' ? f.riskLevel : st === 'info' ? 'INFO' : st.toUpperCase();
-      return `<tr data-sev="${esc(sevKey)}" data-dom="${esc(dom)}" data-ch="${esc(chains.join(' '))}" data-fw="${esc(fws.join(' '))}" data-st="${st}"${st === 'passed' ? ' hidden' : ''}>
+      return `<tr data-sev="${esc(sevKey)}" data-dom="${esc(dom)}" data-ch="${esc(chains.map((c) => c.split('|')[0]).join(' '))}" data-fw="${esc(fws.join(' '))}" data-st="${st}"${st === 'passed' ? ' hidden' : ''}>
   <td>${severityBadge(f)}</td>
   <td><a href="#${anchorOf.get(f)}">${esc(f.title)}</a><span class="row-dom">${esc(dom)}</span></td>
   <td class="num">${f.affectedItems?.length ?? '—'}</td>
-  <td><div class="chips">${chains.map((l) => `<span class="chip">${l}</span>`).join('') || '<span class="none">—</span>'}</div></td>
+  <td><div class="chips">${chains.map((c) => { const [l, sev] = c.split('|'); return `<a class="chip ${sev}" href="#chain-${labels.indexOf(l) + 1}">${l}</a>`; }).join('') || '<span class="none">—</span>'}</div></td>
 </tr>`;
     }).join('');
     const passed = result.findings.filter((f) => f.passed).length;
@@ -466,6 +430,7 @@ export class HtmlRenderer implements AuditRenderer {
     const anchorOfId = new Map<string, string>();
     for (const [f, a] of anchorOf) if (!anchorOfId.has(f.id)) anchorOfId.set(f.id, a);
     const plan = buildActionPlan(result.findings, chains);
+    const chainSev = chains.map((c) => `sev-${c.severity.toLowerCase()}`);
     const openHigh = result.findings.filter((f) => statusOf(f) === 'open' && f.riskLevel === 'HIGH').length;
     const headline = planHeadline(plan, chains, openHigh);
 
@@ -515,10 +480,10 @@ export class HtmlRenderer implements AuditRenderer {
     const bodyHtml = result.findings.length === 0
       ? `<p class="no-findings">No findings.</p>
   ${attackPathsHtml}`
-      : `${this.renderPlan(plan, headline, labels, anchorOf)}
+      : `${this.renderPlan(plan, headline, labels, chainSev, anchorOf)}
   ${attackPathsHtml}
   ${this.renderDomains(result, card)}
-  ${this.renderTable(result, labels, anchorOf)}`;
+  ${this.renderTable(result, labels, chainSev, anchorOf)}`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -569,55 +534,46 @@ ${deckFontFaceCss()}
   .meta strong { color: var(--ink); }
 
   /* ── Panels: white paper on the grey desk, as in the executive report ── */
-  .dash-score-panel, .dash-risk-panel, .kpi-card, .inv-card, .attack-chain {
+  .inv-card, .attack-chain {
     background: var(--paper);
     box-shadow: var(--shadow);
   }
 
-  /* ── Dashboard ── */
+  /* ── Dashboard: one verdict band, then the org inventory ── */
   .dashboard { margin-bottom: 2.75rem; }
-  .dash-top { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-  .dash-score-panel, .dash-risk-panel { padding: 1.75rem; display: flex; align-items: center; justify-content: center; }
-  /* The grade reason and coverage note sit under the gauge, not squeezed beside it. */
-  .dash-score-panel { flex-direction: column; text-align: center; }
-  .grade-reason { margin-top: 0.9rem; font-size: 0.88rem; font-weight: 600; color: var(--ink); }
-  .coverage {
-    align-self: stretch; text-align: left; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--hair);
-    font-size: 0.74rem; line-height: 1.45; color: var(--muted); overflow-wrap: anywhere;
+  .verdict {
+    display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); background: var(--paper); box-shadow: var(--shadow);
+    margin-bottom: 1rem;
   }
-  .coverage code { font-size: 0.95em; }
+  .verdict-grade { display: flex; gap: 1.25rem; align-items: flex-start; padding: 1.4rem 1.6rem; }
+  .grade-mark {
+    flex: none; width: 76px; height: 76px; display: grid; place-items: center; border: 1px solid var(--hair);
+    border-top: 4px solid var(--g); font-family: var(--serif); font-size: 46px; font-weight: 600; line-height: 1; color: var(--g);
+  }
+  .grade-text { min-width: 0; }
+  .score-line { display: flex; align-items: baseline; gap: 0.3rem; }
+  .score-num { font-family: var(--serif); font-size: 2rem; font-weight: 600; line-height: 1; }
+  .score-of { font-size: 0.85rem; color: var(--muted); }
+  .grade-reason { margin-top: 0.35rem; font-size: 0.9rem; font-weight: 600; color: var(--ink); }
+  .coverage { margin-top: 0.35rem; font-size: 0.8rem; color: var(--muted); }
   .coverage.is-capped { color: ${WARN}; }
-
-  /* Score ring */
-  .gauge-wrap { display: flex; align-items: center; justify-content: center; }
-  .score-ring { width: 152px; height: 152px; border-radius: 50%; padding: 10px; display: flex; align-items: center; justify-content: center; }
-  .score-inner {
-    width: 100%; height: 100%; border-radius: 50%; background: var(--paper);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.35rem;
-  }
-  .score-num { font-family: var(--serif); font-size: 2.4rem; font-weight: 600; line-height: 1; }
-  .score-num span { font-family: var(--sans); font-size: 0.75rem; color: var(--muted); font-weight: 400; }
-  .score-grade {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 1.8rem; height: 1.8rem; border-radius: 6px;
-    font-family: var(--serif); font-size: 1rem; font-weight: 700; color: #fff;
-  }
-
-  /* Donut */
-  .donut-wrap { display: flex; align-items: center; gap: 1.75rem; }
-  .donut-legend { display: flex; flex-direction: column; gap: 0.5rem; min-width: 9rem; }
-  .legend-row { display: flex; align-items: center; gap: 0.55rem; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; color: var(--muted); }
-  .legend-dot { width: 10px; height: 10px; flex-shrink: 0; }
-  .legend-count { margin-left: auto; font-size: 0.95rem; font-weight: 700; color: var(--ink); letter-spacing: 0; padding-left: 1rem; }
-
-  /* KPI strip */
-  .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem; }
-  .kpi-card { border-top: 3px solid var(--sev); padding: 1rem 1.25rem 1.1rem; }
-  .kpi-value { font-family: var(--serif); font-size: 2.4rem; font-weight: 600; line-height: 1; margin-bottom: 0.35rem; color: var(--sev); }
-  .kpi-label { font-size: 0.72rem; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; }
+  .cov-more { display: inline; }
+  .cov-more summary { display: inline; cursor: pointer; color: var(--accent); margin-left: 0.4rem; list-style: none; }
+  .cov-more summary::-webkit-details-marker { display: none; }
+  .cov-more summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .cov-more p { margin-top: 0.3rem; overflow-wrap: anywhere; }
+  .verdict-sev { padding: 1.4rem 1.6rem; border-left: 1px solid var(--hair); display: flex; flex-direction: column; gap: 0.65rem; }
+  .open-total { font-size: 0.9rem; color: var(--muted); }
+  .open-total b { font-family: var(--serif); font-size: 2rem; font-weight: 600; color: var(--ink); margin-right: 0.3rem; line-height: 1; }
+  .sev-bar { display: flex; height: 10px; background: var(--hair); }
+  .sev-bar i { display: block; height: 100%; }
+  .kpi-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; }
+  .kpi-card { border-left: 3px solid var(--sev); padding: 0.1rem 0.75rem; }
+  .kpi-value { font-family: var(--serif); font-size: 1.6rem; font-weight: 600; line-height: 1.1; color: var(--sev); }
+  .kpi-label { font-size: 0.68rem; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; }
 
   /* Inventory grid */
-  .inv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .inv-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
   .inv-card { padding: 1.1rem 1.35rem 1.2rem; }
   .inv-card-title {
     font-size: 0.72rem; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase;
@@ -643,9 +599,11 @@ ${deckFontFaceCss()}
   .num { text-align: right; }
   .none { color: var(--muted); }
   .chips { display: flex; flex-wrap: wrap; gap: 4px; }
-  .chip { font-size: 0.72rem; font-weight: 700; padding: 0 5px; border: 1.25px solid var(--crit, #b91c1c); color: ${BAD}; white-space: nowrap; text-decoration: none; background: var(--paper); }
-  .chip.part { border-color: #c9ced3; color: var(--body); font-weight: 600; }
-  a.chip:hover { background: color-mix(in srgb, ${BAD} 8%, var(--paper)); }
+  .chip { font-size: 0.72rem; font-weight: 700; padding: 0 5px; border: 1.25px solid #c9ced3; color: var(--body); white-space: nowrap; text-decoration: none; background: var(--paper); }
+  .chip.sev-critical { border-color: ${RISK_COLORS.CRITICAL}; color: ${RISK_COLORS.CRITICAL}; }
+  .chip.sev-high { border-color: ${RISK_COLORS.HIGH}; color: ${RISK_COLORS.HIGH}; }
+  .chip.part { font-weight: 600; color: var(--muted); }
+  a.chip:hover { background: #f6f7f8; }
 
   /* ── Fix first (A) ── */
   table.plan, table.results { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: var(--paper); box-shadow: var(--shadow); }
@@ -663,11 +621,23 @@ ${deckFontFaceCss()}
   table.plan .effort { white-space: nowrap; color: var(--body); }
   ul.closes { list-style: none; margin: 0.45rem 0 0; padding: 0; display: grid; gap: 0.25rem; }
   ul.closes li { display: flex; gap: 0.5rem; align-items: baseline; font-size: 0.84rem; }
-  ul.closes .risk-badge { min-width: 4.4rem; font-size: 0.62rem; }
-  ul.closes a { color: var(--body); }
-  ul.closes a:hover { color: var(--accent); }
+  ul.closes .risk-badge { min-width: 4.4rem; font-size: 0.6rem; padding: 0 0.35rem; }
+  ul.closes .risk-badge.solid { background: var(--paper); color: var(--sev); }
+  ul.closes a { color: var(--body); text-decoration: none; }
+  ul.closes a:hover { color: var(--accent); text-decoration: underline; }
   .chain-label { font-family: var(--sans); font-size: 0.8rem; font-weight: 700; color: var(--muted); margin-right: 0.15rem; }
-  .attack-chain { scroll-margin-top: 1rem; }
+  .attack-chain { scroll-margin-top: 1rem; padding: 0; }
+  .chain-sum { display: flex; gap: 0.9rem; align-items: flex-start; padding: 1rem 1.4rem; cursor: pointer; list-style: none; transition: background-color 150ms var(--ease); }
+  .chain-sum::-webkit-details-marker { display: none; }
+  .chain-sum:hover { background: #f6f7f8; }
+  .chain-sum:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+  .chain-sum .risk-badge { margin-top: 0.2rem; }
+  .chain-text { flex: 1; min-width: 0; }
+  .chain-text h3 { margin-bottom: 0.15rem; }
+  .chain-gist { display: block; font-size: 0.86rem; color: var(--muted); max-width: 95ch; }
+  .attack-chain[open] .chevron { transform: rotate(90deg); }
+  .chain-body { padding: 0.2rem 1.6rem 1.4rem; border-top: 1px solid var(--hair); }
+  .chain-body > p:first-child { margin-top: 0.9rem; }
   .attack-chain li a { color: inherit; }
 
   /* ── By domain (C) ── */
@@ -681,7 +651,10 @@ ${deckFontFaceCss()}
   .dom-row:hover { background: #f6f7f8; }
   .dom-row:hover .dom-claim span { color: var(--accent); }
   .dom-name { grid-area: name; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-  .dom-claim { grid-area: claim; display: flex; gap: 0.6rem; align-items: baseline; font-weight: 600; color: var(--ink); font-size: 0.92rem; min-width: 0; }
+  .dom-claim { grid-area: claim; display: flex; gap: 0.6rem; align-items: baseline; color: var(--ink); font-size: 0.92rem; min-width: 0; }
+  .dom-claim b { font-weight: 650; margin-right: 0.4rem; }
+  .dom-claim .worst { color: var(--muted); font-size: 0.86rem; }
+  .dom-claim > span:last-child { min-width: 0; overflow-wrap: anywhere; }
   .dom-claim .risk-badge { min-width: 4.9rem; }
   .bar { grid-area: bar; display: flex; height: 12px; background: var(--hair); }
   .bar i, .bar-key i { display: block; height: 100%; }
@@ -729,12 +702,12 @@ ${deckFontFaceCss()}
 
   /* ── Attack paths ── */
   .attack-paths { margin-bottom: 2.75rem; }
-  .attack-chain { border-left: 3px solid var(--chain); padding: 1.4rem 1.6rem; margin-bottom: 1rem; color: var(--body); font-size: 0.92rem; }
+  .attack-chain { border-left: 3px solid var(--chain); margin-bottom: 0.6rem; color: var(--body); font-size: 0.92rem; }
   .attack-chain.severity-critical { --chain: ${RISK_COLORS.CRITICAL}; }
   .attack-chain.severity-high { --chain: ${RISK_COLORS.HIGH}; }
   .attack-chain.severity-medium { --chain: ${RISK_COLORS.MEDIUM}; }
   .attack-chain.severity-low { --chain: ${RISK_COLORS.LOW}; }
-  .attack-chain h3 { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; color: var(--ink); line-height: 1.3; margin-bottom: 0.6rem; }
+  .attack-chain h3 { font-family: var(--serif); font-size: 1.15rem; font-weight: 600; color: var(--ink); line-height: 1.3; }
   .attack-chain p { margin-bottom: 0.6rem; max-width: 95ch; }
   .attack-chain svg { max-width: 100%; height: auto; margin: 0.5rem 0 0.75rem; }
   .attack-chain ol { padding-left: 1.3rem; margin-bottom: 0.75rem; }
@@ -825,8 +798,8 @@ ${deckFontFaceCss()}
   }
   @media print {
     html, body { background: #fff; }
-    .dash-score-panel, .dash-risk-panel, .kpi-card, .inv-card, .attack-chain { box-shadow: none; border: 1px solid var(--hair); }
-    .tools { display: none; }
+    .verdict, .inv-card, .attack-chain { box-shadow: none; border: 1px solid var(--hair); }
+    .tools, .chevron { display: none; }
     table.plan th, table.results th { position: static; }
     .passed-fold > .finding-card { break-inside: avoid; }
   }
@@ -834,15 +807,29 @@ ${deckFontFaceCss()}
   @media (max-width: 680px) {
     body { padding-top: 1.5rem; }
     .header h1 { font-size: 1.75rem; }
-    .dash-top { grid-template-columns: 1fr; }
-    .donut-wrap { flex-direction: column; gap: 1rem; }
-    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+    .verdict { grid-template-columns: 1fr; }
+    .verdict-sev { border-left: 0; border-top: 1px solid var(--hair); }
+    .verdict-grade { padding: 1.1rem; gap: 0.9rem; }
+    .grade-mark { width: 60px; height: 60px; font-size: 36px; }
     .inv-grid { grid-template-columns: 1fr; }
     .finding-summary { flex-wrap: wrap; }
     .dom-row { grid-template-columns: 1fr; grid-template-areas: 'name' 'claim' 'bar' 'counts'; }
     .dom-counts { text-align: left; }
     .scorecard { padding: 0.4rem 1rem; }
     .finding-category { display: none; }
+    .dom-claim { flex-direction: column; gap: 0.3rem; }
+    table.plan thead { display: none; }
+    table.plan, table.plan tbody, table.plan tr, table.plan td { display: block; width: 100%; }
+    table.plan tr { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--hair); }
+    table.plan td { border: 0; padding: 0.15rem 0; }
+    table.plan tr.wave-h td { padding: 0.6rem 0 0; }
+    table.plan .n { display: inline; }
+    table.plan td.num::before { content: 'Closes '; color: var(--muted); }
+    table.plan td.num { text-align: left; }
+    table.plan td.effort::before { content: 'Effort '; color: var(--muted); }
+  }
+  @media (min-width: 681px) and (max-width: 1000px) {
+    .inv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 </style>
 </head>
@@ -864,6 +851,16 @@ ${deckFontFaceCss()}
   ${bodyHtml}
 
 <script>
+(function () {
+  function reveal() {
+    var id = decodeURIComponent(location.hash.slice(1));
+    var el = id && document.getElementById(id);
+    for (var n = el; n; n = n.parentElement) if (n.tagName === 'DETAILS') n.open = true;
+    if (el) el.scrollIntoView();
+  }
+  window.addEventListener('hashchange', reveal);
+  if (location.hash) reveal();
+})();
 (function () {
   var body = document.getElementById('results-body');
   if (!body) return;

@@ -118,6 +118,21 @@ describe('HTML report structure', () => {
     for (const [, st, rest] of rows) expect(rest.includes(' hidden')).toBe(st === 'passed');
   });
 
+  it('closes every element it opens, so no section swallows the next', () => {
+    const body = html.replace(/<(script|style|svg)[\s\S]*?<\/\1>/g, '');
+    const VOID = new Set(['meta', 'br', 'img', 'input', 'link', 'hr']);
+    const open: string[] = [];
+    const mismatches: string[] = [];
+    for (const [, close, tag] of body.matchAll(/<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/g)) {
+      const name = tag.toLowerCase();
+      if (VOID.has(name)) continue;
+      if (!close) open.push(name);
+      else if (open.pop() !== name) mismatches.push(name);
+    }
+    expect(mismatches).toEqual([]);
+    expect(open).toEqual([]);
+  });
+
   it('links each attack-chain step to its finding', () => {
     expect(html).toMatch(/<li><a href="#f-guest-user-write-access"><strong>Guest write<\/strong><\/a>/);
   });
