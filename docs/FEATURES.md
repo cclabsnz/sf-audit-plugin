@@ -334,7 +334,7 @@ Chain building blocks:
 
 | Renderer | Output | File |
 |---|---|---|
-| `HtmlRenderer` | `--format html`: full technical report, embeds the attack-chain DAG | src/renderers/HtmlRenderer.ts |
+| `HtmlRenderer` | `--format html`: full technical report on white in the executive report's palette and fonts. Reads as a fix-first plan (the executive action plan and headline), attack paths (light DAG), findings by CHECKS.md domain with a scorecard and passed checks folded, and a regroupable, searchable table of every result; each finding is drawn once with an anchor the other sections link to | src/renderers/HtmlRenderer.ts |
 | `MarkdownRenderer` | `--format md` | src/renderers/MarkdownRenderer.ts |
 | `JsonRenderer` | `--format json` (input to `audit diff` and history) | src/renderers/JsonRenderer.ts |
 | `SarifRenderer` | `--format sarif` for code-scanning upload; `riskToSarifLevel` | src/renderers/SarifRenderer.ts |
@@ -351,9 +351,10 @@ Chain building blocks:
 | timeline renderers | `renderCsv`, `renderJson`, `renderSummary` for `audit timeline` | src/timeline/render.ts |
 | incident renderers | `renderHtml`, `renderMarkdown`, `buildEvidence`/`writeEvidence`, `redactResult` | src/incident/render/ |
 
-Report section builders used by the executive deck (src/report):
+Report section builders used by the executive deck and the HTML report (src/report):
 
 - `buildActionPlan`: every action, ordered (src/report/ActionPlan.ts).
+- `planHeadline`, `EFFORT_LABEL`, `WAVE_LABEL`, `WAVE_WHY`: the plan's one-sentence conclusion and its labels, shared so both reports state the same answer (src/report/ActionPlan.ts).
 - `buildAttackJourney`: chain narrative for the deck (src/report/AttackJourney.ts).
 - `buildComplianceMatrix`: per-framework control status (src/report/ComplianceMatrix.ts).
 - `selectPriorities`: top-N executive priorities (src/report/ExecutivePriorities.ts).
@@ -371,6 +372,7 @@ Check support, src/checks/support:
 - src/checks/support/schema.ts: `fieldsOf`, `presentFields`, `hasField` (describe before querying edition-dependent fields).
 - src/checks/permCatalog.ts: `DANGEROUS_PERMS`, `PERM_BY_KEY` (high-risk permission vocabulary).
 - src/checks/CheckEngine.ts: `CheckEngine` (runs checks, cache-order validation, inconclusive handling).
+- src/checks/domains.ts: `DOMAINS`, `domainOf` (the ten docs/CHECKS.md domains and each check's domain; use these to group findings by area, not `Finding.category`).
 
 Findings and scoring, src/findings:
 

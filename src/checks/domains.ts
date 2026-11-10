@@ -1,0 +1,161 @@
+/**
+ * The ten domains docs/CHECKS.md groups the checks into, and which domain each check belongs to.
+ * A finding's own `category` is finer and inconsistent across checks (29 labels for 10 domains), so
+ * reports that group by area use this instead. test/unit/checks/domains.test.ts keeps it in step with
+ * the registry and with docs/CHECKS.md.
+ */
+export const DOMAINS = [
+  'Org Health & Configuration',
+  'Identity & Authentication',
+  'Users, Permissions & Privilege',
+  'Data Access & Sharing',
+  'Guest & External-Facing Access',
+  'Apex & Code Security',
+  'Integrations, Connected Apps & Deployments',
+  'Secrets & Credential Storage',
+  'Monitoring & Threat Detection',
+  'AI & Agents (Agentforce / GenAI)',
+] as const;
+
+export type Domain = (typeof DOMAINS)[number];
+
+const BY_DOMAIN: Record<Domain, readonly string[]> = {
+  'Org Health & Configuration': [
+    'health-check',
+    'api-limits',
+    'enhanced-domains',
+    'release-updates',
+    'legacy-api-version',
+  ],
+  'Identity & Authentication': [
+    'password-session-policy',
+    'ip-restrictions',
+    'sso-enforcement',
+    'mfa-enforcement',
+    'certificate-expiry',
+    'trusted-ip-ranges',
+    'my-domain-login-policy',
+    'high-assurance-session',
+    'internal-user-mfa',
+    'auth-providers',
+    'session-hardening',
+    'oauth-device-and-asset-token-flows',
+    'delegated-authentication-exposure',
+    'auth-provider-registration-handler',
+    'mfa-registration',
+    'mfa-method-strength',
+  ],
+  'Users, Permissions & Privilege': [
+    'users-and-admins',
+    'permissions',
+    'inactive-users',
+    'standard-profiles',
+    'api-client-permission',
+    'soap-login-api-auth',
+    'integration-users',
+    'integration-least-privilege',
+    'escalation-perms',
+    'login-access-policy',
+    'data-export-access',
+    'privileged-access',
+    'delegated-administration-groups',
+    'separation-of-duties',
+  ],
+  'Data Access & Sharing': [
+    'sharing-model',
+    'flows-without-sharing',
+    'public-group-sharing',
+    'field-level-security',
+    'content-links',
+    'field-history-tracking',
+    'data-classification',
+    'report-folder-access',
+    'public-content-exposure',
+    'encryption-coverage',
+    'sandbox-data-masking',
+    'data-cloud-data-space-isolation',
+    'restriction-rules-integrity',
+    'shield-tenant-secret-lifecycle',
+  ],
+  'Guest & External-Facing Access': [
+    'guest-user-access',
+    'csp-trusted-sites',
+    'experience-cloud-site',
+    'cors-allowlist',
+    'guest-object-exposure',
+    'guest-site-options',
+    'guest-record-access-policy',
+    'classic-sites',
+    'guest-api-access',
+    'guest-user-visibility',
+    'experience-csp',
+    'external-account-hierarchy-exposure',
+    'guest-executable-apex',
+  ],
+  'Apex & Code Security': [
+    'hardcoded-credentials',
+    'apex-sharing',
+    'scheduled-apex',
+    'code-security',
+    'anonymous-apex-audit',
+    'platform-event-subscriber-context',
+    'flow-http-callout-credential-bypass',
+    'apex-logging',
+    'apex-crud-fls',
+    'apex-rest-endpoint',
+    'visualforce-xss',
+    'lightning-message-channel',
+  ],
+  'Integrations, Connected Apps & Deployments': [
+    'connected-apps',
+    'remote-sites',
+    'named-credentials',
+    'installed-packages',
+    'connected-app-scope',
+    'email-security',
+    'outbound-messages',
+    'external-credentials',
+    'inbound-email-handler-exposure',
+    'org-wide-email-spoofing',
+    'package-post-install-supply-chain',
+    'deployment-identity',
+    'connected-app-inactivity',
+    'oauth-token-inventory',
+  ],
+  'Secrets & Credential Storage': [
+    'custom-settings',
+    'custom-labels-credential',
+  ],
+  'Monitoring & Threat Detection': [
+    'login-session',
+    'audit-trail',
+    'debug-log-access',
+    'transaction-security-policy',
+    'failed-login-detection',
+    'threat-detection',
+    'login-anomaly',
+    'event-monitoring',
+    'guest-traffic-anomaly',
+    'siem-integration',
+  ],
+  'AI & Agents (Agentforce / GenAI)': [
+    'genai-prompt-template-grounding',
+    'agent-inventory',
+    'agent-user-privilege',
+    'agent-action-surface',
+    'agent-channel-exposure',
+    'agent-monitoring-coverage',
+    'agent-query-reach',
+    'agent-outbound-actions',
+    'trusted-url-hygiene',
+  ],
+};
+
+const DOMAIN_OF = new Map<string, Domain>(
+  (Object.entries(BY_DOMAIN) as Array<[Domain, readonly string[]]>).flatMap(([d, ids]) => ids.map((id) => [id, d] as const)),
+);
+
+/** The domain a check belongs to, or undefined for an id no registered check has. */
+export function domainOf(checkId: string | undefined): Domain | undefined {
+  return checkId === undefined ? undefined : DOMAIN_OF.get(checkId);
+}

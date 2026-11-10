@@ -339,11 +339,13 @@ describe('RULE-079 the HTML dashboard counts the findings the grade counts (MN-0
     expect(kpi('HIGH')).toBe('1');
   });
 
-  it('the donut total is the open-finding total', () => {
-    expect(html).toMatch(/>2<\/text>\s*<text[^>]*>open findings</);
+  it('the headline total is the open-finding total', () => {
+    expect(html).toMatch(/<b class="open-n">2<\/b> open findings/);
   });
 
-  it('the grade reason sits below the gauge, not beside it', () => {
-    expect(html).toMatch(/\.dash-score-panel \{ flex-direction: column;/);
+  it('the grade reason sits with the score, inside the grade block', () => {
+    const block = html.slice(html.indexOf('class="verdict-grade"'), html.indexOf('class="verdict-sev"'));
+    expect(block).toContain('class="score-num"');
+    expect(block).toContain('class="grade-reason"');
   });
 });
