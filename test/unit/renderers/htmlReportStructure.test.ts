@@ -114,6 +114,12 @@ describe('HTML report structure', () => {
     expect(row).toContain('1 result could not be assessed');
   });
 
+  it('keeps a finding title intact when it contains a separator character', () => {
+    const piped = new HtmlRenderer().render({ ...result, findings: [f('pipe', 'ip-restrictions', 'HIGH', { title: 'Admins | no IP ranges' })], attackChains: [] });
+    expect(piped).toContain('<span class="worst">Worst: Admins | no IP ranges</span>');
+    expect(piped).toContain('1 high open. Worst: Admins | no IP ranges</p>');
+  });
+
   it('lists the worst domain first in the scorecard', () => {
     const rows = [...html.matchAll(/<a class="dom-row" href="#d-([^"]+)"/g)].map((m) => m[1]);
     expect(rows[0]).toBe('guest-external-facing-access');
@@ -126,12 +132,20 @@ describe('HTML report structure', () => {
   });
 
   it('closes every element it opens, so no section swallows the next', () => {
-    const body = html.replace(/<(script|style|svg)[\s\S]*?<\/\1>/g, '');
+    // Script, style and svg bodies are not HTML structure: tags inside them are skipped by position.
+    const RAW = new Set(['script', 'style', 'svg']);
     const VOID = new Set(['meta', 'br', 'img', 'input', 'link', 'hr']);
     const open: string[] = [];
     const mismatches: string[] = [];
-    for (const [, close, tag] of body.matchAll(/<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/g)) {
+    let skipUntil = -1;
+    for (const m of html.matchAll(/<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/g)) {
+      const [, close, tag] = m;
       const name = tag.toLowerCase();
+      if (m.index! < skipUntil) continue;
+      if (!close && RAW.has(name)) {
+        skipUntil = html.indexOf(`</${name}>`, m.index!) + name.length + 3;
+        continue;
+      }
       if (VOID.has(name)) continue;
       if (!close) open.push(name);
       else if (open.pop() !== name) mismatches.push(name);

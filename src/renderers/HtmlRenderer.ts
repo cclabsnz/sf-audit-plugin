@@ -336,12 +336,13 @@ export class HtmlRenderer implements AuditRenderer {
       })
       .sort((a, b) => (SEV_ORDER[a.worst ?? 'INFO'] - SEV_ORDER[b.worst ?? 'INFO']) || b.open.length - a.open.length);
 
-    const claim = (d: (typeof domains)[number]): string => {
+    /** The domain's headline, and its worst open finding when there is one. */
+    const claim = (d: (typeof domains)[number]): { head: string; worst?: string } => {
       if (d.open.length) {
         const parts = (['c', 'h', 'm', 'l'] as const)
           .filter((k) => d.counts[k])
           .map((k) => `${d.counts[k]} ${{ c: 'critical', h: 'high', m: 'medium', l: 'low' }[k]}`);
-        return `${parts.join(', ')} open|Worst: ${d.open[0].title}`;
+        return { head: `${parts.join(', ')} open`, worst: `Worst: ${d.open[0].title}` };
       }
       const n = (st: Status) => d.fs.filter((f) => statusOf(f) === st).length;
       const rest = [
@@ -350,7 +351,7 @@ export class HtmlRenderer implements AuditRenderer {
         n('info') ? `${n('info')} informational` : '',
         n('passed') ? `${n('passed')} passed` : '',
       ].filter(Boolean);
-      return `No open findings; ${rest.join(', ')}`;
+      return { head: `No open findings; ${rest.join(', ')}` };
     };
     const unassessed = (d: (typeof domains)[number]): boolean => d.fs.some((f) => statusOf(f) === 'inconclusive');
     const mark = (d: (typeof domains)[number]): string => d.worst
@@ -367,7 +368,7 @@ export class HtmlRenderer implements AuditRenderer {
     const withIssues = domains.filter((d) => d.counts.c + d.counts.h > 0).length;
     const scorecard = domains.map((d) => `<a class="dom-row" href="#d-${slug(d.name)}">
   <span class="dom-name">${esc(d.name)}</span>
-  <span class="dom-claim">${mark(d)}<span>${(() => { const [head, worst] = claim(d).split('|'); return `<b>${esc(head)}</b>${worst ? `<span class="worst">${esc(worst)}</span>` : ''}`; })()}</span></span>
+  <span class="dom-claim">${mark(d)}<span>${(() => { const { head, worst } = claim(d); return `<b>${esc(head)}</b>${worst ? `<span class="worst">${esc(worst)}</span>` : ''}`; })()}</span></span>
   ${bar(d)}
   <span class="dom-counts"><b>${d.open.length}</b> open · ${d.fs.filter((f) => statusOf(f) === 'passed').length} passed</span>
 </a>`).join('');
@@ -376,7 +377,7 @@ export class HtmlRenderer implements AuditRenderer {
       const passed = d.fs.filter((f) => statusOf(f) === 'passed');
       return `<section class="domain" id="d-${slug(d.name)}">
   <h3 class="dom-h">${esc(d.name)}</h3>
-  <p class="dom-sub">${esc(claim(d).replace('|', '. '))}</p>
+  <p class="dom-sub">${(() => { const { head, worst } = claim(d); return esc(worst ? `${head}. ${worst}` : head); })()}</p>
   ${shown.map(card).join('')}
   ${passed.length ? `<details class="passed-fold"><summary>${plural(passed.length, 'check')} passed</summary>${passed.map(card).join('')}</details>` : ''}
 </section>`;
