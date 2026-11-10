@@ -12,7 +12,7 @@ import type { AttackChain, AttackChainStep } from '../chains/AttackChain.js';
 import { coverageSummary, coverageAdvice } from '../findings/coverage.js';
 import { techniqueLabel, ATTACK_TACTIC_ORDER } from '../threats/attack.js';
 import { buildThreatView, threatRowStatusText, type ThreatRow } from '../threats/view.js';
-import { buildActionPlan, type PlannedAction } from '../report/ActionPlan.js';
+import { buildActionPlan, planHeadline, EFFORT_LABEL, WAVE_LABEL, WAVE_WHY, type PlannedAction } from '../report/ActionPlan.js';
 import { buildAttackJourney } from '../report/AttackJourney.js';
 import { deckFontFaceCss } from './deckFonts.js';
 
@@ -29,13 +29,6 @@ const SEV_RANK: Record<RiskLevel, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, L
 const SEVERITIES: RiskLevel[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
 // The threat view holds no INFO results, so the heatmap has no Info column.
 const THREAT_LEVELS = SEVERITIES.filter((l) => l !== 'INFO');
-const EFFORT_LABEL = { quick: 'Under a day', moderate: 'Days', project: 'Weeks' } as const;
-const WAVE_LABEL = { 1: 'Start now', 2: 'Next 30 days', 3: 'This quarter' } as const;
-const WAVE_WHY = {
-  1: 'breaks a critical chain or closes a critical finding, whatever the effort',
-  2: 'high severity, days of work or less',
-  3: 'high severity, weeks of work',
-} as const;
 const PLAN_ROWS_PER_SLIDE = 6;
 const MATRIX_MAX = 10;
 const TACTIC_SHORT: Record<string, string> = {
@@ -446,21 +439,8 @@ ${head}<div class="content">${s.body}</div>
     const passed = r.findings.filter((f) => f.passed).length;
     const named = chains.filter((c) => c.abuseCase);
     const critChains = chains.map((c, i) => ({ c, i })).filter((x) => x.c.severity === 'CRITICAL' && x.c.abuseCase);
-    // Every critical chain, potential ones too: a path is only "closed" when an action breaks it.
-    const allCrit = chains.map((c, i) => ({ c, i })).filter((x) => x.c.severity === 'CRITICAL');
-    const wave1 = plan.filter((a) => a.wave === 1);
-    const brokenByWave1 = new Set(wave1.flatMap((a) => a.breaks));
-    const allCritBroken = allCrit.length > 0 && allCrit.every((x) => brokenByWave1.has(x.i));
-    const rest = plan.length - wave1.length;
-    const restText = rest ? `; ${rest} more action${verb(rest, ' completes', 's complete')} the plan` : '';
-    const n1 = wave1.length;
-
-    let headline: string;
-    if (plan.length === 0) headline = 'No critical or high-severity issues are open; the remaining fixes are routine hardening';
-    else if (allCritBroken) headline = `${actions(n1)} to start now ${verb(n1, 'closes', 'close')} every critical attack path${restText}`;
-    else if (n1) headline = `${actions(n1)} to start now ${verb(n1, 'addresses', 'address')} the critical exposure${restText}`;
-    else if (high) headline = `${actions(plan.length)} ${verb(plan.length, 'addresses', 'address')} every open high-severity issue; none is critical`;
-    else headline = `${actions(plan.length)} ${verb(plan.length, 'addresses', 'address')} the remaining exposure; none is critical or high`;
+    const n1 = plan.filter((a) => a.wave === 1).length;
+    const headline = planHeadline(plan, chains, high);
 
     const c = r.coverage;
     const incon = r.findings.filter(unassessed).length;

@@ -287,7 +287,7 @@ describe('RULE-043: an unknown count is never shown as a number', () => {
     expect(r.metrics).not.toHaveProperty('modifyAllDataUsersCount');
     expect(r.metrics).not.toHaveProperty('viewAllDataUsersCount');
     const html = new HtmlRenderer().render(await result({ rows: [row('u1', { ModifyAllData: true })], psaTotal: 12000 }));
-    expect(html).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#8b949e;font-weight:700">unknown/);
+    expect(html).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#636770;font-weight:700">unknown/);
   });
 
   it('an archived "0 user(s)" from v1.17 is unknown, so a later real count is not a change', async () => {
@@ -308,14 +308,14 @@ describe('RULE-043: an unknown count is never shown as a number', () => {
 
   it('the HTML dashboard shows unknown, not a green 0', async () => {
     const html = new HtmlRenderer().render(await result({ rows: [] }));
-    expect(html).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#8b949e;font-weight:700">unknown/);
-    expect(html).toMatch(/View All Data<\/span><div class="metric-right"><span style="color:#8b949e;font-weight:700">unknown/);
-    expect(html).not.toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#22c55e/);
+    expect(html).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#636770;font-weight:700">unknown/);
+    expect(html).toMatch(/View All Data<\/span><div class="metric-right"><span style="color:#636770;font-weight:700">unknown/);
+    expect(html).not.toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#15803d/);
   });
 
   it('the HTML dashboard still shows a known count', async () => {
     const html = new HtmlRenderer().render(await result({ rows: [row('u1', { ModifyAllData: true })] }));
-    expect(html).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#22c55e;font-weight:700">1/);
+    expect(html).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#15803d;font-weight:700">1/);
   });
 
   it('the history diff reports no change into or out of an unknown count', async () => {
@@ -334,7 +334,7 @@ describe('RULE-043: an unknown count is never shown as a number', () => {
     const skipped = buildAuditResult(makeCtx({ rows: [] }), [f('internal-user-mfa-gaps')], {});
     expect(skipped.metrics.modifyAllDataUsersCount).toBe(0);
     expect(computeDiff(known, skipped).metricDeltas.map((m) => m.key)).not.toContain('modifyAllDataUsersCount');
-    expect(new HtmlRenderer().render(skipped)).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#8b949e;font-weight:700">unknown/);
+    expect(new HtmlRenderer().render(skipped)).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#636770;font-weight:700">unknown/);
   });
 
   it('an exact count of 10 or 20 is known, not mistaken for a "0 user(s)" archive', async () => {

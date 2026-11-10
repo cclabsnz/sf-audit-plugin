@@ -129,3 +129,39 @@ export function buildActionPlan(findings: Finding[], chains: AttackChain[]): Pla
 
   return actions.sort((a, b) => a.wave - b.wave || b.risk - a.risk || a.title.localeCompare(b.title));
 }
+
+/** How long an action takes, in the words both reports print. */
+export const EFFORT_LABEL = { quick: 'Under a day', moderate: 'Days', project: 'Weeks' } as const;
+/** When to start each wave. */
+export const WAVE_LABEL = { 1: 'Start now', 2: 'Next 30 days', 3: 'This quarter' } as const;
+/** Why an action sits in its wave. */
+export const WAVE_WHY = {
+  1: 'breaks a critical chain or closes a critical finding, whatever the effort',
+  2: 'high severity, days of work or less',
+  3: 'high severity, weeks of work',
+} as const;
+
+const NUMBER_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
+const countWord = (n: number): string => NUMBER_WORDS[n] ?? String(n);
+const actionsWord = (n: number): string => `${countWord(n)} action${n === 1 ? '' : 's'}`;
+const verb = (n: number, one: string, many: string): string => (n === 1 ? one : many);
+
+/**
+ * The plan's conclusion in one sentence: the executive summary's headline and the technical report's
+ * "fix first" title, so both reports state the same answer.
+ */
+export function planHeadline(plan: PlannedAction[], chains: AttackChain[], openHigh: number): string {
+  // Every critical chain, potential ones too: a path is only "closed" when an action breaks it.
+  const allCrit = chains.map((c, i) => ({ c, i })).filter((x) => x.c.severity === 'CRITICAL');
+  const wave1 = plan.filter((a) => a.wave === 1);
+  const brokenByWave1 = new Set(wave1.flatMap((a) => a.breaks));
+  const allCritBroken = allCrit.length > 0 && allCrit.every((x) => brokenByWave1.has(x.i));
+  const rest = plan.length - wave1.length;
+  const restText = rest ? `; ${rest} more action${verb(rest, ' completes', 's complete')} the plan` : '';
+  const n1 = wave1.length;
+  if (plan.length === 0) return 'No critical or high-severity issues are open; the remaining fixes are routine hardening';
+  if (allCritBroken) return `${actionsWord(n1)} to start now ${verb(n1, 'closes', 'close')} every critical attack path${restText}`;
+  if (n1) return `${actionsWord(n1)} to start now ${verb(n1, 'addresses', 'address')} the critical exposure${restText}`;
+  if (openHigh) return `${actionsWord(plan.length)} ${verb(plan.length, 'addresses', 'address')} every open high-severity issue; none is critical`;
+  return `${actionsWord(plan.length)} ${verb(plan.length, 'addresses', 'address')} the remaining exposure; none is critical or high`;
+}

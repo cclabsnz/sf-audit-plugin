@@ -9,6 +9,39 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.25.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.25.0) — 2026-11-10
+
+The technical HTML report is redesigned. It now uses the executive report's white consulting look
+and reads in the order an admin works: what to fix first, how an attacker would get in, where each
+area of the org stands, and every result in one table.
+
+### Changed
+
+- **`--format html` is on white**, in the executive report's palette and fonts. The dark theme is
+  gone. Severity is shown by tag style and text as well as colour, so the report works printed or
+  in greyscale.
+- **One verdict band at the top**: the grade, score, why it got that grade and evidence coverage,
+  next to the open-finding total with one severity bar and four counts. This replaces the score
+  ring, donut and KPI strip, which repeated the same numbers.
+- **Fix first**: the report opens on the executive report's action plan and headline. Each action
+  lists the findings it closes and the attack chains it breaks or is part of.
+- **Attack paths** collapse to one line each (severity, C1/P1 label as in the executive report,
+  title, where to break it). Steps, the diagram and the fix open on demand.
+- **By domain**: a scorecard row for each of the ten domains in docs/CHECKS.md, worst first, then
+  each domain's findings by severity with passed checks folded away. A domain with checks that could
+  not be assessed is marked "partly unseen", never "clear".
+- **All results**: one table that can be regrouped by severity, domain, attack chain or framework,
+  and searched. Passed checks are hidden until asked for.
+- Each finding is drawn once, with a stable link (`#f-<id>`) for tickets; the plan, attack paths
+  and table link to it.
+
+### Added
+
+- `domainOf` / `DOMAINS` (src/checks/domains.ts): the domain each check belongs to, kept in step
+  with docs/CHECKS.md by a test.
+- `planHeadline` and the plan's effort and wave labels are shared by the executive and HTML reports,
+  so both state the same answer.
+
 ## [v1.24.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.24.1) — 2026-11-01
 
 The threat model reads as the threats it found. Inventory lines no longer sit in the STRIDE view as
