@@ -145,7 +145,7 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
   const cov = result.coverage;
   const coverageLine = cov
     ? `<div class="coverage${cov.gradeCapped ? ' is-capped' : ''}">${esc(coverageSummary(cov))}${cov.notAssessed.length
-      ? `<details class="cov-more"><summary>${cov.notAssessed.length} not assessed: why</summary><p>${cov.notAssessed.map((id) => `<code>${esc(id)}</code>`).join(', ')}</p><p>${esc(coverageAdvice(cov))}</p></details>`
+      ? `<details class="cov-more"><summary>Why ${cov.notAssessed.length} ${cov.notAssessed.length === 1 ? 'was' : 'were'} not assessed</summary><p>${cov.notAssessed.map((id) => `<code>${esc(id)}</code>`).join(', ')}</p><p>${esc(coverageAdvice(cov))}</p></details>`
       : ''}</div>`
     : '';
 
@@ -217,7 +217,8 @@ function chainLabels(chains: AttackChain[]): string[] {
 }
 
 const slug = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-const frameworkOf = (tag: string): string => tag.split(/[-.]/)[0];
+/** The framework a compliance tag belongs to: 'SOC2-CC6.1' is SOC2; OWASP LLM tags ('LLM02') are one framework. */
+const frameworkOf = (tag: string): string => (/^LLM\d/.test(tag) ? 'OWASP-LLM' : tag.split(/[-.]/)[0]);
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 function severityBadge(f: Finding): string {
@@ -251,7 +252,7 @@ export class HtmlRenderer implements AuditRenderer {
           })
           .join('');
         const gist = c.abuseCase ? `Break it: ${esc(c.abuseCase.breakPoint)}` : `${c.steps.length} steps; possible but unproven`;
-        return `<details class="attack-chain severity-${c.severity.toLowerCase()}" id="chain-${ci + 1}">
+        return `<details class="attack-chain severity-${esc(c.severity.toLowerCase())}" id="chain-${ci + 1}">
   <summary class="chain-sum">
     <span class="risk-badge solid" style="--sev:${RISK_COLORS[c.severity] ?? UNKNOWN_COLOR}">${esc(c.severity)}</span>
     <span class="chain-text"><h3><span class="chain-label">${labels[ci]}</span> ${esc(c.title)}${conf}</h3><span class="chain-gist">${gist}</span></span>
@@ -342,13 +343,21 @@ export class HtmlRenderer implements AuditRenderer {
           .map((k) => `${d.counts[k]} ${{ c: 'critical', h: 'high', m: 'medium', l: 'low' }[k]}`);
         return `${parts.join(', ')} open|Worst: ${d.open[0].title}`;
       }
-      const inc = d.fs.filter((f) => statusOf(f) === 'inconclusive').length;
-      const passed = d.fs.filter((f) => statusOf(f) === 'passed').length;
-      return inc ? `No open findings; ${plural(inc, 'check')} could not be assessed` : `No open findings; ${plural(passed, 'check')} passed`;
+      const n = (st: Status) => d.fs.filter((f) => statusOf(f) === st).length;
+      const rest = [
+        n('inconclusive') ? `${plural(n('inconclusive'), 'result')} could not be assessed` : '',
+        n('waived') ? `${n('waived')} waived` : '',
+        n('info') ? `${n('info')} informational` : '',
+        n('passed') ? `${n('passed')} passed` : '',
+      ].filter(Boolean);
+      return `No open findings; ${rest.join(', ')}`;
     };
+    const unassessed = (d: (typeof domains)[number]): boolean => d.fs.some((f) => statusOf(f) === 'inconclusive');
     const mark = (d: (typeof domains)[number]): string => d.worst
-      ? `<span class="risk-badge${SOLID.has(d.worst) ? ' solid' : ''}" style="--sev:${RISK_COLORS[d.worst]}">${d.worst}</span>`
-      : `<span class="risk-badge" style="--sev:${PASS_COLOR}">✓ CLEAR</span>`;
+      ? `<span class="risk-badge${SOLID.has(d.worst) ? ' solid' : ''}" style="--sev:${RISK_COLORS[d.worst]}">${esc(d.worst)}</span>`
+      : unassessed(d)
+        ? '<span class="inconclusive-badge">? PARTLY UNSEEN</span>'
+        : `<span class="risk-badge" style="--sev:${PASS_COLOR}">✓ CLEAR</span>`;
     const bar = (d: (typeof domains)[number]): string => {
       const total = d.fs.length;
       const seg = (k: string, count: number) => (count ? `<i class="b-${k}" style="width:${((count / total) * 100).toFixed(2)}%"></i>` : '');
@@ -430,14 +439,14 @@ export class HtmlRenderer implements AuditRenderer {
     const anchorOfId = new Map<string, string>();
     for (const [f, a] of anchorOf) if (!anchorOfId.has(f.id)) anchorOfId.set(f.id, a);
     const plan = buildActionPlan(result.findings, chains);
-    const chainSev = chains.map((c) => `sev-${c.severity.toLowerCase()}`);
+    const chainSev = chains.map((c) => `sev-${esc(c.severity.toLowerCase())}`);
     const openHigh = result.findings.filter((f) => statusOf(f) === 'open' && f.riskLevel === 'HIGH').length;
     const headline = planHeadline(plan, chains, openHigh);
 
     const attackPathsHtml = this.renderAttackPaths(result, labels, anchorOfId);
 
     const card = (f: Finding): string => {
-        const isInconclusive = !!f.inconclusive;
+        const isInconclusive = statusOf(f) === 'inconclusive';
         const cardAccent = isInconclusive ? UNKNOWN_COLOR : (f.passed ? 'var(--hair)' : (RISK_COLORS[f.riskLevel] ?? UNKNOWN_COLOR));
         const badgeHtml  = severityBadge(f);
         const tagsHtml = f.complianceTags?.length
@@ -853,12 +862,18 @@ ${deckFontFaceCss()}
 <script>
 (function () {
   function reveal() {
-    var id = decodeURIComponent(location.hash.slice(1));
+    var id;
+    try { id = decodeURIComponent(location.hash.slice(1)); } catch (e) { return; }
     var el = id && document.getElementById(id);
     for (var n = el; n; n = n.parentElement) if (n.tagName === 'DETAILS') n.open = true;
     if (el) el.scrollIntoView();
   }
   window.addEventListener('hashchange', reveal);
+  // Following the same link twice fires no hashchange, so reopen on every in-page link click too.
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (a && a.getAttribute('href') === location.hash) setTimeout(reveal, 0);
+  });
   if (location.hash) reveal();
 })();
 (function () {

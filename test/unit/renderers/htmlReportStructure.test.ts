@@ -107,6 +107,13 @@ describe('HTML report structure', () => {
     expect(fold?.[1]).not.toContain('Title of enhanced-domains-unknown');
   });
 
+  it('never calls a domain clear when part of it could not be assessed', () => {
+    const row = /<a class="dom-row" href="#d-org-health-configuration">([\s\S]*?)<\/a>/.exec(html)?.[1] ?? '';
+    expect(row).toContain('PARTLY UNSEEN');
+    expect(row).not.toContain('CLEAR');
+    expect(row).toContain('1 result could not be assessed');
+  });
+
   it('lists the worst domain first in the scorecard', () => {
     const rows = [...html.matchAll(/<a class="dom-row" href="#d-([^"]+)"/g)].map((m) => m[1]);
     expect(rows[0]).toBe('guest-external-facing-access');
