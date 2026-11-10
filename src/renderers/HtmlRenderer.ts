@@ -1,44 +1,43 @@
 import type { AuditResult } from '../findings/AuditResult.js';
 import type { OrgMetrics } from '@cclabsnz/sf-core';
 import type { AuditRenderer } from './AuditRenderer.js';
-import { esc, firaFontFaceCss, INTERACTIVE_CSP_META } from '@cclabsnz/sf-core';
+import { esc, DEFAULT_BRANDING, INTERACTIVE_CSP_META } from '@cclabsnz/sf-core';
+import { deckFontFaceCss } from './deckFonts.js';
 import { renderAttackChainDagSvg } from './AttackChainDagRenderer.js';
 import { coverageSummary, coverageAdvice } from '../findings/coverage.js';
 import { techniqueLabel } from '../threats/attack.js';
 import { unknownMetrics } from '../findings/unknownMetrics.js';
 
+// The report is printed on white, in the executive report's palette. Every severity colour holds
+// at least 4.5:1 on white and under white text, so badges and counts stay legible when printed.
 const RISK_COLORS: Record<string, string> = {
-  CRITICAL: '#dc2626',
-  HIGH:     '#ea580c',
-  MEDIUM:   '#d97706',
-  LOW:      '#2563eb',
-  INFO:     '#64748b',
+  CRITICAL: '#b91c1c',
+  HIGH:     '#c2410c',
+  MEDIUM:   '#a16207',
+  LOW:      '#1d4ed8',
+  INFO:     '#475569',
 };
 
-const RISK_BG: Record<string, string> = {
-  CRITICAL: 'rgba(220,38,38,0.12)',
-  HIGH:     'rgba(234,88,12,0.12)',
-  MEDIUM:   'rgba(217,119,6,0.12)',
-  LOW:      'rgba(37,99,235,0.12)',
-  INFO:     'rgba(100,116,139,0.12)',
-};
-
-const PASS_COLOR = '#22c55e';
-const PASS_BG    = 'rgba(34,197,94,0.10)';
+const GOOD = '#15803d';
+const WARN = '#a16207';
+const BAD  = '#b91c1c';
+const PASS_COLOR = GOOD;
+/** Severities drawn as solid tags; the rest are outlined, as in the executive report. */
+const SOLID = new Set(['CRITICAL', 'HIGH']);
 
 const GRADE_COLOR: Record<string, string> = {
-  A: '#22c55e', B: '#84cc16', C: '#eab308', D: '#f97316', F: '#ef4444',
+  A: GOOD, B: '#4d7c0f', C: WARN, D: '#c2410c', F: BAD,
 };
 
 // ── Dashboard helpers ────────────────────────────────────────────────────────
 
-/** The grey used for inconclusive findings. */
-const UNKNOWN_COLOR = '#8b949e';
+/** The grey used for inconclusive findings and counts the audit could not read. */
+const UNKNOWN_COLOR = DEFAULT_BRANDING.muted;
 
 function statusColor(value: number, warnThreshold: number, dangerThreshold: number): string {
-  if (value <= warnThreshold) return '#22c55e';
-  if (value <= dangerThreshold) return '#d97706';
-  return '#dc2626';
+  if (value <= warnThreshold) return GOOD;
+  if (value <= dangerThreshold) return WARN;
+  return BAD;
 }
 
 function progressBar(value: number, max: number, color: string): string {
@@ -60,7 +59,7 @@ function inventoryCard(title: string, rows: string[]): string {
 
 function buildScoreRing(score: number, grade: string, color: string): string {
   return `
-    <div class="score-ring" style="background:conic-gradient(from -90deg, ${color} ${score}%, #2d3748 ${score}%)" aria-label="Health score ${score} out of 100, grade ${grade}">
+    <div class="score-ring" style="background:conic-gradient(from -90deg, ${color} ${score}%, var(--hair) ${score}%)" aria-label="Health score ${score} out of 100, grade ${grade}">
       <div class="score-inner">
         <div class="score-num" style="color:${color}">${score}<span>/100</span></div>
         <div class="score-grade" style="background:${color}">${esc(grade)}</div>
@@ -76,8 +75,8 @@ function buildDonutSvg(counts: Record<string, number>): string {
 
   if (total === 0) {
     return `<svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
-      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#21262d" stroke-width="14" />
-      <text x="${cx}" y="${cy + 5}" text-anchor="middle" fill="#22c55e" font-size="12" font-family="system-ui,sans-serif">Clean</text>
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#e3e6e9" stroke-width="14" />
+      <text x="${cx}" y="${cy + 5}" text-anchor="middle" fill="${GOOD}" font-size="12" font-family="'Source Sans 3',system-ui,sans-serif">Clean</text>
     </svg>`;
   }
 
@@ -92,10 +91,10 @@ function buildDonutSvg(counts: Record<string, number>): string {
   });
 
   return `<svg width="120" height="120" viewBox="0 0 120 120" aria-hidden="true">
-    <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#21262d" stroke-width="14" />
+    <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#e3e6e9" stroke-width="14" />
     ${arcs.join('')}
-    <text x="${cx}" y="${cy - 5}" text-anchor="middle" fill="#f0f6fc" font-size="20" font-weight="700" font-family="system-ui,sans-serif">${total}</text>
-    <text x="${cx}" y="${cy + 14}" text-anchor="middle" fill="#8b949e" font-size="10" font-family="system-ui,sans-serif">open findings</text>
+    <text x="${cx}" y="${cy - 3}" text-anchor="middle" fill="${DEFAULT_BRANDING.ink}" font-size="22" font-weight="600" font-family="'Source Serif 4',Georgia,serif">${total}</text>
+    <text x="${cx}" y="${cy + 15}" text-anchor="middle" fill="${DEFAULT_BRANDING.muted}" font-size="10" font-family="'Source Sans 3',system-ui,sans-serif">open findings</text>
   </svg>`;
 }
 
@@ -109,13 +108,13 @@ function openCounts(result: AuditResult): Record<string, number> {
 
 function buildDashboard(result: AuditResult, counts: Record<string, number>): string {
   const m: OrgMetrics = result.metrics;
-  const gradeColor = GRADE_COLOR[result.grade] ?? '#64748b';
+  const gradeColor = GRADE_COLOR[result.grade] ?? UNKNOWN_COLOR;
 
   const gauge = buildScoreRing(result.healthScore, result.grade, gradeColor);
   const donut = buildDonutSvg(counts);
 
   const kpiCards = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map(l =>
-    `<div class="kpi-card" style="border-top:3px solid ${RISK_COLORS[l]}">
+    `<div class="kpi-card" style="--sev:${RISK_COLORS[l]}">
       <div class="kpi-value" style="color:${RISK_COLORS[l]}">${counts[l] ?? 0}</div>
       <div class="kpi-label">${l}</div>
     </div>`,
@@ -139,7 +138,7 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
   ]);
 
   // Code Quality
-  const covColor = m.codeCoveragePercent >= 75 ? '#22c55e' : m.codeCoveragePercent >= 50 ? '#d97706' : '#dc2626';
+  const covColor = m.codeCoveragePercent >= 75 ? GOOD : m.codeCoveragePercent >= 50 ? WARN : BAD;
   const codeCard = inventoryCard('Code Quality', [
     metricRow('Apex Classes', m.apexClassCount),
     metricRow('Apex Triggers', m.apexTriggerCount),
@@ -148,7 +147,7 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
   ]);
 
   // Integrations
-  const insecureColor    = m.insecureRemoteSitesCount > 0 ? '#dc2626' : '#22c55e';
+  const insecureColor    = m.insecureRemoteSitesCount > 0 ? BAD : GOOD;
   const unusedCredColor  = statusColor(m.unusedNamedCredentialsCount, 0, 2);
   const integrationsCard = inventoryCard('Integrations', [
     metricRow('Connected Apps', m.connectedAppsCount),
@@ -156,13 +155,13 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
     metricRow('↳ Insecure', m.insecureRemoteSitesCount, insecureColor,
       m.remoteSitesCount > 0 ? progressBar(m.insecureRemoteSitesCount, m.remoteSitesCount, insecureColor) : ''),
     metricRow('Named Credentials', m.namedCredentialsCount),
-    metricRow('↳ Unused', m.unusedNamedCredentialsCount, m.unusedNamedCredentialsCount > 0 ? '#d97706' : '#22c55e',
+    metricRow('↳ Unused', m.unusedNamedCredentialsCount, m.unusedNamedCredentialsCount > 0 ? WARN : GOOD,
       m.namedCredentialsCount > 0 ? progressBar(m.unusedNamedCredentialsCount, m.namedCredentialsCount, unusedCredColor) : ''),
   ]);
 
   // Governance & Events
   const failedColor    = statusColor(m.failedLogins30d, 10, 100);
-  const healthChkColor = m.healthCheckScore >= 75 ? '#22c55e' : m.healthCheckScore >= 50 ? '#d97706' : '#dc2626';
+  const healthChkColor = m.healthCheckScore >= 75 ? GOOD : m.healthCheckScore >= 50 ? WARN : BAD;
   const governanceCard = inventoryCard('Governance & Events', [
     metricRow('Failed Logins (30d)', m.failedLogins30d, failedColor),
     metricRow('SF Health Check', `${m.healthCheckScore}%`, healthChkColor,
@@ -170,15 +169,15 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
   ]);
 
   const waivedBanner = result.waivedFindings?.length
-    ? `<div class="waived-banner" style="background:#0f291e;border:1px solid #16a34a;border-radius:8px;padding:12px 16px;margin-bottom:20px;color:#dcfce7;font-size:13px;"><strong>Accepted risks:</strong> ${result.waivedFindings.length} finding(s) waived under an approved waiver and excluded from the score.</div>`
+    ? `<div class="waived-banner"><strong>Accepted risks:</strong> ${result.waivedFindings.length} finding(s) waived under an approved waiver and excluded from the score.</div>`
     : '';
 
   const gradeReasonLine = result.gradeReason
-    ? `<div class="grade-reason" style="margin-top:10px;font-size:12px;color:#94a3b8">Why ${esc(result.grade)}: ${esc(result.gradeReason.replace(/^[A-F]: /, ''))}</div>`
+    ? `<div class="grade-reason">Why ${esc(result.grade)}: ${esc(result.gradeReason.replace(/^[A-F]: /, ''))}</div>`
     : '';
   const cov = result.coverage;
   const coverageLine = cov
-    ? `<div class="coverage${cov.gradeCapped ? ' is-capped' : ''}" style="margin-top:10px;font-size:12px;color:${cov.gradeCapped ? '#fbbf24' : '#94a3b8'}">${esc(coverageSummary(cov))}${cov.notAssessed.length ? `<br>Not assessed: ${cov.notAssessed.map((id) => `<code>${esc(id)}</code>`).join(', ')}<br>${esc(coverageAdvice(cov))}` : ''}</div>`
+    ? `<div class="coverage${cov.gradeCapped ? ' is-capped' : ''}" >${esc(coverageSummary(cov))}${cov.notAssessed.length ? `<br>Not assessed: ${cov.notAssessed.map((id) => `<code>${esc(id)}</code>`).join(', ')}<br>${esc(coverageAdvice(cov))}` : ''}</div>`
     : '';
 
   return `
@@ -228,7 +227,7 @@ export class HtmlRenderer implements AuditRenderer {
     const cards = result.attackChains
       .map((c) => {
         const conf = c.confidence === 'named' ? '' : ' (potential)';
-        const dagSvg = renderAttackChainDagSvg(c, { theme: 'dark' });
+        const dagSvg = renderAttackChainDagSvg(c, { theme: 'light' });
         const steps = c.steps
           .map((s) => {
             const technique = s.techniques?.length ? ` → ${esc(s.techniques.map(techniqueLabel).join(' · '))}` : '';
@@ -238,7 +237,7 @@ export class HtmlRenderer implements AuditRenderer {
           })
           .join('');
         return `<div class="attack-chain severity-${c.severity.toLowerCase()}">
-  <h3>[${esc(c.severity)}] ${esc(c.title)}${conf}</h3>
+  <h3><span class="risk-badge solid" style="--sev:${RISK_COLORS[c.severity] ?? UNKNOWN_COLOR}">${esc(c.severity)}</span> ${esc(c.title)}${conf}</h3>
   ${c.abuseCase ? `<p><strong>Abuse case:</strong> ${esc(c.abuseCase.actor)} wants to ${esc(c.abuseCase.goal)}.</p>` : ''}
   <p>${esc(c.narrative)}</p>
   ${dagSvg}
@@ -276,18 +275,17 @@ export class HtmlRenderer implements AuditRenderer {
       ? '<p class="no-findings">No findings.</p>'
       : result.findings.map((f) => {
         const isInconclusive = !!f.inconclusive;
-        const cardAccent = isInconclusive ? '#8b949e' : (f.passed ? PASS_COLOR : (RISK_COLORS[f.riskLevel] ?? '#64748b'));
-        const cardBg     = isInconclusive ? 'rgba(139,148,158,0.06)' : (f.passed ? PASS_BG : (RISK_BG[f.riskLevel] ?? 'rgba(100,116,139,0.12)'));
+        const cardAccent = isInconclusive ? UNKNOWN_COLOR : (f.passed ? 'var(--hair)' : (RISK_COLORS[f.riskLevel] ?? UNKNOWN_COLOR));
         const badgeHtml  = isInconclusive
           ? `<span class="inconclusive-badge">? INCONCLUSIVE</span>`
           : f.passed
-            ? `<span class="risk-badge" style="background:${PASS_COLOR}">✓ PASS</span>`
-            : `<span class="risk-badge" style="background:${RISK_COLORS[f.riskLevel] ?? '#64748b'}">${esc(f.riskLevel)}</span>`;
+            ? `<span class="risk-badge" style="--sev:${PASS_COLOR}">✓ PASS</span>`
+            : `<span class="risk-badge${SOLID.has(f.riskLevel) ? ' solid' : ''}" style="--sev:${RISK_COLORS[f.riskLevel] ?? UNKNOWN_COLOR}">${esc(f.riskLevel)}</span>`;
         const tagsHtml = f.complianceTags?.length
           ? `<div class="compliance-tags">${f.complianceTags.map((t) => `<span class="compliance-tag">${esc(t)}</span>`).join('')}</div>`
           : '';
         return `
-      <details class="finding-card${isInconclusive ? ' is-inconclusive' : ''}" data-risk="${esc(f.riskLevel)}" style="--card-accent:${cardAccent};--card-bg:${cardBg}">
+      <details class="finding-card${isInconclusive ? ' is-inconclusive' : ''}" data-risk="${esc(f.riskLevel)}" style="--card-accent:${cardAccent}">
         <summary class="finding-summary">
           ${badgeHtml}
           <span class="finding-title">${esc(f.title)}</span>
@@ -328,292 +326,256 @@ ${INTERACTIVE_CSP_META}
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SF Security Audit: ${esc(result.orgName)}</title>
 <style>
-${firaFontFaceCss()}
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Fira Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-    background: #0d1117;
-    color: #c9d1d9;
-    max-width: 1100px;
-    margin: 2rem auto;
-    padding: 0 1.25rem 4rem;
-    line-height: 1.6;
+${deckFontFaceCss()}
+  :root {
+    --ink: ${DEFAULT_BRANDING.ink};
+    --accent: ${DEFAULT_BRANDING.primary};
+    --muted: ${DEFAULT_BRANDING.muted};
+    --paper: #ffffff;
+    --desk: #eef0f1;
+    --hair: #e3e6e9;
+    --body: #3a434d;
+    --serif: 'Source Serif 4', Georgia, serif;
+    --sans: 'Source Sans 3', system-ui, sans-serif;
+    --mono: ui-monospace, Menlo, Consolas, monospace;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --shadow: 0 1px 2px rgba(20,30,40,0.06), 0 14px 34px -24px rgba(20,30,40,0.35);
   }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: var(--desk); }
+  body {
+    font-family: var(--sans);
+    font-size: 15px;
+    background: var(--desk);
+    color: var(--ink);
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+  }
+  a { color: var(--accent); text-underline-offset: 2px; transition: color 150ms var(--ease); }
+  a:hover { color: ${BAD}; }
+  code { font-family: var(--mono); font-size: 0.86em; background: color-mix(in srgb, var(--accent) 7%, var(--paper)); padding: 0 3px; }
+  strong { font-weight: 650; }
 
   /* ── Header ── */
-  .header { margin-bottom: 1.5rem; }
-  .header h1 { color: #f0f6fc; font-size: 1.5rem; font-weight: 700; margin-bottom: 0.4rem; }
-  .meta { font-size: 0.8rem; color: #8b949e; display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; }
+  .header { margin-bottom: 1.75rem; }
+  .kicker { font-size: 13px; font-weight: 650; color: var(--accent); letter-spacing: 0.01em; }
+  .header h1 { font-family: var(--serif); font-size: 2.25rem; font-weight: 600; line-height: 1.12; letter-spacing: -0.012em; margin: 0.35rem 0 0.6rem; }
+  .meta { font-size: 0.8rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 0.3rem 1.25rem; }
+  .meta strong { color: var(--ink); }
+
+  /* ── Panels: white paper on the grey desk, as in the executive report ── */
+  .dash-score-panel, .dash-risk-panel, .kpi-card, .inv-card, .attack-chain {
+    background: var(--paper);
+    box-shadow: var(--shadow);
+  }
 
   /* ── Dashboard ── */
-  .dashboard { margin-bottom: 2rem; }
-
-  .dash-top {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-  }
-  .dash-score-panel, .dash-risk-panel {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 12px;
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+  .dashboard { margin-bottom: 2.75rem; }
+  .dash-top { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .dash-score-panel, .dash-risk-panel { padding: 1.75rem; display: flex; align-items: center; justify-content: center; }
   /* The grade reason and coverage note sit under the gauge, not squeezed beside it. */
   .dash-score-panel { flex-direction: column; text-align: center; }
+  .grade-reason { margin-top: 0.9rem; font-size: 0.88rem; font-weight: 600; color: var(--ink); }
+  .coverage {
+    align-self: stretch; text-align: left; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--hair);
+    font-size: 0.74rem; line-height: 1.45; color: var(--muted); overflow-wrap: anywhere;
+  }
+  .coverage code { font-size: 0.95em; }
+  .coverage.is-capped { color: ${WARN}; }
 
   /* Score ring */
   .gauge-wrap { display: flex; align-items: center; justify-content: center; }
-  .score-ring {
-    width: 152px;
-    height: 152px;
-    border-radius: 50%;
-    padding: 11px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+  .score-ring { width: 152px; height: 152px; border-radius: 50%; padding: 10px; display: flex; align-items: center; justify-content: center; }
   .score-inner {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: #161b22;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
+    width: 100%; height: 100%; border-radius: 50%; background: var(--paper);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.35rem;
   }
-  .score-num {
-    font-size: 2rem;
-    font-weight: 700;
-    line-height: 1;
-    font-family: 'Fira Code', monospace;
-  }
-  .score-num span { font-size: 0.75rem; color: #8b949e; font-weight: 400; }
+  .score-num { font-family: var(--serif); font-size: 2.4rem; font-weight: 600; line-height: 1; }
+  .score-num span { font-family: var(--sans); font-size: 0.75rem; color: var(--muted); font-weight: 400; }
   .score-grade {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: 50%;
-    font-size: 0.9rem;
-    font-weight: 800;
-    color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.8rem; height: 1.8rem; border-radius: 6px;
+    font-family: var(--serif); font-size: 1rem; font-weight: 700; color: #fff;
   }
 
   /* Donut */
-  .donut-wrap { display: flex; align-items: center; gap: 1.5rem; }
-  .donut-legend { display: flex; flex-direction: column; gap: 0.45rem; }
-  .legend-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #c9d1d9; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
-  .legend-count { margin-left: auto; font-weight: 700; color: #f0f6fc; padding-left: 1rem; }
+  .donut-wrap { display: flex; align-items: center; gap: 1.75rem; }
+  .donut-legend { display: flex; flex-direction: column; gap: 0.5rem; min-width: 9rem; }
+  .legend-row { display: flex; align-items: center; gap: 0.55rem; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; color: var(--muted); }
+  .legend-dot { width: 10px; height: 10px; flex-shrink: 0; }
+  .legend-count { margin-left: auto; font-size: 0.95rem; font-weight: 700; color: var(--ink); letter-spacing: 0; padding-left: 1rem; }
 
   /* KPI strip */
-  .kpi-strip {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-  }
-  .kpi-card {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-  }
-  .kpi-value { font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 0.25rem; }
-  .kpi-label { font-size: 0.7rem; font-weight: 700; color: #8b949e; letter-spacing: 0.06em; }
+  .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1rem; }
+  .kpi-card { border-top: 3px solid var(--sev); padding: 1rem 1.25rem 1.1rem; }
+  .kpi-value { font-family: var(--serif); font-size: 2.4rem; font-weight: 600; line-height: 1; margin-bottom: 0.35rem; color: var(--sev); }
+  .kpi-label { font-size: 0.72rem; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; }
 
   /* Inventory grid */
-  .inv-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-  }
-  .inv-card {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-  }
+  .inv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .inv-card { padding: 1.1rem 1.35rem 1.2rem; }
   .inv-card-title {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: #8b949e;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-bottom: 0.6rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #21262d;
+    font-size: 0.72rem; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1.5px solid var(--ink);
   }
-  .metric-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.28rem 0;
-  }
-  .metric-label { flex: 1; font-size: 0.82rem; color: #c9d1d9; }
+  .metric-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.32rem 0; border-bottom: 1px solid var(--hair); }
+  .metric-row:last-child { border-bottom: 0; }
+  .metric-label { flex: 1; font-size: 0.86rem; color: var(--body); }
   .metric-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.2rem; min-width: 72px; }
-  .metric-value { font-size: 0.9rem; font-weight: 700; color: #f0f6fc; }
-  .prog-bar { width: 72px; height: 4px; background: #21262d; border-radius: 2px; overflow: hidden; }
-  .prog-fill { height: 100%; border-radius: 2px; }
+  .metric-value { font-size: 0.92rem; font-weight: 700; color: var(--ink); }
+  .prog-bar { width: 72px; height: 4px; background: var(--hair); overflow: hidden; }
+  .prog-fill { height: 100%; }
 
-  /* ── Filters ── */
-  .filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; }
+  /* ── Section headings ── */
+  .attack-paths h2, .findings-h2 {
+    font-family: var(--serif); font-size: 1.75rem; font-weight: 600; line-height: 1.2; letter-spacing: -0.005em;
+  }
+  .attack-paths h2::after, .findings-h2::after { content: ''; display: block; width: 72px; height: 2px; background: var(--accent); margin: 0.9rem 0 0; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin: 0.9rem 0 1.25rem; max-width: 70ch; }
+
+  /* ── Attack paths ── */
+  .attack-paths { margin-bottom: 2.75rem; }
+  .attack-chain { border-left: 3px solid var(--chain); padding: 1.4rem 1.6rem; margin-bottom: 1rem; color: var(--body); font-size: 0.92rem; }
+  .attack-chain.severity-critical { --chain: ${RISK_COLORS.CRITICAL}; }
+  .attack-chain.severity-high { --chain: ${RISK_COLORS.HIGH}; }
+  .attack-chain.severity-medium { --chain: ${RISK_COLORS.MEDIUM}; }
+  .attack-chain.severity-low { --chain: ${RISK_COLORS.LOW}; }
+  .attack-chain h3 { font-family: var(--serif); font-size: 1.2rem; font-weight: 600; color: var(--ink); line-height: 1.3; margin-bottom: 0.6rem; }
+  .attack-chain p { margin-bottom: 0.6rem; max-width: 95ch; }
+  .attack-chain svg { max-width: 100%; height: auto; margin: 0.5rem 0 0.75rem; }
+  .attack-chain ol { padding-left: 1.3rem; margin-bottom: 0.75rem; }
+  .attack-chain li { margin-bottom: 0.3rem; }
+  .attack-chain .remediation { border-left: 2px solid var(--accent); padding-left: 0.85rem; }
+
+  /* ── Findings ── */
+  .findings-h2 { margin-bottom: 1.25rem; }
+  .filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.1rem; }
   .filter-btn {
-    padding: 0.35rem 0.9rem;
-    border-radius: 20px;
-    border: 1px solid #30363d;
-    background: #161b22;
-    color: #8b949e;
+    font-family: var(--sans);
+    padding: 0.3rem 0.85rem;
+    border: 1.25px solid var(--hair);
+    background: var(--paper);
+    color: var(--body);
     cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 600;
-    transition: all 0.15s;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    transition: border-color 150ms var(--ease), color 150ms var(--ease), background-color 150ms var(--ease);
   }
-  .filter-btn:hover { border-color: #58a6ff; color: #58a6ff; }
-  .filter-btn.active {
-    background: var(--accent, #238636);
-    border-color: var(--accent, #238636);
-    color: #fff;
-  }
+  .filter-btn:hover { border-color: var(--accent, var(--ink)); color: var(--ink); }
+  .filter-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .filter-btn.active { background: var(--accent, var(--ink)); border-color: var(--accent, var(--ink)); color: #fff; }
+  .filter-btn[data-filter="all"] { --accent: var(--ink); }
 
-  /* ── Finding cards ── */
   .finding-card {
-    background: var(--card-bg);
-    border: 1px solid #30363d;
+    background: var(--paper);
+    border: 1px solid var(--hair);
     border-left: 3px solid var(--card-accent);
-    border-radius: 8px;
-    margin-bottom: 0.6rem;
+    margin-bottom: 0.5rem;
     overflow: hidden;
+    transition: box-shadow 200ms var(--ease);
   }
-  .finding-card[open] { border-color: var(--card-accent); }
+  .finding-card:hover, .finding-card[open] { box-shadow: var(--shadow); }
   .finding-summary {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    cursor: pointer;
-    list-style: none;
-    user-select: none;
+    display: flex; align-items: center; gap: 0.8rem; padding: 0.75rem 1rem;
+    cursor: pointer; list-style: none; user-select: none;
+    transition: background-color 150ms var(--ease);
   }
   .finding-summary::-webkit-details-marker { display: none; }
-  .finding-summary:hover { background: rgba(255,255,255,0.03); }
+  .finding-summary:hover { background: #f6f7f8; }
+  .finding-summary:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
   .risk-badge {
-    flex-shrink: 0;
-    padding: 0.15rem 0.6rem;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: 0.04em;
+    display: inline-block; flex-shrink: 0; min-width: 4.9rem; text-align: center; vertical-align: 0.15em;
+    padding: 0.05rem 0.45rem; font-family: var(--sans); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em;
+    color: var(--sev); border: 1.25px solid var(--sev); background: var(--paper);
   }
-  .finding-title { flex: 1; font-weight: 600; color: #e6edf3; font-size: 0.9rem; }
-  .finding-category { font-size: 0.75rem; color: #8b949e; white-space: nowrap; }
-  .chevron { color: #8b949e; font-size: 1.2rem; transition: transform 0.2s; }
+  .risk-badge.solid { background: var(--sev); color: #fff; }
+  .attack-chain h3 .risk-badge { min-width: 0; margin-right: 0.35rem; }
+  .finding-title { flex: 1; font-weight: 600; color: var(--ink); font-size: 0.93rem; }
+  .finding-category { font-size: 0.76rem; color: var(--muted); white-space: nowrap; }
+  .chevron { color: var(--muted); font-size: 1.2rem; transition: transform 200ms var(--ease); }
   .finding-card[open] .chevron { transform: rotate(90deg); }
-  .finding-body { padding: 0 1rem 1rem; border-top: 1px solid #30363d; }
-  .finding-detail { color: #c9d1d9; font-size: 0.875rem; padding: 0.75rem 0 0.5rem; }
+  .finding-body { padding: 0 1rem 1.1rem; border-top: 1px solid var(--hair); }
+  .finding-detail { color: var(--body); font-size: 0.9rem; padding: 0.8rem 0 0.5rem; max-width: 95ch; }
   .remediation-box {
-    background: rgba(35,134,54,0.1);
-    border: 1px solid rgba(35,134,54,0.3);
-    border-radius: 6px;
-    padding: 0.75rem;
+    background: color-mix(in srgb, var(--accent) 6%, var(--paper));
+    border-left: 2px solid var(--accent);
+    padding: 0.7rem 0.9rem;
     margin-top: 0.5rem;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
+    color: var(--body);
   }
-  .remediation-box strong { color: #3fb950; display: block; margin-bottom: 0.25rem; }
-  .affected-items { margin-top: 0.75rem; font-size: 0.82rem; }
-  .affected-items strong { color: #c9d1d9; display: block; margin-bottom: 0.5rem; }
-  .affected-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.8rem;
-    font-family: 'Menlo', 'Consolas', monospace;
-  }
+  .remediation-box strong { color: var(--accent); display: block; margin-bottom: 0.2rem; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; }
+  .affected-items { margin-top: 0.85rem; font-size: 0.84rem; }
+  .affected-items strong { color: var(--ink); display: block; margin-bottom: 0.45rem; }
+  .affected-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; font-family: var(--mono); }
   .affected-table th {
-    background: #1c2128;
-    color: #8b949e;
-    text-align: left;
-    padding: 0.4rem 0.6rem;
-    border-bottom: 1px solid #30363d;
-    font-weight: 600;
-    white-space: nowrap;
+    font-family: var(--sans); color: var(--muted); text-align: left; padding: 0 0.6rem 0.4rem 0;
+    border-bottom: 1.5px solid var(--ink); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap;
   }
-  .affected-table td {
-    padding: 0.35rem 0.6rem;
-    border-bottom: 1px solid #21262d;
-    color: #c9d1d9;
-    vertical-align: top;
-    word-break: break-word;
-  }
+  .affected-table td { padding: 0.4rem 0.6rem 0.4rem 0; border-bottom: 1px solid var(--hair); color: var(--body); vertical-align: top; word-break: break-word; }
   .affected-table tr:last-child td { border-bottom: none; }
-  .affected-table a { color: #58a6ff; text-decoration: none; white-space: nowrap; }
-  .affected-table a:hover { text-decoration: underline; }
+  .affected-table a { white-space: nowrap; }
 
-  .no-findings { color: #8b949e; text-align: center; padding: 3rem 0; }
+  .no-findings { color: var(--muted); text-align: center; padding: 3rem 0; }
 
   /* ── Compliance tags ── */
-  .compliance-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+  .compliance-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.7rem; }
   .compliance-tag {
-    font-size: 0.65rem;
-    font-weight: 700;
-    padding: 0.1rem 0.45rem;
-    border-radius: 3px;
-    background: rgba(88,166,255,0.12);
-    border: 1px solid rgba(88,166,255,0.25);
-    color: #58a6ff;
-    letter-spacing: 0.03em;
-    white-space: nowrap;
+    font-size: 0.66rem; font-weight: 700; padding: 0.05rem 0.4rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--paper));
+    color: var(--accent); letter-spacing: 0.03em; white-space: nowrap;
   }
   /* ── Inconclusive findings ── */
-  .finding-card.is-inconclusive {
-    border-left-color: #8b949e !important;
-    opacity: 0.8;
-  }
-  .finding-card.is-inconclusive .finding-summary { background: rgba(139,148,158,0.05); }
+  .finding-card.is-inconclusive { border-left-style: dashed; }
+  .finding-card.is-inconclusive .finding-title { color: var(--body); }
   .inconclusive-badge {
-    flex-shrink: 0;
-    padding: 0.15rem 0.6rem;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: 800;
-    color: #8b949e;
-    border: 1px dashed #8b949e;
-    letter-spacing: 0.04em;
+    flex-shrink: 0; min-width: 4.9rem; text-align: center;
+    padding: 0.08rem 0.45rem; font-size: 0.68rem; font-weight: 700;
+    color: var(--muted); border: 1px dashed var(--muted); letter-spacing: 0.05em;
+  }
+  /* ── Accepted risks ── */
+  .waived-banner {
+    background: #f0f7f2; border-left: 3px solid ${GOOD}; padding: 0.75rem 1rem; margin-bottom: 1.25rem;
+    color: #14532d; font-size: 0.86rem;
   }
   /* ── Offline footer ── */
   .offline-footer {
-    margin-top: 3rem;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    background: rgba(34,197,94,0.05);
-    border: 1px solid rgba(34,197,94,0.15);
-    font-size: 0.78rem;
-    color: #8b949e;
-    text-align: center;
+    margin-top: 3rem; padding-top: 0.85rem; border-top: 1px solid #cfd4d9;
+    font-size: 0.78rem; color: var(--muted);
   }
-  .offline-footer strong { color: #3fb950; }
+  .offline-footer strong { color: var(--ink); }
 
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; }
+  }
+  @media print {
+    html, body { background: #fff; }
+    .dash-score-panel, .dash-risk-panel, .kpi-card, .inv-card, .attack-chain { box-shadow: none; border: 1px solid var(--hair); }
+    .filters { display: none; }
+  }
   /* ── Responsive ── */
   @media (max-width: 680px) {
+    body { padding-top: 1.5rem; }
+    .header h1 { font-size: 1.75rem; }
     .dash-top { grid-template-columns: 1fr; }
+    .donut-wrap { flex-direction: column; gap: 1rem; }
     .kpi-strip { grid-template-columns: repeat(2, 1fr); }
     .inv-grid { grid-template-columns: 1fr; }
+    .finding-summary { flex-wrap: wrap; }
+    .finding-category { display: none; }
   }
 </style>
 </head>
 <body>
   <div class="header">
+    <div class="kicker">Technical findings</div>
     <h1>Salesforce Security Audit</h1>
     <div class="meta">
-      <span>Org: <strong style="color:#c9d1d9">${esc(result.orgName)}</strong></span>
+      <span>Org: <strong>${esc(result.orgName)}</strong></span>
       <span>ID: ${esc(result.orgId)}</span>
       <span>Instance: ${esc(result.instance)}</span>
       <span>Type: ${esc(result.orgType)}${result.isSandbox ? ' (Sandbox)' : ''}</span>
@@ -625,6 +587,7 @@ ${firaFontFaceCss()}
 
   ${attackPathsHtml}
 
+  <h2 class="findings-h2">All findings (${result.findings.length})</h2>
   <div class="filters">
     ${filterButtons}
   </div>
@@ -649,7 +612,7 @@ ${firaFontFaceCss()}
   });
 </script>
   <div class="offline-footer">
-    <strong>Offline-first audit:</strong> all analysis performed locally; no data is transmitted outside your Salesforce org. Generated by <a href="https://github.com/cclabsnz/sf-audit-plugin" style="color:inherit">sf-audit</a>, built by <a href="https://cloudcounsel.co.nz" style="color:inherit">CloudCounsel</a>.
+    <strong>Offline-first audit:</strong> all analysis performed locally; no data is transmitted outside your Salesforce org. Generated by <a href="https://github.com/cclabsnz/sf-audit-plugin">sf-audit</a>, built by <a href="https://cloudcounsel.co.nz">CloudCounsel</a>.
   </div>
 </body>
 </html>`;

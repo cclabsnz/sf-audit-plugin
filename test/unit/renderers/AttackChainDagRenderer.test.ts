@@ -235,9 +235,9 @@ describe('AttackChainDagRenderer', () => {
       }],
     });
 
-    it('HtmlRenderer embeds the dark diagram inside the attack-chain card, escaped', () => {
+    it('HtmlRenderer embeds the light diagram inside the attack-chain card, escaped', () => {
       const html = new HtmlRenderer().render(result());
-      expect(html).toContain('dag-arrow-unauth-bulk-exfil-dark');
+      expect(html).toContain('dag-arrow-unauth-bulk-exfil-light');
       expect(html).not.toContain('<svg onload');
       expect(html.indexOf('<svg class="attack-chain-dag"')).toBeGreaterThan(html.indexOf('<div class="attack-chain'));
     });

@@ -334,7 +334,7 @@ Chain building blocks:
 
 | Renderer | Output | File |
 |---|---|---|
-| `HtmlRenderer` | `--format html`: full technical report, embeds the attack-chain DAG | src/renderers/HtmlRenderer.ts |
+| `HtmlRenderer` | `--format html`: full technical report on white in the executive report's palette and fonts, embeds the attack-chain DAG (light theme) | src/renderers/HtmlRenderer.ts |
 | `MarkdownRenderer` | `--format md` | src/renderers/MarkdownRenderer.ts |
 | `JsonRenderer` | `--format json` (input to `audit diff` and history) | src/renderers/JsonRenderer.ts |
 | `SarifRenderer` | `--format sarif` for code-scanning upload; `riskToSarifLevel` | src/renderers/SarifRenderer.ts |
