@@ -36,3 +36,21 @@ cites: INT-001, MN-001, MN-002
 - then it grants `code-exec` and `data-read` (not `data-read-bulk`: record sharing still applies) and is a step in the `unauth-bulk-exfil` chain, like `guest-executable-apex-exposed`
 - and `apex-crud-fls-system-mode` grants `data-read`, like `apex-crud-fls-missing`
 
+## RULE-007 From API 67.0 an omitted sharing keyword means with sharing
+cites: INT-001, MN-001
+- When a class declares no sharing keyword and it, and every parent it inherits sharing from while none declares one, is compiled at API 67.0 or later (Salesforce Summer '26 release note "Apex Classes Enforce Sharing Rules by Default")
+- then it runs with sharing: `guest-executable-apex-unprotected`, `portal-exposed-apex-without-sharing`, `apex-no-sharing-declaration` and `apex-rest-no-sharing-declaration` do not list it, and the guest check goes on to judge its helpers and SYSTEM_MODE as for a `with sharing` class
+- and `apex-sharing-summary` counts it separately as "no declaration at API 67.0+"
+- and a class below 67.0, or whose version (or a parent's) cannot be read, keeps the old default and is reported as before
+
+## RULE-008 A keyword-less class entered only through @AuraEnabled methods runs with sharing
+cites: INT-001, MN-001
+- When a class declares no sharing keyword, has `@AuraEnabled` methods, and has no other way in (`@RemoteAction`, `@RestResource`, `@Http*`, `webservice`, or Visualforce controller use through `ApexPages` or `PageReference`)
+- then, whatever its API version, it runs with sharing (the "Use with sharing for @AuraEnabled Apex Controllers with Implicit Sharing" update, enforced from Winter '21): `guest-executable-apex-unprotected` and `portal-exposed-apex-without-sharing` do not list it for its missing keyword, and the guest check goes on to judge its helpers and SYSTEM_MODE
+- and `apex-no-sharing-declaration` still lists it below API 67.0, as hygiene: another caller could still enter it without sharing
+
+## RULE-009 From API 67.0 queries and DML run in user mode by default
+cites: INT-001, MN-003
+- When a class with SOQL or DML is saved at API 67.0 or later and uses no SYSTEM_MODE (`WITH SYSTEM_MODE`, `AccessLevel.SYSTEM_MODE`, `as system` DML)
+- then its queries and DML enforce the running user's object and field permissions, so `apex-crud-fls-missing` and `apex-crud-fls-without-sharing` do not list it
+- and SYSTEM_MODE in such a class is still reported in `apex-crud-fls-system-mode` (RULE-002)

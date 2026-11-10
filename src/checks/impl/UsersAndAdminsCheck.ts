@@ -53,8 +53,8 @@ export class UsersAndAdminsCheck implements SecurityCheck {
          AND Assignee.IsActive = true
          AND AssigneeId NOT IN (SELECT UserId FROM UserLogin WHERE IsFrozen = true)`;
 
-    // queryAll fetches every batch, but the client caps how many rows it will fetch and returns the
-    // rest silently. The COUNT() says how many rows there are, so a capped read is detected (INT-004).
+    // queryAll reads every page (sf-core 0.12+), but assignments can change between the read and the
+    // COUNT(). The COUNT() says how many rows there are, so a short read is detected (INT-004).
     const broadPerms = await ctx.soql.queryAll<BroadPermRecord>(
       `SELECT Assignee.Id, Assignee.Username, Assignee.Name, Assignee.Profile.Name,
               PermissionSet.Name, PermissionSet.IsOwnedByProfile,
@@ -138,11 +138,11 @@ export class UsersAndAdminsCheck implements SecurityCheck {
     const unknownDetail = (perm: string) => partial
       ? `No ${perm} holder was found, but ${readNote}, so holders may be in the rows not read.`
       : `No active user was found holding ${perm}, yet every org with an active System Administrator has at least one. The audit user most likely cannot see PermissionSetAssignment rows, so this is unknown, not clean.`;
-    const RAISE_LIMIT = 'Raise the query row limit (sf config set org-max-query-limit, or SF_ORG_MAX_QUERY_LIMIT) above the assignment count and re-run.';
+    const RE_RUN = 'Re-run the audit: permission set assignments changed while it was reading them, or the count of them could not be read.';
     const SEE_ROWS = 'Re-run as a user with View Setup and Configuration (or View All Users) so permission set assignments are visible.';
-    // A capped read needs a higher limit; a failed COUNT says nothing about the limit, so the
+    // A short read needs a fresh read; a failed COUNT may also mean the rows are not visible, so the
     // visibility advice applies too.
-    const unknownRemediation = !partial ? SEE_ROWS : psaTotal === undefined ? `${SEE_ROWS} ${RAISE_LIMIT}` : RAISE_LIMIT;
+    const unknownRemediation = !partial ? SEE_ROWS : psaTotal === undefined ? `${SEE_ROWS} ${RE_RUN}` : RE_RUN;
     // On a partial read, a count can also fall under its reporting threshold and not appear at all.
     // This finding is the machine-readable signal for every count from the read (INT-004).
     if (partial) {

@@ -2,7 +2,7 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 import { ApexRepository, testApexPattern } from '@cclabsnz/sf-core';
-import { apexCode, effectiveSharing } from '../support/apexAccess.js';
+import { apexApiVersions, apexCode, effectiveSharing, enteredOnlyThroughAura, omittedSharingEnforced } from '../support/apexAccess.js';
 
 const IS_TEST_CLASS = /@IsTest\b/i;
 // SBS-CPORTAL-001: @AuraEnabled and @RemoteAction expose a class to portal and community users;
@@ -34,11 +34,16 @@ export class ApexSharingCheck implements SecurityCheck {
     const withoutSharingClasses: string[] = [];
     const inheritedSharingClasses: string[] = [];
     const noDeclarationClasses: string[] = [];
+    // No keyword, but compiled at API 67.0 or later: sharing is enforced by default (spec RULE-007).
+    const defaultWithClasses: string[] = [];
     // SBS-CPORTAL-001: portal-exposed Apex without enforcement = IDOR risk
     const portalExposedWithoutSharing: string[] = [];
     const portalExposedNoDeclaration: string[] = [];
 
     const bodyByName = new Map(apexBodies.map((b) => [b.name.toLowerCase(), b.body ?? '']));
+    const lookup = (n: string) => bodyByName.get(n.toLowerCase());
+    const versions = await apexApiVersions(ctx);
+    const versionOf = (n: string) => versions.get(n.toLowerCase());
     for (const apexClass of apexBodies) {
       const body = apexClass.body ?? '';
 
@@ -49,7 +54,7 @@ export class ApexSharingCheck implements SecurityCheck {
       // Read from the class's own declaration, not any mention in the body (spec MN-002).
       // SYSTEM_MODE does not enter into it: it bypasses CRUD/FLS, not sharing (spec RULE-001).
       // A class with no keyword takes the sharing of the class it extends (spec MN-001).
-      const declaration = effectiveSharing(apexClass.name, body, (n) => bodyByName.get(n.toLowerCase()));
+      const declaration = effectiveSharing(apexClass.name, body, lookup);
 
       if (declaration === null) continue; // Not a class definition
 
@@ -67,8 +72,13 @@ export class ApexSharingCheck implements SecurityCheck {
           inheritedSharingClasses.push(apexClass.name);
           break;
         case 'none':
+          if (omittedSharingEnforced(apexClass.name, body, lookup, versionOf)) {
+            defaultWithClasses.push(apexClass.name);
+            break;
+          }
           noDeclarationClasses.push(apexClass.name);
-          if (isPortalExposed) portalExposedNoDeclaration.push(apexClass.name);
+          // An Aura/LWC call into a keyword-less class runs with sharing (spec RULE-008).
+          if (isPortalExposed && !enteredOnlyThroughAura(body)) portalExposedNoDeclaration.push(apexClass.name);
           break;
       }
     }
@@ -77,7 +87,8 @@ export class ApexSharingCheck implements SecurityCheck {
       withSharingClasses.length +
       withoutSharingClasses.length +
       inheritedSharingClasses.length +
-      noDeclarationClasses.length;
+      noDeclarationClasses.length +
+      defaultWithClasses.length;
 
     // SBS-CPORTAL-001: portal-exposed classes with weak sharing declarations are the highest risk
     const allPortalRisk = [...new Set([...portalExposedWithoutSharing, ...portalExposedNoDeclaration])];
@@ -98,7 +109,7 @@ export class ApexSharingCheck implements SecurityCheck {
           url: apexClassesUrl,
           note: portalExposedWithoutSharing.includes(name)
             ? 'Uses explicit "without sharing": replace with "with sharing"'
-            : 'No sharing declaration: add "with sharing"',
+            : 'No sharing declaration, entered through REST or remoting: add "with sharing"',
         })),
       });
     }
@@ -127,8 +138,8 @@ export class ApexSharingCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'MEDIUM',
         title: `${count} Apex class(es) have no sharing declaration`,
-        detail: "Apex classes without a sharing declaration default to \"without sharing\" behavior when called from a context that doesn't enforce sharing.",
-        remediation: 'Add explicit sharing declarations to all Apex classes. Use "with sharing" as the default, or "inherited sharing" for utility classes.',
+        detail: "These classes declare no sharing keyword and are not shown to be saved at API 67.0 or later (with every keyword-less parent; a version that could not be read counts as older), so they run without sharing when called from a context that doesn't enforce sharing (an entry point such as REST or a Visualforce controller). From API 67.0 (Summer '26) an omitted keyword means with sharing, but only for classes saved at that version.",
+        remediation: 'Add explicit sharing declarations to all Apex classes. Use "with sharing" as the default, or "inherited sharing" for utility classes. Raising a class to API 67.0 or later also makes an omitted keyword mean "with sharing", but test it first: queries and DML then run in user mode by default too.',
         affectedItems: noDeclarationClasses.slice(0, 20).map((name) => ({
           label: name,
           url: apexClassesUrl,
@@ -141,7 +152,7 @@ export class ApexSharingCheck implements SecurityCheck {
       id: 'apex-sharing-summary',
       category: this.category,
       riskLevel: 'INFO',
-      title: `Apex sharing analysis: ${withSharingClasses.length} with sharing, ${inheritedSharingClasses.length} inherited, ${withoutSharingClasses.length} without sharing, ${noDeclarationClasses.length} no declaration (${total} total)`,
+      title: `Apex sharing analysis: ${withSharingClasses.length} with sharing, ${inheritedSharingClasses.length} inherited, ${withoutSharingClasses.length} without sharing, ${noDeclarationClasses.length} no declaration${defaultWithClasses.length > 0 ? `, ${defaultWithClasses.length} no declaration at API 67.0+ (with sharing by default)` : ''} (${total} total)`,
       detail: `Summary of sharing declarations across ${total} custom Apex classes.`,
       remediation: 'Aim for all classes to use "with sharing" or "inherited sharing".',
     });

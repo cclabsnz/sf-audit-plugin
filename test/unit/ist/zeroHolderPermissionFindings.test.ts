@@ -121,7 +121,8 @@ describe('RULE-040: zero holders is reported as inconclusive', () => {
 describe('RULE-041: a zero-holder finding never completes an attack chain', () => {
   const others: Record<string, string[]> = {
     'insider-bulk-exfil': ['data-export-weekly-export', 'event-monitoring-disabled'],
-    'mfa-bypass-admin': ['internal-user-mfa-gaps'],
+    // Org-wide, so it reaches whichever holder the test adds.
+    'mfa-bypass-admin': ['trusted-ip-broad-ranges'],
     'xss-to-privileged-session': ['visualforce-xss-escape-false', 'session-hardening-risks'],
     'soql-injection-read': ['soql-injection-risk'],
     'inbound-email-rce': ['inbound-email-handler-unauthenticated-execution'],
@@ -202,7 +203,7 @@ describe('RULE-042: a partial read gives lower bounds, not passes', () => {
 
   it('a capped read with holders still completes a chain', async () => {
     const { findings } = await runCheck({ rows: both(1), psaTotal: 12000 });
-    const chains = new ChainEngine().correlate([...findings, f('internal-user-mfa-gaps')]);
+    const chains = new ChainEngine().correlate([...findings, f('trusted-ip-broad-ranges')]);
     expect(chains.map((c) => c.id)).toContain('mfa-bypass-admin');
   });
 
@@ -227,7 +228,9 @@ describe('RULE-042: a partial read gives lower bounds, not passes', () => {
     expect(finding.riskLevel).toBe('INFO');
     expect(finding.title).toMatch(/read 1 of 12000 assignments$/);
     expect(finding.detail).toMatch(/holders may be in the rows not read/);
-    expect(finding.remediation).toMatch(/org-max-query-limit/);
+    // sf-core 0.12 reads every page, so no row limit applies: a short read means the rows changed.
+    expect(finding.remediation).toMatch(/Re-run the audit/);
+    expect(finding.remediation).not.toMatch(/org-max-query-limit/);
   });
 
   it('a partial read adds one inconclusive read-incomplete finding; a complete read does not', async () => {
@@ -244,11 +247,12 @@ describe('RULE-042: a partial read gives lower bounds, not passes', () => {
     expect(byId(complete, 'users-modify-all-data')!.detail).not.toMatch(/lower bound/);
   });
 
-  it('a failed COUNT gives both visibility and row-limit advice', async () => {
+  it('a failed COUNT gives visibility and re-run advice, never row-limit advice', async () => {
     const { findings } = await runCheck({ rows: [], countThrows: true });
     const r = byId(findings, 'users-modify-all-data')!.remediation;
     expect(r).toMatch(/View Setup and Configuration/);
-    expect(r).toMatch(/org-max-query-limit/);
+    expect(r).toMatch(/Re-run the audit/);
+    expect(r).not.toMatch(/org-max-query-limit/);
     expect(byId(findings, 'users-and-admins-read-incomplete')!.title).toMatch(/could not be confirmed$/);
   });
 
@@ -283,7 +287,7 @@ describe('RULE-043: an unknown count is never shown as a number', () => {
     expect(r.metrics).not.toHaveProperty('modifyAllDataUsersCount');
     expect(r.metrics).not.toHaveProperty('viewAllDataUsersCount');
     const html = new HtmlRenderer().render(await result({ rows: [row('u1', { ModifyAllData: true })], psaTotal: 12000 }));
-    expect(html).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#8b949e;font-weight:700">unknown/);
+    expect(html).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#636770;font-weight:700">unknown/);
   });
 
   it('an archived "0 user(s)" from v1.17 is unknown, so a later real count is not a change', async () => {
@@ -304,14 +308,14 @@ describe('RULE-043: an unknown count is never shown as a number', () => {
 
   it('the HTML dashboard shows unknown, not a green 0', async () => {
     const html = new HtmlRenderer().render(await result({ rows: [] }));
-    expect(html).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#8b949e;font-weight:700">unknown/);
-    expect(html).toMatch(/View All Data<\/span><div class="metric-right"><span style="color:#8b949e;font-weight:700">unknown/);
-    expect(html).not.toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#22c55e/);
+    expect(html).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#636770;font-weight:700">unknown/);
+    expect(html).toMatch(/View All Data<\/span><div class="metric-right"><span style="color:#636770;font-weight:700">unknown/);
+    expect(html).not.toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#15803d/);
   });
 
   it('the HTML dashboard still shows a known count', async () => {
     const html = new HtmlRenderer().render(await result({ rows: [row('u1', { ModifyAllData: true })] }));
-    expect(html).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#22c55e;font-weight:700">1/);
+    expect(html).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#15803d;font-weight:700">1/);
   });
 
   it('the history diff reports no change into or out of an unknown count', async () => {
@@ -330,7 +334,7 @@ describe('RULE-043: an unknown count is never shown as a number', () => {
     const skipped = buildAuditResult(makeCtx({ rows: [] }), [f('internal-user-mfa-gaps')], {});
     expect(skipped.metrics.modifyAllDataUsersCount).toBe(0);
     expect(computeDiff(known, skipped).metricDeltas.map((m) => m.key)).not.toContain('modifyAllDataUsersCount');
-    expect(new HtmlRenderer().render(skipped)).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#8b949e;font-weight:700">unknown/);
+    expect(new HtmlRenderer().render(skipped)).toMatch(/Modify All Data<\/span><div class="metric-right"><span style="color:#636770;font-weight:700">unknown/);
   });
 
   it('an exact count of 10 or 20 is known, not mistaken for a "0 user(s)" archive', async () => {

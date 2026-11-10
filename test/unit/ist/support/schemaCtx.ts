@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs';
 import type { AuditContext } from '@cclabsnz/sf-core';
 
-type FieldInfo = { filterable: boolean; aggregatable: boolean; type: string; relationship?: { name: string; to: string[] } };
+type FieldInfo = { filterable: boolean; aggregatable: boolean; type: string; relationship?: { name: string; to: string[] }; values?: string[] };
 type Api = 'soql' | 'tooling';
 type Schema = { apiVersion: string; soql: Record<string, Record<string, FieldInfo>>; tooling: Record<string, Record<string, FieldInfo>> };
 
@@ -164,6 +164,26 @@ export function validate(api: Api, query: string, childContext = false): void {
       const f = resolvePath(api, object, name);
       if (f && !f.filterable) throw apiError('INVALID_FIELD', `field '${name.split('.').pop()}' can not be filtered in a query call`);
     }
+    // A picklist compared with a value it does not have is accepted by the org and matches nothing,
+    // silently (RowCause = 'SharingRule' hid every sharing rule). Not an org error: a guard of ours.
+    // Describe does not list every value a system picklist holds: a live org has Group.Type
+    // 'GuestUserGroup' and 'ManagedContentSpaceRole', which its describe omits.
+    // Keyed by value, not path, so a relationship path (Group.Type from GroupMember) is covered too.
+    const SEEN_LIVE = new Set(['guestusergroup', 'managedcontentspacerole']);
+    const literalCond = /(?:^|[\s(])([A-Za-z][A-Za-z0-9_.]*)\s*(=|!=|<>|\bNOT\s+IN\b|\bIN\b)\s*(\((?!\s*__SUB)[^)]*\)|'(?:[^'\\]|\\.)*')/gi;
+    for (const c of body.matchAll(literalCond)) {
+      const f = resolvePath(api, object, c[1]);
+      if (!f?.values) continue;
+      for (const lit of c[3].matchAll(/'((?:[^'\\]|\\.)*)'/g)) {
+        // SOQL compares picklist values without regard to case.
+        const value = lit[1].toLowerCase();
+        // Custom and namespaced values are not in the snapshot (capture-schema drops them).
+        if (value.includes('__')) continue;
+        if (!f.values.some((v) => v.toLowerCase() === value) && !SEEN_LIVE.has(value)) {
+          throw apiError('UNKNOWN_PICKLIST_VALUE', `'${lit[1]}' is not a value of picklist ${object}.${c[1]}: the filter matches nothing`);
+        }
+      }
+    }
   }
 
   // Semi-join subqueries in WHERE name real objects; select-list subqueries name relationships.
@@ -171,13 +191,20 @@ export function validate(api: Api, query: string, childContext = false): void {
   subs.forEach((sub, i) => validate(api, sub, selectSubs.has(i)));
 }
 
+/** Rows a valid query returns; undefined or none means no rows. A COUNT() query's totalSize is the row count. */
+export type RowSource = (api: Api, query: string) => unknown[] | undefined;
+
 /**
  * A fresh context plus the violations it records. Objects absent from both APIs are rejected like
  * a real org rejects them, but are not recorded: an edition lacking a feature is not a check bug.
+ * `rows` seeds answers to valid queries, so a check goes past its first empty result and its
+ * deeper queries are validated too; every query sent is kept in `queries`.
  */
-export function schemaCtx(): { ctx: AuditContext; violations: Violation[] } {
+export function schemaCtx(rows: RowSource = () => undefined): { ctx: AuditContext; violations: Violation[]; queries: Violation[] } {
   const violations: Violation[] = [];
-  const run = (api: Api, query: string): void => {
+  const queries: Violation[] = [];
+  const run = (api: Api, query: string): unknown[] => {
+    queries.push({ api, query: query.replace(/\s+/g, ' ').trim(), error: '' });
     try {
       validate(api, query);
     } catch (err) {
@@ -187,6 +214,7 @@ export function schemaCtx(): { ctx: AuditContext; violations: Violation[] } {
       if (!absent) violations.push({ api, query: query.replace(/\s+/g, ' ').trim(), error: msg });
       throw err;
     }
+    return rows(api, query.replace(/\s+/g, ' ').trim()) ?? [];
   };
   const describe = (api: Api, path: string) => {
     const obj = /sobjects\/([A-Za-z0-9_]+)\/describe/.exec(path)?.[1];
@@ -200,19 +228,13 @@ export function schemaCtx(): { ctx: AuditContext; violations: Violation[] } {
   const ctx: AuditContext = {
     soql: {
       query: async (q: string) => {
-        run('soql', q);
-        return { records: [], totalSize: 0, done: true } as any;
+        const records = run('soql', q);
+        return { records, totalSize: records.length, done: true } as any;
       },
-      queryAll: async (q: string) => {
-        run('soql', q);
-        return [];
-      },
+      queryAll: async (q: string) => run('soql', q),
     } as any,
     tooling: {
-      query: async (q: string) => {
-        run('tooling', q);
-        return [];
-      },
+      query: async (q: string) => run('tooling', q),
       getRecord: () => Promise.reject(apiError('NOT_FOUND', 'not found')),
     } as any,
     rest: {
@@ -227,5 +249,5 @@ export function schemaCtx(): { ctx: AuditContext; violations: Violation[] } {
     orgInfo: { id: '00Dxx0000000000EAA', name: 'Schema Org', type: 'Developer Edition', isSandbox: false, instance: 'NA1', instanceUrl: 'https://acme.my.salesforce.com' },
     cache: {},
   };
-  return { ctx, violations };
+  return { ctx, violations, queries };
 }

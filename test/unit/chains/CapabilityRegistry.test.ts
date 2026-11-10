@@ -53,14 +53,26 @@ describe('CapabilityRegistry', () => {
     );
   });
 
-  it('grants unauth-foothold + bulk read to a public external OWD on User', () => {
-    expect(capabilitiesFor(f('guest-user-visibility-owd')).grants).toEqual(
-      expect.arrayContaining(['unauth-foothold', 'data-read-bulk']),
-    );
+  // The User external OWD reaches logged-in external users: the guest OWD is always Private.
+  it('grants low-trust-authenticated + bulk read, not unauth-foothold, to a public external OWD on User', () => {
+    const grants = capabilitiesFor(f('guest-user-visibility-owd')).grants;
+    expect(grants).toEqual(expect.arrayContaining(['low-trust-authenticated', 'data-read-bulk']));
+    expect(grants).not.toContain('unauth-foothold');
   });
 
-  it('grants read but NOT bulk read to a guest Read grant on the User object', () => {
-    const grants = capabilitiesFor(f('guest-user-visibility-object-read')).grants;
+  // Shared records are graded alike whatever the object or OWD; guest-owned records are the bulk sink.
+  it('grants records shared with guests read, not bulk read, and guest-owned records bulk read', () => {
+    for (const id of ['guest-object-exposure-guest-shared', 'guest-object-exposure-public-owd', 'guest-user-sharing-exposure']) {
+      const grants = capabilitiesFor(f(id)).grants;
+      expect({ id, grants }).toEqual({ id, grants: expect.arrayContaining(['unauth-foothold', 'data-read']) });
+      expect({ id, bulk: grants.includes('data-read-bulk') }).toEqual({ id, bulk: false });
+    }
+    expect(capabilitiesFor(f('guest-object-exposure-guest-owned')).grants).toContain('data-read-bulk');
+  });
+
+  // Guest member visibility shows a site's members, not the org's records.
+  it('grants unauth-foothold + read, not bulk read, to guest member visibility', () => {
+    const grants = capabilitiesFor(f('guest-site-options-member-visibility')).grants;
     expect(grants).toEqual(expect.arrayContaining(['unauth-foothold', 'data-read']));
     expect(grants).not.toContain('data-read-bulk');
   });
@@ -102,6 +114,26 @@ describe('CapabilityRegistry', () => {
     expect(grants).toContain('data-read');
     expect(grants).not.toContain('data-write');
     expect(grants).not.toContain('code-exec');
+  });
+
+  // Reading debug logs needs View All Data, and the finding fires on a trace at any level, so the
+  // log hands its reader nothing they could not already read.
+  it('grants nothing to active debug traces', () => {
+    expect(capabilitiesFor(f('debug-log-active-traces')).grants).toEqual([]);
+  });
+
+  // An org-wide address open to all profiles, or mail sent without DKIM, lets someone send
+  // convincing phishing. That is no attacker capability in this model and no data channel.
+  // An allowlist entry exposes no stored credential; abusing it needs a controlled origin and a
+  // logged-in victim, and reaches only that user's own access.
+  it('grants nothing to wildcard or broad CORS origins', () => {
+    expect(capabilitiesFor(f('cors-wildcard-origin')).grants).toEqual([]);
+    expect(capabilitiesFor(f('cors-broad-origin')).grants).toEqual([]);
+  });
+
+  it('grants nothing to org-wide email spoofing', () => {
+    expect(capabilitiesFor(f('org-wide-email-spoofing-all-profiles')).grants).toEqual([]);
+    expect(capabilitiesFor(f('org-wide-email-spoofing-no-dkim')).grants).toEqual([]);
   });
 
   it('grants credential-theft and egress to an outbound message carrying a session ID', () => {

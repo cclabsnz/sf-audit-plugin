@@ -1,6 +1,7 @@
 import * as path from 'node:path';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { buildAuditContext, resolveOrgInfo } from '../../../lib/wire.js';
+import { apiErrorText } from '../../../lib/apiErrorText.js';
 import { collectBundle, defaultIncidentRoot } from '../../../incident/collect/collectBundle.js';
 
 export interface IncidentCollectResult { dir: string; waves: number; logsCollected: number; logsMissing: number }
@@ -42,7 +43,7 @@ export default class AuditIncidentCollectCommand extends SfCommand<IncidentColle
         { sinceDays: flags.since, window: flags.window, event: flags.event, ipRangeFiles: flags['ip-ranges'] ?? [], outputDir: dir, warn: (m) => this.warn(m) },
       ));
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+      const message = apiErrorText(e);
       this.error(`${message} (partial bundle kept at ${dir}; re-run with --output "${dir}" to resume)`, { exit: 1 });
     }
     const collected = manifest.logs.filter((l) => l.status === 'collected').length;

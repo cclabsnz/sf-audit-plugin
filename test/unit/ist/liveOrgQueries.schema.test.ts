@@ -45,6 +45,23 @@ describe('the schema validator itself', () => {
     rejects('soql', 'SELECT Id FROM PermissionSetAssignment WHERE PermissionSet.PermissionsNope = true', /PermissionsNope/));
   it('rejects an unknown relationship', () =>
     rejects('soql', 'SELECT Nobody.Name FROM PermissionSetAssignment', /Didn't understand relationship 'Nobody'/));
+  it('rejects a picklist value the platform never writes', () =>
+    rejects('soql', "SELECT COUNT() FROM AccountShare WHERE RowCause = 'SharingRule'", /'SharingRule' is not a value of picklist AccountShare.RowCause/));
+  it('rejects one inside an IN list', () =>
+    rejects('soql', "SELECT Id FROM CaseShare WHERE RowCause IN ('Rule', 'SharingRule')", /'SharingRule'/));
+  it('accepts picklist values in any case, and values seen live that describe omits, through a path', () => {
+    expect(() => validate('soql', "SELECT Id FROM AccountShare WHERE RowCause = 'guestrule'")).not.toThrow();
+    expect(() => validate('soql', "SELECT Id FROM GroupMember WHERE Group.Type = 'GuestUserGroup'")).not.toThrow();
+  });
+  it('rejects an unknown value behind a relationship path', () =>
+    rejects('soql', "SELECT Id FROM GroupMember WHERE Group.Type = 'AllInternal'", /'AllInternal' is not a value/));
+  // Custom and namespaced values are not in the snapshot, so they are not judged.
+  it('does not judge a custom or namespaced value, and does judge a standard one, on the same picklist', () => {
+    expect(() => validate('soql', "SELECT Id FROM ObjectPermissions WHERE SobjectType = 'Application__c'")).not.toThrow();
+    rejects('soql', "SELECT Id FROM ObjectPermissions WHERE SobjectType = 'User'", /'User' is not a value of picklist ObjectPermissions.SobjectType/);
+  });
+  it('accepts real picklist values', () =>
+    expect(() => validate('soql', "SELECT COUNT() FROM AccountShare WHERE RowCause IN ('Rule', 'GuestRule', 'GuestParentImplicit') AND RowCause != 'Owner'")).not.toThrow());
   it('accepts a valid multi-hop path', () =>
     expect(() => validate('soql', "SELECT Assignee.Profile.Name FROM PermissionSetAssignment WHERE Assignee.IsActive = true")).not.toThrow());
   it('accepts a valid query', () =>

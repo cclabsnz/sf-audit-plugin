@@ -13,6 +13,7 @@ const ALL_GRANTED: Record<AuditPermission, boolean> = {
   ViewHealthCheckScreen: true,
   AuthorApex: true,
   ViewEventLogFiles: true,
+  ManageTwoFactor: true,
 };
 
 describe('checksRequiring', () => {

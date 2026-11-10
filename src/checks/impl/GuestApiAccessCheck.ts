@@ -100,6 +100,8 @@ export class GuestApiAccessCheck implements SecurityCheck {
       findings.push({
         id: 'guest-api-hard-delete',
         category: this.category,
+        // Irreversible deletion takes the data away; it is not a disclosure.
+        threats: { stride: ['D', 'T'] },
         riskLevel: 'CRITICAL',
         title: `${hardDeleteGuests.size} guest user(s) have Bulk API Hard Delete`,
         detail:

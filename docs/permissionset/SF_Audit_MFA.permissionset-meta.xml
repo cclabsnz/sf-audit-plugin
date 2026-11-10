@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SF Audit (MFA registration) permission set: optional, and separate from SF_Audit_ReadOnly.
+
+  `mfa-registration` reads TwoFactorMethodsInfo, which Salesforce hides without "Manage MFA in
+  API" (ManageTwoFactor). Salesforce refuses that permission unless the permission set also holds
+  the user-management permissions below, so this set is NOT read-only: it lets the holder manage
+  users, roles, sharing and passwords. Assign it only to an audit user who is already a System
+  Administrator (who holds all of these), where it adds just Manage MFA in API. Otherwise leave it
+  out: the check reports inconclusive and says why. See ../../PERMISSIONS.md.
+
+  Deploy it with the Salesforce CLI (metadata PermissionSet:SF_Audit_MFA), then assign it with
+  `sf org assign permset -n SF_Audit_MFA -o <orgAlias>`.
+-->
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Optional: Manage MFA in API for the sf-audit MFA registration check, with the user-management permissions Salesforce requires alongside it. Assign only to an audit user who is already a System Administrator.</description>
+    <hasActivationRequired>false</hasActivationRequired>
+    <label>SF Audit (MFA registration)</label>
+    <userPermissions><enabled>true</enabled><name>ManageTwoFactor</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>AssignPermissionSets</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>DelegatedTwoFactor</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>FreezeUsers</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ManageInternalUsers</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ManageIpAddresses</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ManageLoginAccessPolicies</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ManagePasswordPolicies</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ManageProfilesPermissionsets</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ManageRoles</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ManageSharing</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ManageUsers</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>MonitorLoginHistory</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ResetPasswords</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ViewAllUsers</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ViewRoles</name></userPermissions>
+    <userPermissions><enabled>true</enabled><name>ViewSetup</name></userPermissions>
+</PermissionSet>

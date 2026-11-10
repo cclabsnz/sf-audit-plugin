@@ -9,6 +9,204 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.25.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.25.0) — 2026-11-10
+
+The technical HTML report is redesigned. It now uses the executive report's white consulting look
+and reads in the order an admin works: what to fix first, how an attacker would get in, where each
+area of the org stands, and every result in one table.
+
+### Changed
+
+- **`--format html` is on white**, in the executive report's palette and fonts. The dark theme is
+  gone. Severity is shown by tag style and text as well as colour, so the report works printed or
+  in greyscale.
+- **One verdict band at the top**: the grade, score, why it got that grade and evidence coverage,
+  next to the open-finding total with one severity bar and four counts. This replaces the score
+  ring, donut and KPI strip, which repeated the same numbers.
+- **Fix first**: the report opens on the executive report's action plan and headline. Each action
+  lists the findings it closes and the attack chains it breaks or is part of.
+- **Attack paths** collapse to one line each (severity, C1/P1 label as in the executive report,
+  title, where to break it). Steps, the diagram and the fix open on demand.
+- **By domain**: a scorecard row for each of the ten domains in docs/CHECKS.md, worst first, then
+  each domain's findings by severity with passed checks folded away. A domain with checks that could
+  not be assessed is marked "partly unseen", never "clear".
+- **All results**: one table that can be regrouped by severity, domain, attack chain or framework,
+  and searched. Passed checks are hidden until asked for.
+- Each finding is drawn once, with a stable link (`#f-<id>`) for tickets; the plan, attack paths
+  and table link to it.
+
+### Added
+
+- `domainOf` / `DOMAINS` (src/checks/domains.ts): the domain each check belongs to, kept in step
+  with docs/CHECKS.md by a test.
+- `planHeadline` and the plan's effort and wave labels are shared by the executive and HTML reports,
+  so both state the same answer.
+
+## [v1.24.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.24.1) — 2026-11-01
+
+The threat model reads as the threats it found. Inventory lines no longer sit in the STRIDE view as
+open findings, and the MFA bypass chain fires only when a privileged user can actually sign in
+without a second factor, starting at initial access on the ATT&CK slide.
+
+### Fixed
+
+- The threat view (Markdown Threat View, executive STRIDE heatmap and LINDDUN bars) no longer
+  counts INFO results as open findings. An inventory line such as "0 scheduled jobs
+  found" or "No certificates found" sat under a STRIDE category as if it were a threat. The heatmap
+  loses its Info column; the check still counts as coverage for its category (RULE-104).
+- The insider bulk-export chain narrative reads without an em dash.
+- **MFA bypass to privileged compromise** fires only when the MFA weakness reaches a privileged user:
+  a trusted IP range (which exempts everyone), or users without MFA that include an admin-level
+  holder (a full 50-user list counts, since the list stops there). Portal users without MFA no
+  longer fire it on their own, since a portal user is not an admin. Some grades rise where that
+  was the only path.
+- The same chain now starts at **Initial access** on the ATT&CK slide. Weak MFA grants a new
+  `valid-account` capability, mapped to T1078.004 Valid Accounts: Cloud Accounts, so the three MFA
+  findings now carry T1078.004 in every output (Markdown, HTML, JSON, SARIF). It is not an entry
+  point of a potential chain, so no other chain changes.
+
+## [v1.24.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.24.0) — 2026-10-30
+
+Several checks were filtering on values the platform never writes, so they found nothing; they now
+find what they look for. Guest exposure is graded one way, Apex follows the API 67.0 sharing and
+user-mode defaults, and MFA registration reads every method. Some grades will fall where exposures
+are newly found, and some will rise where findings were overstated.
+
+### Added
+
+- **An optional permission set for MFA registration**, `docs/permissionset/SF_Audit_MFA.permissionset-meta.xml`, separate from the read-only one. Salesforce grants "Manage MFA in API" only with user-management permissions, so it is meant for an audit user who is already an administrator.
+
+- **`docs/FEATURES.md` lists what sf-audit already does**: commands, checks, attack chains, renderers, shared helpers, framework mappings and test tooling, each with its file. Search it before building something. A test fails when a check, chain, command, shared helper, renderer or chain module is missing from it.
+- **The schema guard catches filters that match nothing.** The schema snapshot now keeps picklist values (all but geography, locale, currency and encoding lists, and without custom or namespaced values), and a query that filters on a value the picklist does not have fails the guard. A new deep-path guard seeds a consistent org so checks get past their first empty result, and validates the queries behind it.
+
+### Security
+
+- **deepmerge is pinned to 4.1.1 under jest.** GHSA-gcqx-w48m-w2h4 (prototype poisoning in `mergeObject()`, low) affects 4.2.0 to 4.3.1 and has no patched release. deepmerge reaches the project only through `jest-config`, a development dependency, and jest runs unchanged on 4.1.1, which is outside the affected range.
+
+### Fixed
+
+- **Guest-executable Apex is found again.** The check read Apex class access by filtering `SetupEntityAccess.ParentId` on the guest profile Ids. That field holds permission set Ids, so in a real org it matched nothing and reported "Guest profiles cannot execute any Apex classes". It now reads the guest users' permission sets, both the one each guest profile owns and any assigned to the guest. Some orgs will see new `guest-executable-apex-*` findings and the unauthenticated bulk-exfiltration chain they open, so some grades may fall.
+- **The unauthenticated bulk-exfiltration chain needs the guest to reach the data itself.** The bulk read, write or code execution must now come from one of its guest-side steps. Before, an internal user's View All Data or an admin's Author Apex, together with any guest exposure, was enough to fire it. The potential-chain pass no longer pairs a guest foothold with those internal grants either.
+- **The same chain no longer counts Apex or Flow that is only shown to run without sharing.** `portal-exposed-apex-without-sharing` flags classes with `@AuraEnabled`, `@RemoteAction` or `@RestResource` methods that lack sharing enforcement, and `flows-*-without-sharing` flags flows by run mode. Neither shows that a guest can call them. Guest-callable Apex is counted through `guest-executable-apex-*`.
+- **A public external OWD on a guest-readable object no longer makes it CRITICAL.** Secure guest record access has been enforced since Winter '21, so the external OWD alone gives guests nothing: record sharing gives a guest a record only through sharing or ownership. `guest-object-exposure-public-owd` now needs `UserRecordAccess` to show that a guest user (every site's guest user is checked) can read one of up to 200 sampled records, and it is HIGH, like every other way records are shared with guests (see below). An object whose records a guest user owns stays CRITICAL as `guest-object-exposure-guest-owned`. Otherwise the check reports the new MEDIUM finding `guest-object-exposure-public-owd-unconfirmed`, which feeds no attack chain and notes whether the probe ran.
+- **The unauthenticated bulk-exfiltration chain needs a step that reaches records.** Guest API access, guest object permissions, or guest-callable Apex not shown to bypass sharing reach nothing on their own under secure guest record access, yet any one of them, beside a guest user existing, fired a CRITICAL chain. The potential-chain pass does not report them as a guest path either. One step must now show the guest reaching records: a guest sharing rule, guest-owned or confirmed-readable records, the whole User roster, guest-callable Apex that runs without sharing, or secure guest record access not being enforced.
+- **The flows-without-sharing check flags the flows it names.** It flagged autolaunched and screen flows in Default Mode, where a screen flow runs as the user, and missed flows explicitly set to run in system context without sharing. It now flags autolaunched and screen flows explicitly set that way, so most orgs will see fewer of these findings and some will see new ones. Record-, schedule- and platform-event-triggered flows always run that way, have no setting to change, and are not flagged.
+- **Guest exposure findings say what a guest can do.** Affected items read "guest Create permission" instead of "guest WRITE": guests cannot hold Edit or Delete since Winter '21. The guest-owned remediation now says to reassign existing records, instead of enabling two settings the platform has enforced since Winter '21.
+- **Guest sharing rules are found.** The guest-access and public-group sharing checks counted share rows with `RowCause = 'SharingRule'`, a value the platform never writes, so they found no sharing rule at all. They now count `Rule`, and the guest check also counts `GuestRule`, the value guest user sharing rules write. Orgs with guest or public-group sharing rules will see new findings, and some grades may fall.
+- **MFA registration covers the same users as the count.** Frozen users are now dropped from the registrations, as they already were from the count, and the 2000-row cap is gone.
+- **Apex classes saved at API 67.0 or later are no longer reported for a missing sharing keyword.** From Summer '26 an Apex class compiled at API 67.0 or later that declares no sharing keyword runs with sharing. The guest-executable Apex, Apex sharing and Apex REST endpoint checks now read each class's API version. They report a keyword-less class only when it, or a keyword-less parent it inherits from, is below 67.0, or when its version cannot be read. A keyword-less guest-callable class at 67.0 drops from CRITICAL to the HIGH "executable by guests" finding, so some grades may rise. The REST check now also follows inheritance: an endpoint that extends a `without sharing` class is reported as without sharing.
+- **A keyword-less class reached only from Aura or LWC is no longer reported as running without sharing.** Since Winter '21 an `@AuraEnabled` call into a class with no sharing keyword runs with sharing. A class whose only way in is `@AuraEnabled` (no REST, SOAP, remoting or Visualforce use) leaves the guest CRITICAL finding and the portal-exposed list. The Apex sharing check still lists it below API 67.0 as missing a keyword.
+- **Apex saved at API 67.0 or later is no longer reported for missing CRUD/FLS checks.** From that version queries and DML run in user mode by default, which enforces object and field permissions. SYSTEM_MODE in such a class is still reported.
+- **Records shared with guests are found, whatever the object's OWD.** The guest object exposure check looked only for guest-owned records when an object's external OWD was Private, so it missed guest user sharing rules, the main way a guest reaches records under secure guest record access. The guest-access check looked only at sharing-rule rows naming the guest user. Both now read share tables the same way. A row gives guests access when it comes from a guest sharing rule, or from the parent or person-account access one implies, whoever it names. It also counts when it is a manual, Apex or group share naming a guest user or a public group or queue a guest belongs to. Winter '21 did not remove those. The guest-access check reports Account, Case, Contact and Opportunity (`guest-user-sharing-exposure`). The guest object exposure check reports every other guest-readable object as the new HIGH finding `guest-object-exposure-guest-shared`, falling back to `UserRecordAccess` on a sample when the share table shows nothing or cannot be read. Shares to a site's guest user group count too, and group membership is followed through nested groups. The guest-access check also asks `UserRecordAccess` on a sample when Account, Case, Contact or Opportunity show no share row, or the share table cannot be read: for example a Contact controlled by its parent. It asks only where a guest can read the object and owns none of its records. The guest object exposure check leaves those four objects to it, except for guest-owned records, so each exposure is reported once.
+- **Guest object access is found again.** The guest-access check filtered `ObjectPermissions.ParentId` on the guest profile Ids. That field holds permission set Ids, so it never found a guest Read, Create, Edit or Delete on Account, Contact, Case, Lead or Opportunity, and `guest-user-read-access` and `guest-user-write-access` could not fire. It now reads the guest users' permission sets: the one each guest profile owns, and any assigned to a guest. Some orgs will see these findings for the first time, and some grades may fall. It is HIGH, not CRITICAL, because a guest sharing rule is how a site publishes records on purpose: the finding asks the org to confirm they are meant to be public. Share rows on a public-OWD object are graded the same way, since the external OWD does not reach guests. All of these count as the guest reaching records in the unauthenticated bulk-exfiltration chain, which still needs a guest step that reads in bulk, writes or runs code (guest API access, guest-owned records, guest-callable Apex without sharing). Guest-owned records remain the CRITICAL bulk sink. Some grades may fall.
+- **A public external OWD on User no longer counts as a guest exposure.** Secure guest record access keeps the guest OWD Private on every object, User included, so `guest-user-visibility-owd` shows the staff roster to logged-in portal and community users, not to guests. It is now MEDIUM instead of HIGH, says who it reaches, is reported whether or not the org has a guest user (but only when it has an active external user or an Experience Cloud site, so someone can be reached), and feeds the low-trust chains (such as self-registration) instead of the unauthenticated one.
+- **Guest member visibility counts only on live sites, and as a read.** "Let guest users see other members of this site" shows a live site's members to guests. It now joins the unauthenticated chain as a step when that chain fires, but it opens no chain, unauthenticated or low-trust, since it shows members, not business records. On a site that is not live it is reported apart, at LOW, as `guest-site-options-member-visibility-not-live`.
+- **MFA registration reads every method.** The check read `TwoFactorInfo`, whose `Type` can only be `TOTP`, so users registered with Salesforce Authenticator, a security key or a built-in authenticator counted as unregistered (`TwoFactorInfo.Type` has `TOTP` as its only picklist value). It now reads `TwoFactorMethodsInfo`. An authenticator app, Salesforce Authenticator, a security key or a built-in authenticator counts as registered. A verified phone number or email address, or a temporary code, does not: those are sign-in fallbacks. Only registered users go to the method strength check, with every method they hold. A user with just a phone number or email address is reported as unregistered, not graded as having weak MFA, so an admin who verified an email address no longer rates worse than one who did nothing. Preflight now reports the permission as optional. The object needs "Manage MFA in API", which Salesforce grants only with user-management permissions. It is therefore optional and not in the read-only permission set; see PERMISSIONS.md.
+- **The guest User visibility check no longer looks for a Read grant on User.** User takes no object permissions, so `ObjectPermissions` never holds a User row (a Developer Edition org had none across all its permission sets, against 141 for Account), and `guest-user-visibility-object-read` could never fire. The leg and its finding are removed. Guest access to the roster is still reported through View All Users and a site's guest member visibility.
+- **The guest read probe samples both ends of an object's history.** It took the first 200 records in no order, so a share matching only recent records could read as no guest access. It now samples the 100 most and 100 least recently changed records, and falls back to an unordered sample when the object cannot be ordered.
+- **Guest file access counts only on live sites.** As with member visibility, a site that is not live is reported apart, at LOW, as `guest-site-options-file-access-not-live`, and feeds no chain.
+- **The Apex REST check reads `without sharing` from code.** A comment or string containing the words no longer marks an endpoint as running without sharing. An inner class declared `without sharing` still counts.
+- **Three checks filtered on values the platform never writes, so they found nothing.** Salesforce accepts a filter on a picklist value that does not exist and matches no rows, so these checks passed in every org:
+  - **SSO enforcement** looked for `LoginType = 'Username-Password'`. Credential logins are recorded in `LoginSubType` (`UI Username-Password`, `OAuth Username-Password`), which the check now reads. Orgs where users still log in with Salesforce credentials will see the finding.
+  - **Public group sharing** looked for the All Internal Users group as `Group.Type = 'AllInternal'`. That group's type is `Organization`. Orgs that share records to All Internal Users through sharing rules will see the finding.
+  - **Release updates** also asked for a `Revoked` status, which does not exist. The check's results do not change.
+  Some grades may fall.
+
+## [v1.23.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.23.0) — 2026-10-29
+
+Attack chains and checks now match what the platform does. One chain is re-rated, so some grades may
+rise.
+
+### Changed
+
+- **`cred-theft-pivot` is rated HIGH, not CRITICAL.** Its secret is found by pattern match. Its egress steps are mostly the org's own registered endpoints, which give an attacker who holds the secret nothing new. Orgs where this chain fires no longer count it as a critical chain in the grade.
+
+### Fixed
+
+- **The unauthenticated bulk-exfiltration chain no longer counts external sharing defaults as an unauthenticated step.** Guest record access has been secured since Winter '21, so the external OWD reaches logged-in portal users, not guests. Those findings stay in the low-trust chains, such as self-registration.
+- **The hardcoded-credential check no longer flags a value read at run time.** A credential parameter built from a stored value, such as `'client_secret=' + EncodingUtil.urlEncode(cfg.Secret__c, 'UTF-8')`, was matched as a hardcoded secret.
+- **The CRUD/FLS finding gives the CRUD/FLS remedy.** It now leads with `WITH USER_MODE` or `Security.stripInaccessible()`. Before, it led with "with sharing", which enforces record sharing only and duplicated the sharing finding's advice.
+- **The self-registration chain tells one story.** It no longer calls self-registration "not a finding" while making it the break point. Its remediation leads with turning self-registration off, or with a custom registration handler that approves accounts.
+- **Each attack-scenario slide states its chain's rating against its steps.** This covers a chain rated above its steps, and a chain whose critical step is also counted on its own in the grade.
+- **MFA results no longer read as assurance about nobody.** When no active standard user is visible, the registration check is now inconclusive instead of "All 0 users have registered". The audit user is itself one, so a count of 0 means the users could not be seen. When no one has registered a method, the method-strength check reports an informational "not graded" finding instead of a pass, and notes that this is expected with single sign-on.
+- **The executive scope statement matches what the audit reads.** It reads configuration, metadata, selected records and event logs, including pattern-based static checks of Apex and Flow. It is not a penetration test or a code review. Readers are asked to confirm each finding in the org.
+
+## [v1.22.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.22.0) — 2026-10-29
+
+The executive report is now a consulting-style deck that leads with what to do, with the threat
+model on its own slides.
+
+### Changed
+
+- **The executive report is now a consulting-style deck.** Every slide's title states its conclusion, and a note under each exhibit says where its numbers come from. In order:
+  - **Cover**: grade and health score, kept small.
+  - **Executive summary**: situation, complication and resolution.
+  - **Where to act**: the actions placed on risk removed against effort.
+  - **Action plan**: ranked actions in three waves (start now, next 30 days, this quarter). For each, what it breaks, the findings it closes, effort, and an owner to agree.
+  - **Threat model**: a MITRE ATT&CK slide (findings per tactic, and the tactics each attack chain reaches) and a STRIDE and LINDDUN heatmap.
+  - **Attack scenarios**: one slide per named attack chain, and one for the potential chains.
+  - **Appendix and sign-off**: roadmap, compliance, findings, and a sign-off page.
+- **Actions are computed, not listed.** Each named chain's break point becomes the action that breaks it (chains sharing a break point share it). Every other open critical or high finding becomes an action per check. Actions are ranked by the risk they remove, with a broken chain counting double.
+- **It prints one slide per landscape A4 page.** Every printed page names its client, date and page. Fonts are Source Serif 4 and Source Sans 3, embedded so the report never fetches anything. A firm's own colours and fonts still apply when it has set them.
+
+## [v1.21.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.21.1) — 2026-10-28
+
+### Fixed
+
+- **The CORS allowlist check no longer overstates the risk.** Its findings said a wildcard origin enabled "token theft" and "authenticated cross-origin requests". An allowlist entry supplies no credential: script on an allowed origin can use the org's APIs from a user's browser only with a session ID or OAuth token it already has, except for a Lightning Out app shared with guest users. The findings now say so. Severity is unchanged.
+
+## [v1.21.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.21.0) — 2026-10-28
+
+Findings and attack chains now name the MITRE ATT&CK techniques an attacker would use, and chain
+steps are listed in the order an attack would run.
+
+### Added
+
+- **MITRE ATT&CK techniques on findings.** A finding carries the techniques for the attacker capabilities it grants, never for the check that raised it: as `threats.attack` in JSON, an **ATT&CK** line in Markdown, `attack:<id>` rule tags in SARIF, and a technique label on each attack-chain step in Markdown and HTML (SARIF steps carry `attackTechniques`). Techniques are pinned to Enterprise ATT&CK v20.0, and only techniques whose id, name, tactics and fit are recorded in the verification worksheet are ever shown. Where a capability's usual technique does not fit a finding, the finding names its own or none.
+- **Detection gaps say what goes unseen.** A finding showing that nothing alerts on suspicious logins carries the techniques it leaves unobserved (`threats.detects`, "leaves unobserved" in Markdown), kept apart from the techniques a finding grants.
+- **Chain steps follow the ATT&CK tactic order.** Steps of named and potential chains are listed from the earliest tactic (initial access) to the latest (exfiltration, impact). Ordering moves steps only; the break point, severity and score are unchanged.
+
+### Changed
+
+- **Active debug traces no longer count as an exposed secret.** The finding fires on a trace at any log level, and only View All Data users can read debug logs, so it grants no attacker capability. It no longer feeds `cred-theft-pivot`, nor the potential chain from an unauthenticated foothold to credential theft.
+- **Wildcard and broad CORS origins no longer count as an exposed secret.** An allowlist entry exposes no stored credential; abusing one needs a controlled origin and a logged-in victim, and reaches only that user's own access. The findings keep their severity but no longer feed `cred-theft-pivot`, nor the potential chain from an unauthenticated foothold to credential theft.
+- **Org-wide email spoofing no longer grants egress.** An address open to all profiles, or mail without DKIM, is a phishing surface rather than a channel for moving data.
+
+### Fixed
+
+- **`cred-theft-pivot` needs an egress path among its steps.** It checked only that some finding granted egress, so exposed secrets plus a finding outside the chain (org-wide email spoofing, a session id in an outbound message) fired a CRITICAL chain with no egress step in it.
+
+## [v1.20.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.20.0) — 2026-10-28
+
+Findings now say which threats they enable, and each named attack chain says who would run it and
+which single fix stops it.
+
+### Added
+
+- **STRIDE and LINDDUN on every finding.** Each check is mapped to the STRIDE categories it guards (all 109 checks) and, where personal data is involved, to LINDDUN privacy categories (32 checks). Findings carry them as `threats` in JSON, as a **Threats:** line in Markdown, and as `stride:` / `linddun:` rule tags in SARIF. Tagging never changes severity, score or grade.
+- **Threat view in the Markdown report.** One row per category, reading "N findings (from N checks)", "no findings from N checks", "not assessed in this run" or "not assessed by this tool". An empty category is never shown as assurance, and privacy and security readings of the same finding are kept apart, not netted against each other.
+- **Named attack chains are abuse cases.** Every named chain states its actor, goal and preconditions, and its break point: the fix that stops the chain in every case it fires. Markdown, HTML and the executive report show "Abuse case:" and "Breaks the chain:", with the full remediation below it. SARIF chain results carry `abuseCase`, and break-point steps carry `breaksChain`.
+
+### Changed
+
+- **The attack-chain diagram marks the proven break point** ("✂ BREAK POINT", on every step of a multi-step break point) instead of guessing one cut-point. Steps whose capability was inferred no longer show a capability label.
+- Potential chains label their fix text "Recommended fixes" in Markdown, HTML and the executive report, since no single break point is proven for them.
+- **`cred-theft-pivot` needs an exposed secret.** The chain now fires only when one of its steps exposes a credential (including credentials stored in custom settings), so orgs without one no longer show it.
+- **Moves to `@cclabsnz/sf-core` 0.12.** `queryAll` now reads every page instead of stopping at the client's row limit, so reads that came back short on large orgs are complete.
+
+### Fixed
+
+- **The executive report's "Breaks the chain" line no longer shows the full remediation list.** It now names the break point; the full list follows as "Full remediation".
+- **An expired session stops `incident collect` again.** sf-core 0.12 reports a failed log download as `INVALID_SESSION_ID` instead of "HTTP 401", so collect recorded every remaining log as failed instead of stopping. Error classifiers now read the error's code and status, not only its message.
+- A Salesforce error that arrives with only a code (`INSUFFICIENT_ACCESS`, or `ERROR_HTTP_403` with no body) is classified as a permission problem in `incident collect` and the API log listing, and `ERROR_HTTP_404` counts as a missing object in the checks that probe for optional features.
+- **A malformed agent query no longer reads as "Agentforce not enabled".** The AI & Agents checks counted `MALFORMED_QUERY` as an absent object, which became reachable with sf-core 0.12; they now share the missing-object test the other checks use, so a broken query is inconclusive.
+- A failed download whose error body is empty now names its code and status (`ERROR_HTTP_403 HTTP 403`) in `incident collect` and the API log listing, instead of an empty reason.
+- `users-and-admins` no longer advises raising `org-max-query-limit`, which no longer limits the read. When the assignment count differs from the rows read, it advises re-running the audit.
+
+### Security
+
+- `fast-uri` pinned to 3.1.9 or later, closing Dependabot alerts #44–47. (#181)
+
 ## [v1.19.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.19.0) — 2026-10-23
 
 When the audit user cannot see who holds Modify All Data or View All Data, the report now says so

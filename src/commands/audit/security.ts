@@ -85,7 +85,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
       helpValue: './report-branding.json',
     }),
     top: Flags.integer({
-      summary: 'Number of executive priorities to highlight (executive format).',
+      summary: 'Number of top actions to plot on the deck\'s "Where to act" slide, up to 10 (executive format). The action plan lists every action.',
       default: 5,
     }),
     frameworks: Flags.string({

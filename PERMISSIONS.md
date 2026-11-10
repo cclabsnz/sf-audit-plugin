@@ -38,7 +38,7 @@ permissions below, and nothing else. A starter permission-set definition is in
 | **API Enabled** | `ApiEnabled` | All access is via SOQL/Tooling/REST over the API | Audit cannot run at all |
 | **View Setup and Configuration** | `ViewSetup` | Reads the bulk of the surface: `SetupAuditTrail`, `TraceFlag`, `ConnectedApplication`, `RemoteProxy`, `CorsWhitelistEntry`, `CspTrustedSite`, `NamedCredential`, `AuthConfig`, `CriticalUpdate`/release updates, `Network` (Experience sites), `ProfileLoginIpRange`, `NetworkAccess`, `Certificate`, `ExternalString` (Custom Labels), `OrgWideEmailAddress`, `EmailServicesFunction`/`EmailServicesAddress`, and Tooling metadata (`ApexClass`, `Flow`, `CustomObject`/`CustomField`, `EntityDefinition`, `FieldDefinition`, `FieldPermissions`, `ObjectPermissions`, `SetupEntityAccess`, `WorkflowOutboundMessage`, `StaticResource`) | Most setup/config checks return **inconclusive** |
 | **Read `OauthToken`** | n/a (object read) | Standing OAuth authorisations per app, for `oauth-token-inventory`. Read separately from `ConnectedApplication`: a refresh token is exchanged without producing a login, so this is the only surface that shows an app which can still act | `oauth-token-inventory` returns **inconclusive** rather than reporting an org with no standing tokens |
-| **View All Users** | `ViewAllUsers` | Enumerate every `User`, `UserLogin`, `PermissionSetAssignment`, and `TwoFactorInfo` record org-wide (not just role-hierarchy-visible users) | User/admin/MFA checks under-count and miss accounts |
+| **View All Users** | `ViewAllUsers` | Enumerate every `User`, `UserLogin` and `PermissionSetAssignment` record org-wide (not just role-hierarchy-visible users) | User/admin/MFA checks under-count and miss accounts |
 | **View Health Check** | `ViewHealthCheckScreen` | Read `SecurityHealthCheck` and `SecurityHealthCheckRisks` (Tooling) | Health Check + Password/Session checks inconclusive |
 | **Author Apex** | `AuthorApex` | **Read-only use:** the only standard gate that exposes `ApexClass`/`ApexTrigger`/`ApexPage` **`Body`** via the Tooling API. Used by the ~9 Apex/Visualforce code-security checks. Grants *no* ability to modify org data | The 9 code-security checks return **inconclusive**; rest of the audit is unaffected |
 | **View Event Log Files** | `ViewEventLogFiles` | Read `EventLogFile` for the Event Monitoring check | Event Monitoring check inconclusive |
@@ -48,6 +48,20 @@ permissions below, and nothing else. A starter permission-set definition is in
 | Permission | API name | Why |
 |---|---|---|
 | **View Roles and Role Hierarchy** | `ViewRoles` | Complete visibility of role-based sharing context |
+
+### Optional, and not in the read-only set: MFA registration
+
+`mfa-registration` reads `TwoFactorMethodsInfo`, which records each user's MFA methods. The
+object is hidden without **Manage MFA in API** (`ManageTwoFactor`), and Salesforce will not grant
+that permission without user-management permissions alongside it: Manage Users, Manage Internal
+Users, Manage Sharing, Manage Roles, Reset Passwords, Freeze Users, Manage Profiles and Permission
+Sets, Assign Permission Sets and others. That is far more than a read-only audit needs, so it is
+not in `SF_Audit_ReadOnly`. Without it the check returns **inconclusive** and says why, and
+`mfa-method-strength` has nothing to grade. Grant it only where the audit runs as an
+administrator who already holds those permissions, using the separate
+[`SF_Audit_MFA`](docs/permissionset/SF_Audit_MFA.permissionset-meta.xml) permission set: on a
+System Administrator it adds just Manage MFA in API. Otherwise review MFA registration in Setup →
+Identity → Identity Verification. Preflight lists it as optional.
 
 - **View Event Log Files**, **View Setup and Configuration**: required by `sf audit incident collect`.
 - **Query All Files**: lets `incident collect` see files owned by guest users. Without it the report states the gap.
@@ -67,7 +81,7 @@ security team is right to refuse them:
 - **`Manage Users`** / **`Manage Internal Users`**
 - Any **Create / Edit / Delete (DML)** permission on any object
 - **Metadata API** deploy/retrieve (`deployMetadata`, `modifyMetadata`)
-- Password, MFA, or session **management** permissions (the tool *reads* MFA/session config, it does not change it)
+- Password, MFA, or session **management** permissions (the tool *reads* MFA/session config, it does not change it). The one exception is optional: see "MFA registration" above
 
 ## Important caveats
 

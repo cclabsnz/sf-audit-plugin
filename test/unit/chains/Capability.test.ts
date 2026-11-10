@@ -2,8 +2,8 @@
 import { SOURCE_CAPS, HIGH_IMPACT_SINKS, ALL_CAPABILITIES } from '../../../src/chains/Capability.js';
 
 describe('Capability vocabulary', () => {
-  it('has exactly 10 capabilities', () => {
-    expect(ALL_CAPABILITIES).toHaveLength(10);
+  it('has exactly 11 capabilities', () => {
+    expect(ALL_CAPABILITIES).toHaveLength(11);
   });
 
   it('source caps are a subset of all capabilities', () => {

@@ -89,7 +89,7 @@ describe('ApexSharingCheck', () => {
     // RULE-069: CRITICAL only for an explicit "without sharing"; no declaration is HIGH.
     ['@AuraEnabled without sharing', '@AuraEnabled public without sharing class P { }', 'without sharing', 'CRITICAL'],
     ['@RemoteAction without sharing', '@RemoteAction public without sharing class P { }', 'without sharing', 'CRITICAL'],
-    ['@AuraEnabled with no declaration', '@AuraEnabled public class P { }', 'No sharing declaration', 'HIGH'],
+    ['@RemoteAction with no declaration', '@RemoteAction public class P { }', 'No sharing declaration', 'HIGH'],
   ])('flags %s', async (_label, body, expectedNote, expectedRisk) => {
     const r = await check.run(makeCtx({ apexBodies: [cls('P', body)] }));
     const f = r.findings.find((x) => x.id === 'portal-exposed-apex-without-sharing');
@@ -164,5 +164,46 @@ describe('ApexSharingCheck', () => {
     expect(summaryOf(r)).toContain('1 without sharing');
     expect(summaryOf(r)).toContain('1 no declaration');
     expect(summaryOf(r)).toContain('(5 total)');
+  });
+
+  // spec RULE-007: from API 67.0 an omitted sharing keyword means with sharing.
+  describe('API 67.0 sharing default', () => {
+    const withVersions = (bodies: Body[], versions: Record<string, number>) => {
+      const ctx = makeCtx({ apexBodies: bodies });
+      (ctx as any).soql = {
+        queryAll: (jest.fn() as any).mockResolvedValue(Object.entries(versions).map(([Name, ApiVersion]) => ({ Name, ApiVersion }))),
+      };
+      return ctx;
+    };
+
+    it('does not report a keyword-less class at 67.0, and counts it apart', async () => {
+      const r = await check.run(withVersions([cls('A', '@AuraEnabled public class A { }')], { A: 67 }));
+      const ids = r.findings.map((f) => f.id);
+      expect(ids).not.toContain('apex-no-sharing-declaration');
+      expect(ids).not.toContain('portal-exposed-apex-without-sharing');
+      expect(summaryOf(r)).toContain('1 no declaration at API 67.0+ (with sharing by default)');
+    });
+
+    it('still reports a keyword-less class below 67.0', async () => {
+      const r = await check.run(withVersions([cls('A', '@RestResource(urlMapping=\'/a\') public class A { }')], { A: 66 }));
+      const ids = r.findings.map((f) => f.id);
+      expect(ids).toContain('apex-no-sharing-declaration');
+      expect(ids).toContain('portal-exposed-apex-without-sharing');
+    });
+  });
+
+  // spec RULE-008: an Aura/LWC call into a keyword-less class runs with sharing.
+  it('keeps a keyword-less class entered only through @AuraEnabled off the portal list', async () => {
+    const r = await check.run(makeCtx({ apexBodies: [cls('P', 'public class P { @AuraEnabled public static void go() {} }')] }));
+    expect(r.findings.some((x) => x.id === 'portal-exposed-apex-without-sharing')).toBe(false);
+    expect(r.findings.some((x) => x.id === 'apex-no-sharing-declaration')).toBe(true);
+  });
+
+  it.each([
+    ['@RemoteAction', 'public class P { @AuraEnabled public static void a() {} @RemoteAction public static void b() {} }'],
+    ['a Visualforce controller', 'public class P { @AuraEnabled public static void a() {} public PageReference save() { return null; } }'],
+  ])('keeps an @AuraEnabled class also entered through %s on the portal list', async (_label, body) => {
+    const r = await check.run(makeCtx({ apexBodies: [cls('P', body)] }));
+    expect(r.findings.some((x) => x.id === 'portal-exposed-apex-without-sharing')).toBe(true);
   });
 });

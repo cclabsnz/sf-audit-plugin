@@ -5,7 +5,8 @@ import type { AttackChain, AttackChainStep } from './AttackChain.js';
 import type { Capability } from './Capability.js';
 import { SOURCE_CAPS, HIGH_IMPACT_SINKS } from './Capability.js';
 import { capabilitiesFor } from './CapabilityRegistry.js';
-import { NAMED_CHAINS } from './namedChains.js';
+import { orderStepsByTactic, techniquesForGrant } from '../threats/attack.js';
+import { NAMED_CHAINS, UNAUTH_EXFIL_STEPS, UNAUTH_RECORD_REACH, inGroup, type NamedChainDef } from './namedChains.js';
 
 const SEVERITY_ORDER: Record<RiskLevel, number> = {
   CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4,
@@ -60,14 +61,21 @@ export class ChainEngine {
     return (c.confidence === 'named' ? 0 : 100) + SEVERITY_ORDER[c.severity];
   }
 
-  private stepFor(f: Finding, grants: Capability[]): AttackChainStep {
-    return {
+  private stepFor(f: Finding, grants: Capability[], role?: Capability): AttackChainStep {
+    const step: AttackChainStep = {
       findingId: f.id,
       checkId: f.checkId,
-      capability: grants[0] ?? 'data-read',
+      capability: (role && grants.includes(role) ? role : grants[0]) ?? 'data-read',
       title: f.title,
       severity: f.riskLevel,
     };
+    if (grants.length === 0) {
+      step.capabilityInferred = true;
+    } else {
+      const techniques = techniquesForGrant(f.id, step.capability);
+      if (techniques.length) step.techniques = techniques;
+    }
+    return step;
   }
 
   private runNamedPass(
@@ -86,7 +94,8 @@ export class ChainEngine {
         confidence: 'named',
         narrative: def.narrative,
         remediation: def.remediation,
-        steps: members.map((f) => this.stepFor(f, grantsByFinding.get(f) ?? [])),
+        abuseCase: { actor: def.abuseCase.actor, goal: def.abuseCase.goal, breakPoint: def.abuseCase.breakPointText },
+        steps: this.namedSteps(def, members, grantsByFinding),
       });
     }
     return out;
@@ -136,8 +145,14 @@ export class ChainEngine {
       if (!present.has(src)) continue;
       const hasRealSource = active.some((f) => !SURFACE_ONLY.has(f.id) && (grantsByFinding.get(f) ?? []).includes(src));
       if (!hasRealSource) continue;
+      // A guest reaches only what the guest side grants: an internal user's View All Data or an
+      // admin's Author Apex is no sink for an unauthenticated foothold (as in unauth-bulk-exfil).
+      const reaches = (f: Finding): boolean => src !== 'unauth-foothold' || UNAUTH_EXFIL_STEPS.includes(f.id);
+      // Nor is a guest path potential when no step shows the guest reaching a record.
+      if (src === 'unauth-foothold' && !active.some((f) => UNAUTH_RECORD_REACH.includes(f.id))) continue;
       for (const sink of HIGH_IMPACT_SINKS) {
         if (!present.has(sink)) continue;
+        if (!active.some((f) => reaches(f) && (grantsByFinding.get(f) ?? []).includes(sink))) continue;
         const key = `${src}->${sink}`;
         if (covered.has(key) || seen.has(key)) continue;
         seen.add(key);
@@ -146,7 +161,7 @@ export class ChainEngine {
         const members: Finding[] = [];
         for (const f of active) {
           const g = grantsByFinding.get(f) ?? [];
-          if (g.includes(src) || g.includes(sink) || g.includes('code-exec')) members.push(f);
+          if (g.includes(src) || (reaches(f) && (g.includes(sink) || g.includes('code-exec')))) members.push(f);
           if (members.length >= MAX_STEPS) break;
         }
         if (members.length === 0) continue;
@@ -161,11 +176,24 @@ export class ChainEngine {
             `${this.label(sink)}. Review whether these can be combined into an exploit path.`,
           remediation:
             'Treat the contributing findings as a single risk: remediating any one of them breaks the path.',
-          steps: members.map((f) => this.stepFor(f, grantsByFinding.get(f) ?? [])),
+          steps: orderStepsByTactic(members.map((f) => this.stepFor(f, grantsByFinding.get(f) ?? []))),
         });
       }
     }
     return out;
+  }
+
+  /** A named chain's steps, break point marked, in tactic order; inferred steps keep their precondition group's place. */
+  private namedSteps(def: NamedChainDef, members: Finding[], grantsByFinding: Map<Finding, Capability[]>): AttackChainStep[] {
+    const group = new Map<AttackChainStep, number>();
+    const steps = members.map((f) => {
+      const g = def.abuseCase.preconditions.findIndex((p) => inGroup(f, p));
+      const step = this.stepFor(f, grantsByFinding.get(f) ?? [], def.abuseCase.preconditions[g]?.role);
+      if (inGroup(f, def.abuseCase.preconditions[def.abuseCase.breakPoint])) step.breaksChain = true;
+      if (g >= 0) group.set(step, g);
+      return step;
+    });
+    return orderStepsByTactic(steps, (s) => group.get(s));
   }
 
   private label(c: Capability): string {

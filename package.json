@@ -1,6 +1,6 @@
 {
   "name": "@cclabsnz/sf-audit",
-  "version": "1.19.0",
+  "version": "1.25.0",
   "description": "Read-only Salesforce security audit for the sf CLI: 109 checks, attack-chain correlation, A-F risk grading, compliance mapping, free EventLogFile capture, and Guest User Anomaly investigation.",
   "keywords": [
     "salesforce",
@@ -46,7 +46,9 @@
     "test:jest": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests"
   },
   "dependencies": {
-    "@cclabsnz/sf-core": "^0.11.0",
+    "@cclabsnz/sf-core": "^0.12.0",
+    "@fontsource-variable/source-sans-3": "^5.3.1",
+    "@fontsource-variable/source-serif-4": "^5.3.1",
     "@oclif/core": "^5",
     "@salesforce/core": "^9.3.0",
     "@salesforce/sf-plugins-core": "^13",
@@ -112,9 +114,11 @@
       "form-data": "^4.0.6",
       "handlebars": "^4.7.9",
       "brace-expansion": "^5.0.11",
-      "fast-uri@3": "^3.1.8",
+      "fast-uri@3": "^3.1.9",
       "browserslist": "^4.28.7",
-      "@istanbuljs/load-nyc-config>js-yaml": "^4.1.1"
+      "@istanbuljs/load-nyc-config>js-yaml": "^4.1.1",
+      "jest-config>deepmerge": "4.1.1",
+      "minimatch@<11.0.1": "^11.0.1"
     }
   }
 }

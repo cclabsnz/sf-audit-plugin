@@ -29,7 +29,9 @@ export class PublicGroupSharingCheck implements SecurityCheck {
     const sharingRulesUrl = `${baseUrl}/lightning/setup/SecuritySharing/page`;
 
     const groups = await ctx.soql.queryAll<GroupRecord>(
-      "SELECT Id, Name, Type FROM Group WHERE Type = 'AllInternal'"
+      // The All Internal Users group is the one Group of Type 'Organization' (DeveloperName
+      // AllInternalUsers). There is no 'AllInternal' type: a filter on it matched nothing.
+      "SELECT Id, Name, Type FROM Group WHERE Type = 'Organization'"
     );
 
     if (groups.length === 0) {
@@ -61,13 +63,15 @@ export class PublicGroupSharingCheck implements SecurityCheck {
     // simply not permitted; either way the check did not see it, and the conclusion has to say
     // so rather than count silence as evidence of no sharing.
     const unreadable: string[] = [];
+    // Sharing rules write RowCause 'Rule'; there is no 'SharingRule' value, and a filter on it
+    // matched no row.
     for (const shareTable of SHARE_TABLES) {
       try {
         const result = await ctx.soql.query<SharingCountRecord>(
           `SELECT UserOrGroupId, COUNT(Id) cnt
            FROM ${shareTable}
            WHERE UserOrGroupId IN (${groupIdList})
-             AND RowCause = 'SharingRule'
+             AND RowCause = 'Rule'
            GROUP BY UserOrGroupId`
         );
         for (const r of result.records) {

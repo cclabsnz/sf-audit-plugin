@@ -86,9 +86,20 @@ describe('HtmlRenderer', () => {
     expect(html).not.toContain('fonts.gstatic.com');
   });
 
+  // The technical report is printed and shared alongside the executive report, so it uses the same
+  // white page and palette rather than a dark theme.
+  it('renders on white in the executive palette, with no dark theme left behind', () => {
+    const html = renderer.render(makeResult());
+    expect(html).toContain('--paper: #ffffff;');
+    expect(html).toMatch(/body \{[^}]*background: var\(--desk\)/);
+    for (const dark of ['#0d1117', '#161b22', '#21262d', '#30363d']) expect(html).not.toContain(dark);
+  });
+
   it('embeds the report webfonts as data URIs', () => {
     const html = renderer.render(makeResult());
-    expect(html).toContain("@font-face{font-family: 'Fira Sans'");
+    // The executive report's faces, so the two reports read as one document set.
+    expect(html).toContain("font-family:'Source Serif 4'");
+    expect(html).toContain("font-family:'Source Sans 3'");
     expect(html).toContain('src:url(data:font/woff2;base64,');
   });
 });

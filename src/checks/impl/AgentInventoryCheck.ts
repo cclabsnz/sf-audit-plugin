@@ -3,6 +3,8 @@ import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 import type { AgentDefinition, AgentUser } from '@cclabsnz/sf-core';
 import { isApiError } from '@cclabsnz/sf-core';
+// Shared, so MALFORMED_QUERY (a bug in the query) is never read as an absent feature.
+import { isMissingObjectError } from '../support/missingObject.js';
 
 // BotDefinition rows carry both classic Einstein Bots and Agentforce agents; Type
 // separates them. BotUserId is the run-as user where the platform exposes it.
@@ -55,22 +57,6 @@ const AGENT_TYPE_HINTS = ['agent', 'einsteinservice', 'einsteincopilot', 'genai'
 // Permission set license labels that grant Agentforce / Einstein Agent capability.
 // Substring match so exact SKU names are not load-bearing.
 const AGENT_LICENSE_HINTS = ['agentforce', 'einstein agent'];
-
-// A Tooling error whose cause is "the object does not exist" (feature absent) rather
-// than a transient/permission failure. Mirrors classifyEventLogAccessError's not-enabled arm.
-function isMissingObjectError(err: unknown): boolean {
-  if (isApiError(err)) {
-    if (/INVALID_TYPE|NOT_FOUND|MALFORMED_QUERY/i.test(err.errorCode)) return true;
-    if (err.statusCode === 404) return true;
-  }
-  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
-  return (
-    msg.includes('not supported') ||
-    msg.includes('invalid type') ||
-    msg.includes('is not supported') ||
-    msg.includes('sobject type')
-  );
-}
 
 export class AgentInventoryCheck implements SecurityCheck {
   readonly id = 'agent-inventory';

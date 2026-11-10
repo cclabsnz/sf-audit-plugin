@@ -1,11 +1,13 @@
 import { testApexPattern } from '@cclabsnz/sf-core';
+import type { AuditContext } from '@cclabsnz/sf-core';
 
 /**
  * How an Apex class's record sharing and CRUD/FLS are controlled (spec/apex-access-mode.md).
  *
  * Record sharing follows the class's own sharing keyword. WITH SYSTEM_MODE and
  * AccessLevel.SYSTEM_MODE switch off only CRUD/FLS for the operation they are on. A class with no
- * keyword runs with its caller's sharing, and as an entry point (Aura, REST, guest) without it.
+ * keyword runs with its caller's sharing, and as an entry point (Aura, REST, guest) without it,
+ * unless it is compiled at API 67.0 or later (Summer '26), where an omitted keyword means with sharing.
  */
 export type SharingKeyword = 'with' | 'without' | 'inherited' | 'none';
 
@@ -121,6 +123,66 @@ export function effectiveSharing(className: string, body: string, lookup: (name:
     name = parent;
     current = parentBody;
   }
+}
+
+/** From Summer '26 (API 67.0), a class compiled at this version or later with no sharing keyword runs with sharing. */
+export const OMITTED_SHARING_ENFORCED_FROM = 67;
+
+/**
+ * Whether a class whose effective sharing is 'none' still enforces sharing because every class
+ * that decides it (the class, and each parent it inherits from while none declares a keyword) is
+ * compiled at API 67.0 or later. A class whose version is unknown, such as a parent outside the
+ * org's own code, keeps the old default: the answer errs towards reporting.
+ */
+export function omittedSharingEnforced(
+  className: string, body: string, lookup: (name: string) => string | undefined, versionOf: (name: string) => number | undefined,
+): boolean {
+  let name = className;
+  let current: string | undefined = body;
+  const seen = new Set<string>();
+  for (;;) {
+    // A parent whose body is unreadable may declare without sharing, which the child would inherit.
+    if (current === undefined) return false;
+    // A class that declares a keyword decides the sharing itself, whatever its version.
+    const keyword = sharingKeyword(name, current);
+    if (keyword !== 'none' && keyword !== null) return keyword !== 'without';
+    if ((versionOf(name) ?? 0) < OMITTED_SHARING_ENFORCED_FROM) return false;
+    const parent = parentClass(name, current);
+    if (!parent || seen.has(parent.toLowerCase())) return true;
+    seen.add(parent.toLowerCase());
+    name = parent;
+    current = lookup(parent);
+  }
+}
+
+/** Each org-local Apex class's API version, keyed by lower-cased name; empty when it cannot be read. */
+export async function apexApiVersions(ctx: AuditContext): Promise<Map<string, number>> {
+  try {
+    const rows = await ctx.soql.queryAll<{ Name: string; ApiVersion: number }>(
+      'SELECT Name, ApiVersion FROM ApexClass WHERE NamespacePrefix = null',
+    );
+    return new Map((rows ?? []).filter((r) => r?.Name).map((r) => [r.Name.toLowerCase(), Number(r.ApiVersion)]));
+  } catch {
+    return new Map();
+  }
+}
+
+// Ways into a class other than an Aura/LWC call: REST, SOAP, Visualforce remoting, flow actions
+// (@InvocableMethod, @InvocableVariable), and Visualforce controllers, which use ApexPages, return a
+// PageReference, or expose properties (`{ get; set; }`, `get { ... }`) that a page reads. A
+// controller with none of these cannot be told apart from Aura-only code, so the list errs wide.
+const NON_AURA_ENTRY =
+  /@RemoteAction\b|@RestResource\b|@Http(?:Get|Post|Put|Patch|Delete)\b|\bwebservice\b|@Invocable(?:Method|Variable)\b|\bApexPages\s*\.|\bPageReference\b|\bget\s*[;{]/i;
+
+/**
+ * Whether a keyword-less class can be entered only through @AuraEnabled methods. Since the "Use with
+ * sharing for @AuraEnabled Apex Controllers with Implicit Sharing" update (enforced from Winter '21),
+ * an Aura or LWC call into a class with no keyword runs with sharing, so such a class does not run
+ * without sharing whatever its API version. A class that can also be entered another way can.
+ */
+export function enteredOnlyThroughAura(body: string): boolean {
+  const code = codeWithoutStrings(body);
+  return /@AuraEnabled\b/i.test(code) && !NON_AURA_ENTRY.test(code);
 }
 
 /** Whether the class's code (not its comments) uses SYSTEM_MODE anywhere. */

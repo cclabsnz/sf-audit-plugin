@@ -137,14 +137,16 @@ describe('RULE-069 externally callable Apex is CRITICAL only when it declares wi
     );
   const exposed = (r: { findings: Finding[] }) => r.findings.find((x) => x.id === 'portal-exposed-apex-without-sharing');
 
+  // An Aura/LWC call into a keyword-less class runs with sharing (RULE-008), so the class needs
+  // another way in to be exposed.
   it('no declaration only: HIGH', async () => {
-    const r = await run([{ name: 'A', body: 'public class A { @AuraEnabled public static void go() {} }' }]);
+    const r = await run([{ name: 'A', body: 'public class A { @RemoteAction public static void go() {} }' }]);
     expect(exposed(r)?.riskLevel).toBe('HIGH');
   });
 
   it('any explicit without sharing: CRITICAL', async () => {
     const r = await run([
-      { name: 'A', body: 'public class A { @AuraEnabled public static void go() {} }' },
+      { name: 'A', body: 'public class A { @RemoteAction public static void go() {} }' },
       { name: 'B', body: 'public without sharing class B { @AuraEnabled public static void go() {} }' },
     ]);
     expect(exposed(r)?.riskLevel).toBe('CRITICAL');
@@ -180,11 +182,11 @@ describe('RULE-071 / RULE-072 attack chains need a connected path (INT-012, MN-0
 
   it('RULE-071: a confirmed guest exposure opens it, and the surfaces join as steps', async () => {
     const chains = (await engine()).correlate(
-      ['guest-object-exposure-public-owd', 'guest-user-baseline', 'classic-sites-active'].map((id) => f('HIGH', id)),
+      ['guest-object-exposure-guest-owned', 'guest-user-baseline', 'classic-sites-active'].map((id) => f('HIGH', id)),
     );
     const chain = chains.find((c) => c.id === 'unauth-bulk-exfil');
     expect(chain?.steps.map((s) => s.findingId)).toEqual(
-      expect.arrayContaining(['guest-object-exposure-public-owd', 'guest-user-baseline', 'classic-sites-active']),
+      expect.arrayContaining(['guest-object-exposure-guest-owned', 'guest-user-baseline', 'classic-sites-active']),
     );
   });
 
@@ -337,11 +339,13 @@ describe('RULE-079 the HTML dashboard counts the findings the grade counts (MN-0
     expect(kpi('HIGH')).toBe('1');
   });
 
-  it('the donut total is the open-finding total', () => {
-    expect(html).toMatch(/>2<\/text>\s*<text[^>]*>open findings</);
+  it('the headline total is the open-finding total', () => {
+    expect(html).toMatch(/<b class="open-n">2<\/b> open findings/);
   });
 
-  it('the grade reason sits below the gauge, not beside it', () => {
-    expect(html).toMatch(/\.dash-score-panel \{ flex-direction: column;/);
+  it('the grade reason sits with the score, inside the grade block', () => {
+    const block = html.slice(html.indexOf('class="verdict-grade"'), html.indexOf('class="verdict-sev"'));
+    expect(block).toContain('class="score-num"');
+    expect(block).toContain('class="grade-reason"');
   });
 });

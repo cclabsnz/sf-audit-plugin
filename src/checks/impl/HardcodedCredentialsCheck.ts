@@ -9,7 +9,9 @@ const HIGH_RISK_PATTERNS = [
   /Basic\s+[A-Za-z0-9+/]{20,}=*/gi,               // Basic auth (min length)
   /Authorization['":\s]+['"](Bearer|Basic)/gi,     // Auth header construction
   // Credential variable assignments with a string literal RHS (single or double quoted)
-  /(?:password|passwd|secret|apiKey|api_key|clientSecret|client_secret|accessToken|access_token|authToken|auth_token)\s*[=+]\s*['"][^'"]{8,}['"]/gi,
+  // The literal must end the expression, so "'client_secret=' + EncodingUtil.urlEncode(cfg.Secret__c, 'UTF-8')"
+  // (a value read at run time) does not match.
+  /(?:password|passwd|secret|apiKey|api_key|clientSecret|client_secret|accessToken|access_token|authToken|auth_token)\s*[=+]\s*['"][^'"]{8,}['"]\s*[;,)]/gi,
 ];
 
 const ENDPOINT_PATTERN = /\.setEndpoint\s*\(\s*'(https?:\/\/[^']+)'/gi;

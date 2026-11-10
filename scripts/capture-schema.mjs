@@ -39,6 +39,9 @@ const OBJECTS = [
   'Profile', 'Name', 'ApexClassMember', 'Report', 'Dashboard', 'Bot', 'BotVersion', 'PermissionSetTabSetting',
 ];
 
+// Picklists left without values in the snapshot (see describe below).
+const GEO_LOCALE = /(?:CountryCode|StateCode)$|SidKey$|LanguageLocaleKey$|CurrencyIsoCode$|EncodingKey$/;
+
 const [alias, out] = process.argv.slice(2);
 if (!alias || !out) {
   console.error('usage: capture-schema.mjs <org-alias> <out.json>');
@@ -55,6 +58,14 @@ async function describe(path) {
     for (const f of d.fields ?? []) {
       if (f.name.includes('__')) continue;
       fields[f.name] = { filterable: Boolean(f.filterable), aggregatable: Boolean(f.aggregatable), type: f.type };
+      // Picklist values let the schema guard flag a filter on a value the platform never writes
+      // (RowCause = 'SharingRule' matched nothing, silently, and hid every sharing rule).
+      // Values naming a custom or namespaced component (anything with "__") are org-specific, like
+      // custom fields, and are dropped; the guard does not judge a literal containing "__".
+      const values = (f.picklistValues ?? []).map((p) => p.value).filter((v) => typeof v === 'string' && !v.includes('__'));
+      // Geography, locale, time zone, currency and encoding lists are thousands of values that no
+      // check filters on; every other picklist is kept whole, however long.
+      if (f.type === 'picklist' && values.length > 0 && !GEO_LOCALE.test(f.name)) fields[f.name].values = values.sort();
       // A lookup is queried through its relationship name (Assignee.Username); record where it points.
       const to = (f.referenceTo ?? []).filter((t) => !t.includes("__"));
       if (f.relationshipName && to.length) fields[f.name].relationship = { name: f.relationshipName, to };

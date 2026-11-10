@@ -12,7 +12,7 @@ export class CorsAllowlistCheck implements SecurityCheck {
   readonly name = 'CORS Allowlist';
   readonly category = 'External Connectivity';
   readonly description =
-    'Detects wildcard or overly broad CORS allowlist origins that let malicious sites make authenticated browser requests';
+    'Detects wildcard or overly broad CORS allowlist origins, which widen the set of websites whose scripts can use the org\'s APIs from a user\'s browser';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
@@ -43,7 +43,7 @@ export class CorsAllowlistCheck implements SecurityCheck {
         riskLevel: 'LOW',
         passed: true,
         title: 'No CORS allowlist entries configured',
-        detail: 'No cross-origin allowlist entries exist, so browser-based cross-origin token theft via CORS is not a concern.',
+        detail: 'No CORS allowlist entries exist, so scripts on other websites cannot use the org\'s REST-family APIs, Apex REST or Lightning Out from a user\'s browser. This setting does not affect server-to-server API access.',
         remediation: 'If CORS entries are added later, allow only exact, fully-qualified HTTPS origins.',
       });
       return { findings };
@@ -64,7 +64,10 @@ export class CorsAllowlistCheck implements SecurityCheck {
         riskLevel: 'HIGH',
         title: `${wildcard.length} CORS allowlist entry(ies) use a full wildcard origin`,
         detail:
-          'A wildcard CORS origin lets ANY website make authenticated cross-origin requests to your org from a logged-in user\'s browser and read the responses, enabling session-scoped data and token theft.',
+          'A full wildcard origin lets scripts on any website use the org\'s REST APIs, Apex REST and Lightning Out from a user\'s browser and read the responses. ' +
+          'These calls only work if the page supplies a session ID or OAuth access token; the allowlist entry does not provide one. ' +
+          'The exception is a Lightning Out app shared with guest users, which any website can then run with guest access. ' +
+          'Whatever the page does runs with the permissions of that token or session: it can read and change what that user can, within the token\'s scopes.',
         remediation: 'Replace wildcard origins with exact, fully-qualified HTTPS origins for each trusted application.',
         affectedItems: wildcard.map((r) => ({ label: r.UrlPattern, url: setupUrl, note: 'Full wildcard: remove immediately' })),
       });
@@ -77,7 +80,9 @@ export class CorsAllowlistCheck implements SecurityCheck {
         riskLevel: 'MEDIUM',
         title: `${broad.length} CORS allowlist entry(ies) use a broad subdomain wildcard`,
         detail:
-          'Subdomain-wildcard CORS origins trust every current and future subdomain, widening the set of sites that can make authenticated cross-origin requests. A single compromised or attacker-controlled subdomain can steal session-scoped data.',
+          'A subdomain wildcard trusts every current and future subdomain of that domain. If any one of them is taken over or runs injected script, ' +
+          'that script can use any Salesforce token or session available to it in the user\'s browser to read and change what that user can access. ' +
+          'The entry itself exposes no stored credential.',
         remediation: 'Pin CORS origins to the exact subdomains that need access rather than a wildcard.',
         affectedItems: broad.map((r) => ({ label: r.UrlPattern, url: setupUrl, note: 'Broad wildcard: narrow to exact origins' })),
       });

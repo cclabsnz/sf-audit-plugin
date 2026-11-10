@@ -2,6 +2,7 @@
 import { rmSync, renameSync, statfsSync } from 'node:fs';
 import { join } from 'node:path';
 import { secureFs, type RestClient, type SoqlClient } from '@cclabsnz/sf-core';
+import { apiErrorText } from '../../lib/apiErrorText.js';
 import { degrades } from './orgErrors.js';
 import { filterLogFile, MissingColumnsError } from '../csv.js';
 import { logPath } from '../bundleIo.js';
@@ -91,7 +92,7 @@ export async function streamGuestLogs(
         renameSync(part, join(bundleDir, rel));
         settled = { type, day, status: 'collected', ...r, file: rel };
       } catch (e) {
-        if ((e as { code?: string })?.code === 'ENOSPC' || /HTTP 401/.test(String(e))) {
+        if ((e as { code?: string })?.code === 'ENOSPC' || /HTTP 401/.test(apiErrorText(e))) {
           rmSync(part, { force: true });
           rmSync(raw, { force: true });
           rmSync(tmp, { recursive: true, force: true });
@@ -100,7 +101,7 @@ export async function streamGuestLogs(
         warn(`Could not collect ${type} for ${day}: ${e instanceof MissingColumnsError ? e.message : String(e)}`);
         settled = e instanceof MissingColumnsError
           ? blank(type, day, 'failed', e.message)
-          : blank(type, day, /INSUFFICIENT_ACCESS|HTTP 403/i.test(String(e)) ? 'no-permission' : 'failed', String(e));
+          : blank(type, day, /INSUFFICIENT_ACCESS|HTTP 403/i.test(apiErrorText(e)) ? 'no-permission' : 'failed', apiErrorText(e));
         rmSync(part, { force: true });
       } finally {
         rmSync(raw, { force: true });

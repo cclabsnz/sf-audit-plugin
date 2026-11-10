@@ -3,7 +3,7 @@ import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 import { fieldsOf } from '../support/schema.js';
 
-/** Tooling ReleaseUpdate. Status 'Invocable' = available but not enabled, 'Revoked' = enabled then reverted (both pending); 'Invoked'/'Revocable' = enabled. */
+/** Tooling ReleaseUpdate. Status 'Invocable' = available but not enabled (pending); 'Invoked'/'Revocable' = enabled. There is no 'Revoked' status. */
 interface ReleaseUpdateRecord {
   Id: string;
   Title: string | null;
@@ -38,7 +38,7 @@ export class ReleaseUpdatesCheck implements SecurityCheck {
       // object, absent from current releases. Use whichever this org serves.
       if (await fieldsOf(ctx, 'ReleaseUpdate', 'tooling')) {
         const rows = await ctx.tooling.query<ReleaseUpdateRecord>(
-          "SELECT Id, DeveloperName, Title, Description, DueDate, Status FROM ReleaseUpdate WHERE Status IN ('Invocable', 'Revoked')"
+          "SELECT Id, DeveloperName, Title, Description, DueDate, Status FROM ReleaseUpdate WHERE Status = 'Invocable'"
         );
         pendingUpdates = rows.map((r) => ({
           Id: r.Id,

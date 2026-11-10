@@ -160,7 +160,11 @@ export class SarifRenderer implements AuditRenderer {
 
       const acc = this.ruleFor(rules, ruleId, f);
       acc.worst = acc.worst ? maxRisk(acc.worst, f.riskLevel) : f.riskLevel;
-      for (const tag of f.complianceTags ?? []) {
+      const threatTags = [
+        ...(f.threats?.stride ?? []).map((c) => `stride:${c}`),
+        ...(f.threats?.linddun ?? []).map((c) => `linddun:${c}`),
+      ];
+      for (const tag of [...(f.complianceTags ?? []), ...threatTags]) {
         if (!acc.rule.properties.tags.includes(tag)) acc.rule.properties.tags.push(tag);
       }
 
@@ -286,11 +290,19 @@ export class SarifRenderer implements AuditRenderer {
       rules.set(ruleId, acc);
     }
     acc.worst = acc.worst ? maxRisk(acc.worst, chain.severity) : chain.severity;
+    for (const id of chain.steps.flatMap((s) => s.techniques ?? [])) {
+      const tag = `attack:${id}`;
+      if (!acc.rule.properties.tags.includes(tag)) acc.rule.properties.tags.push(tag);
+    }
 
     const stepLocation = (step: AttackChain['steps'][number], idx: number) => ({
       message: { text: `Step ${idx + 1}: ${step.title ?? step.findingId} (${step.findingId})` },
       logicalLocations: logicalLocations([step.findingId]),
-      properties: { capability: step.capability },
+      properties: {
+        ...(step.capabilityInferred ? {} : { capability: step.capability }),
+        ...(step.breaksChain ? { breaksChain: true } : {}),
+        ...(step.techniques?.length ? { attackTechniques: step.techniques } : {}),
+      },
     });
 
     return {
@@ -310,6 +322,7 @@ export class SarifRenderer implements AuditRenderer {
         confidence: chain.confidence,
         attackChainId: chain.id,
         remediation: chain.remediation,
+        ...(chain.abuseCase ? { abuseCase: chain.abuseCase } : {}),
       },
     };
   }

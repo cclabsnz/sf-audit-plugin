@@ -174,7 +174,7 @@ export const CHECKS: SecurityCheck[] = [
   new CustomLabelsCredentialCheck(),      // credentials stored in globally-readable labels
   new ReportFolderAccessCheck(),          // public report folders — mass data exfiltration risk
   new EscalationPermsCheck(),             // priv-esc permission cluster (chain ingredient)
-  new CorsAllowlistCheck(),               // wildcard/broad CORS origins (chain ingredient)
+  new CorsAllowlistCheck(),               // wildcard/broad CORS origins
   new EmailSecurityCheck(),               // inbound email services + send-as spoofing
   new OutboundMessagesCheck(),            // outbound message session-id leak + cleartext endpoints
   new PublicContentExposureCheck(),       // externally available Documents + public static resources

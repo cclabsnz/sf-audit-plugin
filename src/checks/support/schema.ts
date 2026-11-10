@@ -14,7 +14,7 @@ export type Api = 'soql' | 'tooling';
 const cache = new WeakMap<AuditContext, Map<string, Promise<ReadonlySet<string> | null>>>();
 
 function isNotFound(err: unknown): boolean {
-  if (isApiError(err) && (err.statusCode === 404 || /NOT_FOUND|INVALID_TYPE/i.test(err.errorCode))) return true;
+  if (isApiError(err) && (err.statusCode === 404 || /NOT_FOUND|INVALID_TYPE|^ERROR_HTTP_404$/i.test(err.errorCode))) return true;
   const msg = err instanceof Error ? err.message : String(err);
   return /NOT_FOUND|requested resource does not exist|is not supported/i.test(msg);
 }

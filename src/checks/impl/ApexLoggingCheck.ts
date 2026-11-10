@@ -117,6 +117,8 @@ export class ApexLoggingCheck implements SecurityCheck {
       findings.push({
         id: 'apex-logging-sensitive-data',
         category: this.category,
+        // A disclosure, not a repudiation gap: its fix removes logging (RULE-103).
+        threats: { stride: ['I'] },
         riskLevel: 'HIGH',
         title: `${sensitiveLogClasses.length} Apex class(es) may log sensitive data: SBS-CODE-004`,
         detail:

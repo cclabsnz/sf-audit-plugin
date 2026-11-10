@@ -71,6 +71,19 @@ describe('HardcodedCredentialsCheck', () => {
     expect(r.findings[0].id).toBe('no-hardcoded-credentials');
   });
 
+  // A value read at run time and URL-encoded into a query string is not a hardcoded secret.
+  it('does not flag a credential parameter built from a stored value', async () => {
+    const ctx = makeCtx([apexClass('Ok', `String body = 'client_secret=' + EncodingUtil.urlEncode(cfg.Secret__c, 'UTF-8');`)]);
+    const r = await check.run(ctx);
+    expect(r.findings[0].id).toBe('no-hardcoded-credentials');
+  });
+
+  it('still flags a credential assigned a string literal', async () => {
+    const ctx = makeCtx([apexClass('Bad', `String password = 'hunter2hunter2';`)]);
+    const r = await check.run(ctx);
+    expect(r.findings.some((x) => x.id === 'hardcoded-credentials-found')).toBe(true);
+  });
+
   it('flags the same idiom when the token is inlined', async () => {
     const ctx = makeCtx([apexClass('Bad', `req.setHeader('Authorization', '${'Bearer abcdefghijklmnopqrstuvwxyz0123456789'}');`)]);
     const r = await check.run(ctx);

@@ -1,0 +1,353 @@
+{
+  "source": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/v20.0/enterprise-attack/enterprise-attack-20.0.json",
+  "release": "20.0",
+  "sha256": "81113ba98afa2928f3dcff62022539f7ce30c315c32e14422f11ff95ce534352",
+  "extracted": "2026-10-28",
+  "tacticOrder": [
+    "reconnaissance",
+    "resource-development",
+    "initial-access",
+    "execution",
+    "persistence",
+    "privilege-escalation",
+    "stealth",
+    "defense-impairment",
+    "credential-access",
+    "discovery",
+    "lateral-movement",
+    "collection",
+    "command-and-control",
+    "exfiltration",
+    "impact"
+  ],
+  "techniques": {
+    "T1059.009": {
+      "name": "Cloud API",
+      "tactics": [
+        "execution"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1059/009",
+      "platforms": [
+        "IaaS",
+        "Identity Provider",
+        "Office Suite",
+        "SaaS"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1078.004": {
+      "name": "Cloud Accounts",
+      "tactics": [
+        "stealth",
+        "persistence",
+        "privilege-escalation",
+        "initial-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1078/004",
+      "platforms": [
+        "IaaS",
+        "Identity Provider",
+        "Office Suite",
+        "SaaS"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1087.004": {
+      "name": "Cloud Account",
+      "tactics": [
+        "discovery"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1087/004",
+      "platforms": [
+        "IaaS",
+        "Identity Provider",
+        "Office Suite",
+        "SaaS"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1098": {
+      "name": "Account Manipulation",
+      "tactics": [
+        "persistence",
+        "privilege-escalation"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1098",
+      "platforms": [
+        "Containers",
+        "ESXi",
+        "IaaS",
+        "Identity Provider",
+        "Linux",
+        "macOS",
+        "Network Devices",
+        "Office Suite",
+        "SaaS",
+        "Windows"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1098.003": {
+      "name": "Additional Cloud Roles",
+      "tactics": [
+        "persistence",
+        "privilege-escalation"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1098/003",
+      "platforms": [
+        "IaaS",
+        "Identity Provider",
+        "Office Suite",
+        "SaaS"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1110": {
+      "name": "Brute Force",
+      "tactics": [
+        "credential-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1110",
+      "platforms": [
+        "Containers",
+        "ESXi",
+        "IaaS",
+        "Identity Provider",
+        "Linux",
+        "macOS",
+        "Network Devices",
+        "Office Suite",
+        "SaaS",
+        "Windows"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1110.003": {
+      "name": "Password Spraying",
+      "tactics": [
+        "credential-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1110/003",
+      "platforms": [
+        "Containers",
+        "ESXi",
+        "IaaS",
+        "Identity Provider",
+        "Linux",
+        "Network Devices",
+        "Office Suite",
+        "SaaS",
+        "Windows",
+        "macOS"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1136.003": {
+      "name": "Cloud Account",
+      "tactics": [
+        "persistence"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1136/003",
+      "platforms": [
+        "IaaS",
+        "SaaS",
+        "Office Suite",
+        "Identity Provider"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1190": {
+      "name": "Exploit Public-Facing Application",
+      "tactics": [
+        "initial-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1190",
+      "platforms": [
+        "Containers",
+        "ESXi",
+        "IaaS",
+        "Linux",
+        "macOS",
+        "Network Devices",
+        "Windows"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1213.004": {
+      "name": "Customer Relationship Management Software",
+      "tactics": [
+        "collection"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1213/004",
+      "platforms": [
+        "SaaS"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1485": {
+      "name": "Data Destruction",
+      "tactics": [
+        "impact"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1485",
+      "platforms": [
+        "Containers",
+        "ESXi",
+        "IaaS",
+        "Linux",
+        "macOS",
+        "Windows"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1528": {
+      "name": "Steal Application Access Token",
+      "tactics": [
+        "credential-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1528",
+      "platforms": [
+        "Containers",
+        "IaaS",
+        "Identity Provider",
+        "Office Suite",
+        "SaaS"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1546": {
+      "name": "Event Triggered Execution",
+      "tactics": [
+        "privilege-escalation",
+        "persistence"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1546",
+      "platforms": [
+        "Linux",
+        "macOS",
+        "Windows",
+        "SaaS",
+        "IaaS",
+        "Office Suite"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1552": {
+      "name": "Unsecured Credentials",
+      "tactics": [
+        "credential-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1552",
+      "platforms": [
+        "Windows",
+        "SaaS",
+        "IaaS",
+        "Linux",
+        "macOS",
+        "Containers",
+        "Network Devices",
+        "Office Suite",
+        "Identity Provider"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1556": {
+      "name": "Modify Authentication Process",
+      "tactics": [
+        "defense-impairment",
+        "persistence",
+        "credential-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1556",
+      "platforms": [
+        "IaaS",
+        "Identity Provider",
+        "Linux",
+        "macOS",
+        "Network Devices",
+        "Office Suite",
+        "SaaS",
+        "Windows"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1556.007": {
+      "name": "Hybrid Identity",
+      "tactics": [
+        "defense-impairment",
+        "persistence",
+        "credential-access"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1556/007",
+      "platforms": [
+        "IaaS",
+        "Identity Provider",
+        "Office Suite",
+        "SaaS",
+        "Windows"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1565.001": {
+      "name": "Stored Data Manipulation",
+      "tactics": [
+        "impact"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1565/001",
+      "platforms": [
+        "Linux",
+        "macOS",
+        "Windows"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1567": {
+      "name": "Exfiltration Over Web Service",
+      "tactics": [
+        "exfiltration"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1567",
+      "platforms": [
+        "ESXi",
+        "Linux",
+        "macOS",
+        "Office Suite",
+        "SaaS",
+        "Windows"
+      ],
+      "revoked": false,
+      "deprecated": false
+    },
+    "T1648": {
+      "name": "Serverless Execution",
+      "tactics": [
+        "execution"
+      ],
+      "url": "https://attack.mitre.org/techniques/T1648",
+      "platforms": [
+        "SaaS",
+        "IaaS",
+        "Office Suite"
+      ],
+      "revoked": false,
+      "deprecated": false
+    }
+  }
+}
