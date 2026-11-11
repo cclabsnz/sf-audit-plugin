@@ -22,6 +22,12 @@ on:
 permissions:
   contents: read
 
+# An explicit `bash` adds -o pipefail; the implicit default does not, and `node … | tee` would
+# then always pass.
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: live-org
   cancel-in-progress: false
@@ -35,7 +41,8 @@ jobs:
       contents: read
     timeout-minutes: 30
     steps:
-      # Until the secret and a baseline exist, say so and stop, rather than fail every week.
+      # Until the secret exists, say so and stop, rather than fail every week. With the secret but
+      # no baseline, the compare step fails and says how to record one.
       - name: Check it is set up
         id: setup
         env:
@@ -72,7 +79,7 @@ jobs:
         if: steps.setup.outputs.ready == 'true'
         run: |
           npm install --global @salesforce/cli@2.154.4
-          sf plugins link .
+          sf plugins link . --no-install
 
       - name: Log in to the live org
         if: steps.setup.outputs.ready == 'true'
@@ -80,9 +87,9 @@ jobs:
           SF_LIVE_ORG_AUTH_URL: ${{ secrets.SF_LIVE_ORG_AUTH_URL }}
         run: |
           umask 077
+          trap 'rm -f "$RUNNER_TEMP/auth-url.txt"' EXIT
           printf '%s' "$SF_LIVE_ORG_AUTH_URL" > "$RUNNER_TEMP/auth-url.txt"
           sf org login sfdx-url --sfdx-url-file "$RUNNER_TEMP/auth-url.txt" --alias live > /dev/null
-          rm -f "$RUNNER_TEMP/auth-url.txt"
 
       - name: Run the audit
         if: steps.setup.outputs.ready == 'true'

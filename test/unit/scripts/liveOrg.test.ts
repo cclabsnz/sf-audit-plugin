@@ -63,6 +63,37 @@ describe('scripts/live-org-check.mjs', () => {
     expect(r.out).toContain('not assessed: mfa-registration');
   });
 
+  // Some finding ids embed org values; the baseline and the log must not carry them.
+  it('hashes a finding id that embeds an org value, keeps plain ids readable, and compares chains', () => {
+    const b = join(dir, 'b-hash.json');
+    const r = report([
+      f('agent-user-privilege', 'agent-user-privilege-005xx0000000001AAA'),
+      f('trusted-url-hygiene', 'trusted-url-hygiene-unresolvable-cdn.acme.example'),
+      f('apex-sharing', 'apex-no-sharing-declaration'),
+      f('apex-sharing', 'apex-no-sharing-declaration', { riskLevel: 'LOW' }),
+    ]);
+    (r as Record<string, unknown>).attackChains = [{ id: 'unauth-bulk-exfil', confidence: 'named', severity: 'CRITICAL' }];
+    run('live-org-check.mjs', [file('r-hash.json', r), b, '--write-baseline']);
+    const text = readFileSync(b, 'utf8');
+    expect(text).not.toMatch(/005xx|acme\.example/);
+    const keys = Object.keys(JSON.parse(text).findings);
+    expect(keys).toEqual(expect.arrayContaining([
+      'apex-sharing/apex-no-sharing-declaration', 'apex-sharing/apex-no-sharing-declaration~2', 'chain/unauth-bulk-exfil',
+    ]));
+    expect(keys.filter((k) => /\/#[0-9a-f]{12}$/.test(k))).toHaveLength(2);
+    // A chain that disappears is drift.
+    delete (r as Record<string, unknown>).attackChains;
+    const out = run('live-org-check.mjs', [file('r-hash2.json', r), b]);
+    expect(out.code).toBe(1);
+    expect(out.out).toContain('gone       chain/unauth-bulk-exfil');
+  });
+
+  it('resets the coverage floor when the baseline is re-recorded', () => {
+    const b = file('b-floor.json', { minCoverage: 99, allowUnassessed: [], findings: {} });
+    run('live-org-check.mjs', [file('r-floor.json', base), b, '--write-baseline']);
+    expect(JSON.parse(readFileSync(b, 'utf8')).minCoverage).toBe(95);
+  });
+
   it('refuses a digest or summary, and a missing baseline', () => {
     expect(run('live-org-check.mjs', [file('d.json', { result: { grade: 'B', actions: [] } }), join(dir, 'none.json')]).code).toBe(2);
     expect(run('live-org-check.mjs', [file('r5.json', base), join(dir, 'missing.json')]).code).toBe(2);

@@ -138,9 +138,12 @@ and diffs the schema against the committed snapshot. It skips with a note until 
    sf audit security --target-org devedition --format json --output /tmp/live --no-history
    node scripts/live-org-check.mjs /tmp/live/sf-audit-*.json test/fixtures/live-org/baseline.json --write-baseline
    ```
-   Commit the baseline. It holds check and finding ids and statuses only.
-2. Create a `live-org` environment (Settings → Environments) and add the org's SFDX auth URL as its
-   `SF_LIVE_ORG_AUTH_URL` secret, without printing it:
+   Commit the baseline. It holds check ids, statuses and finding ids; an id that embeds an org value
+   (a record id, a domain, a developer name) is stored as a short hash. Re-recording also resets the
+   coverage floor to two points below that run.
+2. Create a `live-org` environment (Settings → Environments), set its **deployment branches to
+   `main` only** so a pushed branch with an edited workflow cannot read the secret, and add the
+   org's SFDX auth URL as its `SF_LIVE_ORG_AUTH_URL` secret, without printing it:
    ```bash
    sf org display --target-org devedition --verbose --json | jq -r .result.sfdxAuthUrl \
      | gh secret set SF_LIVE_ORG_AUTH_URL --env live-org --repo cclabsnz/sf-audit-plugin

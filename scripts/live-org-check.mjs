@@ -11,8 +11,11 @@
 //   - a check goes unassessed that the baseline does not allow;
 //   - any finding's status differs from the baseline (new, gone, or changed).
 // Output is check and finding ids, statuses and counts only: never titles, detail or affected
-// items, because CI logs on a public repository are public.
+// items, because CI logs on a public repository are public. Some finding ids embed org values
+// (a user record id, a trusted-site domain, an agent's developer name), so an id that is not plain
+// lowercase words is recorded as a short hash: stable across runs, but it names nothing.
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 
 const [reportPath, baselinePath, ...rest] = process.argv.slice(2);
 if (!reportPath || !baselinePath) {
@@ -30,16 +33,25 @@ if (!Array.isArray(result.findings) || !result.coverage) {
 
 const status = (f) =>
   f.passed ? 'passed' : f.inconclusive || f.notAssessed ? 'inconclusive' : f.waived ? 'waived' : f.riskLevel === 'INFO' ? 'info' : `open:${f.riskLevel}`;
-const key = (f) => `${f.checkId}/${f.id}`;
+const safe = (id) => (/^[a-z0-9-]+$/.test(id) ? id : `#${createHash('sha256').update(String(id)).digest('hex').slice(0, 12)}`);
 const observed = {};
-for (const f of result.findings) observed[key(f)] = status(f);
+const record = (k, s) => {
+  // Two results with the same key are both kept: the second as k~2, and so on.
+  let key = k, n = 1;
+  while (key in observed) key = `${k}~${++n}`;
+  observed[key] = s;
+};
+for (const f of result.findings) record(`${f.checkId}/${safe(f.id)}`, status(f));
+// Attack chains too: a chain rule change shows up as a chain appearing, going or changing severity.
+for (const c of result.attackChains ?? []) record(`chain/${safe(c.id)}`, `${c.confidence ?? 'named'}:${c.severity}`);
 const notAssessed = [...(result.coverage.notAssessed ?? [])].sort();
 
 const previous = existsSync(baselinePath) ? JSON.parse(readFileSync(baselinePath, 'utf8')) : undefined;
 
 if (write) {
   const baseline = {
-    minCoverage: previous?.minCoverage ?? Math.max(0, result.coverage.percent - 2),
+    // Two points below this run's coverage: a reviewed re-record moves the floor with the org.
+    minCoverage: Math.max(0, result.coverage.percent - 2),
     allowUnassessed: notAssessed,
     findings: Object.fromEntries(Object.entries(observed).sort(([a], [b]) => a.localeCompare(b))),
   };
