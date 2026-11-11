@@ -9,6 +9,19 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Fixed
+
+- **Secure guest user record access is reported as the platform guarantee it is.** Salesforce has
+  enforced it in every org since Winter '21: from API 50.0 `SharingSettings.enableSecureGuestAccess`
+  is always true, and the Release Update that carried it is gone. The check looked for a Release
+  Update whose title or description mentioned "guest" and "record access", which could only find a
+  different guest update. Depending on that update's status it reported a false pass, a false HIGH
+  `guest-record-access-policy-not-enforced` (which also fed the unauthenticated chains), or a LOW
+  "verify manually". It now passes for orgs with guest users and points to
+  `guest-object-exposure` and `guest-user-access`, which read guest-owned and guest-shared records
+  directly. `guest-record-access-policy-not-enforced`, `-verify-manually` and
+  `-tooling-inaccessible` are removed; waivers on them match nothing and can be deleted.
+
 ## [v1.25.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.25.1) — 2026-11-11
 
 Documentation only. No change to checks, scores or reports.

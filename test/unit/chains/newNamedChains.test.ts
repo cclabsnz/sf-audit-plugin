@@ -137,10 +137,6 @@ describe('named chain wording and step roles', () => {
     expect(chains.filter((c) => c.steps.some((s) => ids.includes(s.findingId)))).toEqual([]);
   });
 
-  it('counts an unenforced secure guest record access setting as record reach', () => {
-    expect(match('unauth-bulk-exfil', [f('guest-record-access-policy-not-enforced'), f('guest-api-access-enabled')])).not.toBeNull();
-  });
-
   // Nor may the potential-chain pass pair the guest foothold with those internal grants instead.
   it.each([
     [['users-modify-all-data', 'users-author-apex']],
@@ -187,7 +183,6 @@ describe('newly modelled capabilities', () => {
     ['flows-screen-without-sharing', 'code-exec'],
     ['public-group-sharing-exposure', 'data-read-bulk'],
     ['report-folder-access-public', 'data-read'],
-    ['guest-record-access-policy-not-enforced', 'unauth-foothold'],
     ['encryption-coverage-unencrypted-sensitive', 'data-read'],
     ['sandbox-data-masking-pii-present', 'data-read'],
   ])('%s grants %s', (id, cap) => {
