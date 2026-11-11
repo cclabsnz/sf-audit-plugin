@@ -19,6 +19,7 @@ import { HistoryStore } from '../../history/HistoryStore.js';
 import { isCiEnvironment, shouldArchiveHistory } from '../../history/archivePolicy.js';
 import { EXIT_FINDINGS, EXIT_INCONCLUSIVE, resolveExitCode, violationsFor } from '../../findings/exitCode.js';
 import { buildDigest, type AuditDigest } from '../../findings/digest.js';
+import { buildSummary, type AuditSummary } from '../../findings/summary.js';
 
 import { WaiverLoader, DEFAULT_WAIVER_FILE } from '../../waivers/WaiverLoader.js';
 import { coverageSummary, coverageAdvice } from '../../findings/coverage.js';
@@ -30,7 +31,7 @@ const RENDERERS: Record<string, AuditRenderer> = {
   sarif: new SarifRenderer(),
 };
 
-export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditDigest> {
+export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditDigest | AuditSummary> {
   public static summary = 'Run a comprehensive security audit against a Salesforce org';
   public static description =
     'Runs all security checks against the target org and writes a report file.';
@@ -64,6 +65,13 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
     digest: Flags.boolean({
       summary: 'Return a compact, token-cheap result: no passing checks, no detail prose, capped affected lists.',
       default: false,
+      exclusive: ['summary'],
+    }),
+    summary: Flags.boolean({
+      summary: 'Return page one of the report: grade and reason, coverage, the fix-first plan and attack paths. Smaller than --digest.',
+      description: 'Each action lists the ids of the findings it closes; run sf audit explain <id> --file <report.json> for one of them.',
+      default: false,
+      exclusive: ['digest'],
     }),
     'fail-on-inconclusive': Flags.boolean({
       summary: 'Exit with code 3 if any check could not gather evidence. Off by default.',
@@ -110,7 +118,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
     }),
   };
 
-  public async run(): Promise<AuditResult | AuditDigest> {
+  public async run(): Promise<AuditResult | AuditDigest | AuditSummary> {
     const { flags } = await this.parse(SecurityAuditCommand);
 
     // Validate the selection and output formats up front, so a typo fails fast with
@@ -188,6 +196,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
     // which the threshold logic must still be able to see and discount.
     this.applyExitCode(result, flags['fail-on'] as RiskLevel | undefined, flags['fail-on-inconclusive']);
 
+    if (flags.summary) return buildSummary(result);
     return flags.digest ? buildDigest(result) : result;
   }
 

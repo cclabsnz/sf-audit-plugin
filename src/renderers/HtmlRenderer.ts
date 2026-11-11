@@ -8,8 +8,7 @@ import { coverageSummary, coverageAdvice } from '../findings/coverage.js';
 import { techniqueLabel } from '../threats/attack.js';
 import { unknownMetrics } from '../findings/unknownMetrics.js';
 import type { Finding } from '../findings/Finding.js';
-import type { AttackChain } from '../chains/AttackChain.js';
-import { buildActionPlan, planHeadline, EFFORT_LABEL, WAVE_LABEL, WAVE_WHY, type PlannedAction } from '../report/ActionPlan.js';
+import { buildActionPlan, planHeadline, chainLabels, EFFORT_LABEL, WAVE_LABEL, WAVE_WHY, type PlannedAction } from '../report/ActionPlan.js';
 import { DOMAINS, domainOf } from '../checks/domains.js';
 
 // The report is printed on white, in the executive report's palette. Every severity colour holds
@@ -208,12 +207,6 @@ function findingAnchors(findings: Finding[]): Map<Finding, string> {
     out.set(f, a);
   }
   return out;
-}
-
-/** Chain labels as the executive report prints them: C1… for named chains, P1… for potential ones. */
-function chainLabels(chains: AttackChain[]): string[] {
-  let c = 0, p = 0;
-  return chains.map((ch) => (ch.abuseCase ? `C${++c}` : `P${++p}`));
 }
 
 const slug = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

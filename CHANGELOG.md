@@ -9,6 +9,19 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Added
+
+- **`--summary`**, with `--json`: page one of the report as data. It gives the grade and its reason,
+  evidence coverage, counts, the fix-first plan and the attack paths, labelled C1 and P1 as in the
+  reports. Each action lists the ids of the findings it closes. It carries no detail prose or
+  affected lists, so it is a fraction of `--digest`'s size, and it is meant for an agent to triage
+  before reading further.
+- **`sf audit explain <id>`**. With a check id it gives what the check looks for, its domain,
+  typical effort, why it matters and its compliance mapping. With `--file` and a finding id from a
+  run it gives what the finding affects, the attack chains it is part of (and whether fixing it
+  breaks them) and the fix-first action that closes it. With `--file` and a check id it lists that
+  check's findings in the run. Works offline.
+
 ## [v1.26.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.26.0) — 2026-11-11
 
 Four checks read fields or values Salesforce does not have, or matched by wording, so they could
