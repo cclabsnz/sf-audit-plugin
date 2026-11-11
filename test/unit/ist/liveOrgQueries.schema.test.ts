@@ -56,6 +56,11 @@ describe('the schema validator itself', () => {
     expect(() => validate('soql', "SELECT Id FROM LoginHistory WHERE LoginSubType LIKE 'oauth%'")).not.toThrow();
     expect(() => validate('soql', "SELECT Id FROM LoginHistory WHERE LoginType LIKE 'Remote Access _.0'")).not.toThrow();
   });
+  it('treats an escaped % or _ in a LIKE pattern as a literal character', () => {
+    expect(() => validate('soql', "SELECT Id FROM LoginHistory WHERE LoginSubType LIKE 'OAuth Web%'")).not.toThrow();
+    rejects('soql', "SELECT Id FROM LoginHistory WHERE LoginSubType LIKE 'OAuth\\_Web%'", /matches no value/);
+    rejects('soql', "SELECT Id FROM LoginHistory WHERE LoginType LIKE 'Remote Access 2\\%'", /matches no value/);
+  });
   it('accepts picklist values in any case, and values seen live that describe omits, through a path', () => {
     expect(() => validate('soql', "SELECT Id FROM AccountShare WHERE RowCause = 'guestrule'")).not.toThrow();
     expect(() => validate('soql', "SELECT Id FROM GroupMember WHERE Group.Type = 'GuestUserGroup'")).not.toThrow();

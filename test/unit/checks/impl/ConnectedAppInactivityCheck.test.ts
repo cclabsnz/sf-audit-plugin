@@ -57,6 +57,7 @@ describe('ConnectedAppInactivityCheck', () => {
     const f = find(await check.run(makeCtx([], ['Beta'])), 'connected-app-inactive')!;
     expect(f.remediation).toMatch(/^Confirm with the app's owner/);
     expect(f.remediation).toContain('cannot be undone');
+    expect(f.remediation).toContain('Block the app');
     expect(f.affectedItems![0].note).not.toMatch(/delete if not/);
   });
 
@@ -92,9 +93,9 @@ describe('ConnectedAppInactivityCheck', () => {
   });
 
   /**
-   * The load-bearing limitation, pinned so it cannot be forgotten. A refresh token is
-   * exchanged for an access token without writing a LoginHistory row of LoginType 'OAuth%',
-   * so an app that still holds a working credential appears here as inactive and merely LOW.
+   * The load-bearing limitation, pinned so it cannot be forgotten. It is not established that a
+   * refresh token exchange writes a LoginHistory row, so an app that still holds a working
+   * credential can appear here as inactive and merely LOW.
    * That is the blind spot oauth-token-inventory exists to cover, and this test documents
    * that this check does not and cannot see it from LoginHistory alone.
    */
@@ -104,6 +105,6 @@ describe('ConnectedAppInactivityCheck', () => {
     expect(f!.riskLevel).toBe('LOW');
     expect(f!.affectedItems!.map((i) => i.label)).toEqual(['Breached Vendor App']);
     // The detail acknowledges the residual credential without measuring it.
-    expect(f!.detail).toContain('still hold valid OAuth credentials');
+    expect(f!.detail).toContain('may still hold valid OAuth credentials');
   });
 });

@@ -15,12 +15,15 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
   with `LoginType LIKE 'OAuth%'`, and no LoginType starts with "OAuth": an OAuth login is recorded
   as `Remote Access 2.0` or `Remote Access Client`, with the flow in `LoginSubType`. The filter
   matched nothing, so every connected app was reported as having no OAuth logins in 90 days. It
-  now reads either field, so apps in use, including those refreshing tokens, count as active.
-  Orgs will see far fewer `connected-app-inactive` items.
+  now reads either field, so apps that sign in count as active and orgs will see far fewer
+  `connected-app-inactive` items. An app that only exchanges refresh tokens may still read as
+  inactive: whether that writes a LoginHistory row is not established, and
+  `oauth-token-inventory` covers standing tokens.
 - **The inactive connected app remedy no longer leads with deleting the app.** It asks the owner
-  first, points to Connected Apps OAuth Usage, and restricts the app to pre-authorized users
-  before any delete. A delete cannot be undone: it destroys the consumer key and secret, and new
-  connected apps cannot be created from Spring '26.
+  first, then revokes tokens and blocks the app in Connected Apps OAuth Usage, which can be
+  reversed. A delete cannot be undone, loses the consumer key and secret, and connected app
+  creation is restricted from Spring '26. The finding now says inactive apps *may* still hold
+  credentials.
 - **The schema guard judges LIKE on picklists.** A LIKE pattern that fits no value of a picklist
   fails the guard, as an unknown `=` or `IN` value already did. The deep-path guard now drives the
   inactivity check to its LoginHistory read.
