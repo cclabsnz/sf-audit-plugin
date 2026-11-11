@@ -22,6 +22,16 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
   breaks them) and the fix-first action that closes it. With `--file` and a check id it lists that
   check's findings in the run. Works offline.
 
+### Fixed
+
+- **`--checks` runs any selection.** A check that reads data another check collects (Apex bodies,
+  connected app names, named credential endpoints and others) failed with "depends on cache key ...
+  but no preceding check declares it" unless that check was selected too, so `--checks apex-sharing`
+  and the documented example `--checks hardcoded-credentials,apex-sharing` both stopped before
+  running. The command now adds the checks that collect that data, runs them first, and names them
+  in a warning (shown with `--json` too); their findings count toward the grade and `--fail-on`.
+  A test runs every check alone. docs/COMMANDS.md no longer says there are 88 checks.
+
 ## [v1.26.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.26.0) — 2026-11-11
 
 Four checks read fields or values Salesforce does not have, or matched by wording, so they could

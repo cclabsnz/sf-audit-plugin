@@ -386,6 +386,7 @@ Findings and scoring, src/findings:
 - src/findings/summary.ts: `buildSummary` (`--summary` output: grade and reason, coverage, fix-first plan with finding ids, chains).
 - src/report/explain.ts: `explain`, `parseResult`, `checkForFindingId` (`audit explain`).
 - src/report/ActionPlan.ts also exports `chainLabels` (C1… named, P1… potential), shared by the HTML report and `--summary`.
+- src/checks/selection.ts: `withCacheProviders` (a `--checks` selection plus the checks that fill the cache it reads).
 - src/findings/exitCode.ts: `resolveExitCode`, `violationsFor`, `EXIT_OK`, `EXIT_FINDINGS`, `EXIT_INCONCLUSIVE`.
 - src/findings/unknownMetrics.ts: `unknownMetrics`.
 - src/findings/AuditResult.ts: `AuditResult`.
