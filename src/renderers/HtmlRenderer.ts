@@ -8,8 +8,8 @@ import { coverageSummary, coverageAdvice } from '../findings/coverage.js';
 import { techniqueLabel } from '../threats/attack.js';
 import { unknownMetrics } from '../findings/unknownMetrics.js';
 import type { Finding } from '../findings/Finding.js';
-import type { AttackChain } from '../chains/AttackChain.js';
-import { buildActionPlan, planHeadline, EFFORT_LABEL, WAVE_LABEL, WAVE_WHY, type PlannedAction } from '../report/ActionPlan.js';
+import { buildActionPlan, planHeadline, chainLabels, EFFORT_LABEL, WAVE_LABEL, WAVE_WHY, type PlannedAction } from '../report/ActionPlan.js';
+import { findingStatus, openCounts, type FindingStatus } from '../findings/status.js';
 import { DOMAINS, domainOf } from '../checks/domains.js';
 
 // The report is printed on white, in the executive report's palette. Every severity colour holds
@@ -61,13 +61,6 @@ function inventoryCard(title: string, rows: string[]): string {
   return `<div class="inv-card"><div class="inv-card-title">${esc(title)}</div>${rows.join('')}</div>`;
 }
 
-/** Open findings per severity: what the score and the executive report count (RULE-079). */
-function openCounts(result: AuditResult): Record<string, number> {
-  const open = result.findings.filter((f) => !f.passed && !f.inconclusive && !f.notAssessed && !f.waived);
-  return Object.fromEntries(
-    (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((l) => [l, open.filter((f) => f.riskLevel === l).length]),
-  );
-}
 
 function buildDashboard(result: AuditResult, counts: Record<string, number>): string {
   const m: OrgMetrics = result.metrics;
@@ -181,14 +174,8 @@ function buildDashboard(result: AuditResult, counts: Record<string, number>): st
 const SEV_ORDER: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4 };
 const OTHER_DOMAIN = 'Other checks';
 
-type Status = 'open' | 'info' | 'waived' | 'inconclusive' | 'passed';
-
-function statusOf(f: Finding): Status {
-  if (f.passed) return 'passed';
-  if (f.inconclusive || f.notAssessed) return 'inconclusive';
-  if (f.waived) return 'waived';
-  return f.riskLevel === 'INFO' ? 'info' : 'open';
-}
+type Status = FindingStatus;
+const statusOf = findingStatus;
 
 /** Open findings first, worst first; then informational, waived, inconclusive and passed results. */
 const STATUS_ORDER: Record<Status, number> = { open: 0, info: 1, waived: 2, inconclusive: 3, passed: 4 };
@@ -208,12 +195,6 @@ function findingAnchors(findings: Finding[]): Map<Finding, string> {
     out.set(f, a);
   }
   return out;
-}
-
-/** Chain labels as the executive report prints them: C1… for named chains, P1… for potential ones. */
-function chainLabels(chains: AttackChain[]): string[] {
-  let c = 0, p = 0;
-  return chains.map((ch) => (ch.abuseCase ? `C${++c}` : `P${++p}`));
 }
 
 const slug = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

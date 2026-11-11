@@ -89,7 +89,8 @@ check id.
 | `--fail-on` | (none) | Exit 1 if any finding is at or above `CRITICAL`/`HIGH`/`MEDIUM`/`LOW`. For CI |
 | `--fail-on-inconclusive` | `false` | Exit 3 if any check could not gather evidence. For CI |
 | `--waivers` | `.sfaudit-waivers.json` if present | Accepted-risk waivers. See [Accepting a risk](#accepting-a-risk) |
-| `--digest` | `false` | Compact result for programmatic callers — no passing checks, no prose, capped lists |
+| `--digest` | `false` | With `--json`: compact result for programmatic callers — no passing checks, no prose, capped lists |
+| `--summary` | `false` | With `--json`: page one as data — grade and why, coverage, the fix-first plan with the finding ids each action closes, attack paths. Smaller than `--digest` |
 | `--checks` | *(all)* | Run only these check ids |
 | `--frameworks` | `universal` | Compliance matrix scope for the executive report |
 | `--no-history` / `--keep-history` | `false` | Skip, or force, the archive to `~/.sf/audit-history`. Skipped in CI (`CI` set, `GITHUB_ACTIONS`, `TF_BUILD`, `JENKINS_URL`) unless `--keep-history` |
@@ -294,7 +295,7 @@ A finding you have reviewed and accepted can be waived, which takes it out of th
 
 ## Other commands
 
-Beyond the audit itself, the plugin ships five commands. Each is documented in
+Beyond the audit itself, the plugin ships these commands. Each is documented in
 **[docs/COMMANDS.md](docs/COMMANDS.md)**.
 
 | Command | What it does |
@@ -302,6 +303,7 @@ Beyond the audit itself, the plugin ships five commands. Each is documented in
 | `sf audit history` / `sf audit diff` | Every run auto-archives to `~/.sf/audit-history/{orgId}`. Show posture drift across runs as a table plus an HTML timeline, or diff any two report JSONs |
 | `sf audit events pull` | Capture the org's **free** daily `EventLogFile` logs to local disk before the ~1-day retention window drops them — no Event Monitoring / Shield add-on needed. Idempotent, safe to cron |
 | `sf audit timeline` | Reconstruct one actor's activity across every captured event type, entirely offline. Refuses to expand a shared identity or join on a blank field, and always reports capture coverage first |
+| `sf audit explain` | Explain a check, or one finding from a run: what it affects, the attack chains it is part of, and the fix-first action that closes it. Offline |
 | `sf audit preflight` | Read the running user's effective permissions in one query and report which checks will produce a verdict and which will return inconclusive — **before** an audit is run |
 | `sf audit apps` | Read the `RestApi`, `BulkApi2`, `GraphQlQueryExecution` and `AuraRequest` event logs to compare what each connected app actually *uses* against what its run-as user is *granted*, per object and read/write, and suggest a least-privilege permission set. `--emit-permset <dir>` writes it as local `.permissionset-meta.xml` files for review; nothing is deployed |
 
