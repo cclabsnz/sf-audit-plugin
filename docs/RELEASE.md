@@ -123,6 +123,37 @@ resolves after the first successful run:
   it generates, would contact something other than the authenticated org. Every package runs
   both guards against its own `src/`, so check the failing package, not just core.
 
+## Live org verification
+
+The schema guard proves a query is valid; it cannot prove the query finds anything. A check that
+filters on a value Salesforce never writes still passes. The `Live org verification` workflow
+(`.github/workflows/live-org.yml`) catches that by running the audit weekly against a Developer
+Edition org you own. It compares every finding's status with `test/fixtures/live-org/baseline.json`
+and diffs the schema against the committed snapshot. It skips with a note until set up.
+
+**Set up once** (Developer Edition org only, never a client org):
+
+1. Record a baseline from a run you have reviewed:
+   ```bash
+   sf audit security --target-org devedition --format json --output /tmp/live --no-history
+   node scripts/live-org-check.mjs /tmp/live/sf-audit-*.json test/fixtures/live-org/baseline.json --write-baseline
+   ```
+   Commit the baseline. It holds check and finding ids and statuses only.
+2. Create a `live-org` environment (Settings → Environments) and add the org's SFDX auth URL as its
+   `SF_LIVE_ORG_AUTH_URL` secret, without printing it:
+   ```bash
+   sf org display --target-org devedition --verbose --json | jq -r .result.sfdxAuthUrl \
+     | gh secret set SF_LIVE_ORG_AUTH_URL --env live-org --repo cclabsnz/sf-audit-plugin
+   ```
+3. Run the workflow once from the Actions tab.
+
+**When it fails:**
+- **A finding drifted:** a check started or stopped finding something.
+  - If a change in the code caused it, check that the new status is right before accepting it.
+  - If the org changed, re-record the baseline (step 1) and commit it with a line saying why.
+- **A query was rejected:** the check is broken on the current API version. Fix it like any other failing check.
+- **Schema drift:** a Salesforce release changed a field. Re-capture the schema with `node scripts/capture-schema.mjs devedition test/fixtures/schema/developer-edition.json`, run `pnpm test`, and fix what the guard now rejects.
+
 ## The credibility signals at a glance
 
 | Signal | Where | Proves |
