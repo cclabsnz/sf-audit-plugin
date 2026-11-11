@@ -9,6 +9,12 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.27.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.27.0) — 2026-11-11
+
+sf-audit is now easier for an AI agent to drive. `--summary` returns page one of the report as
+compact JSON, `sf audit explain` explains a check or a finding, and a Claude Code plugin in this repo
+runs the audit and triages it. `--checks` now works for any selection. No check or score changes.
+
 ### Added
 
 - **A Claude Code plugin** in `claude-plugin/`, installable with
