@@ -212,7 +212,8 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
     // Checks that read data another check collects need that check to run first.
     const { checks, added } = withCacheProviders(selected, CHECKS);
     if (added.length > 0) {
-      this.log(`Also running ${added.map((c) => c.id).join(', ')}: ${added.length === 1 ? 'it collects' : 'they collect'} data the selected checks read.`);
+      // A warning, not a log line, so --json callers see it too (on stderr): these checks' findings count.
+      this.warn(`Also running ${added.map((c) => c.id).join(', ')}: ${added.length === 1 ? 'it collects' : 'they collect'} data the selected checks read, and ${added.length === 1 ? 'its' : 'their'} findings count toward the grade and --fail-on.`);
     }
     return checks;
   }

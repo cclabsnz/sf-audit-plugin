@@ -23,7 +23,7 @@ The audit itself. The [README](../README.md#usage) covers the common path; this 
 | `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json`, `executive`, `sarif` (SARIF 2.1.0, for GitHub code scanning) |
 | `--output` / `-o` | `.` | Directory to write the report file |
 | `--fail-on` | (none) | Exit with code 1 if any finding is at or above this severity: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
-| `--checks` | *(all)* | Comma-separated check IDs to run instead of all of them (e.g. `hardcoded-credentials,apex-sharing`). Checks that collect data the selected ones read run too, and the command names them |
+| `--checks` | *(all)* | Comma-separated check IDs to run instead of all of them (e.g. `hardcoded-credentials,apex-sharing`). Checks that collect data the selected ones read run too; the command names them, and their findings count toward the grade and `--fail-on` |
 | `--scoring-config` | (none) | Path to a custom scoring config JSON file to override weights and grade thresholds |
 | `--prepared-for` | (none) | Client name for the executive report cover line |
 | `--branding` | (none) | Path to a `report-branding.json` to override CloudCounsel defaults (executive format) |
