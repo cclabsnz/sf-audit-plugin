@@ -81,7 +81,6 @@ export const GUEST_EXPOSURE = [
   // Not 'guest-site-options-member-visibility': a site's member list is no foothold into org data,
   // and this list also gates the low-trust chains (LOW_TRUST_ENTRY).
   'guest-user-visibility-view-all-users',
-  'guest-record-access-policy-not-enforced',
   'inbound-email-handler-unauthenticated-execution',
 ];
 
@@ -116,8 +115,6 @@ export const UNAUTH_EXFIL_STEPS = [
   // @AuraEnabled class or any Flow, which a logged-in user may be the only one able to call. The
   // guest-side counterpart is 'guest-executable-apex-*', read from the guest profile's class access.
   'field-level-security-high', 'field-level-security-medium',
-  // The guardrail whose absence lets guest-owned records defeat a Private OWD.
-  'guest-record-access-policy-not-enforced',
   // An open inbound email handler grants unauth-foothold, so it must appear whenever it
   // is what opened the gate.
   'inbound-email-handler-unauthenticated-execution',
@@ -133,9 +130,6 @@ export const UNAUTH_RECORD_REACH = [
   // Not 'guest-site-options-member-visibility': it shows a site's members, not business records.
   'guest-user-visibility-view-all-users',
   'guest-executable-apex-unprotected',
-  // Secure guest record access is what makes the rest of this list necessary: with it off, legacy
-  // sharing and guest ownership reach records directly.
-  'guest-record-access-policy-not-enforced',
 ];
 // What a guest-side step must grant for the visitor to reach data or run code.
 const UNAUTH_EXFIL_REACH: readonly Capability[] = ['code-exec', 'data-read-bulk', 'data-write'];
@@ -409,7 +403,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       'exfiltration surface, i.e. an incident likely already in progress.',
     remediation:
       'Treat as an active incident: block the source IPs at the WAF/CDN, close the guest bulk-read surface ' +
-      '(set external OWD to Private, strip guest object read, enforce "Secure guest user record access"), ' +
+      '(remove guest sharing rules and guest object read, reassign guest-owned records), ' +
       'and preserve/forward the event logs before the short EventLogFile retention window closes.',
     abuseCase: {
       actor: 'an unauthenticated visitor already probing the site',

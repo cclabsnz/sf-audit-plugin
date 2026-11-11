@@ -191,7 +191,7 @@ export class GuestTrafficAnomalyCheck implements SecurityCheck {
         detail:
           'These unauthenticated source IPs issued GraphQL queries that request only totalCount across many distinct objects — the signature of reconnaissance that maps the guest-readable data surface before bulk extraction. This is exactly the pre-attack recon pattern seen through aura://RecordUiController/ACTION$executeGraphQL on Experience Cloud sites.',
         remediation:
-          'Treat these IPs as hostile and block them at the WAF/CDN. Then close the surface they were mapping: set external OWD to Private, strip guest object read permissions, and enforce "Secure guest user record access". Enable Threat Detection storage and a Transaction Security Policy to catch this in real time.',
+          'Treat these IPs as hostile and block them at the WAF/CDN. Then close the surface they were mapping: remove guest sharing rules and guest object read permissions, and reassign guest-owned records. Enable Threat Detection storage and a Transaction Security Policy to catch this in real time.',
         affectedItems: reconIps
           .sort((a, b) => b[1].reconEntities.size - a[1].reconEntities.size)
           .slice(0, 20)
