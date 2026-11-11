@@ -1,0 +1,10 @@
+{
+  "name": "sf-audit",
+  "version": "0.1.0",
+  "description": "Run a read-only Salesforce security audit with the sf-audit CLI plugin and triage it: grade and why, what to fix first, attack paths, and any finding explained.",
+  "author": { "name": "CloudCounsel Ltd", "url": "https://cloudcounsel.co.nz" },
+  "homepage": "https://github.com/cclabsnz/sf-audit-plugin",
+  "repository": "https://github.com/cclabsnz/sf-audit-plugin",
+  "license": "Apache-2.0",
+  "keywords": ["salesforce", "security", "audit", "sf-cli"]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "cclabsnz",
+  "owner": {
+    "name": "CloudCounsel Ltd",
+    "url": "https://cloudcounsel.co.nz"
+  },
+  "description": "CloudCounsel plugins for Claude Code: sf-audit, a read-only Salesforce security audit you can run and triage from a chat.",
+  "plugins": [
+    {
+      "name": "sf-audit",
+      "source": "./claude-plugin",
+      "description": "Run a read-only Salesforce security audit with sf-audit and triage it: grade and why, what to fix first, and any finding explained."
+    }
+  ]
+}

@@ -9,6 +9,15 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Added
+
+- **A Claude Code plugin** in `claude-plugin/`, installable with
+  `/plugin install sf-audit --marketplace cclabsnz/sf-audit-plugin`. It runs the audit and
+  reports page one: the grade and why, coverage, what to fix first and the attack paths. It then
+  explains any finding and compares runs (`/sf-audit:audit`, `/sf-audit:fix-first`,
+  `/sf-audit:explain`, `/sf-audit:diff`). It needs this CLI at 1.27.0 or later. It is not part of
+  the npm package.
+
 ## [v1.26.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.26.0) — 2026-11-11
 
 Four checks read fields or values Salesforce does not have, or matched by wording, so they could
