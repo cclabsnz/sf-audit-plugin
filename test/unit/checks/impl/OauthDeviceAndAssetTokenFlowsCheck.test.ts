@@ -63,6 +63,7 @@ describe('OauthDeviceAndAssetTokenFlowsCheck', () => {
     const r = await check.run(ctx);
     expect(r.findings.some((f) => f.passed)).toBe(false);
     expect(r.findings.map((f) => f.id)).toEqual(['oauth-device-and-asset-flows-advisory']);
+    expect(r.findings[0].inconclusive).toBe(true);
   });
 
   it('does not pass when there is no Metadata client', async () => {

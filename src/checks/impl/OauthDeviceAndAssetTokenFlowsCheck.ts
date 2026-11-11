@@ -4,7 +4,7 @@ import type { Finding } from '../../findings/Finding.js';
 
 // OauthOidcSettings states the username-password flow as blockOAuthUnPwFlow. It has no Device
 // Flow field: Device Flow is switched on per connected app ("Enable for Device Flow"), and
-// ConnectedApp metadata does not carry that setting either, so this check cannot read it.
+// ConnectedApp metadata does not carry that setting either, so this check does not report it.
 interface OauthOidcSettingsMeta {
   blockOAuthUnPwFlow?: boolean | string;
 }
@@ -66,7 +66,7 @@ export class OauthDeviceAndAssetTokenFlowsCheck implements SecurityCheck {
         passed: true,
         title: 'OAuth Username-Password Flow is blocked org-wide',
         detail:
-          'OAuth and OpenID Connect Settings block the Username-Password Flow, so no connected app can exchange a raw password for a token. Device Flow is switched on per connected app ("Enable for Device Flow"), which this audit cannot read, so review it in each app that needs it.',
+          'OAuth and OpenID Connect Settings block the Username-Password Flow, so no connected app can exchange a raw password for a token. Device Flow is switched on per connected app ("Enable for Device Flow"), and connected app metadata does not report it, so review it in each app that needs it.',
         remediation: 'Keep the Username-Password Flow blocked, and enable Device Flow only on connected apps for headless devices.',
       });
     } else {
@@ -74,6 +74,7 @@ export class OauthDeviceAndAssetTokenFlowsCheck implements SecurityCheck {
         id: 'oauth-device-and-asset-flows-advisory',
         category: this.category,
         riskLevel: 'INFO',
+        inconclusive: true,
         title: 'Verify the OAuth Username-Password Flow setting manually',
         detail:
           'This run could not read whether OAuth and OpenID Connect Settings block the Username-Password Flow, so whether it is allowed is unknown. The flow lets a token be issued for a raw password, bypassing MFA and conditional access.',
