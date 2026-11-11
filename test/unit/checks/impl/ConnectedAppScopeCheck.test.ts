@@ -37,15 +37,12 @@ function makeCtx(apps: App[] | Error, { metadata = true, unreadable = [] as stri
 
 const app = (
   Name: string,
-  opts: { scopes?: string[]; validity?: number; policy?: string } = {},
+  opts: { scopes?: string[]; policy?: string } = {},
 ) => ({
   Id: `0CiA${Name}`,
   Name,
   Metadata: {
-    oauthConfig: {
-      scopes: opts.scopes ?? [],
-      ...(opts.validity !== undefined ? { refreshTokenValidityPeriod: opts.validity } : {}),
-    },
+    oauthConfig: { scopes: opts.scopes ?? [] },
     ...(opts.policy ? { oauthPolicy: { refreshTokenPolicy: opts.policy } } : {}),
   },
 });
@@ -62,7 +59,7 @@ describe('ConnectedAppScopeCheck data sources', () => {
   });
 
   it('never counts an unread app as scoped', async () => {
-    const r = await check.run(makeCtx([app('Good', { scopes: ['Api'], validity: 90 }), app('Hidden')], { unreadable: ['Hidden'] }));
+    const r = await check.run(makeCtx([app('Good', { scopes: ['Api'], policy: 'specific_lifetime:90:DAYS' }), app('Hidden')], { unreadable: ['Hidden'] }));
     const f = find(r, 'connected-app-scope-unread');
     expect(f?.inconclusive).toBe(true);
     expect(f?.affectedItems?.map((i) => i.label)).toEqual(['Hidden']);
@@ -99,13 +96,13 @@ describe('ConnectedAppScopeCheck', () => {
   });
 
   it('passes when apps use scoped permissions and bounded tokens', async () => {
-    const r = await check.run(makeCtx([app('Good', { scopes: ['Api', 'Web'], validity: 90 })]));
+    const r = await check.run(makeCtx([app('Good', { scopes: ['Api', 'Web'], policy: 'specific_lifetime:90:DAYS' })]));
     expect(r.findings[0].id).toBe('connected-app-scope-ok');
     expect(r.findings[0].passed).toBe(true);
   });
 
   it.each(['Full', 'full'])('flags the %s scope as HIGH', async (scope) => {
-    const r = await check.run(makeCtx([app('Broad', { scopes: [scope], validity: 90 })]));
+    const r = await check.run(makeCtx([app('Broad', { scopes: [scope], policy: 'specific_lifetime:90:DAYS' })]));
     const f = find(r, 'connected-app-full-scope')!;
     expect(f.riskLevel).toBe('HIGH');
     expect(f.affectedItems?.[0].note).toContain(scope);
@@ -113,44 +110,49 @@ describe('ConnectedAppScopeCheck', () => {
 
   it('does not flag narrower scopes', async () => {
     const r = await check.run(makeCtx([
-      app('A', { scopes: ['Api', 'Web', 'OpenID', 'CustomPermissions'], validity: 30 }),
+      app('A', { scopes: ['Api', 'Web', 'OpenID', 'CustomPermissions'], policy: 'specific_lifetime:30:DAYS' }),
     ]));
     expect(find(r, 'connected-app-full-scope')).toBeUndefined();
   });
 
-  // Two encodings of "never expires", both of which must be caught.
-  it.each([
-    ['validityPeriod -1', { scopes: ['Api'], validity: -1 }],
-    ['policy infinite', { scopes: ['Api'], policy: 'infinite' }],
-  ])('flags an infinite refresh token via %s', async (_label, opts) => {
-    const r = await check.run(makeCtx([app('Forever', opts)]));
+  it('flags an infinite refresh token policy', async () => {
+    const r = await check.run(makeCtx([app('Forever', { scopes: ['Api'], policy: 'infinite' })]));
     const f = find(r, 'connected-app-infinite-refresh-token')!;
     expect(f.riskLevel).toBe('MEDIUM');
   });
 
+  // ConnectedApp metadata has no oauthConfig.refreshTokenValidityPeriod; oauthPolicy.refreshTokenPolicy
+  // is the only place the Metadata API states a refresh token lifetime.
+  it('ignores a refreshTokenValidityPeriod under oauthConfig, which ConnectedApp metadata does not have', async () => {
+    const odd = { ...app('Odd', { scopes: ['Api'], policy: 'specific_lifetime:90:DAYS' }) };
+    (odd.Metadata.oauthConfig as Record<string, unknown>).refreshTokenValidityPeriod = -1;
+    const r = await check.run(makeCtx([odd]));
+    expect(find(r, 'connected-app-infinite-refresh-token')).toBeUndefined();
+  });
+
   // An app with no scopes issues no tokens, so an unbounded policy on it is not a risk.
   it('ignores an infinite token policy on an app with no OAuth scopes', async () => {
-    const r = await check.run(makeCtx([app('NonOauth', { scopes: [], validity: -1 })]));
+    const r = await check.run(makeCtx([app('NonOauth', { scopes: [], policy: 'infinite' })]));
     expect(find(r, 'connected-app-infinite-refresh-token')).toBeUndefined();
     expect(r.findings[0].id).toBe('connected-app-scope-ok');
   });
 
-  it('treats a bounded validity period as acceptable', async () => {
-    const r = await check.run(makeCtx([app('Bounded', { scopes: ['Api'], validity: 90 })]));
+  it.each(['specific_lifetime:90:DAYS', 'specific_inactivity:30:DAYS', 'zero'])('treats a bounded policy (%s) as acceptable', async (policy) => {
+    const r = await check.run(makeCtx([app('Bounded', { scopes: ['Api'], policy })]));
     expect(find(r, 'connected-app-infinite-refresh-token')).toBeUndefined();
   });
 
   // Full scope plus a token that never expires is a permanent admin-equivalent credential,
   // so it escalates rather than being reported as two separate mid-level findings.
   it('escalates Full scope combined with an infinite token to CRITICAL', async () => {
-    const r = await check.run(makeCtx([app('Worst', { scopes: ['Full'], validity: -1 })]));
+    const r = await check.run(makeCtx([app('Worst', { scopes: ['Full'], policy: 'infinite' })]));
     const f = find(r, 'connected-app-full-scope-infinite-token')!;
     expect(f.riskLevel).toBe('CRITICAL');
     expect(f.affectedItems?.[0].label).toBe('Worst');
   });
 
   it('does not double-count a compound app in the infinite-token finding', async () => {
-    const r = await check.run(makeCtx([app('Worst', { scopes: ['Full'], validity: -1 })]));
+    const r = await check.run(makeCtx([app('Worst', { scopes: ['Full'], policy: 'infinite' })]));
     // It appears in the Full-scope finding and the compound one, but not in the
     // infinite-token-only finding, which is reserved for apps that are otherwise scoped.
     expect(find(r, 'connected-app-full-scope')).toBeDefined();
@@ -160,8 +162,8 @@ describe('ConnectedAppScopeCheck', () => {
 
   it('separates a compound app from an unrelated infinite-token app', async () => {
     const r = await check.run(makeCtx([
-      app('Worst', { scopes: ['Full'], validity: -1 }),
-      app('Lax', { scopes: ['Api'], validity: -1 }),
+      app('Worst', { scopes: ['Full'], policy: 'infinite' }),
+      app('Lax', { scopes: ['Api'], policy: 'infinite' }),
     ]));
     expect(find(r, 'connected-app-infinite-refresh-token')!.affectedItems).toHaveLength(1);
     expect(find(r, 'connected-app-infinite-refresh-token')!.affectedItems?.[0].label).toBe('Lax');

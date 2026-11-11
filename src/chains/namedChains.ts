@@ -165,7 +165,7 @@ export const TAKEOVER_ADMIN_EVIDENCE = [
 // Exposed secrets: every finding here that grants credential-theft.
 export const EXPOSED_SECRETS = [
   'hardcoded-credentials-found', 'custom-labels-credential-value-match', 'custom-labels-credential-name-match',
-  'flow-http-callout-hardcoded-secret', 'oauth-device-flow-enabled', 'oauth-password-flow-enabled',
+  'flow-http-callout-hardcoded-secret', 'oauth-password-flow-enabled',
   'custom-settings-credentials',
 ];
 export const EGRESS_PATHS = [
