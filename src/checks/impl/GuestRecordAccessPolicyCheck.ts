@@ -61,9 +61,9 @@ export class GuestRecordAccessPolicyCheck implements SecurityCheck {
       passed: true,
       title: `"Secure guest user record access" is enforced by the platform (${guests.length} active guest user(s))`,
       detail:
-        "Salesforce has enforced secure guest user record access in every org since Winter '21, and from API 50.0 the setting is always on and cannot be turned off. Guests reach records only through guest user sharing rules, cannot be given Edit or Delete on objects, and do not get records through the external org-wide default.",
+        "Salesforce has enforced secure guest user record access in every org since Winter '21, and from API 50.0 the setting is always on and cannot be turned off. Guests get no access from the org-wide default, and new record access for guests comes only through guest user sharing rules. Records a guest owns, shares granted before Winter '21, and Apex or flows that run without sharing can still reach records.",
       remediation:
-        'Nothing to switch on. The remaining risk is records a guest already owns or that a guest sharing rule shares, which guest-object-exposure and guest-user-access report.',
+        'Nothing to switch on. Review the residual paths: guest-object-exposure and guest-user-access report guest-owned and guest-shared records, and guest-executable-apex reports Apex guests can run without sharing.',
       affectedItems: [{ label: 'Sharing Settings', url: setupUrl, note: 'Enforced by the platform' }],
     });
     return { findings };

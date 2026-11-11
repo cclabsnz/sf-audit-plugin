@@ -180,7 +180,7 @@ export const CHECKS: SecurityCheck[] = [
   new PublicContentExposureCheck(),       // externally available Documents + public static resources
   new GuestObjectExposureCheck(),         // auto-discovered guest bulk-read surface (UI API) + ownership-defeats-OWD
   new GuestSiteOptionsCheck(),            // guest file access + guest member visibility on Experience sites
-  new GuestRecordAccessPolicyCheck(),     // "Secure guest user record access" enforcement (ownership-defeats-OWD guardrail)
+  new GuestRecordAccessPolicyCheck(),     // "Secure guest user record access": platform-enforced since API 50.0
   new ThreatDetectionCheck(),             // Guest User Anomaly / Threat Detection event storage enabled
   new LoginAccessPolicyCheck(),           // delegated admin + login-as impersonation paths
   new DataExportAccessCheck(),            // Weekly Export / API+ViewAll bulk-exfil capability

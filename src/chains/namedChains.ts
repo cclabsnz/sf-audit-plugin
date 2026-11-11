@@ -403,7 +403,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       'exfiltration surface, i.e. an incident likely already in progress.',
     remediation:
       'Treat as an active incident: block the source IPs at the WAF/CDN, close the guest bulk-read surface ' +
-      '(set external OWD to Private, strip guest object read, enforce "Secure guest user record access"), ' +
+      '(remove guest sharing rules and guest object read, reassign guest-owned records), ' +
       'and preserve/forward the event logs before the short EventLogFile retention window closes.',
     abuseCase: {
       actor: 'an unauthenticated visitor already probing the site',
