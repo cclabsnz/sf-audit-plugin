@@ -5,6 +5,7 @@ import type { AuditResult } from '../../findings/AuditResult.js';
 import type { RiskLevel } from '@cclabsnz/sf-core';
 import { CheckEngine } from '../../checks/CheckEngine.js';
 import { CHECKS } from '../../checks/registry.js';
+import { withCacheProviders } from '../../checks/selection.js';
 import { JsonRenderer } from '../../renderers/JsonRenderer.js';
 import { HtmlRenderer } from '../../renderers/HtmlRenderer.js';
 import { MarkdownRenderer } from '../../renderers/MarkdownRenderer.js';
@@ -208,7 +209,12 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
         suggestions: ["Run 'sf audit list' to see valid check IDs, or omit --checks to run all."],
       });
     }
-    return selected;
+    // Checks that read data another check collects need that check to run first.
+    const { checks, added } = withCacheProviders(selected, CHECKS);
+    if (added.length > 0) {
+      this.log(`Also running ${added.map((c) => c.id).join(', ')}: ${added.length === 1 ? 'it collects' : 'they collect'} data the selected checks read.`);
+    }
+    return checks;
   }
 
   /** Resolve --format to a validated list, erroring on any unknown format. */
