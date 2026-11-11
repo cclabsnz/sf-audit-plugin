@@ -5,6 +5,7 @@ import type { AuditResult } from '../../findings/AuditResult.js';
 import type { RiskLevel } from '@cclabsnz/sf-core';
 import { CheckEngine } from '../../checks/CheckEngine.js';
 import { CHECKS } from '../../checks/registry.js';
+import { withCacheProviders } from '../../checks/selection.js';
 import { JsonRenderer } from '../../renderers/JsonRenderer.js';
 import { HtmlRenderer } from '../../renderers/HtmlRenderer.js';
 import { MarkdownRenderer } from '../../renderers/MarkdownRenderer.js';
@@ -19,6 +20,7 @@ import { HistoryStore } from '../../history/HistoryStore.js';
 import { isCiEnvironment, shouldArchiveHistory } from '../../history/archivePolicy.js';
 import { EXIT_FINDINGS, EXIT_INCONCLUSIVE, resolveExitCode, violationsFor } from '../../findings/exitCode.js';
 import { buildDigest, type AuditDigest } from '../../findings/digest.js';
+import { buildSummary, type AuditSummary } from '../../findings/summary.js';
 
 import { WaiverLoader, DEFAULT_WAIVER_FILE } from '../../waivers/WaiverLoader.js';
 import { coverageSummary, coverageAdvice } from '../../findings/coverage.js';
@@ -30,7 +32,7 @@ const RENDERERS: Record<string, AuditRenderer> = {
   sarif: new SarifRenderer(),
 };
 
-export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditDigest> {
+export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditDigest | AuditSummary> {
   public static summary = 'Run a comprehensive security audit against a Salesforce org';
   public static description =
     'Runs all security checks against the target org and writes a report file.';
@@ -62,8 +64,15 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
       options: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
     }),
     digest: Flags.boolean({
-      summary: 'Return a compact, token-cheap result: no passing checks, no detail prose, capped affected lists.',
+      summary: 'With --json, return a compact, token-cheap result: no passing checks, no detail prose, capped affected lists.',
       default: false,
+      exclusive: ['summary'],
+    }),
+    summary: Flags.boolean({
+      summary: 'With --json, return page one of the report: grade and reason, coverage, the fix-first plan and attack paths. Smaller than --digest.',
+      description: 'Each action lists the ids of the findings it closes; run sf audit explain <id> --file <report.json> for one of them.',
+      default: false,
+      exclusive: ['digest'],
     }),
     'fail-on-inconclusive': Flags.boolean({
       summary: 'Exit with code 3 if any check could not gather evidence. Off by default.',
@@ -110,8 +119,11 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
     }),
   };
 
-  public async run(): Promise<AuditResult | AuditDigest> {
+  public async run(): Promise<AuditResult | AuditDigest | AuditSummary> {
     const { flags } = await this.parse(SecurityAuditCommand);
+    if ((flags.summary || flags.digest) && !this.jsonEnabled()) {
+      this.warn(`--${flags.summary ? 'summary' : 'digest'} shapes the --json output only; add --json to see it.`);
+    }
 
     // Validate the selection and output formats up front, so a typo fails fast with
     // a clear message instead of silently running a partial/empty audit or writing
@@ -188,6 +200,7 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
     // which the threshold logic must still be able to see and discount.
     this.applyExitCode(result, flags['fail-on'] as RiskLevel | undefined, flags['fail-on-inconclusive']);
 
+    if (flags.summary) return buildSummary(result);
     return flags.digest ? buildDigest(result) : result;
   }
 
@@ -208,7 +221,13 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
         suggestions: ["Run 'sf audit list' to see valid check IDs, or omit --checks to run all."],
       });
     }
-    return selected;
+    // Checks that read data another check collects need that check to run first.
+    const { checks, added } = withCacheProviders(selected, CHECKS);
+    if (added.length > 0) {
+      // A warning, not a log line, so --json callers see it too (on stderr): these checks' findings count.
+      this.warn(`Also running ${added.map((c) => c.id).join(', ')}: ${added.length === 1 ? 'it collects' : 'they collect'} data the selected checks read, and ${added.length === 1 ? 'its' : 'their'} findings count toward the grade and --fail-on.`);
+    }
+    return checks;
   }
 
   /** Resolve --format to a validated list, erroring on any unknown format. */

@@ -16,8 +16,9 @@ Each is an oclif command under `src/commands`; the id is the path with spaces.
 
 | Command | What it does | Flags worth knowing | File |
 |---|---|---|---|
-| `audit security` | Runs every check, correlates chains, grades A-F, writes reports | `--format html,md,json,executive,sarif`, `--checks`, `--fail-on`, `--fail-on-inconclusive`, `--waivers`, `--scoring-config`, `--digest`, `--frameworks`, `--top`, `--prepared-for`, `--branding`, `--resolve-domains`, `--no-history` | src/commands/audit/security.ts |
+| `audit security` | Runs every check, correlates chains, grades A-F, writes reports | `--format html,md,json,executive,sarif`, `--checks`, `--fail-on`, `--fail-on-inconclusive`, `--waivers`, `--scoring-config`, `--digest`, `--summary`, `--frameworks`, `--top`, `--prepared-for`, `--branding`, `--resolve-domains`, `--no-history` | src/commands/audit/security.ts |
 | `audit list` | Lists every registered check with id and description | none | src/commands/audit/list.ts |
+| `audit explain` | Explains a check, or one finding from a run (affected sample, chains, fix-first action) | `--file` | src/commands/audit/explain.ts |
 | `audit preflight` | Reports what the audit user can and cannot establish (missing permissions per check) | `--target-org` | src/commands/audit/preflight.ts |
 | `audit diff` | Compares two audit JSON reports | `--format html,json`, `--output` | src/commands/audit/diff.ts |
 | `audit history` | HTML timeline of archived runs for an org | `--output`, `--limit` | src/commands/audit/history.ts |
@@ -381,6 +382,11 @@ Findings and scoring, src/findings:
 - src/findings/scoring.ts: `buildAuditResult` (A-F grade); config in src/findings/ScoringConfig.ts (`DEFAULT_SCORING_CONFIG`, `scoringConfigSchema`) and src/findings/loadScoringConfig.ts.
 - src/findings/coverage.ts: `evidenceCoverage`, `coverageSummary`, `coverageAdvice`, `MIN_COVERAGE_FOR_A`.
 - src/findings/digest.ts: `buildDigest` (`--digest` output).
+- src/findings/status.ts: `findingStatus`, `openCounts` (page one's status rules, shared by the HTML report, `--summary` and `audit explain`).
+- src/findings/summary.ts: `buildSummary` (`--summary` output: grade and reason, coverage, fix-first plan with finding ids, chains).
+- src/report/explain.ts: `explain`, `parseResult`, `checkForFindingId` (`audit explain`).
+- src/report/ActionPlan.ts also exports `chainLabels` (C1… named, P1… potential), shared by the HTML report and `--summary`.
+- src/checks/selection.ts: `withCacheProviders` (a `--checks` selection plus the checks that fill the cache it reads).
 - src/findings/exitCode.ts: `resolveExitCode`, `violationsFor`, `EXIT_OK`, `EXIT_FINDINGS`, `EXIT_INCONCLUSIVE`.
 - src/findings/unknownMetrics.ts: `unknownMetrics`.
 - src/findings/AuditResult.ts: `AuditResult`.
@@ -427,6 +433,10 @@ Other reusable code:
 - Git hooks: .githooks/pre-commit and .githooks/commit-msg block org ids and client identifiers; .githooks/fixture-allowlist lists allowed synthetic values.
 - Least-privilege permission set for the audit user: docs/permissionset/SF_Audit_ReadOnly.permissionset-meta.xml.
 - Config schemas: schemas/scoring-config.schema.json, schemas/waivers.schema.json; sample config/scoring.sample.json.
+
+## Claude Code plugin
+
+- claude-plugin/: a Claude Code plugin (skill `sf-audit`, commands `/sf-audit:audit`, `/sf-audit:fix-first`, `/sf-audit:explain`, `/sf-audit:diff`) that drives this CLI through `--json --summary` and `sf audit explain`. The marketplace manifest is .claude-plugin/marketplace.json; check both with `claude plugin validate`.
 
 ## Related repos
 
