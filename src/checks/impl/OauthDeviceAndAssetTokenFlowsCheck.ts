@@ -2,24 +2,34 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
+// OauthOidcSettings states the username-password flow as blockOAuthUnPwFlow. It has no Device
+// Flow field: Device Flow is switched on per connected app ("Enable for Device Flow"), and
+// ConnectedApp metadata does not carry that setting either, so this check cannot read it.
 interface OauthOidcSettingsMeta {
-  isDeviceFlowEnabled?: boolean;
-  isPasswordFlowEnabled?: boolean;
+  blockOAuthUnPwFlow?: boolean | string;
+}
+
+/** Settings types outside jsforce's schema come back with string values. */
+function asBoolean(v: unknown): boolean | undefined {
+  if (v === true || v === 'true') return true;
+  if (v === false || v === 'false') return false;
+  return undefined;
 }
 
 export class OauthDeviceAndAssetTokenFlowsCheck implements SecurityCheck {
   readonly id = 'oauth-device-and-asset-token-flows';
-  readonly name = 'OAuth Device & Password Flows';
+  readonly name = 'OAuth Username-Password Flow';
   readonly category = 'Identity & Access';
   readonly description =
-    'Flags OAuth 2.0 Device Flow and Username-Password Flow enabled in OAuth and OpenID Connect Settings.';
+    'Flags the OAuth 2.0 Username-Password Flow when OAuth and OpenID Connect Settings do not block it.';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
     const oauthUrl = `${ctx.orgInfo.instanceUrl}/lightning/setup/OauthOidcSettings/home`;
 
-    // Org settings are the only evidence read. A flag counts only when the read returned it as
-    // a boolean: a failed read, an absent Metadata client or a missing field is not "disabled".
+    // Org settings are the only evidence read. The flow counts as blocked or not only when the
+    // read returned the field as a boolean: a failed read, an absent Metadata client or a missing
+    // field is not "blocked".
     let settings: OauthOidcSettingsMeta | null = null;
     if (ctx.metadata) {
       try {
@@ -28,73 +38,47 @@ export class OauthDeviceAndAssetTokenFlowsCheck implements SecurityCheck {
         settings = null;
       }
     }
-    const device = typeof settings?.isDeviceFlowEnabled === 'boolean' ? settings.isDeviceFlowEnabled : undefined;
-    const password =
-      typeof settings?.isPasswordFlowEnabled === 'boolean' ? settings.isPasswordFlowEnabled : undefined;
+    const blocked = asBoolean(settings?.blockOAuthUnPwFlow);
 
-    if (device === true) {
-      findings.push({
-        id: 'oauth-device-flow-enabled',
-        category: this.category,
-        riskLevel: 'HIGH',
-        title: 'OAuth 2.0 Device Flow is ENABLED in org settings',
-        detail:
-          'OAuth 2.0 Device Flow allows a user to authorize a token by entering an 8-character code on a legitimate verification URL. Attackers frequently use Device Code phishing to bypass standard browser-based conditional access and MFA controls, obtaining persistent refresh tokens.',
-        remediation:
-          'Disable OAuth 2.0 Device Flow in Setup → OAuth and OpenID Connect Settings unless strictly required for headless devices.',
-        affectedItems: [
-          {
-            label: 'OAuth and OpenID Connect Settings',
-            url: oauthUrl,
-            note: 'Disable "Allow OAuth Device Flow"',
-          },
-        ],
-      });
-    }
-
-    if (password === true) {
+    if (blocked === false) {
       findings.push({
         id: 'oauth-password-flow-enabled',
         category: this.category,
         riskLevel: 'HIGH',
-        title: 'OAuth 2.0 Username-Password Flow is ENABLED in org settings',
+        title: 'OAuth 2.0 Username-Password Flow is not blocked in org settings',
         detail:
           'The Resource Owner Password Credentials (ROPC / Username-Password) flow allows exchanging raw credentials directly for access tokens, completely bypassing interactive SSO redirects, browser-based MFA, and device trust policies.',
         remediation:
-          'Disable Username-Password Flow in Setup → OAuth and OpenID Connect Settings, and migrate integrations to OAuth 2.0 Client Credentials or JWT Bearer flow.',
+          'Turn on "Block OAuth Username-Password Flows" in Setup → OAuth and OpenID Connect Settings, and migrate integrations to OAuth 2.0 Client Credentials or JWT Bearer flow.',
         affectedItems: [
           {
             label: 'OAuth and OpenID Connect Settings',
             url: oauthUrl,
-            note: 'Disable "Allow Username-Password Flow"',
+            note: 'Block OAuth Username-Password Flows',
           },
         ],
       });
-    }
-
-    if (device === false && password === false) {
+    } else if (blocked === true) {
       findings.push({
         id: 'oauth-device-and-asset-flows-ok',
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: 'Phishable OAuth Device Flow and Username-Password Flow are disabled',
+        title: 'OAuth Username-Password Flow is blocked org-wide',
         detail:
-          'Org settings confirm both OAuth 2.0 Device Flow and Username-Password Flow are disabled, eliminating secondary token-issuance backdoors.',
-        remediation: 'Keep Device Flow and Password Flow disabled org-wide.',
+          'OAuth and OpenID Connect Settings block the Username-Password Flow, so no connected app can exchange a raw password for a token. Device Flow is switched on per connected app ("Enable for Device Flow"), which this audit cannot read, so review it in each app that needs it.',
+        remediation: 'Keep the Username-Password Flow blocked, and enable Device Flow only on connected apps for headless devices.',
       });
-    } else if (device === undefined || password === undefined) {
-      const unread = [device === undefined && 'Device Flow', password === undefined && 'Username-Password Flow']
-        .filter(Boolean)
-        .join(' and ');
+    } else {
       findings.push({
         id: 'oauth-device-and-asset-flows-advisory',
         category: this.category,
         riskLevel: 'INFO',
-        title: `Verify the OAuth ${unread} setting manually`,
-        detail: `This run could not read the ${unread} setting from OAuth and OpenID Connect Settings, so whether it is enabled is unknown. Both flows let a token be issued outside the browser sign-in, bypassing MFA and conditional access.`,
+        title: 'Verify the OAuth Username-Password Flow setting manually',
+        detail:
+          'This run could not read whether OAuth and OpenID Connect Settings block the Username-Password Flow, so whether it is allowed is unknown. The flow lets a token be issued for a raw password, bypassing MFA and conditional access.',
         remediation:
-          'In Setup → OAuth and OpenID Connect Settings, confirm "Allow OAuth Device Flow" and "Allow OAuth Username-Password Flows" are off unless a documented integration needs them.',
+          'In Setup → OAuth and OpenID Connect Settings, confirm "Block OAuth Username-Password Flows" is on unless a documented integration needs the flow.',
         affectedItems: [{ label: 'OAuth and OpenID Connect Settings', url: oauthUrl }],
       });
     }

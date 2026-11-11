@@ -193,7 +193,7 @@ this). Grouped by each check's declared `category`. Interface: src/checks/Securi
 |---|---|---|---|
 | `password-session-policy` | Password and Session Policy | Evaluates password complexity, session timeout, and MFA enforcement from Health Check data | src/checks/impl/PasswordSessionPolicyCheck.ts |
 | `ip-restrictions` | Login IP Restrictions | Checks admin profiles for missing IP range restrictions and connected apps with relaxed IP policies | src/checks/impl/IpRestrictionsCheck.ts |
-| `oauth-device-and-asset-token-flows` | OAuth Device & Password Flows | Flags OAuth 2.0 Device Flow and Username-Password Flow enabled in OAuth and OpenID Connect Settings | src/checks/impl/OauthDeviceAndAssetTokenFlowsCheck.ts |
+| `oauth-device-and-asset-token-flows` | OAuth Username-Password Flow | Flags the OAuth 2.0 Username-Password Flow when OAuth and OpenID Connect Settings do not block it | src/checks/impl/OauthDeviceAndAssetTokenFlowsCheck.ts |
 | `delegated-authentication-exposure` | Delegated Authentication Exposure | Flags Delegated Authentication enabled over non-mTLS endpoints or assigned to System Administrator profiles | src/checks/impl/DelegatedAuthenticationExposureCheck.ts |
 | `auth-provider-registration-handler` | Auth.Provider Registration Handler Security | Detects Auth.Provider RegistrationHandler running as Admin with email-based account linking vulnerable to pre-auth takeover | src/checks/impl/AuthProviderRegistrationHandlerCheck.ts |
 

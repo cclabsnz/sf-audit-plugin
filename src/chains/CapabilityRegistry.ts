@@ -200,7 +200,6 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'platform-event-subscriber-escalation':        { grants: ['priv-esc', 'data-write'], techniques: { 'priv-esc': ['T1546'] } },
   'flow-http-callout-hardcoded-secret':          { grants: ['credential-theft', 'external-egress'] },
   'flow-http-callout-uncredentialed-endpoint':   { grants: ['external-egress'] },
-  'oauth-device-flow-enabled':                   { grants: ['credential-theft'], techniques: { 'credential-theft': ['T1528'] } },
   'oauth-password-flow-enabled':                 { grants: ['credential-theft'], techniques: { 'credential-theft': ['T1110.003'] } },
   'delegated-authentication-admin-assigned':     { grants: ['org-takeover'], techniques: { 'org-takeover': ['T1556.007'] } },
   'delegated-authentication-insecure-gateway':   { grants: ['org-takeover'], techniques: { 'org-takeover': ['T1556.007'] } },

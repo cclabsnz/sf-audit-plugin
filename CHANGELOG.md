@@ -9,6 +9,22 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Fixed
+
+- **The OAuth Username-Password Flow check reads the setting Salesforce has.** It read
+  `isDeviceFlowEnabled` and `isPasswordFlowEnabled` from OAuth and OpenID Connect Settings, which
+  has neither field, so every run ended in "verify manually". It now reads `blockOAuthUnPwFlow`
+  and reports `oauth-password-flow-enabled` when the flow is not blocked. Orgs that still allow
+  the flow will see the finding, and it feeds the credential-theft chain, so some grades may fall.
+- **The Device Flow finding is removed.** Device Flow is switched on per connected app, and neither
+  OauthOidcSettings nor ConnectedApp metadata carries it, so `oauth-device-flow-enabled` could
+  never fire. The check is renamed OAuth Username-Password Flow; its id is unchanged, so waivers
+  still apply.
+- **Infinite refresh tokens are read from the refresh token policy only.** The connected-app scope
+  check also flagged `oauthConfig.refreshTokenValidityPeriod = -1`, which is not a ConnectedApp
+  metadata field. `oauthPolicy.refreshTokenPolicy = infinite` is how the Metadata API states a
+  token valid until revoked, and it already raised the finding. Results do not change.
+
 ## [v1.25.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.25.1) — 2026-11-11
 
 Documentation only. No change to checks, scores or reports.

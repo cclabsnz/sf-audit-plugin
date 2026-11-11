@@ -27,7 +27,7 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 | Certificate Expiry | Installed certificates nearing expiry (30 / 90 / 180-day thresholds) |
 | Auth Providers & External IdPs | External Auth Providers and SAML SSO configs; flags social/JIT providers that can federate in or auto-provision users |
 | Session & Clickjack Hardening | Clickjack, CSRF, XSS, and content-sniffing settings read authoritatively from SecuritySettings (Health Check cache fallback) with per-setting remediation |
-| OAuth Device & Password Flows | OAuth 2.0 Device Flow and Username-Password Flow enabled in OAuth and OpenID Connect Settings, with an advisory when the settings cannot be read; phishable device code flows and SSO/MFA bypass paths |
+| OAuth Username-Password Flow | OAuth 2.0 Username-Password Flow not blocked in OAuth and OpenID Connect Settings, with an advisory when the setting cannot be read; an SSO/MFA bypass path. Device Flow is set per connected app and cannot be read |
 | Delegated Authentication Exposure | Delegated Authentication enabled over unencrypted/non-mTLS endpoints or assigned to System Administrator profiles |
 | Auth.Provider Registration Handler Security | Auth.Provider RegistrationHandler running as System Administrator with email-based user account linking vulnerable to pre-auth takeover |
 
