@@ -28,6 +28,50 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
   - A failed read is now inconclusive rather than an error. If custom metadata types cannot be
     listed, custom settings are still read and the finding says so.
 
+### Fixed
+
+- **The OAuth Username-Password Flow check reads the setting Salesforce has.** It read
+  `isDeviceFlowEnabled` and `isPasswordFlowEnabled` from OAuth and OpenID Connect Settings, which
+  has neither field, so every run ended in "verify manually". It now reads `blockOAuthUnPwFlow`,
+  confirmed against a Developer Edition org, and reports `oauth-password-flow-enabled` when the
+  flow is not blocked. Orgs that allow the flow will see the finding, and it feeds the
+  credential-theft chain, so some grades may fall. When the setting cannot be read, the advisory
+  is now marked inconclusive, so the check no longer counts as assessed.
+- **The Device Flow finding is removed.** Device Flow is switched on per connected app, and neither
+  OauthOidcSettings nor ConnectedApp metadata carries it, so `oauth-device-flow-enabled` could
+  never fire. A waiver on that id now matches nothing and can be deleted. The check is renamed
+  OAuth Username-Password Flow; its id is unchanged, so waivers on the check still apply.
+- **Infinite refresh tokens are read from the refresh token policy only.** The connected-app scope
+  check also flagged `oauthConfig.refreshTokenValidityPeriod = -1`, which is not a ConnectedApp
+  metadata field. `oauthPolicy.refreshTokenPolicy = infinite` is how the Metadata API states a
+  token valid until revoked, and it already raised the finding. Results do not change.
+- **Inactive connected apps are found by real OAuth logins.** The check counted LoginHistory rows
+  with `LoginType LIKE 'OAuth%'`, and no LoginType starts with "OAuth": an OAuth login is recorded
+  as `Remote Access 2.0` or `Remote Access Client`, with the flow in `LoginSubType`. The filter
+  matched nothing, so every connected app was reported as having no OAuth logins in 90 days. It
+  now reads either field, so apps that sign in count as active and orgs will see far fewer
+  `connected-app-inactive` items. An app that only exchanges refresh tokens may still read as
+  inactive: whether that writes a LoginHistory row is not established, and
+  `oauth-token-inventory` covers standing tokens.
+- **The inactive connected app remedy no longer leads with deleting the app.** It asks the owner
+  first, then revokes tokens and blocks the app in Connected Apps OAuth Usage, which can be
+  reversed. A delete cannot be undone, loses the consumer key and secret, and connected app
+  creation is restricted from Spring '26. The finding now says inactive apps *may* still hold
+  credentials.
+- **The schema guard judges LIKE on picklists.** A LIKE pattern that fits no value of a picklist
+  fails the guard, as an unknown `=` or `IN` value already did. The deep-path guard now drives the
+  inactivity check to its LoginHistory read.
+- **Secure guest user record access is reported as the platform guarantee it is.** Salesforce has
+  enforced it in every org since Winter '21: from API 50.0 `SharingSettings.enableSecureGuestAccess`
+  is always true, and the Release Update that carried it is gone. The check looked for a Release
+  Update whose title or description mentioned "guest" and "record access", which could only find a
+  different guest update. Depending on that update's status it reported a false pass, a false HIGH
+  `guest-record-access-policy-not-enforced` (which also fed the unauthenticated chains), or a LOW
+  "verify manually". It now passes for orgs with guest users and points to
+  `guest-object-exposure` and `guest-user-access`, which read guest-owned and guest-shared records
+  directly. `guest-record-access-policy-not-enforced`, `-verify-manually` and
+  `-tooling-inaccessible` are removed; waivers on them match nothing and can be deleted.
+
 ## [v1.25.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.25.1) — 2026-11-11
 
 Documentation only. No change to checks, scores or reports.
@@ -341,7 +385,6 @@ mean what they say. Found by running the audit against a Developer Edition org a
 - `scripts/capture-schema.mjs` and a captured Developer Edition schema
   (`test/fixtures/schema/developer-edition.json`, standard fields only). A test runs every
   check against it and fails on any query the org would reject.
-||||||| a23c86e
 
 ## [v1.17.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.17.0) — 2026-10-17
 

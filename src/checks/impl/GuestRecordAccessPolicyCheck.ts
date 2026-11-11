@@ -1,77 +1,31 @@
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
-import { fieldsOf } from '../support/schema.js';
 import type { Finding } from '../../findings/Finding.js';
 
 interface GuestUser {
   Id: string;
 }
-/**
- * Whether a Tooling ReleaseUpdate status means the update is enabled. Invoked and Revocable
- * (enabled, can still be reverted) are on; Invocable (available) and Revoked are off; any other
- * status is unknown.
- */
-function releaseUpdateEnabled(status: string): boolean | null {
-  if (status === 'Invoked' || status === 'Revocable') return true;
-  if (status === 'Invocable' || status === 'Revoked') return false;
-  return null;
-}
-
-/** Tooling ReleaseUpdate, the current form of CriticalUpdate. */
-interface ReleaseUpdateRecord {
-  Id: string;
-  DeveloperName: string;
-  Title: string | null;
-  Description: string | null;
-  Status: string;
-}
-
-interface CriticalUpdateRecord {
-  Id: string;
-  Name: string;
-  Description: string | null;
-  /** null when the status does not say either way. */
-  IsEnabled: boolean | null;
-}
 
 /**
- * Verifies the PREVENTIVE guardrail that stops the guest-ownership-defeats-OWD
- * exfiltration vector: "Secure guest user record access".
+ * The PREVENTIVE guardrail that stops guest-owned records defeating a Private OWD: "Secure guest
+ * user record access". With it, guests reach records only through guest user sharing rules.
  *
- * This is the policy complement to GuestObjectExposureCheck (which detects the
- * SYMPTOM — guest-owned records readable under a Private OWD). Once "Secure guest
- * user record access" is enforced, guests can no longer be granted record access
- * except via explicit guest user sharing rules, and — paired with "Assign new
- * records created by guest users to the default owner" — guests stop OWNING the
- * records they submit, which is what otherwise nullifies a Private OWD for
- * guest-submitted records (an owner can always read its own records).
+ * Salesforce has enforced it in every org since Winter '21. From API 50.0,
+ * SharingSettings.enableSecureGuestAccess is always true and setting it has no effect, and the
+ * Release Update that once carried it is no longer served. So there is no state to read: this
+ * check states the platform guarantee for orgs with guest users. It once matched a Release Update
+ * by its wording ("guest" plus "record access"), which could only pick up a different guest update.
  *
- * The enforcement ships as a Salesforce Release Update ("Secure guest user record
- * access", api-visible as a CriticalUpdate). This check reads that update's
- * activation state via the Tooling API and grades:
- *   - update present & IsEnabled = false  => HIGH: guardrail available, NOT activated.
- *   - update present & IsEnabled = true    => pass: guardrail enforced.
- *   - update absent (older orgs where it was auto-activated long ago, or not
- *     surfaced)                            => LOW advisory: confirm the Sharing
- *     Settings checkboxes manually, since the API no longer exposes the toggle.
- * Degrades to inconclusive if guest users or the Tooling API cannot be read.
+ * The residual risk is the symptom, not the policy: records a guest already owns, or shares a
+ * guest sharing rule grants. GuestObjectExposureCheck and GuestUserAccessCheck read those directly.
+ * Degrades to inconclusive if guest users cannot be read.
  */
 export class GuestRecordAccessPolicyCheck implements SecurityCheck {
   readonly id = 'guest-record-access-policy';
   readonly name = 'Secure Guest User Record Access';
   readonly category = 'Access Control';
   readonly description =
-    'Verifies the "Secure guest user record access" enforcement is activated, the guardrail that stops guest-owned records defeating a Private org-wide default';
-
-  // Matches the release update / sharing setting regardless of the exact label
-  // Salesforce uses across versions: the name/description mentions guests AND
-  // record access.
-  private matchesSecureGuestAccess(u: CriticalUpdateRecord): boolean {
-    const hay = `${u.Name} ${u.Description ?? ''}`.toLowerCase();
-    const guest = hay.includes('guest');
-    const record = hay.includes('record access') || hay.includes('record-level') || hay.includes("access to records") || hay.includes('securely access');
-    return guest && record;
-  }
+    'Confirms the platform enforces "Secure guest user record access" for orgs with guest users, the guardrail that stops guest-owned records defeating a Private org-wide default';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
@@ -95,97 +49,22 @@ export class GuestRecordAccessPolicyCheck implements SecurityCheck {
         passed: true,
         title: 'No active guest users',
         detail: 'There are no active guest users, so guest record-access enforcement has no attack surface to protect.',
-        remediation: 'If an Experience Cloud or Sites site is added later, ensure "Secure guest user record access" is enforced before going live.',
+        remediation: 'If an Experience Cloud or Sites site is added later, review its guest user sharing rules and guest-owned records before going live.',
       });
       return { findings };
     }
 
-    let updates: CriticalUpdateRecord[];
-    try {
-      // Current orgs serve Release Updates as Tooling ReleaseUpdate (Status 'Invocable' = available
-      // but not enabled); CriticalUpdate is the older object. Read whichever this org serves.
-      if (await fieldsOf(ctx, 'ReleaseUpdate', 'tooling')) {
-        const rows = await ctx.tooling.query<ReleaseUpdateRecord>(
-          'SELECT Id, DeveloperName, Title, Description, Status FROM ReleaseUpdate',
-        );
-        updates = rows.map((r) => ({
-          Id: r.Id,
-          Name: r.Title ?? r.DeveloperName,
-          Description: r.Description,
-          IsEnabled: releaseUpdateEnabled(r.Status),
-        }));
-      } else {
-        updates = await ctx.tooling.query<CriticalUpdateRecord>(
-          'SELECT Id, Name, Description, IsEnabled FROM CriticalUpdate',
-        );
-      }
-    } catch (err) {
-      findings.push(this.inconclusive('guest-record-access-policy-tooling-inaccessible', 'Release updates could not be queried', err));
-      return { findings };
-    }
-
-    const match = updates.find((u) => this.matchesSecureGuestAccess(u));
-
-    if (match && match.IsEnabled === false) {
-      findings.push({
-        id: 'guest-record-access-policy-not-enforced',
-        category: this.category,
-        riskLevel: 'HIGH',
-        title: `"Secure guest user record access" is available but NOT activated (${guests.length} active guest user(s))`,
-        detail:
-          'The "Secure guest user record access" Release Update is present but not enabled. Until it is activated, guest users can be granted record access through legacy sharing mechanisms and can own the records they submit via public forms. Because an owner can always read its own records, a Private org-wide default does not protect guest-owned records — this is the exact vector that turns a public submission form into an unauthenticated bulk-read surface.',
-        remediation:
-          'Activate "Secure guest user record access" in Setup → Release Updates, and enable "Assign new records created by guest users to the default owner" in Setup → Sharing Settings. Reparent existing guest-owned records to an internal default/integration owner. After enforcement, grant guest read access only through explicit, minimal guest user sharing rules.',
-        affectedItems: [{ label: match.Name, url: `${ctx.orgInfo.instanceUrl}/lightning/setup/ReleaseUpdates/home`, note: 'Release Update present, IsEnabled = false' }],
-      });
-      return { findings };
-    }
-
-    if (match && match.IsEnabled === true) {
-      findings.push({
-        id: 'guest-record-access-policy-enforced',
-        category: this.category,
-        riskLevel: 'LOW',
-        passed: true,
-        title: '"Secure guest user record access" is enforced',
-        detail:
-          'The "Secure guest user record access" Release Update is enabled, so guests cannot be granted record access except through explicit guest user sharing rules. Verify "Assign new records created by guest users to the default owner" is also enabled so guests do not own the records they submit.',
-        remediation:
-          'Confirm "Assign new records created by guest users to the default owner" is enabled in Setup → Sharing Settings, and periodically review guest user sharing rules for least privilege.',
-        affectedItems: [{ label: match.Name, url: setupUrl, note: 'Release Update enabled' }],
-      });
-      return { findings };
-    }
-
-    if (match) {
-      // Present, but its status says neither enabled nor available (e.g. a new status value):
-      // never read as enforced. MN-051.
-      findings.push({
-        id: 'guest-record-access-policy-verify-manually',
-        category: this.category,
-        riskLevel: 'LOW',
-        title: `Confirm guest record-access guardrails manually (${guests.length} active guest user(s))`,
-        detail: `The "Secure guest user record access" Release Update is present, but its status does not say whether it is enabled, so enforcement is not assumed.`,
-        remediation:
-          'In Setup → Release Updates and Setup → Sharing Settings, confirm "Secure guest user record access" is on and "Assign new records created by guest users to the default owner" is enabled.',
-        affectedItems: [{ label: match.Name, url: `${ctx.orgInfo.instanceUrl}/lightning/setup/ReleaseUpdates/home`, note: 'Status unknown' }],
-      });
-      return { findings };
-    }
-
-    // No matching update surfaced — typical of orgs where it was auto-activated in
-    // an earlier release and no longer appears in CriticalUpdate. We got data, so
-    // this is advisory (LOW), not inconclusive: point the operator at the manual toggles.
     findings.push({
-      id: 'guest-record-access-policy-verify-manually',
+      id: 'guest-record-access-policy-enforced',
       category: this.category,
       riskLevel: 'LOW',
-      title: `Confirm guest record-access guardrails manually (${guests.length} active guest user(s))`,
+      passed: true,
+      title: `"Secure guest user record access" is enforced by the platform (${guests.length} active guest user(s))`,
       detail:
-        'The "Secure guest user record access" Release Update is no longer exposed via the API (usually because it was auto-activated in an earlier Salesforce release). Enforcement is therefore assumed but not API-verifiable. The two settings that jointly close the guest-ownership-defeats-OWD vector cannot be read programmatically.',
+        "Salesforce has enforced secure guest user record access in every org since Winter '21, and from API 50.0 the setting is always on and cannot be turned off. Guests get no access from the org-wide default, and new record access for guests comes only through guest user sharing rules. Records a guest owns, shares granted before Winter '21, and Apex or flows that run without sharing can still reach records.",
       remediation:
-        'In Setup → Sharing Settings, confirm "Secure guest user record access" is on and "Assign new records created by guest users to the default owner" is enabled. Then confirm no guest user OWNS records (see the guest-object-exposure finding) and that guest access is granted only via minimal guest user sharing rules.',
-      affectedItems: [{ label: 'Sharing Settings', url: setupUrl, note: 'Manual verification required' }],
+        'Nothing to switch on. Review the residual paths: guest-object-exposure and guest-user-access report guest-owned and guest-shared records, and guest-executable-apex reports Apex guests can run without sharing.',
+      affectedItems: [{ label: 'Sharing Settings', url: setupUrl, note: 'Enforced by the platform' }],
     });
     return { findings };
   }

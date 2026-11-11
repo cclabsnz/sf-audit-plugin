@@ -59,7 +59,7 @@ this). Grouped by each check's declared `category`. Interface: src/checks/Securi
 | `experience-cloud-site` | Experience Cloud Site Security | Checks live Experience Cloud sites for self-registration enabled (attacker account creation) and guest user presence | src/checks/impl/ExperienceCloudSiteCheck.ts |
 | `guest-object-exposure` | Guest Object Exposure (Bulk Read via UI API) | Auto-discovers every object an unauthenticated guest can read in bulk via the UI API (GraphQL), including records exposed by guest... | src/checks/impl/GuestObjectExposureCheck.ts |
 | `guest-site-options` | Experience Cloud Guest Site Options | Checks Experience Cloud sites for guest file access and guest member visibility, which expose files and member identities to... | src/checks/impl/GuestSiteOptionsCheck.ts |
-| `guest-record-access-policy` | Secure Guest User Record Access | Verifies the "Secure guest user record access" enforcement is activated, the guardrail that stops guest-owned records defeating a... | src/checks/impl/GuestRecordAccessPolicyCheck.ts |
+| `guest-record-access-policy` | Secure Guest User Record Access | Confirms the platform enforces "Secure guest user record access" for orgs with guest users (always on since API 50.0) | src/checks/impl/GuestRecordAccessPolicyCheck.ts |
 | `login-access-policy` | Login-As & Delegated Administration | Flags delegated-administration groups and the org login-as policy, which allow user impersonation and scoped admin escalation that... | src/checks/impl/LoginAccessPolicyCheck.ts |
 | `classic-sites` | Classic Force.com Sites | Flags active classic (Visualforce) Force.com Sites and their guest users | src/checks/impl/ClassicSitesCheck.ts |
 | `guest-api-access` | Guest API & Bulk Access | Flags guest users granted API Enabled or Bulk API Hard Delete | src/checks/impl/GuestApiAccessCheck.ts |
@@ -193,7 +193,7 @@ this). Grouped by each check's declared `category`. Interface: src/checks/Securi
 |---|---|---|---|
 | `password-session-policy` | Password and Session Policy | Evaluates password complexity, session timeout, and MFA enforcement from Health Check data | src/checks/impl/PasswordSessionPolicyCheck.ts |
 | `ip-restrictions` | Login IP Restrictions | Checks admin profiles for missing IP range restrictions and connected apps with relaxed IP policies | src/checks/impl/IpRestrictionsCheck.ts |
-| `oauth-device-and-asset-token-flows` | OAuth Device & Password Flows | Flags OAuth 2.0 Device Flow and Username-Password Flow enabled in OAuth and OpenID Connect Settings | src/checks/impl/OauthDeviceAndAssetTokenFlowsCheck.ts |
+| `oauth-device-and-asset-token-flows` | OAuth Username-Password Flow | Flags the OAuth 2.0 Username-Password Flow when OAuth and OpenID Connect Settings do not block it | src/checks/impl/OauthDeviceAndAssetTokenFlowsCheck.ts |
 | `delegated-authentication-exposure` | Delegated Authentication Exposure | Flags Delegated Authentication enabled over non-mTLS endpoints or assigned to System Administrator profiles | src/checks/impl/DelegatedAuthenticationExposureCheck.ts |
 | `auth-provider-registration-handler` | Auth.Provider Registration Handler Security | Detects Auth.Provider RegistrationHandler running as Admin with email-based account linking vulnerable to pre-auth takeover | src/checks/impl/AuthProviderRegistrationHandlerCheck.ts |
 

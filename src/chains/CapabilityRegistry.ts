@@ -121,10 +121,6 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'public-group-sharing-exposure':              { grants: ['data-read-bulk'] },
   // Report folders any authenticated user can view.
   'report-folder-access-public':                { grants: ['data-read'] },
-  // "Secure guest user record access" not enforced: guest-owned records can defeat a Private OWD.
-  // The policy gap widens guest visibility rather than creating the surface itself, so it mirrors
-  // 'guest-user-sharing-exposure' rather than the confirmed bulk-read sinks.
-  'guest-record-access-policy-not-enforced':    { grants: ['unauth-foothold', 'data-read'] },
   // Sensitive data present and readable — what every other capability is ultimately reaching for.
   'encryption-coverage-unencrypted-sensitive':  { grants: ['data-read'], techniques: { 'data-read': [] } },
   'sandbox-data-masking-pii-present':           { grants: ['data-read'] },
@@ -201,7 +197,6 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'platform-event-subscriber-escalation':        { grants: ['priv-esc', 'data-write'], techniques: { 'priv-esc': ['T1546'] } },
   'flow-http-callout-hardcoded-secret':          { grants: ['credential-theft', 'external-egress'] },
   'flow-http-callout-uncredentialed-endpoint':   { grants: ['external-egress'] },
-  'oauth-device-flow-enabled':                   { grants: ['credential-theft'], techniques: { 'credential-theft': ['T1528'] } },
   'oauth-password-flow-enabled':                 { grants: ['credential-theft'], techniques: { 'credential-theft': ['T1110.003'] } },
   'delegated-authentication-admin-assigned':     { grants: ['org-takeover'], techniques: { 'org-takeover': ['T1556.007'] } },
   'delegated-authentication-insecure-gateway':   { grants: ['org-takeover'], techniques: { 'org-takeover': ['T1556.007'] } },

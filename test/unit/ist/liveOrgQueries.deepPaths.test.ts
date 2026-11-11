@@ -13,6 +13,7 @@ import { ApexSharingCheck } from '../../../src/checks/impl/ApexSharingCheck.js';
 import { ApexRestEndpointCheck } from '../../../src/checks/impl/ApexRestEndpointCheck.js';
 import { ApexCrudFLSCheck } from '../../../src/checks/impl/ApexCrudFLSCheck.js';
 import { PublicGroupSharingCheck } from '../../../src/checks/impl/PublicGroupSharingCheck.js';
+import { ConnectedAppInactivityCheck } from '../../../src/checks/impl/ConnectedAppInactivityCheck.js';
 import { CustomSettingsCheck } from '../../../src/checks/impl/CustomSettingsCheck.js';
 import type { SecurityCheck } from '../../../src/checks/SecurityCheck.js';
 import { schemaCtx, type RowSource } from './support/schemaCtx.js';
@@ -55,7 +56,7 @@ const BODIES = [
 const CHECKS: SecurityCheck[] = [
   new GuestObjectExposureCheck(), new GuestUserAccessCheck(), new GuestUserVisibilityCheck(), new GuestSiteOptionsCheck(),
   new GuestExecutableApexCheck(), new ApexSharingCheck(), new ApexRestEndpointCheck(), new ApexCrudFLSCheck(),
-  new PublicGroupSharingCheck(), new CustomSettingsCheck(),
+  new PublicGroupSharingCheck(), new ConnectedAppInactivityCheck(), new CustomSettingsCheck(),
 ];
 
 // The queries each path exists for. If a check stops sending one, the path is no longer exercised.
@@ -72,6 +73,7 @@ const EXPECTED: Array<[string, RegExp]> = [
   ['Apex class API versions', /^SELECT Name, ApiVersion FROM ApexClass WHERE NamespacePrefix = null$/],
   ['guest class access through permission sets', /FROM SetupEntityAccess WHERE SetupEntityType = 'ApexClass' AND ParentId IN/],
   ['the User external OWD', /FROM EntityDefinition WHERE QualifiedApiName = 'User'/],
+  ['recent OAuth logins per connected app', /FROM LoginHistory\s+WHERE LoginTime > LAST_N_DAYS:90/],
   ['fields of custom settings and custom metadata types', /FROM FieldDefinition WHERE EntityDefinition\.QualifiedApiName IN/],
 ];
 
@@ -79,6 +81,8 @@ describe('RULE-063 deep paths: queries past the first empty result are valid aga
   const run = async () => {
     const { ctx, violations, queries } = schemaCtx(org);
     (ctx.cache as Record<string, unknown>).apexBodies = BODIES;
+    // A connected app takes the inactivity check past "no apps" to its LoginHistory read.
+    (ctx.cache as Record<string, unknown>).connectedAppNames = ['Sample Integration'];
     const findings: string[] = [];
     for (const check of CHECKS) {
       const r = await check.run(ctx);

@@ -27,7 +27,7 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 | Certificate Expiry | Installed certificates nearing expiry (30 / 90 / 180-day thresholds) |
 | Auth Providers & External IdPs | External Auth Providers and SAML SSO configs; flags social/JIT providers that can federate in or auto-provision users |
 | Session & Clickjack Hardening | Clickjack, CSRF, XSS, and content-sniffing settings read authoritatively from SecuritySettings (Health Check cache fallback) with per-setting remediation |
-| OAuth Device & Password Flows | OAuth 2.0 Device Flow and Username-Password Flow enabled in OAuth and OpenID Connect Settings, with an advisory when the settings cannot be read; phishable device code flows and SSO/MFA bypass paths |
+| OAuth Username-Password Flow | OAuth 2.0 Username-Password Flow not blocked in OAuth and OpenID Connect Settings, with an advisory when the setting cannot be read; an SSO/MFA bypass path. Device Flow is set per connected app and cannot be read |
 | Delegated Authentication Exposure | Delegated Authentication enabled over unencrypted/non-mTLS endpoints or assigned to System Administrator profiles |
 | Auth.Provider Registration Handler Security | Auth.Provider RegistrationHandler running as System Administrator with email-based user account linking vulnerable to pre-auth takeover |
 
@@ -75,7 +75,7 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 | Guest-Executable Apex | Apex that guest profiles can run: CRITICAL when it, or a helper it calls, runs without sharing; HIGH when it switches off CRUD/FLS with SYSTEM_MODE. A class with no sharing keyword counts as running without sharing unless it (and any keyword-less parent) is saved at API 67.0 or later, or can be entered only through `@AuraEnabled` methods |
 | Experience Cloud Sites | Live sites with self-registration enabled and guest user presence |
 | Experience Cloud Guest Site Options | Guest file access and guest member visibility on live Experience Cloud sites; either setting on a site that is not live is reported apart, at LOW |
-| Secure Guest User Record Access | Verifies the "Secure guest user record access" enforcement is activated — the guardrail that stops guest-owned records defeating a Private OWD (complements Guest Object Exposure) |
+| Secure Guest User Record Access | Confirms the platform enforces "Secure guest user record access" for orgs with guest users (always on since Winter '21 / API 50.0); guest-owned and guest-shared records are reported by Guest Object Exposure and Guest User Access |
 | Guest API & Bulk Access | Guest users granted API Enabled or Bulk API Hard Delete — programmatic bulk read/delete for unauthenticated visitors |
 | Guest Visibility of Other Users | Whether unauthenticated guests can enumerate other User records through "View All Users" on a guest permission grant, and whether a public external org-wide default on `User` shows every user to logged-in portal and community users (MEDIUM, only when external users or a site exist; it does not reach guests, whose OWD is Private on every object). There is no object-permission leg: User takes no object permissions. The internal OWD is reported but not graded (Public Read Only is the platform default), and the Sharing Settings user-visibility checkboxes are not API-readable, so a clean result carries a manual-verification note |
 | Classic Force.com Sites | Active classic (Visualforce) Sites and their guest users — an unauthenticated surface separate from Experience Cloud |
