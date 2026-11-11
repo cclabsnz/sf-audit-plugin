@@ -14,9 +14,23 @@ interface FieldRecord {
   NamespacePrefix?: string | null;
 }
 
-// Field names that say the value is a secret. Bare "key" is left out: it names prefixes, record
-// keys and flags far more often than credentials.
-const SECRET_NAME = /pass(word|wd)|pwd|secret|token|api_?key|private_?key|access_?key|credential|bearer/i;
+// Words in a field name that say the value is a secret. Bare "key" counts only after a qualifier
+// (api, private, access, client, signing, secret, encryption): alone it names prefixes, record keys
+// and flags far more often than credentials.
+const SECRET_WORDS = new Set(['password', 'passwd', 'pwd', 'passphrase', 'secret', 'token', 'apikey', 'privatekey', 'accesskey', 'credential', 'credentials', 'bearer']);
+const KEY_QUALIFIERS = new Set(['api', 'private', 'access', 'client', 'signing', 'secret', 'encryption']);
+// A name ending in one of these describes a secret (where it lives, what it is called), not the secret.
+const DESCRIBES_ONLY = new Set(['endpoint', 'url', 'uri', 'name', 'label', 'type', 'count', 'length', 'date', 'expiry', 'expiration', 'id']);
+
+/** Whether a field's own name (no namespace, no __c) says it holds a secret. */
+export function namesSecret(qualifiedApiName: string): boolean {
+  const base = qualifiedApiName.replace(/^[A-Za-z0-9]+__(?=.+__c$)/, '').replace(/__c$/, '');
+  const words = base.split(/_+|(?<=[a-z0-9])(?=[A-Z])/).map((w) => w.toLowerCase()).filter(Boolean);
+  if (words.length === 0 || DESCRIBES_ONLY.has(words[words.length - 1])) return false;
+  // The name of a Named Credential is the recommended thing to store, not a secret.
+  if (words.some((w, i) => w === 'named' && words[i + 1]?.startsWith('credential')) || words.includes('namedcredential')) return false;
+  return words.some((w, i) => SECRET_WORDS.has(w) || (w === 'key' && i > 0 && KEY_QUALIFIERS.has(words[i - 1])));
+}
 
 /** Plain or long text: a value someone could paste a secret into. Encrypted text is not plain. */
 function isPlainText(dataType: string | null): boolean {
@@ -86,37 +100,54 @@ export class CustomSettingsCheck implements SecurityCheck {
       return { findings };
     }
 
-    const managed = (f: FieldRecord) => {
-      const entity = entities.find((e) => e.QualifiedApiName === f.EntityDefinition?.QualifiedApiName);
-      return Boolean(f.NamespacePrefix || entity?.NamespacePrefix);
-    };
-    const matches = fields.filter((f) => f.EntityDefinition?.QualifiedApiName && SECRET_NAME.test(f.QualifiedApiName) && isPlainText(f.DataType));
+    // A field is the vendor's when the field itself carries a namespace; an org's own field on a
+    // managed type is the org's to fix.
+    const managed = (f: FieldRecord) => Boolean(f.NamespacePrefix);
+    const isMdt = (obj: string) => obj.endsWith('__mdt');
+    const matches = fields.filter((f) => f.EntityDefinition?.QualifiedApiName && namesSecret(f.QualifiedApiName) && isPlainText(f.DataType));
     const mdtNote = mdtError ? ` Custom metadata types could not be listed (${mdtError}), so only custom settings were read.` : '';
     const scope = `${settings.length} custom setting(s) and ${mdt.length} custom metadata type(s)`;
 
-    if (matches.length > 0) {
-      const unmanaged = matches.filter((f) => !managed(f));
+    const item = (f: FieldRecord) => {
+      const obj = f.EntityDefinition!.QualifiedApiName!;
+      return {
+        label: `${obj}.${f.QualifiedApiName}`,
+        url: `${baseUrl}/lightning/setup/${isMdt(obj) ? 'CustomMetadata' : 'CustomSettings'}/home`,
+        note: managed(f)
+          ? `${f.DataType}; managed package: ask the vendor whether the type is protected and how the secret is stored`
+          : `${f.DataType}; check whether records hold a secret`,
+      };
+    };
+    const own = matches.filter((f) => !managed(f));
+    const vendor = matches.filter(managed);
+
+    if (own.length > 0) {
       findings.push({
         id: 'custom-settings-credentials',
         category: this.category,
-        riskLevel: unmanaged.length > 0 ? 'MEDIUM' : 'LOW',
-        title: `${matches.length} custom setting or custom metadata field(s) are named for a password, secret, token or key`,
+        riskLevel: 'MEDIUM',
+        title: `${own.length} custom setting or custom metadata field(s) are named for a password, secret, token or key`,
         detail:
-          `These plain-text fields on ${scope} are named as if they hold a secret. Their records can be read through the API by anyone with access to the type, so a secret stored there is exposed. Field values were not read: confirm what each holds.${mdtNote}`,
+          `These plain-text fields on ${scope} are named as if they hold a secret. Their records can be read through the API by users with access to the type, so a secret stored there is exposed. Field values were not read: confirm what each holds.${mdtNote}`,
         remediation:
-          'For each field, check whether its records hold a live secret. Move any that do to a Named Credential with an External Credential, rotate the secret, and clear the field. For a managed package field, ask the vendor whether the type is protected and how the secret is stored.',
-        affectedItems: matches.map((f) => {
-          const obj = f.EntityDefinition!.QualifiedApiName!;
-          return {
-            label: `${obj}.${f.QualifiedApiName}`,
-            url: `${baseUrl}/lightning/setup/ObjectManager/${obj}/FieldsAndRelationships/view`,
-            note: managed(f)
-              ? `${f.DataType}; managed package: ask the vendor whether it is protected`
-              : `${f.DataType}; check whether records hold a secret`,
-          };
-        }),
+          'For each field, check whether its records hold a live secret. Move any that do to a Named Credential with an External Credential, rotate the secret, and clear the field.',
+        affectedItems: own.map(item),
       });
-    } else {
+    }
+    // A vendor's field is reported apart and feeds no attack chain: whether it is readable depends
+    // on the type's visibility, which this check does not read, and only the vendor can change it.
+    if (vendor.length > 0) {
+      findings.push({
+        id: 'custom-settings-credentials-managed',
+        category: this.category,
+        riskLevel: 'LOW',
+        title: `${vendor.length} managed package field(s) on custom settings or custom metadata are named for a secret`,
+        detail: `These plain-text fields belong to installed packages and are named as if they hold a secret. A protected type is not readable from this org; a public one is. Field values were not read.${mdtNote}`,
+        remediation: 'Ask each vendor whether the type is protected and how the secret is stored and rotated.',
+        affectedItems: vendor.map(item),
+      });
+    }
+    if (matches.length === 0) {
       findings.push({
         id: 'custom-settings-clean',
         category: this.category,

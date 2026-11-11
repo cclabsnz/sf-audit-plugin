@@ -136,9 +136,10 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'integration-least-privilege-escalation-permissions': { grants: ['code-exec', 'priv-esc'], techniques: { 'priv-esc': ['T1098'] } },
   'integration-least-privilege-data-permissions':       { grants: ['data-read-bulk'] },
 
-  // Credentials in custom settings — the third place secrets hide, after hardcoded literals and
-  // custom labels, both of which already grant here. A protected custom setting is readable by any
-  // Apex running in system context, so the reach is the same.
+  // Credentials in the org's own custom setting or custom metadata fields: the third place secrets
+  // hide, after hardcoded literals and custom labels, both of which already grant here. Managed
+  // package fields ('custom-settings-credentials-managed') grant nothing: their reach depends on the
+  // type's visibility, which is not read.
   'custom-settings-credentials':                { grants: ['credential-theft'] },
 
   // Apex reachable over REST, and Apex that skips CRUD/FLS. The registry already models the portal

@@ -1,5 +1,6 @@
 import { jest } from '@jest/globals';
-import { CustomSettingsCheck } from '../../../../src/checks/impl/CustomSettingsCheck.js';
+import { CustomSettingsCheck, namesSecret } from '../../../../src/checks/impl/CustomSettingsCheck.js';
+import { capabilitiesFor } from '../../../../src/chains/CapabilityRegistry.js';
 import type { AuditContext } from '@cclabsnz/sf-core';
 import type { CheckResult } from '../../../../src/checks/SecurityCheck.js';
 
@@ -86,7 +87,14 @@ describe('CustomSettingsCheck', () => {
     expect(find(await check.run(ctx), 'custom-settings-credentials')).toBeUndefined();
   });
 
-  it.each(['Password__c', 'Passwd__c', 'Access_Token__c', 'Refresh_Token__c', 'Private_Key__c', 'Client_Secret__c', 'ApiKey__c', 'Bearer__c'])(
+  // Names that describe a secret (where it lives, what it is called) or store a Named Credential's
+  // name are not secrets; nor is a namespace that happens to contain a secret word.
+  it.each(['Named_Credential__c', 'NamedCredential__c', 'Token_Endpoint__c', 'Secret_Name__c', 'Tokenized__c', 'Compass__c', 'Bypass_Validation__c', 'Passport_Number__c', 'pwdmgr__Region__c', 'Key__c'])(
+    'does not treat %s as a secret',
+    (name) => expect(namesSecret(name)).toBe(false),
+  );
+
+  it.each(['Password__c', 'Passwd__c', 'Passphrase__c', 'Access_Token__c', 'Refresh_Token__c', 'Private_Key__c', 'Client_Key__c', 'Signing_Key__c', 'Client_Secret__c', 'ApiKey__c', 'Bearer__c', 'acme__Api_Key__c', 'oauthToken__c'])(
     'flags %s',
     async (name) => {
       const { ctx } = makeCtx({
@@ -99,25 +107,40 @@ describe('CustomSettingsCheck', () => {
 
   // A managed package's protected setting or type cannot be read from the subscriber org's API,
   // and only the vendor can change it, so a package-only match is LOW and says so.
-  it('rates a match found only in managed-package components LOW, and says to ask the vendor', async () => {
+  // A vendor's field is reported apart, LOW, under an id that feeds no attack chain: whether it is
+  // readable depends on the type's visibility, which is not read.
+  it('reports managed-package fields apart, LOW, and not as the chain-feeding finding', async () => {
     const { ctx } = makeCtx({
       settings: [{ QualifiedApiName: 'acme__Config__c', NamespacePrefix: 'acme' }],
       fields: [{ object: 'acme__Config__c', QualifiedApiName: 'acme__Secret__c', DataType: 'Text(255)', NamespacePrefix: 'acme' }],
     });
-    const f = find(await check.run(ctx), 'custom-settings-credentials')!;
+    const r = await check.run(ctx);
+    expect(find(r, 'custom-settings-credentials')).toBeUndefined();
+    const f = find(r, 'custom-settings-credentials-managed')!;
     expect(f.riskLevel).toBe('LOW');
     expect(f.affectedItems![0].note).toContain('vendor');
+    expect(capabilitiesFor(f).grants ?? []).toEqual([]);
   });
 
-  it('stays MEDIUM when an unmanaged field matches alongside a managed one', async () => {
+  it("treats the org's own field on a managed type as the org's", async () => {
     const { ctx } = makeCtx({
-      settings: [{ QualifiedApiName: 'acme__Config__c', NamespacePrefix: 'acme' }, { QualifiedApiName: 'Mine__c' }],
-      fields: [
-        { object: 'acme__Config__c', QualifiedApiName: 'acme__Secret__c', DataType: 'Text(255)', NamespacePrefix: 'acme' },
-        { object: 'Mine__c', QualifiedApiName: 'Token__c', DataType: 'Text(255)' },
-      ],
+      settings: [{ QualifiedApiName: 'acme__Config__c', NamespacePrefix: 'acme' }],
+      fields: [{ object: 'acme__Config__c', QualifiedApiName: 'Token__c', DataType: 'Text(255)' }],
     });
     expect(find(await check.run(ctx), 'custom-settings-credentials')!.riskLevel).toBe('MEDIUM');
+  });
+
+  it('links custom settings and custom metadata types to their own Setup pages', async () => {
+    const { ctx } = makeCtx({
+      settings: [{ QualifiedApiName: 'A__c' }],
+      mdt: [{ QualifiedApiName: 'B__mdt' }],
+      fields: [
+        { object: 'A__c', QualifiedApiName: 'Password__c', DataType: 'Text(80)' },
+        { object: 'B__mdt', QualifiedApiName: 'Password__c', DataType: 'Text(80)' },
+      ],
+    });
+    const urls = find(await check.run(ctx), 'custom-settings-credentials')!.affectedItems!.map((i) => i.url);
+    expect(urls).toEqual(['https://x.my.salesforce.com/lightning/setup/CustomSettings/home', 'https://x.my.salesforce.com/lightning/setup/CustomMetadata/home']);
   });
 
   it('passes, naming how many it read, when no field looks like a secret', async () => {

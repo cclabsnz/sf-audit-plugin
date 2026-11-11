@@ -14,12 +14,19 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 - **The custom settings check looks at fields, not object names.** It flagged any custom object
   named with "Setting", "Config" or "Credential" whose name or description contained a word such
   as "key", at HIGH, so most of its hits were not secrets. It now reads the fields of actual custom
-  settings and custom metadata types, and reports plain-text fields named for a password, secret,
-  token or key (bare "key" no longer counts). Encrypted, number and checkbox fields are not
-  reported. `custom-settings-credentials` is MEDIUM, or LOW when only managed-package fields
-  match, since only the vendor can change those. Record values are still never read. A failed
-  read is now inconclusive rather than an error, and if custom metadata types cannot be listed,
-  custom settings are still read and the finding says so.
+  settings and custom metadata types, and reports plain-text fields whose own name says they hold
+  a secret: password, passphrase, secret, token, credential, bearer, or a qualified key such as API,
+  private, client or signing key. Bare "key", names that only describe a secret (`Token_Endpoint`,
+  `Secret_Name`), and a Named Credential's name are not reported, nor are encrypted, number and
+  checkbox fields. Record values are still never read.
+  - `custom-settings-credentials` is MEDIUM and covers the org's own fields.
+  - Managed-package fields are reported apart as `custom-settings-credentials-managed`, LOW. It
+    feeds no attack chain, since whether the field is readable depends on the type's visibility,
+    which is not read.
+  - Ordinary custom objects are no longer reported for their names. Secrets in Apex and custom
+    labels are still covered by `hardcoded-credentials` and `custom-labels-credential`.
+  - A failed read is now inconclusive rather than an error. If custom metadata types cannot be
+    listed, custom settings are still read and the finding says so.
 
 ## [v1.25.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.25.1) — 2026-11-11
 
