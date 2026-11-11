@@ -36,14 +36,19 @@ export class ConnectedAppInactivityCheck implements SecurityCheck {
     }
 
     // Query OAuth login history for the last 90 days, grouped by application name.
-    // Apps NOT appearing in this result have had zero OAuth logins in 90 days.
+    // Apps NOT appearing in this result have had zero OAuth logins in 90 days. LoginHistory records
+    // an OAuth login as LoginType 'Remote Access 2.0' (or 'Remote Access Client'), and the flow in
+    // LoginSubType ('OAuth Web Server', 'OAuth JWT Bearer', ...). No LoginType starts with 'OAuth',
+    // so filtering on that found no logins and called every app inactive. Whether a refresh token
+    // exchange writes a row is not established, so an app using only refresh tokens may still read
+    // as inactive; oauth-token-inventory covers standing tokens.
     let activeAppNames = new Set<string>();
     try {
       const result = await ctx.soql.query<LoginHistoryGroupRecord>(
         `SELECT Application, COUNT(Id) loginCount
          FROM LoginHistory
          WHERE LoginTime > LAST_N_DAYS:90
-           AND LoginType LIKE 'OAuth%'
+           AND (LoginType IN ('Remote Access 2.0', 'Remote Access Client') OR LoginSubType LIKE 'OAuth%')
          GROUP BY Application`
       );
       for (const r of result.records) {
@@ -77,13 +82,13 @@ export class ConnectedAppInactivityCheck implements SecurityCheck {
         riskLevel: inactiveApps.length > 5 ? 'MEDIUM' : 'LOW',
         title: `${inactiveApps.length} connected app(s) have had no OAuth logins in 90 days`,
         detail:
-          `${inactiveApps.length} of ${connectedAppNames.length} connected apps show no OAuth login activity in the past 90 days. Inactive apps still hold valid OAuth credentials and expand the attack surface. A compromised or leaked client secret for an inactive app can be used to obtain access tokens without triggering activity alerts.`,
+          `${inactiveApps.length} of ${connectedAppNames.length} connected apps show no OAuth login activity in the past 90 days. Inactive apps may still hold valid OAuth credentials and expand the attack surface. A compromised or leaked client secret for an inactive app can be used to obtain access tokens without triggering activity alerts.`,
         remediation:
-          'Review each inactive connected app. If the integration is no longer in use, delete or disable the app to revoke its OAuth credentials. Ensure active integrations are documented with an owner.',
+          "Confirm with the app's owner whether the integration is still needed. If it is not, open Setup → Connected Apps OAuth Usage, revoke the tokens it still holds, and Block the app, which stops it being used and can be reversed. Delete it only once you are sure: a delete cannot be undone, the consumer key and secret are lost with it, and connected app creation is restricted from Spring '26 (Salesforce Support only).",
         affectedItems: inactiveApps.map((name) => ({
           label: name,
           url: setupUrl,
-          note: 'No OAuth logins in 90 days: verify if still needed and delete if not',
+          note: 'No OAuth logins in 90 days: confirm it is still needed',
         })),
       });
     }

@@ -26,6 +26,23 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
   check also flagged `oauthConfig.refreshTokenValidityPeriod = -1`, which is not a ConnectedApp
   metadata field. `oauthPolicy.refreshTokenPolicy = infinite` is how the Metadata API states a
   token valid until revoked, and it already raised the finding. Results do not change.
+- **Inactive connected apps are found by real OAuth logins.** The check counted LoginHistory rows
+  with `LoginType LIKE 'OAuth%'`, and no LoginType starts with "OAuth": an OAuth login is recorded
+  as `Remote Access 2.0` or `Remote Access Client`, with the flow in `LoginSubType`. The filter
+  matched nothing, so every connected app was reported as having no OAuth logins in 90 days. It
+  now reads either field, so apps that sign in count as active and orgs will see far fewer
+  `connected-app-inactive` items. An app that only exchanges refresh tokens may still read as
+  inactive: whether that writes a LoginHistory row is not established, and
+  `oauth-token-inventory` covers standing tokens.
+- **The inactive connected app remedy no longer leads with deleting the app.** It asks the owner
+  first, then revokes tokens and blocks the app in Connected Apps OAuth Usage, which can be
+  reversed. A delete cannot be undone, loses the consumer key and secret, and connected app
+  creation is restricted from Spring '26. The finding now says inactive apps *may* still hold
+  credentials.
+- **The schema guard judges LIKE on picklists.** A LIKE pattern that fits no value of a picklist
+  fails the guard, as an unknown `=` or `IN` value already did. The deep-path guard now drives the
+  inactivity check to its LoginHistory read.
+||||||| 6b577a5
 
 ## [v1.25.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.25.1) — 2026-11-11
 
