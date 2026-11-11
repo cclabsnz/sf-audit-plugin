@@ -184,6 +184,22 @@ export function validate(api: Api, query: string, childContext = false): void {
         }
       }
     }
+    // LIKE on a picklist is accepted too: a pattern that fits no value matches nothing
+    // (LoginType LIKE 'OAuth%'; OAuth logins are 'Remote Access 2.0', the flow is in LoginSubType).
+    const likeCond = /(?:^|[\s(])([A-Za-z][A-Za-z0-9_.]*)\s+LIKE\s+'((?:[^'\\]|\\.)*)'/gi;
+    for (const c of body.matchAll(likeCond)) {
+      const f = resolvePath(api, object, c[1]);
+      if (!f?.values) continue;
+      if (c[2].includes('__')) continue;
+      // \% \_ and \' are literal characters; an unescaped % or _ is a wildcard.
+      const src = [...c[2].matchAll(/\\(.)|(%)|(_)|([^\\%_])/g)]
+        .map((t) => (t[2] ? '.*' : t[3] ? '.' : (t[1] ?? t[4]).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+        .join('');
+      const re = new RegExp(`^${src}$`, 'i');
+      if (!f.values.some((v) => re.test(v)) && ![...SEEN_LIVE].some((v) => re.test(v))) {
+        throw apiError('UNKNOWN_PICKLIST_VALUE', `'${c[2]}' matches no value of picklist ${object}.${c[1]}: the filter matches nothing`);
+      }
+    }
   }
 
   // Semi-join subqueries in WHERE name real objects; select-list subqueries name relationships.

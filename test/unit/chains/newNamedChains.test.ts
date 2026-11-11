@@ -234,8 +234,8 @@ describe('oauth-standing-access', () => {
     expect(match('oauth-standing-access', [unmatched, stale, ipBypass])).toBeNull();
   });
 
-  // A token exchange produces no OAuth login row, so a chain that fired only on observed activity
-  // would never fire at all. Nothing in the gate depends on evidence of use.
+  // A token exchange may produce no login row, so a chain that fired only on observed activity
+  // could miss standing access. Nothing in the gate depends on evidence of use.
   it('fires without any evidence the access has been exercised', () => {
     expect(match('oauth-standing-access', [fullScope, stale])).not.toBeNull();
   });
