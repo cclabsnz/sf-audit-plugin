@@ -1,6 +1,6 @@
 import type { AuditResult } from './AuditResult.js';
 import type { Finding } from './Finding.js';
-import { countBy, type DigestCounts } from './digest.js';
+import { findingStatus, openCounts } from './status.js';
 import { buildActionPlan, chainLabels, planHeadline, EFFORT_LABEL, WAVE_LABEL } from '../report/ActionPlan.js';
 
 export interface SummaryAction {
@@ -36,14 +36,14 @@ export interface AuditSummary {
   healthScore: number;
   gradeReason?: string;
   coverage?: { percent: number; checksAssessed: number; checksRun: number; notAssessed: string[] };
-  counts: DigestCounts;
+  /** Open findings by severity, as page one counts them, plus the other statuses. */
+  counts: { open: Record<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW', number>; info: number; waived: number; inconclusive: number; passed: number };
   /** The plan's conclusion in one sentence, as both reports state it. */
   headline: string;
   actions: SummaryAction[];
   attackChains: SummaryChain[];
 }
 
-const isOpen = (f: Finding): boolean => !f.passed && !f.inconclusive && !f.notAssessed && !f.waived;
 
 /**
  * Page one of the report as data: grade and why, coverage, the fix-first plan and the attack paths.
@@ -54,7 +54,8 @@ export function buildSummary(result: AuditResult): AuditSummary {
   const chains = result.attackChains ?? [];
   const labels = chainLabels(chains);
   const plan = buildActionPlan(result.findings, chains);
-  const openHigh = result.findings.filter((f) => isOpen(f) && f.riskLevel === 'HIGH').length;
+  const open = openCounts(result);
+  const tally = (s: string) => result.findings.filter((f) => findingStatus(f) === s).length;
   const out: AuditSummary = {
     orgId: result.orgId,
     orgName: result.orgName,
@@ -62,8 +63,8 @@ export function buildSummary(result: AuditResult): AuditSummary {
     generatedAt: result.generatedAt,
     grade: result.grade,
     healthScore: result.healthScore,
-    counts: countBy(result.findings),
-    headline: planHeadline(plan, chains, openHigh),
+    counts: { open, info: tally('info'), waived: tally('waived'), inconclusive: tally('inconclusive'), passed: tally('passed') },
+    headline: planHeadline(plan, chains, open.HIGH),
     actions: plan.map((a, i) => ({
       rank: i + 1,
       wave: WAVE_LABEL[a.wave],

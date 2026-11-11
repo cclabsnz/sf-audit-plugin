@@ -130,13 +130,13 @@ export function buildActionPlan(findings: Finding[], chains: AttackChain[]): Pla
   return actions.sort((a, b) => a.wave - b.wave || b.risk - a.risk || a.title.localeCompare(b.title));
 }
 
-/** How long an action takes, in the words both reports print. */
 /** Chain labels as the executive report prints them: C1… for named chains, P1… for potential ones. */
 export function chainLabels(chains: AttackChain[]): string[] {
   let c = 0, p = 0;
   return chains.map((ch) => (ch.abuseCase ? `C${++c}` : `P${++p}`));
 }
 
+/** How long an action takes, in the words both reports print. */
 export const EFFORT_LABEL = { quick: 'Under a day', moderate: 'Days', project: 'Weeks' } as const;
 /** When to start each wave. */
 export const WAVE_LABEL = { 1: 'Start now', 2: 'Next 30 days', 3: 'This quarter' } as const;

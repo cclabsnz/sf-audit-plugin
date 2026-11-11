@@ -5,6 +5,7 @@ import { getComplianceTags } from '../compliance/resolve.js';
 import { buildActionPlan, chainLabels, EFFORT_LABEL, WAVE_LABEL } from './ActionPlan.js';
 import type { AuditResult } from '../findings/AuditResult.js';
 import type { Finding } from '../findings/Finding.js';
+import { findingStatus, type FindingStatus } from '../findings/status.js';
 
 /** How many affected items to show; the report has the rest. */
 const SAMPLE = 5;
@@ -22,7 +23,7 @@ export interface CheckExplanation {
 export interface FindingExplanation {
   id: string;
   title: string;
-  status: 'open' | 'passed' | 'inconclusive' | 'waived' | 'not assessed';
+  status: FindingStatus;
   severity: Finding['riskLevel'];
   detail: string;
   remediation: string;
@@ -32,6 +33,8 @@ export interface FindingExplanation {
   chains: Array<{ label: string; title: string; severity: Finding['riskLevel']; breaksChain: boolean }>;
   /** The fix-first action that closes it, if it is open. */
   action?: { rank: number; wave: string; title: string };
+  /** Other checks that reported a finding with the same id in this run. */
+  alsoFrom?: string[];
 }
 
 export interface Explanation {
@@ -41,8 +44,7 @@ export interface Explanation {
   findings?: Array<{ id: string; title: string; status: FindingExplanation['status']; severity: Finding['riskLevel'] }>;
 }
 
-export const statusOf = (f: Finding): FindingExplanation['status'] =>
-  f.waived ? 'waived' : f.notAssessed ? 'not assessed' : f.inconclusive ? 'inconclusive' : f.passed ? 'passed' : 'open';
+const statusOf = findingStatus;
 
 /** The check a finding id belongs to: the longest check id it starts with. */
 export function checkForFindingId(id: string): (typeof CHECKS)[number] | undefined {
@@ -52,7 +54,9 @@ export function checkForFindingId(id: string): (typeof CHECKS)[number] | undefin
 export function parseResult(json: string): AuditResult {
   const raw = JSON.parse(json) as { result?: AuditResult } & Partial<AuditResult>;
   const result = (raw.result ?? raw) as AuditResult;
-  if (!Array.isArray(result.findings)) throw new Error('not a full audit result');
+  // A --digest result also has findings, but without ids or detail; --summary has none.
+  const full = Array.isArray(result.findings) && result.metrics !== undefined && result.findings.every((f) => typeof f.id === 'string' && 'detail' in f);
+  if (!full) throw new Error('not a full audit result');
   return result;
 }
 
@@ -70,9 +74,14 @@ export class ExplainError extends Error {
 export function explain(id: string, result?: AuditResult): Explanation {
   // A finding id does not always start with its check's id (apex-no-sharing-declaration is
   // apex-sharing's), so a run's own checkId wins; the prefix is the fallback without one.
-  const inRun = result?.findings.find((f) => f.id === id);
+  // Finding ids are not unique across checks; explain the first and name the others.
+  const matches = result?.findings.filter((f) => f.id === id) ?? [];
+  const inRun = matches[0];
   const check =
-    CHECKS.find((c) => c.id === (inRun?.checkId ?? id)) ?? checkForFindingId(id);
+    CHECKS.find((c) => c.id === (inRun?.checkId ?? id)) ??
+    checkForFindingId(id) ??
+    // A finding from an older report whose check has since been renamed or removed.
+    (inRun?.checkId ? { id: inRun.checkId, name: inRun.checkId, description: 'This check is not in the installed version of sf-audit.' } : undefined);
   if (!check) {
     throw new ExplainError(
       `No check or finding id matches '${id}'.`,
@@ -94,6 +103,8 @@ export function explain(id: string, result?: AuditResult): Explanation {
   if (!result) return out;
   if (inRun) {
     out.finding = explainFinding(inRun, result);
+    const others = matches.slice(1).map((f) => f.checkId).filter((c): c is string => Boolean(c));
+    if (others.length > 0) out.finding.alsoFrom = others;
   } else if (id === check.id) {
     out.findings = result.findings
       .filter((f) => f.checkId === check.id)

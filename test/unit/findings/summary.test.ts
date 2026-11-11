@@ -45,6 +45,15 @@ describe('buildSummary: page one of the report as data', () => {
     expect(s.actions.find((a) => a.closes.includes('a-1'))!.breaks).toEqual(['C1']);
   });
 
+  // Page one counts open findings only: a waived or not-assessed HIGH is not open (RULE-079).
+  it('counts findings as page one does', () => {
+    const s = buildSummary(result([
+      finding('a-1', 'HIGH'), finding('b-1', 'HIGH', { waived: true }), finding('c-1', 'HIGH', { notAssessed: true }),
+      finding('d-1', 'INFO'), finding('e-1', 'LOW', { passed: true }),
+    ]));
+    expect(s.counts).toEqual({ open: { CRITICAL: 0, HIGH: 1, MEDIUM: 0, LOW: 0 }, info: 1, waived: 1, inconclusive: 1, passed: 1 });
+  });
+
   it('never carries detail prose or affected-item lists', () => {
     const affectedItems = Array.from({ length: 500 }, (_, i) => ({ label: `item ${i}` }));
     const findings = Array.from({ length: 60 }, (_, i) => finding(`k${i}-1`, i % 2 ? 'HIGH' : 'MEDIUM', { affectedItems }));

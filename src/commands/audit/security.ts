@@ -63,12 +63,12 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
       options: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
     }),
     digest: Flags.boolean({
-      summary: 'Return a compact, token-cheap result: no passing checks, no detail prose, capped affected lists.',
+      summary: 'With --json, return a compact, token-cheap result: no passing checks, no detail prose, capped affected lists.',
       default: false,
       exclusive: ['summary'],
     }),
     summary: Flags.boolean({
-      summary: 'Return page one of the report: grade and reason, coverage, the fix-first plan and attack paths. Smaller than --digest.',
+      summary: 'With --json, return page one of the report: grade and reason, coverage, the fix-first plan and attack paths. Smaller than --digest.',
       description: 'Each action lists the ids of the findings it closes; run sf audit explain <id> --file <report.json> for one of them.',
       default: false,
       exclusive: ['digest'],
@@ -120,6 +120,9 @@ export default class SecurityAuditCommand extends SfCommand<AuditResult | AuditD
 
   public async run(): Promise<AuditResult | AuditDigest | AuditSummary> {
     const { flags } = await this.parse(SecurityAuditCommand);
+    if ((flags.summary || flags.digest) && !this.jsonEnabled()) {
+      this.warn(`--${flags.summary ? 'summary' : 'digest'} shapes the --json output only; add --json to see it.`);
+    }
 
     // Validate the selection and output formats up front, so a typo fails fast with
     // a clear message instead of silently running a partial/empty audit or writing

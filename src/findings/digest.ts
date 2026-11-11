@@ -63,7 +63,7 @@ function toDigestFinding(f: Finding): DigestFinding {
   return out;
 }
 
-export function countBy(findings: Finding[]): DigestCounts {
+function countBy(findings: Finding[]): DigestCounts {
   const counts: DigestCounts = { critical: 0, high: 0, medium: 0, low: 0, info: 0, passed: 0, inconclusive: 0 };
   for (const f of findings) {
     if (f.passed === true) counts.passed += 1;

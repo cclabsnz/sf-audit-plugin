@@ -2,6 +2,7 @@ import { explain, parseResult, ExplainError } from '../../../src/report/explain.
 import type { AuditResult } from '../../../src/findings/AuditResult.js';
 
 const RESULT = {
+  metrics: {},
   findings: [
     {
       id: 'apex-no-sharing-declaration', checkId: 'apex-sharing', category: 'c', riskLevel: 'HIGH', title: 'Classes lack a sharing keyword',
@@ -53,5 +54,30 @@ describe('explain', () => {
     expect(parseResult(JSON.stringify({ status: 0, result: RESULT })).findings).toHaveLength(2);
     expect(parseResult(JSON.stringify(RESULT)).findings).toHaveLength(2);
     expect(() => parseResult(JSON.stringify({ result: { grade: 'B', actions: [] } }))).toThrow(/not a full audit result/);
+    // A digest has findings too, but no ids, detail or metrics.
+    const digest = { grade: 'B', counts: {}, findings: [{ checkId: 'apex-sharing', riskLevel: 'HIGH', title: 't', remediation: 'r' }] };
+    expect(() => parseResult(JSON.stringify({ result: digest }))).toThrow(/not a full audit result/);
+  });
+
+  it('uses the report status rules: waived, inconclusive and informational are not open', () => {
+    const r = { ...RESULT, findings: [
+      { id: 'w', checkId: 'apex-sharing', riskLevel: 'HIGH', waived: true, title: 't', detail: 'd', remediation: 'r' },
+      { id: 'n', checkId: 'apex-sharing', riskLevel: 'HIGH', notAssessed: true, waived: true, title: 't', detail: 'd', remediation: 'r' },
+      { id: 'i', checkId: 'apex-sharing', riskLevel: 'INFO', title: 't', detail: 'd', remediation: 'r' },
+    ] } as unknown as AuditResult;
+    expect(explain('apex-sharing', r).findings!.map((f) => f.status)).toEqual(['waived', 'inconclusive', 'info']);
+  });
+
+  it('names the other checks when a finding id appears more than once', () => {
+    const dup = { ...RESULT.findings[0], checkId: 'code-security' };
+    const r = { ...RESULT, findings: [...RESULT.findings, dup] } as unknown as AuditResult;
+    expect(explain('apex-no-sharing-declaration', r).finding!.alsoFrom).toEqual(['code-security']);
+  });
+
+  it('explains a finding from an older report whose check is no longer installed', () => {
+    const old = { ...RESULT, findings: [{ id: 'retired-thing', checkId: 'retired-check', riskLevel: 'LOW', title: 't', detail: 'd', remediation: 'r' }] } as unknown as AuditResult;
+    const r = explain('retired-thing', old);
+    expect(r.check.id).toBe('retired-check');
+    expect(r.finding!.id).toBe('retired-thing');
   });
 });

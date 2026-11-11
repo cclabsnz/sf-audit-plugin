@@ -16,7 +16,7 @@ Each is an oclif command under `src/commands`; the id is the path with spaces.
 
 | Command | What it does | Flags worth knowing | File |
 |---|---|---|---|
-| `audit security` | Runs every check, correlates chains, grades A-F, writes reports | `--format html,md,json,executive,sarif`, `--checks`, `--fail-on`, `--fail-on-inconclusive`, `--waivers`, `--scoring-config`, `--digest`, `--frameworks`, `--top`, `--prepared-for`, `--branding`, `--resolve-domains`, `--no-history` | src/commands/audit/security.ts |
+| `audit security` | Runs every check, correlates chains, grades A-F, writes reports | `--format html,md,json,executive,sarif`, `--checks`, `--fail-on`, `--fail-on-inconclusive`, `--waivers`, `--scoring-config`, `--digest`, `--summary`, `--frameworks`, `--top`, `--prepared-for`, `--branding`, `--resolve-domains`, `--no-history` | src/commands/audit/security.ts |
 | `audit list` | Lists every registered check with id and description | none | src/commands/audit/list.ts |
 | `audit explain` | Explains a check, or one finding from a run (affected sample, chains, fix-first action) | `--file` | src/commands/audit/explain.ts |
 | `audit preflight` | Reports what the audit user can and cannot establish (missing permissions per check) | `--target-org` | src/commands/audit/preflight.ts |
@@ -381,7 +381,8 @@ Findings and scoring, src/findings:
 - src/findings/CheckMeta.ts: `CHECK_META`, `getCheckMeta` (per-check effort tier and impact sentence).
 - src/findings/scoring.ts: `buildAuditResult` (A-F grade); config in src/findings/ScoringConfig.ts (`DEFAULT_SCORING_CONFIG`, `scoringConfigSchema`) and src/findings/loadScoringConfig.ts.
 - src/findings/coverage.ts: `evidenceCoverage`, `coverageSummary`, `coverageAdvice`, `MIN_COVERAGE_FOR_A`.
-- src/findings/digest.ts: `buildDigest` (`--digest` output), `countBy`.
+- src/findings/digest.ts: `buildDigest` (`--digest` output).
+- src/findings/status.ts: `findingStatus`, `openCounts` (page one's status rules, shared by the HTML report, `--summary` and `audit explain`).
 - src/findings/summary.ts: `buildSummary` (`--summary` output: grade and reason, coverage, fix-first plan with finding ids, chains).
 - src/report/explain.ts: `explain`, `parseResult`, `checkForFindingId` (`audit explain`).
 - src/report/ActionPlan.ts also exports `chainLabels` (C1… named, P1… potential), shared by the HTML report and `--summary`.
