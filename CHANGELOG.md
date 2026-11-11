@@ -9,6 +9,14 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.26.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.26.0) — 2026-11-11
+
+Four checks read fields or values Salesforce does not have, or matched by wording, so they could
+not report what they were for. They now read what the platform writes, confirmed against a
+Developer Edition org. Grades can move either way: orgs that allow the OAuth Username-Password
+Flow get a new HIGH finding and may fall; orgs lose a false HIGH guest finding and most
+connected-app inactivity noise, and custom settings matches drop from HIGH to MEDIUM or LOW.
+
 ### Changed
 
 - **The custom settings check looks at fields, not object names.** It flagged any custom object
