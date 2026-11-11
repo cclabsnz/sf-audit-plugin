@@ -9,6 +9,18 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Changed
+
+- **The custom settings check looks at fields, not object names.** It flagged any custom object
+  named with "Setting", "Config" or "Credential" whose name or description contained a word such
+  as "key", at HIGH, so most of its hits were not secrets. It now reads the fields of actual custom
+  settings and custom metadata types, and reports plain-text fields named for a password, secret,
+  token or key (bare "key" no longer counts). Encrypted, number and checkbox fields are not
+  reported. `custom-settings-credentials` is MEDIUM, or LOW when only managed-package fields
+  match, since only the vendor can change those. Record values are still never read. A failed
+  read is now inconclusive rather than an error, and if custom metadata types cannot be listed,
+  custom settings are still read and the finding says so.
+
 ## [v1.25.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.25.1) — 2026-11-11
 
 Documentation only. No change to checks, scores or reports.

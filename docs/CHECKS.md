@@ -121,7 +121,7 @@ The audit runs **109 read-only checks**. The [README](../README.md#what-it-check
 ## Secrets & Credential Storage
 | Check | What it looks for |
 |-------|------------------|
-| Custom Settings & Credentials | Custom settings with credential-like names that may store secrets |
+| Custom Settings & Credentials | Plain-text fields on custom settings and custom metadata types named for a password, secret, token or key; MEDIUM, or LOW when only managed-package fields match |
 | Custom Labels Credential Exposure | API keys and tokens in globally-readable Custom Labels |
 
 ## Monitoring & Threat Detection

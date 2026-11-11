@@ -23,7 +23,7 @@ export const CHECK_META: Record<string, CheckMeta> = {
   'csp-trusted-sites':       { effort: 'quick',    impact: 'Insecure HTTP CSP entries allow mixed-content loading and man-in-the-middle script injection.' },
   'named-credentials':       { effort: 'quick',    impact: 'Unmanaged callout endpoints can send org data to unintended or attacker-controlled destinations.' },
   'hardcoded-credentials':   { effort: 'moderate', impact: 'Secrets embedded in Apex can be read by anyone with code access and reused to reach connected systems.' },
-  'custom-settings':         { effort: 'quick',    impact: 'Credential-like custom settings may store secrets readable by users who can query them.' },
+  'custom-settings':         { effort: 'quick',    impact: 'A secret kept in a custom setting or custom metadata field is readable by users who can query the type.' },
   'health-check':            { effort: 'moderate', impact: 'Unaddressed Health Check high-risk settings are documented, exploitable misconfigurations.' },
   'audit-trail':             { effort: 'quick',    impact: 'Without reviewing the audit trail, malicious permission changes and Login-As abuse go undetected.' },
   'code-security':           { effort: 'project',  impact: 'Low Apex test coverage and injection-prone code hide exploitable vulnerabilities behind untested paths.' },
