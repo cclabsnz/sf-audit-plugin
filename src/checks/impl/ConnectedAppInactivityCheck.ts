@@ -36,14 +36,17 @@ export class ConnectedAppInactivityCheck implements SecurityCheck {
     }
 
     // Query OAuth login history for the last 90 days, grouped by application name.
-    // Apps NOT appearing in this result have had zero OAuth logins in 90 days.
+    // Apps NOT appearing in this result have had zero OAuth logins in 90 days. LoginHistory records
+    // an OAuth login as LoginType 'Remote Access 2.0' (or 'Remote Access Client'), and the flow in
+    // LoginSubType ('OAuth Web Server', 'OAuth Refresh Token', 'OAuth JWT Bearer', ...). No
+    // LoginType starts with 'OAuth', so filtering on that found no logins and called every app inactive.
     let activeAppNames = new Set<string>();
     try {
       const result = await ctx.soql.query<LoginHistoryGroupRecord>(
         `SELECT Application, COUNT(Id) loginCount
          FROM LoginHistory
          WHERE LoginTime > LAST_N_DAYS:90
-           AND LoginType LIKE 'OAuth%'
+           AND (LoginType IN ('Remote Access 2.0', 'Remote Access Client') OR LoginSubType LIKE 'OAuth%')
          GROUP BY Application`
       );
       for (const r of result.records) {
@@ -79,11 +82,11 @@ export class ConnectedAppInactivityCheck implements SecurityCheck {
         detail:
           `${inactiveApps.length} of ${connectedAppNames.length} connected apps show no OAuth login activity in the past 90 days. Inactive apps still hold valid OAuth credentials and expand the attack surface. A compromised or leaked client secret for an inactive app can be used to obtain access tokens without triggering activity alerts.`,
         remediation:
-          'Review each inactive connected app. If the integration is no longer in use, delete or disable the app to revoke its OAuth credentials. Ensure active integrations are documented with an owner.',
+          "Confirm with the app's owner whether the integration is still needed, and check Setup → Connected Apps OAuth Usage for tokens still held. If it is not needed, revoke its tokens and set Permitted Users to \"Admin approved users are pre-authorized\" with no profiles or permission sets assigned, which stops it being used. Delete it only once you are sure: a delete cannot be undone, it destroys the consumer key and secret, and new connected apps cannot be created from Spring '26.",
         affectedItems: inactiveApps.map((name) => ({
           label: name,
           url: setupUrl,
-          note: 'No OAuth logins in 90 days: verify if still needed and delete if not',
+          note: 'No OAuth logins in 90 days: confirm it is still needed',
         })),
       });
     }

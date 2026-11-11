@@ -51,6 +51,15 @@ describe('ConnectedAppInactivityCheck', () => {
     expect(r.findings[0].passed).toBeUndefined();
   });
 
+  // Deleting a connected app destroys its consumer key and secret, and new connected apps cannot be
+  // created from Spring '26, so the remedy leads with restricting the app, not deleting it.
+  it('advises restricting an inactive app before any delete, and says a delete cannot be undone', async () => {
+    const f = find(await check.run(makeCtx([], ['Beta'])), 'connected-app-inactive')!;
+    expect(f.remediation).toMatch(/^Confirm with the app's owner/);
+    expect(f.remediation).toContain('cannot be undone');
+    expect(f.affectedItems![0].note).not.toMatch(/delete if not/);
+  });
+
   it('splits apps into active and inactive by recent OAuth logins', async () => {
     const r = await check.run(makeCtx([login('Alpha')], ['Alpha', 'Beta']));
     expect(find(r, 'connected-app-active')!.affectedItems!.map((i) => i.label)).toEqual(['Alpha']);

@@ -49,6 +49,13 @@ describe('the schema validator itself', () => {
     rejects('soql', "SELECT COUNT() FROM AccountShare WHERE RowCause = 'SharingRule'", /'SharingRule' is not a value of picklist AccountShare.RowCause/));
   it('rejects one inside an IN list', () =>
     rejects('soql', "SELECT Id FROM CaseShare WHERE RowCause IN ('Rule', 'SharingRule')", /'SharingRule'/));
+  // LIKE on a picklist is accepted by the org too; a pattern no value fits matches nothing.
+  it('rejects a LIKE pattern no picklist value fits', () =>
+    rejects('soql', "SELECT Application FROM LoginHistory WHERE LoginType LIKE 'OAuth%'", /'OAuth%' matches no value of picklist LoginHistory.LoginType/));
+  it('accepts a LIKE pattern some picklist value fits, in any case, with % and _', () => {
+    expect(() => validate('soql', "SELECT Id FROM LoginHistory WHERE LoginSubType LIKE 'oauth%'")).not.toThrow();
+    expect(() => validate('soql', "SELECT Id FROM LoginHistory WHERE LoginType LIKE 'Remote Access _.0'")).not.toThrow();
+  });
   it('accepts picklist values in any case, and values seen live that describe omits, through a path', () => {
     expect(() => validate('soql', "SELECT Id FROM AccountShare WHERE RowCause = 'guestrule'")).not.toThrow();
     expect(() => validate('soql', "SELECT Id FROM GroupMember WHERE Group.Type = 'GuestUserGroup'")).not.toThrow();
