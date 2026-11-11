@@ -88,7 +88,7 @@ describe('RULE-106 ATT&CK techniques attach to granted capabilities, not checks'
   });
 
   it('a registry override replaces the default for that grant only, and an empty override means none', () => {
-    expect(techniquesForGrant('oauth-device-flow-enabled', 'credential-theft')).toEqual(['T1528']);
+    expect(techniquesForGrant('outbound-messages-session-id', 'credential-theft')).toEqual(['T1528']);
     expect(techniquesForGrant('hardcoded-credentials-found', 'credential-theft')).toEqual(['T1552']);
     expect(techniquesForGrant('inbound-email-handler-unauthenticated-execution', 'code-exec')).toEqual([]);
     expect(techniquesForGrant('users-author-apex', 'code-exec')).toEqual(['T1059.009']);
@@ -111,13 +111,13 @@ describe('RULE-106 ATT&CK techniques attach to granted capabilities, not checks'
 
   it('CheckEngine puts the techniques on the finding beside its STRIDE tags', async () => {
     const check: SecurityCheck = {
-      id: 'oauth-device-and-asset-token-flows', name: 'n', category: 'c', description: 'd',
+      id: 'outbound-messages', name: 'n', category: 'c', description: 'd',
       run: jest.fn<SecurityCheck['run']>().mockResolvedValue({
-        findings: [{ id: 'oauth-device-flow-enabled', category: 'c', riskLevel: 'HIGH', title: 't', detail: 'd', remediation: 'r' }],
+        findings: [{ id: 'outbound-messages-session-id', category: 'c', riskLevel: 'HIGH', title: 't', detail: 'd', remediation: 'r' }],
       }),
     };
     const r = await new CheckEngine([check], ctx()).run();
-    expect(r.findings[0].threats?.attack).toEqual(['T1528']);
+    expect(r.findings[0].threats?.attack).toEqual(['T1528', 'T1567']);
   });
 });
 
@@ -145,8 +145,9 @@ describe('RULE-107 ATT&CK techniques have provenance', () => {
     const t = ATTACK_TECHNIQUES['T1528'];
     t.verified = false;
     try {
-      expect(techniquesForGrant('oauth-device-flow-enabled', 'credential-theft')).toEqual([]);
-      expect(attackFor(finding('oauth-device-flow-enabled'))).toBeUndefined();
+      expect(techniquesForGrant('outbound-messages-session-id', 'credential-theft')).toEqual([]);
+      // Its other grant keeps its own technique; nothing stands in for the unverified one.
+      expect(attackFor(finding('outbound-messages-session-id'))).toEqual(['T1567']);
       const chains = new ChainEngine().correlate(Object.keys(CAPABILITY_REGISTRY).map((id) => finding(id)));
       for (const s of chains.flatMap((c) => c.steps)) expect(s.techniques ?? []).not.toContain('T1528');
     } finally {
@@ -201,9 +202,9 @@ describe('RULE-113 every output carries ATT&CK in its own idiom', () => {
   });
 
   it('JSON carries technique ids on findings and chain steps', () => {
-    const f = { ...finding('oauth-device-flow-enabled'), threats: { attack: attackFor(finding('oauth-device-flow-enabled')) } };
+    const f = { ...finding('outbound-messages-session-id'), threats: { attack: attackFor(finding('outbound-messages-session-id')) } };
     const json = JSON.parse(new JsonRenderer().render(buildAuditResult(ctx(), [f], {}, undefined, [withTechnique])));
-    expect(json.findings[0].threats.attack).toEqual(['T1528']);
+    expect(json.findings[0].threats.attack).toEqual(['T1528', 'T1567']);
     expect(json.attackChains[0].steps.find((s: any) => s.findingId === step.findingId).techniques).toEqual(step.techniques);
   });
 
@@ -225,7 +226,7 @@ describe('RULE-113 every output carries ATT&CK in its own idiom', () => {
 
   it('Markdown shows a finding\'s techniques, and what a detection gap leaves unobserved, on its Threats line', () => {
     const fs = [
-      { ...finding('oauth-device-flow-enabled'), threats: { stride: ['S' as const], attack: ['T1528'] } },
+      { ...finding('outbound-messages-session-id'), threats: { stride: ['S' as const], attack: ['T1528'] } },
       { ...finding('siem-integration-not-detected'), threats: { stride: ['R' as const], detects: ['T1110', 'T1078.004'] } },
     ];
     const md = new MarkdownRenderer().render(buildAuditResult(ctx(), fs, {}));

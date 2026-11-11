@@ -15,7 +15,6 @@ interface ConnectedAppScopeRecord {
     oauthConfig?: {
       scopes?: string[];
       isRefreshTokenRotationEnabled?: boolean;
-      refreshTokenValidityPeriod?: number;
     };
     oauthPolicy?: {
       refreshTokenPolicy?: string;
@@ -41,13 +40,11 @@ function normalise(meta: ConnectedAppMetadata): ConnectedAppMetadata {
 // Scopes that grant effectively unlimited access as the authorising user.
 const OVERLY_BROAD_SCOPES = new Set(['Full', 'full']);
 
-// Refresh token policy values that indicate no expiry.
-// refreshTokenValidityPeriod = -1 means "use org default" (often hours or longer).
-// oauthPolicy.refreshTokenPolicy = 'infinite' means no expiry at all.
+// oauthPolicy.refreshTokenPolicy is where ConnectedApp metadata states a refresh token's lifetime:
+// 'infinite', 'zero', or 'specific_lifetime' / 'specific_inactivity' with a duration. 'infinite'
+// means the token is valid until revoked.
 function isInfiniteRefreshToken(app: ConnectedAppScopeRecord): boolean {
-  const validityPeriod = app.Metadata?.oauthConfig?.refreshTokenValidityPeriod;
-  const policy = app.Metadata?.oauthPolicy?.refreshTokenPolicy;
-  return validityPeriod === -1 || policy === 'infinite';
+  return app.Metadata?.oauthPolicy?.refreshTokenPolicy === 'infinite';
 }
 
 export class ConnectedAppScopeCheck implements SecurityCheck {
@@ -180,13 +177,13 @@ export class ConnectedAppScopeCheck implements SecurityCheck {
           riskLevel: 'MEDIUM',
           title: `${infiniteOnlyApps.length} connected app(s) issue refresh tokens with no expiry`,
           detail:
-            'Connected apps with an infinite or org-default refresh token policy (refreshTokenValidityPeriod = -1 or policy = "infinite") issue tokens that never expire unless manually revoked. A stolen refresh token provides indefinite access to the org as the authorising user. SBS-DEP-006 requires access token lifetimes of 15 minutes or less; refresh token lifetimes should also be bounded.',
+            'Connected apps with the refresh token policy "valid until revoked" (refreshTokenPolicy = infinite) issue tokens that never expire unless manually revoked. A stolen refresh token provides indefinite access to the org as the authorising user. SBS-DEP-006 requires access token lifetimes of 15 minutes or less; refresh token lifetimes should also be bounded.',
           remediation:
             'Set an explicit refresh token validity period in Setup → Connected Apps → OAuth Policies. For machine-to-machine integrations, consider using the Client Credentials flow (which does not issue refresh tokens) instead of the Authorization Code flow. For user-facing apps, a 90-day refresh token limit is a reasonable starting point.',
           affectedItems: infiniteOnlyApps.map((app) => ({
             label: app.Name,
             url: setupUrl,
-            note: `RefreshTokenPolicy: ${app.Metadata?.oauthPolicy?.refreshTokenPolicy ?? 'unset'}, ValidityPeriod: ${app.Metadata?.oauthConfig?.refreshTokenValidityPeriod ?? 'unset'}`,
+            note: `RefreshTokenPolicy: ${app.Metadata?.oauthPolicy?.refreshTokenPolicy ?? 'unset'}`,
           })),
         });
       }

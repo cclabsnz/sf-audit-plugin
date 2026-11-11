@@ -11,6 +11,21 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ### Fixed
 
+- **The OAuth Username-Password Flow check reads the setting Salesforce has.** It read
+  `isDeviceFlowEnabled` and `isPasswordFlowEnabled` from OAuth and OpenID Connect Settings, which
+  has neither field, so every run ended in "verify manually". It now reads `blockOAuthUnPwFlow`,
+  confirmed against a Developer Edition org, and reports `oauth-password-flow-enabled` when the
+  flow is not blocked. Orgs that allow the flow will see the finding, and it feeds the
+  credential-theft chain, so some grades may fall. When the setting cannot be read, the advisory
+  is now marked inconclusive, so the check no longer counts as assessed.
+- **The Device Flow finding is removed.** Device Flow is switched on per connected app, and neither
+  OauthOidcSettings nor ConnectedApp metadata carries it, so `oauth-device-flow-enabled` could
+  never fire. A waiver on that id now matches nothing and can be deleted. The check is renamed
+  OAuth Username-Password Flow; its id is unchanged, so waivers on the check still apply.
+- **Infinite refresh tokens are read from the refresh token policy only.** The connected-app scope
+  check also flagged `oauthConfig.refreshTokenValidityPeriod = -1`, which is not a ConnectedApp
+  metadata field. `oauthPolicy.refreshTokenPolicy = infinite` is how the Metadata API states a
+  token valid until revoked, and it already raised the finding. Results do not change.
 - **Inactive connected apps are found by real OAuth logins.** The check counted LoginHistory rows
   with `LoginType LIKE 'OAuth%'`, and no LoginType starts with "OAuth": an OAuth login is recorded
   as `Remote Access 2.0` or `Remote Access Client`, with the flow in `LoginSubType`. The filter
@@ -27,6 +42,7 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 - **The schema guard judges LIKE on picklists.** A LIKE pattern that fits no value of a picklist
   fails the guard, as an unknown `=` or `IN` value already did. The deep-path guard now drives the
   inactivity check to its LoginHistory read.
+||||||| 6b577a5
 
 ## [v1.25.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.25.1) — 2026-11-11
 

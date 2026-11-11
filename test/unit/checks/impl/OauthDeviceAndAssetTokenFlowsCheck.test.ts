@@ -27,28 +27,34 @@ function makeCtx(metaSettings: any, apps: any[] = []): AuditContext {
 describe('OauthDeviceAndAssetTokenFlowsCheck', () => {
   const check = new OauthDeviceAndAssetTokenFlowsCheck();
 
-  it('passes when both flows are disabled', async () => {
-    const ctx = makeCtx({ isDeviceFlowEnabled: false, isPasswordFlowEnabled: false });
-    const r = await check.run(ctx);
+  // OauthOidcSettings states the username-password flow as blockOAuthUnPwFlow. It has no device
+  // flow field: Device Flow is switched on per connected app.
+  it('passes when the username-password flow is blocked', async () => {
+    const r = await check.run(makeCtx({ blockOAuthUnPwFlow: true }));
     expect(r.findings).toHaveLength(1);
     expect(r.findings[0].id).toBe('oauth-device-and-asset-flows-ok');
     expect(r.findings[0].passed).toBe(true);
+    expect(r.findings[0].detail).toContain('per connected app');
   });
 
-  it('flags when Device Flow is enabled in metadata', async () => {
-    const ctx = makeCtx({ isDeviceFlowEnabled: true, isPasswordFlowEnabled: false });
-    const r = await check.run(ctx);
-    const f = r.findings.find((x) => x.id === 'oauth-device-flow-enabled');
-    expect(f).toBeDefined();
-    expect(f?.riskLevel).toBe('HIGH');
+  it('flags the username-password flow when it is not blocked', async () => {
+    const r = await check.run(makeCtx({ blockOAuthUnPwFlow: false }));
+    expect(r.findings.map((f) => f.id)).toEqual(['oauth-password-flow-enabled']);
+    expect(r.findings[0].riskLevel).toBe('HIGH');
   });
 
-  it('flags when Username-Password Flow is enabled in metadata', async () => {
-    const ctx = makeCtx({ isDeviceFlowEnabled: false, isPasswordFlowEnabled: true });
-    const r = await check.run(ctx);
-    const f = r.findings.find((x) => x.id === 'oauth-password-flow-enabled');
-    expect(f).toBeDefined();
-    expect(f?.riskLevel).toBe('HIGH');
+  // Settings types outside jsforce's schema come back with string values.
+  it.each([
+    ['"false"', 'false', 'oauth-password-flow-enabled'],
+    ['"true"', 'true', 'oauth-device-and-asset-flows-ok'],
+  ])('reads the setting given as the string %s', async (_l, value, id) => {
+    const r = await check.run(makeCtx({ blockOAuthUnPwFlow: value }));
+    expect(r.findings.map((f) => f.id)).toEqual([id]);
+  });
+
+  it('never reports a device flow finding from org settings', async () => {
+    const r = await check.run(makeCtx({ blockOAuthUnPwFlow: false, isDeviceFlowEnabled: true }));
+    expect(r.findings.some((f) => f.id === 'oauth-device-flow-enabled')).toBe(false);
   });
 
   it('does not pass when the settings read throws', async () => {
@@ -57,6 +63,7 @@ describe('OauthDeviceAndAssetTokenFlowsCheck', () => {
     const r = await check.run(ctx);
     expect(r.findings.some((f) => f.passed)).toBe(false);
     expect(r.findings.map((f) => f.id)).toEqual(['oauth-device-and-asset-flows-advisory']);
+    expect(r.findings[0].inconclusive).toBe(true);
   });
 
   it('does not pass when there is no Metadata client', async () => {
@@ -67,21 +74,12 @@ describe('OauthDeviceAndAssetTokenFlowsCheck', () => {
     expect(r.findings[0].id).toBe('oauth-device-and-asset-flows-advisory');
   });
 
-  it('treats a field missing from the settings as unknown, not disabled', async () => {
-    const ctx = makeCtx({ isDeviceFlowEnabled: false });
-    const r = await check.run(ctx);
-    expect(r.findings.some((f) => f.passed)).toBe(false);
-    const f = r.findings.find((x) => x.id === 'oauth-device-and-asset-flows-advisory');
-    expect(f?.title).toContain('Username-Password Flow');
-    expect(f?.title).not.toContain('Device Flow and');
-  });
-
-  it('still reports an enabled flow when the other setting is unreadable', async () => {
-    const ctx = makeCtx({ isPasswordFlowEnabled: true });
-    const r = await check.run(ctx);
-    expect(r.findings.map((f) => f.id).sort()).toEqual([
-      'oauth-device-and-asset-flows-advisory',
-      'oauth-password-flow-enabled',
-    ]);
+  it('treats a missing or unrecognised value as unknown, not blocked', async () => {
+    for (const settings of [{ blockOAuthUsrAgtFlow: true }, { blockOAuthUnPwFlow: 'yes' }]) {
+      const r = await check.run(makeCtx(settings));
+      expect(r.findings.some((f) => f.passed)).toBe(false);
+      expect(r.findings.map((f) => f.id)).toEqual(['oauth-device-and-asset-flows-advisory']);
+      expect(r.findings[0].title).toContain('Username-Password Flow');
+    }
   });
 });
