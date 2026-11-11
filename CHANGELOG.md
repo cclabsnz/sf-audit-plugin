@@ -17,6 +17,26 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
   explains any finding and compares runs (`/sf-audit:audit`, `/sf-audit:fix-first`,
   `/sf-audit:explain`, `/sf-audit:diff`). It needs this CLI at 1.27.0 or later. It is not part of
   the npm package.
+- **`--summary`**, with `--json`: page one of the report as data. It gives the grade and its reason,
+  evidence coverage, counts, the fix-first plan and the attack paths, labelled C1 and P1 as in the
+  reports. Each action lists the ids of the findings it closes. It carries no detail prose or
+  affected lists, so it is a fraction of `--digest`'s size, and it is meant for an agent to triage
+  before reading further.
+- **`sf audit explain <id>`**. With a check id it gives what the check looks for, its domain,
+  typical effort, why it matters and its compliance mapping. With `--file` and a finding id from a
+  run it gives what the finding affects, the attack chains it is part of (and whether fixing it
+  breaks them) and the fix-first action that closes it. With `--file` and a check id it lists that
+  check's findings in the run. Works offline.
+
+### Fixed
+
+- **`--checks` runs any selection.** A check that reads data another check collects (Apex bodies,
+  connected app names, named credential endpoints and others) failed with "depends on cache key ...
+  but no preceding check declares it" unless that check was selected too, so `--checks apex-sharing`
+  and the documented example `--checks hardcoded-credentials,apex-sharing` both stopped before
+  running. The command now adds the checks that collect that data, runs them first, and names them
+  in a warning (shown with `--json` too); their findings count toward the grade and `--fail-on`.
+  A test runs every check alone. docs/COMMANDS.md no longer says there are 88 checks.
 
 ## [v1.26.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.26.0) — 2026-11-11
 

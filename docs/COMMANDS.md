@@ -23,7 +23,9 @@ The audit itself. The [README](../README.md#usage) covers the common path; this 
 | `--format` / `-f` | `html` | Output format(s), comma-separated: `html`, `md`, `json`, `executive`, `sarif` (SARIF 2.1.0, for GitHub code scanning) |
 | `--output` / `-o` | `.` | Directory to write the report file |
 | `--fail-on` | (none) | Exit with code 1 if any finding is at or above this severity: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` |
-| `--checks` | *(all)* | Comma-separated check IDs to run instead of all 88 (e.g. `hardcoded-credentials,apex-sharing`) |
+| `--checks` | *(all)* | Comma-separated check IDs to run instead of all of them (e.g. `hardcoded-credentials,apex-sharing`). Checks that collect data the selected ones read run too; the command names them, and their findings count toward the grade and `--fail-on` |
+| `--digest` | `false` | With `--json`: a compact result for programs, with open findings, remediation and capped affected lists, but no passing checks or detail |
+| `--summary` | `false` | With `--json`: page one of the report, the grade and why, coverage, the fix-first plan (each action lists the finding ids it closes) and the attack paths. Smaller than `--digest` |
 | `--scoring-config` | (none) | Path to a custom scoring config JSON file to override weights and grade thresholds |
 | `--prepared-for` | (none) | Client name for the executive report cover line |
 | `--branding` | (none) | Path to a `report-branding.json` to override CloudCounsel defaults (executive format) |
@@ -69,6 +71,9 @@ sf audit security --target-org myOrg --checks hardcoded-credentials,apex-sharing
 # Guest / Experience Cloud exposure sweep — the unauthenticated data-leak surface
 # (bulk-read via UI API, guest-owned records defeating Private OWD, file access, self-reg, threat detection)
 sf audit security --target-org myOrg --checks guest-user-access,guest-object-exposure,guest-site-options,guest-executable-apex,experience-cloud-site,threat-detection
+
+# Page one as JSON, for an agent to triage before it reads the full report
+sf audit security --target-org myOrg --json --summary > summary.json
 
 # Use a custom scoring config (e.g. stricter weights for your org)
 sf audit security --target-org myOrg --scoring-config ./my-scoring.json
@@ -364,6 +369,24 @@ No configuration needed: archiving happens silently after each run. CI runs are 
 when a CI environment is detected the archive is skipped, since the runner's disk is usually thrown
 away and a shared runner would keep org data for the next job. Pass `--keep-history` to archive
 anyway, or `--no-history` to skip it on a local run.
+
+## `sf audit explain`
+
+Explains a check, or one finding from a run. Works offline.
+
+```bash
+# What a check looks for, its domain, typical effort, why it matters, and its compliance mapping
+sf audit explain apex-sharing
+
+# One finding from a run: what it affects, the attack chains it is part of, and the fix-first action that closes it
+sf audit security --target-org myOrg --json > audit.json
+sf audit explain apex-no-sharing-declaration --file audit.json
+
+# Every finding a check produced in that run
+sf audit explain apex-sharing --file audit.json
+```
+
+`--file` takes the full `--json` result, not `--digest` or `--summary`. The finding ids an action closes in `--summary` are the ids to pass here.
 
 ## View Audit History
 
