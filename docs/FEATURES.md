@@ -381,6 +381,7 @@ Findings and scoring, src/findings:
 - src/findings/scoring.ts: `buildAuditResult` (A-F grade); config in src/findings/ScoringConfig.ts (`DEFAULT_SCORING_CONFIG`, `scoringConfigSchema`) and src/findings/loadScoringConfig.ts.
 - src/findings/coverage.ts: `evidenceCoverage`, `coverageSummary`, `coverageAdvice`, `MIN_COVERAGE_FOR_A`.
 - src/findings/digest.ts: `buildDigest` (`--digest` output).
+- src/checks/selection.ts: `withCacheProviders` (a `--checks` selection plus the checks that fill the cache it reads).
 - src/findings/exitCode.ts: `resolveExitCode`, `violationsFor`, `EXIT_OK`, `EXIT_FINDINGS`, `EXIT_INCONCLUSIVE`.
 - src/findings/unknownMetrics.ts: `unknownMetrics`.
 - src/findings/AuditResult.ts: `AuditResult`.
