@@ -9,6 +9,19 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.25.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.25.1) — 2026-11-11
+
+Documentation only. No change to checks, scores or reports.
+
+### Changed
+
+- **The README shows the report on its first screen**: a screenshot of a sample technical report,
+  linked to the full [technical](https://www.softwareinsights.dev/samples/sf-audit/sample-report.html)
+  and [executive](https://www.softwareinsights.dev/samples/sf-audit/sample-executive-report.html)
+  samples, and the install and run commands. The npm page shows the README as it was at publish,
+  so this release carries it there. (#206)
+- The incident evidence-bundle spec is agreed, with resume and the staging sweep deferred. (#210)
+
 ## [v1.25.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.25.0) — 2026-11-10
 
 The technical HTML report is redesigned. It now uses the executive report's white consulting look
