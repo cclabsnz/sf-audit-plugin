@@ -101,7 +101,7 @@ this). Grouped by each check's declared `category`. Interface: src/checks/Securi
 | `apex-sharing` | Apex Sharing Declarations | Classifies Apex classes by sharing declaration (with sharing, without sharing, inherited, omitted) | src/checks/impl/ApexSharingCheck.ts |
 | `scheduled-apex` | Scheduled and Batch Apex | Lists active scheduled and batch Apex jobs running in the org | src/checks/impl/ScheduledApexCheck.ts |
 | `code-security` | Code Security and Coverage | Reports org-wide Apex test coverage, class/trigger counts, and flags potential SOQL injection patterns | src/checks/impl/CodeSecurityCheck.ts |
-| `custom-settings` | Custom Settings and Credentials | Flags custom settings with credential-like names that may store secrets | src/checks/impl/CustomSettingsCheck.ts |
+| `custom-settings` | Custom Settings and Credentials | Flags text fields on custom settings and custom metadata types whose names say they hold a password, secret, token or key | src/checks/impl/CustomSettingsCheck.ts |
 | `anonymous-apex-audit` | Anonymous Apex Execution Audit | Detects anonymous Apex execution in the last 90 days via SetupAuditTrail | src/checks/impl/AnonymousApexAuditCheck.ts |
 | `platform-event-subscriber-context` | Platform Event Subscriber Context & Privilege Escalation | Detects Platform Event subscribers executing in system context or as Admin while low-trust or guest users hold Publish permissions | src/checks/impl/PlatformEventSubscriberContextCheck.ts |
 | `apex-logging` | Apex Logging Framework | Checks for persistent logging framework usage and sensitive data in Apex logs | src/checks/impl/ApexLoggingCheck.ts |

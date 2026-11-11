@@ -9,6 +9,25 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Changed
+
+- **The custom settings check looks at fields, not object names.** It flagged any custom object
+  named with "Setting", "Config" or "Credential" whose name or description contained a word such
+  as "key", at HIGH, so most of its hits were not secrets. It now reads the fields of actual custom
+  settings and custom metadata types, and reports plain-text fields whose own name says they hold
+  a secret: password, passphrase, secret, token, credential, bearer, or a qualified key such as API,
+  private, client or signing key. Bare "key", names that only describe a secret (`Token_Endpoint`,
+  `Secret_Name`), and a Named Credential's name are not reported, nor are encrypted, number and
+  checkbox fields. Record values are still never read.
+  - `custom-settings-credentials` is MEDIUM and covers the org's own fields.
+  - Managed-package fields are reported apart as `custom-settings-credentials-managed`, LOW. It
+    feeds no attack chain, since whether the field is readable depends on the type's visibility,
+    which is not read.
+  - Ordinary custom objects are no longer reported for their names. Secrets in Apex and custom
+    labels are still covered by `hardcoded-credentials` and `custom-labels-credential`.
+  - A failed read is now inconclusive rather than an error. If custom metadata types cannot be
+    listed, custom settings are still read and the finding says so.
+
 ### Fixed
 
 - **The OAuth Username-Password Flow check reads the setting Salesforce has.** It read
@@ -42,7 +61,6 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 - **The schema guard judges LIKE on picklists.** A LIKE pattern that fits no value of a picklist
   fails the guard, as an unknown `=` or `IN` value already did. The deep-path guard now drives the
   inactivity check to its LoginHistory read.
-||||||| 6b577a5
 - **Secure guest user record access is reported as the platform guarantee it is.** Salesforce has
   enforced it in every org since Winter '21: from API 50.0 `SharingSettings.enableSecureGuestAccess`
   is always true, and the Release Update that carried it is gone. The check looked for a Release
@@ -53,7 +71,6 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
   `guest-object-exposure` and `guest-user-access`, which read guest-owned and guest-shared records
   directly. `guest-record-access-policy-not-enforced`, `-verify-manually` and
   `-tooling-inaccessible` are removed; waivers on them match nothing and can be deleted.
-||||||| 6b577a5
 
 ## [v1.25.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.25.1) — 2026-11-11
 
@@ -368,7 +385,6 @@ mean what they say. Found by running the audit against a Developer Edition org a
 - `scripts/capture-schema.mjs` and a captured Developer Edition schema
   (`test/fixtures/schema/developer-edition.json`, standard fields only). A test runs every
   check against it and fails on any query the org would reject.
-||||||| a23c86e
 
 ## [v1.17.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.17.0) — 2026-10-17
 
