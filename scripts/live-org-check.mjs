@@ -14,7 +14,7 @@
 // items, because CI logs on a public repository are public. Some finding ids embed org values
 // (a user record id, a trusted-site domain, an agent's developer name), so an id that is not plain
 // lowercase words is recorded as a short hash: stable across runs, but it names nothing.
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 
 const [reportPath, baselinePath, ...rest] = process.argv.slice(2);
@@ -46,7 +46,12 @@ for (const f of result.findings) record(`${f.checkId}/${safe(f.id)}`, status(f))
 for (const c of result.attackChains ?? []) record(`chain/${safe(c.id)}`, `${c.confidence ?? 'named'}:${c.severity}`);
 const notAssessed = [...(result.coverage.notAssessed ?? [])].sort();
 
-const previous = existsSync(baselinePath) ? JSON.parse(readFileSync(baselinePath, 'utf8')) : undefined;
+let previous;
+try {
+  previous = JSON.parse(readFileSync(baselinePath, 'utf8'));
+} catch (err) {
+  if (err.code !== 'ENOENT') throw err;
+}
 
 if (write) {
   const baseline = {
