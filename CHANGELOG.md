@@ -11,6 +11,12 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ### Added
 
+- **A Claude Code plugin** in `claude-plugin/`, installable with
+  `/plugin install sf-audit --marketplace cclabsnz/sf-audit-plugin`. It runs the audit and
+  reports page one: the grade and why, coverage, what to fix first and the attack paths. It then
+  explains any finding and compares runs (`/sf-audit:audit`, `/sf-audit:fix-first`,
+  `/sf-audit:explain`, `/sf-audit:diff`). It needs this CLI at 1.27.0 or later. It is not part of
+  the npm package.
 - **`--summary`**, with `--json`: page one of the report as data. It gives the grade and its reason,
   evidence coverage, counts, the fix-first plan and the attack paths, labelled C1 and P1 as in the
   reports. Each action lists the ids of the findings it closes. It carries no detail prose or

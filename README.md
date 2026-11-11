@@ -140,6 +140,16 @@ inconclusive count is still in the report body. `3` exists so a pipeline can tel
 Every flag, more examples, and what the executive report contains:
 **[docs/COMMANDS.md](docs/COMMANDS.md)**.
 
+## Using it from Claude Code
+
+A Claude Code plugin in this repo runs the audit and triages it for you: the grade and why, what to fix first, the attack paths, and any finding explained. It drives this CLI, so install the CLI first (1.27.0 or later), then in Claude Code:
+
+```text
+/plugin install sf-audit --marketplace cclabsnz/sf-audit-plugin
+```
+
+Then `/sf-audit:audit myOrg`, `/sf-audit:fix-first`, `/sf-audit:explain <id>` and `/sf-audit:diff`. Any agent can do the same without the plugin: `sf audit security --json --summary` returns page one as compact JSON, and `sf audit explain` explains a check or finding.
+
 ## What It Checks
 
 **109 read-only checks** across ten domains. Every finding is risk-rated CRITICAL → INFO, mapped to

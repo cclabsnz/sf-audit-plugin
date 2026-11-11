@@ -433,6 +433,10 @@ Other reusable code:
 - Least-privilege permission set for the audit user: docs/permissionset/SF_Audit_ReadOnly.permissionset-meta.xml.
 - Config schemas: schemas/scoring-config.schema.json, schemas/waivers.schema.json; sample config/scoring.sample.json.
 
+## Claude Code plugin
+
+- claude-plugin/: a Claude Code plugin (skill `sf-audit`, commands `/sf-audit:audit`, `/sf-audit:fix-first`, `/sf-audit:explain`, `/sf-audit:diff`) that drives this CLI through `--json --summary` and `sf audit explain`. The marketplace manifest is .claude-plugin/marketplace.json; check both with `claude plugin validate`.
+
 ## Related repos
 
 - sf-core: published as `@cclabsnz/sf-core`, the shared query, repository, API-client and report-shell layer. Consumed from the npm registry (package.json).
