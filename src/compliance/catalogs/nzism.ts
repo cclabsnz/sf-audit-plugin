@@ -3,7 +3,7 @@ import type { ControlDef } from '../types.js';
 // New Zealand Information Security Manual (NZISM), GCSB/NCSC.
 // Chapter references VERIFIED 2026-11 against the official manual (https://nzism.gcsb.govt.nz/ism-document),
 // version 3.9 (last updated November 2025). First verified 2026-06 against v3.8; every cited chapter and
-// section kept its number and title in v3.9. These are CHAPTER/SECTION-level mappings; refining to individual
+// section kept its number and title in v3.9 (three chapter titles are now lower case after the first word). These are CHAPTER/SECTION-level mappings; refining to individual
 // NZISM control numbers (e.g. 16.1.35) is a future granularity pass. `verified` = the chapter reference
 // is confirmed to exist with this title in the current NZISM.
 const V = 'NZISM v3.9';

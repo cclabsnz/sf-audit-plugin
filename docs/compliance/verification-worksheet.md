@@ -116,14 +116,14 @@ Total controls: 119 · Verified: 119
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
-| [x] | HISO-AC | Access control | HISO 10029:2022 (HISF), Access Control: HISO 10029.3:2023 HML38, HML40, HML41 |
-| [x] | HISO-AUTH | Identity and authentication | HISO 10029:2022 (HISF), Authentication: HISO 10029.3:2023 HML39 |
-| [x] | HISO-CRYPTO | Cryptography and key management | HISO 10029:2022 (HISF), Cryptography: HISO 10029.3:2023 HML37 |
-| [x] | HISO-LOG | Logging, monitoring and audit | HISO 10029:2022 (HISF), Logging and Monitoring: HISO 10029.3:2023 HML70, HML71 |
-| [x] | HISO-DATA | Information classification and handling | HISO 10029:2022 (HISF), Information Classification: HISO 10029.3:2023 HML34, HML69 |
-| [x] | HISO-DEV | Secure development and change | HISO 10029:2022 (HISF), Secure Development: HISO 10029.3:2023 HML18, HML42, HML58, HML67 |
-| [x] | HISO-COMM | Communications and integration security | HISO 10029:2022 (HISF), Communications Security: HISO 10029.3:2023 HML52 |
-| [x] | HISO-GOV | Security configuration and governance | HISO 10029:2022 (HISF), Security Governance: HISO 10029.3:2023 HML19, HML59, HML60 |
+| [x] | HISO-AC | Access control | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML10, HML38, HML40, HML41 |
+| [x] | HISO-AUTH | Identity and authentication | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML39 |
+| [x] | HISO-CRYPTO | Cryptography and key management | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML37 |
+| [x] | HISO-LOG | Logging, monitoring and audit | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML70 |
+| [x] | HISO-DATA | Information classification and handling | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML05, HML69 |
+| [x] | HISO-DEV | Secure development and change | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML18, HML42, HML50, HML58, HML67 |
+| [x] | HISO-COMM | Communications and integration security | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML52, HML54 |
+| [x] | HISO-GOV | Security configuration and governance | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML19, HML59, HML60 |
 
 ## NZISM — NZISM v3.9 (7/7 verified)
 
