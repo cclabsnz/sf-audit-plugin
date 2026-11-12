@@ -45,8 +45,8 @@ https://nzism.gcsb.govt.nz/ism-document
 https://owasp.org/Top10/2021/
 https://privacy.org.nz/privacy-act-2020/privacy-principles/
 https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C
+https://www.healthnz.govt.nz/health-professionals/guidance-standards/topic/digital-technologies/cyber-security-hub/health-security-frameworks
 https://www.legislation.govt.nz/act/public/2020/0031/latest/LMS23342.html
-https://www.tewhatuora.govt.nz/health-services-and-programmes/cyber-hub/cyber-standards
 ```
 
 The other three are this project's own attribution links, printed in report footers and CLI output rather than fetched:

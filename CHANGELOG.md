@@ -9,6 +9,19 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+### Fixed
+
+- **HISO 10029 controls cite the right basis.** The catalogue said HISO 10029 is built on
+  ISO/IEC 27002 and labelled every HISO control "AS/NZS ISO/IEC 27002-aligned". HISO 10029:2022
+  is built on the NIST Cybersecurity Framework; ISO 27002 is one of the catalogues it maps to. Each
+  HISO control now cites the HISO 10029.3:2023 requirement IDs it covers (for example HML39 for
+  authentication), checked against the published PDF. Control IDs and finding mappings are
+  unchanged. The citation link, which redirected to the Health NZ homepage, now points to Health
+  NZ's health security frameworks page.
+- **NZISM is pinned to v3.9.** Every cited chapter and section was re-checked against v3.9 and
+  kept its number and title; chapters 14, 18 and 19 are now titled in sentence case. `NZISM-CONFIG` now names sections 12.2 and 12.4 instead of a
+  paraphrase.
+
 ## [v1.27.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.27.0) — 2026-11-11
 
 sf-audit is now easier for an AI agent to drive. `--summary` returns page one of the report as

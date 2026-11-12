@@ -10,8 +10,8 @@ Findings are mapped to controls across 10 security and privacy frameworks: 8 sou
 | ISO/IEC 27001 | 2022 | Annex A controls |
 | Security Benchmark for Salesforce (SBS) | current | Salesforce-native benchmark: [docs.securitybenchmark.org](https://docs.securitybenchmark.org) |
 | NZ Privacy Act | 2020 | Information Privacy Principles (IPP 5/9/12) |
-| HISO 10029 | 2022 | NZ Health Information Security Framework |
-| NZISM | v3.8 | NZ Information Security Manual |
+| HISO 10029 | 2022 | NZ Health Information Security Framework, built on the NIST Cybersecurity Framework; controls cite HISO 10029.3 requirement IDs (HML) |
+| NZISM | v3.9 | NZ Information Security Manual |
 | HIPAA Security Rule | 45 CFR Part 164 Subpart C (2013 Omnibus) | Administrative (164.308) and technical (164.312) safeguards, with each implementation specification's **Required / Addressable** designation preserved. Maps the **operative** rule: the HHS NPRM of 2025-01-06 that would make encryption, MFA and segmentation mandatory is still proposed, not final |
 | GDPR | Regulation (EU) 2016/679 | Art. 5(1)(f), 25, 30, 32(1)(a)/(b)/(d), 33 and 44. Mapped at paragraph level, so a finding cites the specific obligation rather than "Article 32" at large |
 
