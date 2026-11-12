@@ -88,6 +88,12 @@ describe('scripts/live-org-check.mjs', () => {
     expect(out.out).toContain('gone       chain/unauth-bulk-exfil');
   });
 
+  it('creates the baseline folder when it does not exist yet', () => {
+    const b = join(dir, 'new', 'folder', 'baseline.json');
+    expect(run('live-org-check.mjs', [file('r-new.json', base), b, '--write-baseline']).code).toBe(0);
+    expect(JSON.parse(readFileSync(b, 'utf8')).findings).toBeDefined();
+  });
+
   it('resets the coverage floor when the baseline is re-recorded', () => {
     const b = file('b-floor.json', { minCoverage: 99, allowUnassessed: [], findings: {} });
     run('live-org-check.mjs', [file('r-floor.json', base), b, '--write-baseline']);

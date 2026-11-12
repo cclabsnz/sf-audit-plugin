@@ -14,7 +14,8 @@
 // items, because CI logs on a public repository are public. Some finding ids embed org values
 // (a user record id, a trusted-site domain, an agent's developer name), so an id that is not plain
 // lowercase words is recorded as a short hash: stable across runs, but it names nothing.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 
 const [reportPath, baselinePath, ...rest] = process.argv.slice(2);
@@ -60,6 +61,7 @@ if (write) {
     allowUnassessed: notAssessed,
     findings: Object.fromEntries(Object.entries(observed).sort(([a], [b]) => a.localeCompare(b))),
   };
+  mkdirSync(dirname(baselinePath), { recursive: true });
   writeFileSync(baselinePath, JSON.stringify(baseline, null, 2) + '\n');
   console.log(`Baseline written: ${Object.keys(baseline.findings).length} findings, coverage floor ${baseline.minCoverage}%, ${notAssessed.length} allowed unassessed.`);
   process.exit(0);
