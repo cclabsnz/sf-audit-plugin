@@ -116,26 +116,26 @@ Total controls: 119 · Verified: 119
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
-| [x] | HISO-AC | Access control | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Access Control |
-| [x] | HISO-AUTH | Identity and authentication | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Authentication |
-| [x] | HISO-CRYPTO | Cryptography and key management | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Cryptography |
-| [x] | HISO-LOG | Logging, monitoring and audit | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Logging and Monitoring |
-| [x] | HISO-DATA | Information classification and handling | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Information Classification |
-| [x] | HISO-DEV | Secure development and change | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Secure Development |
-| [x] | HISO-COMM | Communications and integration security | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Communications Security |
-| [x] | HISO-GOV | Security configuration and governance | HISO 10029:2022 (HISF, AS/NZS ISO/IEC 27002-aligned), Security Governance |
+| [x] | HISO-AC | Access control | HISO 10029:2022 (HISF), Access Control: HISO 10029.3:2023 HML38, HML40, HML41 |
+| [x] | HISO-AUTH | Identity and authentication | HISO 10029:2022 (HISF), Authentication: HISO 10029.3:2023 HML39 |
+| [x] | HISO-CRYPTO | Cryptography and key management | HISO 10029:2022 (HISF), Cryptography: HISO 10029.3:2023 HML37 |
+| [x] | HISO-LOG | Logging, monitoring and audit | HISO 10029:2022 (HISF), Logging and Monitoring: HISO 10029.3:2023 HML70, HML71 |
+| [x] | HISO-DATA | Information classification and handling | HISO 10029:2022 (HISF), Information Classification: HISO 10029.3:2023 HML34, HML69 |
+| [x] | HISO-DEV | Secure development and change | HISO 10029:2022 (HISF), Secure Development: HISO 10029.3:2023 HML18, HML42, HML58, HML67 |
+| [x] | HISO-COMM | Communications and integration security | HISO 10029:2022 (HISF), Communications Security: HISO 10029.3:2023 HML52 |
+| [x] | HISO-GOV | Security configuration and governance | HISO 10029:2022 (HISF), Security Governance: HISO 10029.3:2023 HML19, HML59, HML60 |
 
-## NZISM — NZISM v3.8 (7/7 verified)
+## NZISM — NZISM v3.9 (7/7 verified)
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
-| [x] | NZISM-AC | Access control and privilege management | NZISM v3.8, Ch.16 Authentication and Access Controls (16.2 System Access, 16.3 Privileged User Access) |
-| [x] | NZISM-AUTH | Identification, authentication and MFA | NZISM v3.8, Ch.16 Authentication and Access Controls (16.1 Identification, Authentication and Authorisation, 16.7 Multi-Factor Authentication) |
-| [x] | NZISM-LOG | Event monitoring, logging and auditing | NZISM v3.8, §16.6 Event Monitoring, Logging and Auditing |
-| [x] | NZISM-CRYPTO | Cryptography and key management | NZISM v3.8, Ch.17 Cryptography |
-| [x] | NZISM-SW | Software and application security | NZISM v3.8, Ch.14 Software Security |
-| [x] | NZISM-NET | Network security and gateways | NZISM v3.8, Ch.18 Network Security / Ch.19 Gateway Security |
-| [x] | NZISM-CONFIG | System hardening and configuration | NZISM v3.8, Ch.12 Product Security (configuration and patching) |
+| [x] | NZISM-AC | Access control and privilege management | NZISM v3.9, Ch.16 Authentication and Access Controls (16.2 System Access, 16.3 Privileged User Access) |
+| [x] | NZISM-AUTH | Identification, authentication and MFA | NZISM v3.9, Ch.16 Authentication and Access Controls (16.1 Identification, Authentication and Authorisation, 16.7 Multi-Factor Authentication) |
+| [x] | NZISM-LOG | Event monitoring, logging and auditing | NZISM v3.9, §16.6 Event Monitoring, Logging and Auditing |
+| [x] | NZISM-CRYPTO | Cryptography and key management | NZISM v3.9, Ch.17 Cryptography |
+| [x] | NZISM-SW | Software and application security | NZISM v3.9, Ch.14 Software security |
+| [x] | NZISM-NET | Network security and gateways | NZISM v3.9, Ch.18 Network security / Ch.19 Gateway security |
+| [x] | NZISM-CONFIG | System hardening and configuration | NZISM v3.9, Ch.12 Product Security (12.2 Product Installation and Configuration, 12.4 Product Patching and Updating) |
 
 ## HIPAA — 45 CFR Part 164 Subpart C (HIPAA Security Rule, 2013 Omnibus) (18/18 verified)
 

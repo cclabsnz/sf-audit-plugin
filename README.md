@@ -179,7 +179,7 @@ advisories are INFO and never inflate the health score.
 ## Compliance frameworks
 
 Findings map to controls across 10 frameworks organized into 8 source-verified general baselines and 2 specialized jurisdictional packs:
-- **8 General Baselines:** OWASP Top 10 (2021), OWASP LLM Top 10 (2025), SOC 2 (2017 TSC), ISO/IEC 27001:2022, Security Benchmark for Salesforce (SBS), New Zealand Privacy Act 2020, HISO 10029:2022, and NZISM (v3.8).
+- **8 General Baselines:** OWASP Top 10 (2021), OWASP LLM Top 10 (2025), SOC 2 (2017 TSC), ISO/IEC 27001:2022, Security Benchmark for Salesforce (SBS), New Zealand Privacy Act 2020, HISO 10029:2022, and NZISM (v3.9).
 - **2 Jurisdictional Packs:** HIPAA Security Rule (45 CFR Part 164 Subpart C) and GDPR (Regulation (EU) 2016/679).
 
 The mapping is built on a **sourced catalog** — each control carries its framework, pinned version,
