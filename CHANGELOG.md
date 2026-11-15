@@ -9,6 +9,11 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.27.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.27.1) — 2026-11-16
+
+Compliance citations only. HISO 10029 and NZISM references in reports change; no check, finding or
+score changes.
+
 ### Fixed
 
 - **HISO 10029 controls cite the right basis.** The catalogue said HISO 10029 is built on
@@ -19,8 +24,8 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
   unchanged. The citation link, which redirected to the Health NZ homepage, now points to Health
   NZ's health security frameworks page.
 - **NZISM is pinned to v3.9.** Every cited chapter and section was re-checked against v3.9 and
-  kept its number and title; chapters 14, 18 and 19 are now titled in sentence case. `NZISM-CONFIG` now names sections 12.2 and 12.4 instead of a
-  paraphrase.
+  kept its number and title; chapters 14, 18 and 19 are now titled in sentence case.
+  `NZISM-CONFIG` now names sections 12.2 and 12.4 instead of a paraphrase.
 
 ## [v1.27.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.27.0) — 2026-11-11
 
