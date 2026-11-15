@@ -2,7 +2,7 @@
 
 Controls marked verified have been checked against an authoritative source. Unverified controls stay excluded from rendered reports (provenance gate).
 
-Total controls: 119 · Verified: 119
+Total controls: 183 · Verified: 183
 
 ## OWASP — OWASP Top 10:2021 (9/9 verified)
 
@@ -112,30 +112,86 @@ Total controls: 119 · Verified: 119
 | [x] | PRIVACY-IPP9 | IPP 9 — Retention of personal information | Privacy Act 2020, IPP 9 |
 | [x] | PRIVACY-IPP12 | IPP 12 — Disclosure of personal information outside New Zealand | Privacy Act 2020, IPP 12 |
 
-## HISO10029 — HISO 10029:2022 (HISF) (8/8 verified)
+## HISO10029_3 — HISO 10029.3:2023 (19/19 verified)
+
+Requirement ids and statements checked against the published PDFs by `test/unit/compliance/nzCrosswalk.test.ts`; which checks cite each one is in [nz-crosswalk.md](nz-crosswalk.md).
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
-| [x] | HISO-AC | Access control | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML10, HML38, HML40, HML41 |
-| [x] | HISO-AUTH | Identity and authentication | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML39 |
-| [x] | HISO-CRYPTO | Cryptography and key management | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML37 |
-| [x] | HISO-LOG | Logging, monitoring and audit | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML70 |
-| [x] | HISO-DATA | Information classification and handling | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML05, HML69 |
-| [x] | HISO-DEV | Secure development and change | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML18, HML42, HML50, HML58, HML67 |
-| [x] | HISO-COMM | Communications and integration security | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML52, HML54 |
-| [x] | HISO-GOV | Security configuration and governance | HISO 10029:2022 (HISF); HISO 10029.3:2023 HML19, HML59, HML60 |
+| [x] | HISO-HML10 | HML10 Access control | HISO 10029.3:2023, HML10 |
+| [x] | HISO-HML16 | HML16 Security while developing applications, products or services | HISO 10029.3:2023, HML16 |
+| [x] | HISO-HML25 | HML25 Supply chain risks | HISO 10029.3:2023, HML25 |
+| [x] | HISO-HML34 | HML34 Information and associated assets | HISO 10029.3:2023, HML34 |
+| [x] | HISO-HML37 | HML37 Use of cryptography | HISO 10029.3:2023, HML37 |
+| [x] | HISO-HML38 | HML38 Identity management | HISO 10029.3:2023, HML38 |
+| [x] | HISO-HML39 | HML39 Information authentication | HISO 10029.3:2023, HML39 |
+| [x] | HISO-HML40 | HML40 Access rights | HISO 10029.3:2023, HML40 |
+| [x] | HISO-HML41 | HML41 Privileged access rights | HISO 10029.3:2023, HML41 |
+| [x] | HISO-HML42 | HML42 Access to source code | HISO 10029.3:2023, HML42 |
+| [x] | HISO-HML50 | HML50 Security of web applications | HISO 10029.3:2023, HML50 |
+| [x] | HISO-HML52 | HML52 Use of application & programming interface (API) | HISO 10029.3:2023, HML52 |
+| [x] | HISO-HML53 | HML53 Cloud security controls | HISO 10029.3:2023, HML53 |
+| [x] | HISO-HML58 | HML58 Separate production and non-production environments | HISO 10029.3:2023, HML58 |
+| [x] | HISO-HML59 | HML59 Patch and vulnerabilities remediation | HISO 10029.3:2023, HML59 |
+| [x] | HISO-HML60 | HML60 Secure configuration | HISO 10029.3:2023, HML60 |
+| [x] | HISO-HML61 | HML61 Capacity management | HISO 10029.3:2023, HML61 |
+| [x] | HISO-HML69 | HML69 Data leakage prevention | HISO 10029.3:2023, HML69 |
+| [x] | HISO-HML70 | HML70 Logging and monitoring | HISO 10029.3:2023, HML70 |
 
-## NZISM — NZISM v3.9 (7/7 verified)
+## HISO10029_4 — HISO 10029.4:2025 (19/19 verified)
+
+Requirement ids and statements checked against the published PDFs by `test/unit/compliance/nzCrosswalk.test.ts`; which checks cite each one is in [nz-crosswalk.md](nz-crosswalk.md).
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
-| [x] | NZISM-AC | Access control and privilege management | NZISM v3.9, Ch.16 Authentication and Access Controls (16.2 System Access, 16.3 Privileged User Access) |
-| [x] | NZISM-AUTH | Identification, authentication and MFA | NZISM v3.9, Ch.16 Authentication and Access Controls (16.1 Identification, Authentication and Authorisation, 16.7 Multi-Factor Authentication) |
-| [x] | NZISM-LOG | Event monitoring, logging and auditing | NZISM v3.9, §16.6 Event Monitoring, Logging and Auditing |
-| [x] | NZISM-CRYPTO | Cryptography and key management | NZISM v3.9, Ch.17 Cryptography |
-| [x] | NZISM-SW | Software and application security | NZISM v3.9, Ch.14 Software security |
-| [x] | NZISM-NET | Network security and gateways | NZISM v3.9, Ch.18 Network security / Ch.19 Gateway security |
-| [x] | NZISM-CONFIG | System hardening and configuration | NZISM v3.9, Ch.12 Product Security (12.2 Product Installation and Configuration, 12.4 Product Patching and Updating) |
+| [x] | HISO-HSUP09 | HSUP09 Access control | HISO 10029.4:2025, HSUP09 |
+| [x] | HISO-HSUP14 | HSUP14 Security while developing applications, products or services | HISO 10029.4:2025, HSUP14 |
+| [x] | HISO-HSUP30 | HSUP30 Information and associated assets | HISO 10029.4:2025, HSUP30 |
+| [x] | HISO-HSUP32 | HSUP32 Use of cryptography | HISO 10029.4:2025, HSUP32 |
+| [x] | HISO-HSUP33 | HSUP33 Identity Management | HISO 10029.4:2025, HSUP33 |
+| [x] | HISO-HSUP34 | HSUP34 Information Authentication | HISO 10029.4:2025, HSUP34 |
+| [x] | HISO-HSUP35 | HSUP35 Access Rights | HISO 10029.4:2025, HSUP35 |
+| [x] | HISO-HSUP36 | HSUP36 Privileged Access Rights | HISO 10029.4:2025, HSUP36 |
+| [x] | HISO-HSUP37 | HSUP37 Access to source code | HISO 10029.4:2025, HSUP37 |
+| [x] | HISO-HSUP42 | HSUP42 Security of Web Applications | HISO 10029.4:2025, HSUP42 |
+| [x] | HISO-HSUP44 | HSUP44 Use of application & programming interface (API) | HISO 10029.4:2025, HSUP44 |
+| [x] | HISO-HSUP45 | HSUP45 Cloud security controls | HISO 10029.4:2025, HSUP45 |
+| [x] | HISO-HSUP50 | HSUP50 Separate production and non-production environments | HISO 10029.4:2025, HSUP50 |
+| [x] | HISO-HSUP51 | HSUP51 Patch and vulnerabilities remediation | HISO 10029.4:2025, HSUP51 |
+| [x] | HISO-HSUP52 | HSUP52 Secure configuration | HISO 10029.4:2025, HSUP52 |
+| [x] | HISO-HSUP53 | HSUP53 Capacity management | HISO 10029.4:2025, HSUP53 |
+| [x] | HISO-HSUP55 | HSUP55 Data leakage prevention | HISO 10029.4:2025, HSUP55 |
+| [x] | HISO-HSUP61 | HSUP61 Logging and monitoring | HISO 10029.4:2025, HSUP61 |
+| [x] | HISO-HSUP67 | HSUP67 Third-Party Management | HISO 10029.4:2025, HSUP67 |
+
+## NZISM — NZISM v3.9 (22/22 verified)
+
+Requirement ids and statements checked against the published PDFs by `test/unit/compliance/nzCrosswalk.test.ts`; which checks cite each one is in [nz-crosswalk.md](nz-crosswalk.md).
+
+| ✓ | id | title | sourceRef |
+|---|---|---|---|
+| [x] | NZISM-9.2 | 9.2 Authorisations, Security Clearances And Briefings | NZISM v3.9, 9.2 |
+| [x] | NZISM-12.3 | 12.3 Product Classifying and Labelling | NZISM v3.9, 12.3 |
+| [x] | NZISM-12.4 | 12.4 Product Patching and Updating | NZISM v3.9, 12.4 |
+| [x] | NZISM-12.7 | 12.7 Supply Chain | NZISM v3.9, 12.7 |
+| [x] | NZISM-14.1 | 14.1 Standard Operating Environments | NZISM v3.9, 14.1 |
+| [x] | NZISM-14.3 | 14.3 Web Applications | NZISM v3.9, 14.3 |
+| [x] | NZISM-14.4 | 14.4 Software Application Development | NZISM v3.9, 14.4 |
+| [x] | NZISM-14.5 | 14.5 Web Application Development | NZISM v3.9, 14.5 |
+| [x] | NZISM-15.2 | 15.2 Email Infrastructure | NZISM v3.9, 15.2 |
+| [x] | NZISM-16.1 | 16.1 Identification, Authentication and Authorisation | NZISM v3.9, 16.1 |
+| [x] | NZISM-16.2 | 16.2 System Access | NZISM v3.9, 16.2 |
+| [x] | NZISM-16.3 | 16.3 Privileged User Access | NZISM v3.9, 16.3 |
+| [x] | NZISM-16.4 | 16.4 Privileged Access Management | NZISM v3.9, 16.4 |
+| [x] | NZISM-16.5 | 16.5 Remote Access | NZISM v3.9, 16.5 |
+| [x] | NZISM-16.6 | 16.6 Event Monitoring, Logging and Auditing | NZISM v3.9, 16.6 |
+| [x] | NZISM-16.7 | 16.7 Multi-Factor Authentication | NZISM v3.9, 16.7 |
+| [x] | NZISM-17.1 | 17.1 Cryptographic Fundamentals | NZISM v3.9, 17.1 |
+| [x] | NZISM-21.1 | 21.1 Data Transfers | NZISM v3.9, 21.1 |
+| [x] | NZISM-23.2 | 23.2 Governance, Risk Assessment &amp; Assurance | NZISM v3.9, 23.2 |
+| [x] | NZISM-23.3 | 23.3 Identity Management and Access Control | NZISM v3.9, 23.3 |
+| [x] | NZISM-23.4 | 23.4 Data Protection in Public Cloud | NZISM v3.9, 23.4 |
+| [x] | NZISM-23.5 | 23.5 Logging and Alerting in Public Cloud | NZISM v3.9, 23.5 |
 
 ## HIPAA — 45 CFR Part 164 Subpart C (HIPAA Security Rule, 2013 Omnibus) (18/18 verified)
 

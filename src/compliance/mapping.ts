@@ -1,3 +1,5 @@
+import { CHECK_NZ_CITATIONS } from './nz/citations.generated.js';
+
 // Maps each check id to the compliance control ids it relates to.
 // Migrated from the former ComplianceMapping. A08/A10 are mapped precisely:
 //   A10 (SSRF) → egress controls (remote-sites, csp-trusted-sites, named-credentials)
@@ -171,18 +173,26 @@ const DOMAIN = {
              'genai-prompt-template-grounding'],
 } as const;
 
-// NZ pack crosswalk — HISO/NZISM are domain/chapter-level; Privacy Act IPPs are statute-level.
+// NZ Privacy Act: IPPs are statute-level, so they are layered on by domain. (SCF's Privacy Act
+// column maps Part 6 breach notification sections, not the IPPs, so it is not used here.)
 const NZ_CROSSWALK: Array<{ controls: string[]; checks: readonly string[] }> = [
-  { controls: ['HISO-AC', 'NZISM-AC', 'PRIVACY-IPP5'], checks: DOMAIN.accessControl },
-  { controls: ['HISO-AUTH', 'NZISM-AUTH', 'PRIVACY-IPP5'], checks: DOMAIN.authentication },
-  { controls: ['HISO-CRYPTO', 'NZISM-CRYPTO', 'PRIVACY-IPP5'], checks: DOMAIN.crypto },
-  { controls: ['HISO-LOG', 'NZISM-LOG'], checks: DOMAIN.logging },
-  { controls: ['HISO-DEV', 'NZISM-SW'], checks: DOMAIN.devSecurity },
-  { controls: ['HISO-COMM', 'NZISM-NET', 'PRIVACY-IPP12'], checks: DOMAIN.network },
-  { controls: ['HISO-DATA', 'PRIVACY-IPP5'], checks: DOMAIN.dataGovernance },
-  { controls: ['HISO-GOV', 'NZISM-CONFIG'], checks: DOMAIN.configGovernance },
+  { controls: ['PRIVACY-IPP5'], checks: [...DOMAIN.accessControl, ...DOMAIN.authentication, ...DOMAIN.crypto, ...DOMAIN.dataGovernance] },
+  { controls: ['PRIVACY-IPP12'], checks: DOMAIN.network },
   { controls: ['PRIVACY-IPP9'], checks: DOMAIN.accountLifecycle },
 ];
+
+// HISO 10029 and NZISM are cited per check, at requirement and section level, from the generated
+// crosswalk (scripts/compliance/derive_nz_citations.py). Each HSUP citation also cites its
+// HISO 10029.3 HML equivalent, so a provider and a supplier each see the part that applies to them.
+function nzCitationIds(check: string): string[] {
+  const c = CHECK_NZ_CITATIONS[check];
+  if (!c) return [];
+  return [
+    ...c.hsup.map((h) => `HISO-${h.id}`),
+    ...c.hml.map((h) => `HISO-${h}`),
+    ...c.nzism.map((n) => `NZISM-${n.section}`),
+  ];
+}
 
 // HIPAA / GDPR crosswalk — the domain-wide obligations. Anything narrower than a whole domain is
 // mapped per check in REGULATORY_PRECISE below rather than swept across the domain, because these
@@ -257,6 +267,7 @@ function buildCheckControlMap(): Record<string, string[]> {
   for (const [check, ids] of Object.entries(REGULATORY_PRECISE)) {
     (map[check] ??= []).push(...ids);
   }
+  for (const check of Object.keys(map)) map[check].push(...nzCitationIds(check));
   // A control can arrive from both a crosswalk and a precise entry; a compliance matrix must not
   // render the same control twice for one check.
   for (const check of Object.keys(map)) map[check] = [...new Set(map[check])];

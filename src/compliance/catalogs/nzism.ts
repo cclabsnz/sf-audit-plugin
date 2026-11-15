@@ -1,34 +1,22 @@
 import type { ControlDef } from '../types.js';
+import { NZISM_SECTIONS, NZISM_SOURCE } from '../nz/citations.generated.js';
 
-// New Zealand Information Security Manual (NZISM), GCSB/NCSC.
-// Chapter references VERIFIED 2026-11 against the official manual (https://nzism.gcsb.govt.nz/ism-document),
-// version 3.9 (last updated November 2025). First verified 2026-06 against v3.8; every cited chapter and
-// section kept its number and title in v3.9 (three chapter titles are now lower case after the first word). These are CHAPTER/SECTION-level mappings; refining to individual
-// NZISM control numbers (e.g. 16.1.35) is a future granularity pass. `verified` = the chapter reference
-// is confirmed to exist with this title in the current NZISM.
-const V = 'NZISM v3.9';
-const URL = 'https://nzism.gcsb.govt.nz/ism-document';
+// New Zealand Information Security Manual (NZISM), GCSB/NCSC. Section-level controls: each one is
+// an NZISM section (e.g. 16.7 Multi-Factor Authentication) that at least one check cites, and its
+// citation lists the individual controls the Secure Controls Framework 2026.3 crosswalk maps there,
+// with each control's compliance level from the manual. Which checks cite a section comes from
+// scripts/compliance/derive_nz_citations.py. `verified` = the section and every listed control
+// exist in the pinned manual version, which test/unit/compliance/nzCrosswalk.test.ts checks.
+const V = `NZISM v${NZISM_SOURCE.version}`;
 
-export const NZISM_CONTROLS: ControlDef[] = [
-  { id: 'NZISM-AC', framework: 'NZISM', version: V, title: 'Access control and privilege management',
-    requirement: 'Access to systems and information is granted on a least-privilege, need-to-know basis; privileged access is controlled and reviewed.',
-    sourceRef: 'NZISM v3.9, Ch.16 Authentication and Access Controls (16.2 System Access, 16.3 Privileged User Access)', url: URL, verified: true },
-  { id: 'NZISM-AUTH', framework: 'NZISM', version: V, title: 'Identification, authentication and MFA',
-    requirement: 'Users and systems are uniquely identified and strongly authenticated, including multi-factor authentication.',
-    sourceRef: 'NZISM v3.9, Ch.16 Authentication and Access Controls (16.1 Identification, Authentication and Authorisation, 16.7 Multi-Factor Authentication)', url: URL, verified: true },
-  { id: 'NZISM-LOG', framework: 'NZISM', version: V, title: 'Event monitoring, logging and auditing',
-    requirement: 'Security-relevant events are logged with sufficient detail and retention, and reviewed to detect and investigate incidents.',
-    sourceRef: 'NZISM v3.9, §16.6 Event Monitoring, Logging and Auditing', url: URL, verified: true },
-  { id: 'NZISM-CRYPTO', framework: 'NZISM', version: V, title: 'Cryptography and key management',
-    requirement: 'Approved cryptographic algorithms, protocols, and key management protect information in transit and at rest.',
-    sourceRef: 'NZISM v3.9, Ch.17 Cryptography', url: URL, verified: true },
-  { id: 'NZISM-SW', framework: 'NZISM', version: V, title: 'Software and application security',
-    requirement: 'Applications are developed and configured securely, mitigating common code-level vulnerabilities and unsafe execution.',
-    sourceRef: 'NZISM v3.9, Ch.14 Software security', url: URL, verified: true },
-  { id: 'NZISM-NET', framework: 'NZISM', version: V, title: 'Network security and gateways',
-    requirement: 'Network connections, gateways, and external integrations are restricted to authorised, secured endpoints.',
-    sourceRef: 'NZISM v3.9, Ch.18 Network security / Ch.19 Gateway security', url: URL, verified: true },
-  { id: 'NZISM-CONFIG', framework: 'NZISM', version: V, title: 'System hardening and configuration',
-    requirement: 'Systems are hardened to a secure baseline, kept current with security updates, and unnecessary functionality is disabled.',
-    sourceRef: 'NZISM v3.9, Ch.12 Product Security (12.2 Product Installation and Configuration, 12.4 Product Patching and Updating)', url: URL, verified: true },
-];
+const level = (l: string): string => l.toUpperCase();
+
+export const NZISM_CONTROLS: ControlDef[] = Object.entries(NZISM_SECTIONS).map(([section, s]) => ({
+  id: `NZISM-${section}`, framework: 'NZISM', version: V, title: `${section} ${s.title}`,
+  requirement: s.controls.length
+    ? `Controls in section ${section} that the Secure Controls Framework maps to the checks citing it: `
+      + s.controls.map((c) => `${c.id} (${level(c.level)})`).join(', ')
+    : `Section ${section} as a whole (cited directly by sf-audit; no SCF crosswalk entry).`,
+  sourceRef: `${V}, ${section} ${s.title}`,
+  url: NZISM_SOURCE.url, verified: true,
+}));

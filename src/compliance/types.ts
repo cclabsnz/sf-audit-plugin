@@ -1,6 +1,6 @@
 export type Framework =
   | 'OWASP' | 'OWASP_LLM' | 'SOC2' | 'ISO27001' | 'SBS'
-  | 'HISO10029' | 'PRIVACY_ACT' | 'NZISM' | 'HIPAA' | 'GDPR';
+  | 'HISO10029_3' | 'HISO10029_4' | 'PRIVACY_ACT' | 'NZISM' | 'HIPAA' | 'GDPR';
 
 export interface ControlDef {
   id: string;            // exact identifier, e.g. 'NZISM-16.1.35'

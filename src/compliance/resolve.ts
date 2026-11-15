@@ -4,8 +4,8 @@ import { getControl } from './catalogs/index.js';
 
 const PACKS: Record<FrameworkPack, Framework[]> = {
   universal: ['OWASP', 'OWASP_LLM', 'SOC2', 'ISO27001'],
-  nz: ['ISO27001', 'HISO10029', 'PRIVACY_ACT', 'NZISM'],
-  all: ['OWASP', 'OWASP_LLM', 'SOC2', 'ISO27001', 'SBS', 'HISO10029', 'PRIVACY_ACT', 'NZISM', 'HIPAA', 'GDPR'],
+  nz: ['ISO27001', 'HISO10029_3', 'HISO10029_4', 'PRIVACY_ACT', 'NZISM'],
+  all: ['OWASP', 'OWASP_LLM', 'SOC2', 'ISO27001', 'SBS', 'HISO10029_3', 'HISO10029_4', 'PRIVACY_ACT', 'NZISM', 'HIPAA', 'GDPR'],
 };
 
 export function packFrameworks(pack: FrameworkPack): Framework[] {
@@ -36,10 +36,13 @@ export function getComplianceTags(checkId: string): string[] {
   return CHECK_CONTROL_MAP[checkId] ?? [];
 }
 
-const ALIAS: Record<string, Framework> = {
+// `hiso` selects both HISO parts; `hiso-provider` (10029.3, health organisations) and
+// `hiso-supplier` (10029.4, their suppliers) select one. Which applies depends on who owns the org.
+const ALIAS: Record<string, Framework | Framework[]> = {
   owasp: 'OWASP', 'owasp-llm': 'OWASP_LLM', llm: 'OWASP_LLM',
   soc2: 'SOC2', iso: 'ISO27001', iso27001: 'ISO27001', sbs: 'SBS',
-  privacy: 'PRIVACY_ACT', 'privacy-act': 'PRIVACY_ACT', hiso: 'HISO10029', nzism: 'NZISM',
+  privacy: 'PRIVACY_ACT', 'privacy-act': 'PRIVACY_ACT', nzism: 'NZISM',
+  hiso: ['HISO10029_3', 'HISO10029_4'], 'hiso-provider': 'HISO10029_3', 'hiso-supplier': 'HISO10029_4',
   hipaa: 'HIPAA', gdpr: 'GDPR',
 };
 
@@ -49,8 +52,10 @@ export function resolveFrameworks(input: string): Framework[] {
   if (v === 'universal' || v === 'nz' || v === 'all') return packFrameworks(v);
   const out: Framework[] = [];
   for (const part of v.split(',').map((s) => s.trim())) {
-    const fw = ALIAS[part];
-    if (fw && !out.includes(fw)) out.push(fw);
+    const fws = ALIAS[part];
+    for (const fw of fws === undefined ? [] : Array.isArray(fws) ? fws : [fws]) {
+      if (!out.includes(fw)) out.push(fw);
+    }
   }
   return out;
 }

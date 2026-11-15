@@ -26,7 +26,7 @@ Because this tool authenticates against production orgs, "is it safe to run?" de
 | Alert | What triggers it | Why it is expected |
 | --- | --- | --- |
 | **Filesystem access** | `node:fs` reads and writes | It is a CLI that writes your audit reports (HTML/MD/JSON) to disk and reads local inputs: report-branding overrides, event-log baselines under `~/.sf/audit-history`, and its own history archive. Every path is one you pass on the command line or the tool's own dot-directory. |
-| **URL strings** | `https://` literals in the shipped code | These are inert citation links rendered as `<a href>` in reports — OWASP, NZISM, the NZ Privacy Act, GDPR, HIPAA, Te Whatu Ora and CIS-style benchmark references cited by compliance findings. They are never fetched. |
+| **URL strings** | `https://` literals in the shipped code | These are inert citation links rendered as `<a href>` in reports — OWASP, NZISM, the NZ Privacy Act, GDPR, HIPAA, the HISO 10029 PDFs from Health NZ and CIS-style benchmark references cited by compliance findings. They are never fetched. |
 
 Check the second one yourself — this lists every URL in the published build:
 
@@ -35,7 +35,7 @@ npm pack @cclabsnz/sf-audit && tar xzf cclabsnz-sf-audit-*.tgz
 grep -rhoE 'https?://[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}[^"'"'"'`,;) ]*' package/lib | sort -u
 ```
 
-As of v1.12.0 that prints twelve results. Nine are the standards-body citations rendered as `<a href>` in compliance findings:
+The standards-body citations rendered as `<a href>` in compliance findings (as of v1.28.0):
 
 ```
 https://docs.securitybenchmark.org/controls-at-a-glance.html
@@ -44,17 +44,19 @@ https://genai.owasp.org/llm-top-10/
 https://nzism.gcsb.govt.nz/ism-document
 https://owasp.org/Top10/2021/
 https://privacy.org.nz/privacy-act-2020/privacy-principles/
+https://static.info.content.health.nz/docs/HISO/HISO-10029-3-2023-Health-Information-Security-Framework-Guidance-for-Medium-to-Large-Organisations.pdf
+https://static.info.content.health.nz/docs/HISO/HISO-10029-4-Health-Information-Security-Framework-Guidance-for-Suppliers.pdf
 https://www.ecfr.gov/current/title-45/subtitle-A/subchapter-C/part-164/subpart-C
-https://www.healthnz.govt.nz/health-professionals/guidance-standards/topic/digital-technologies/cyber-security-hub/health-security-frameworks
 https://www.legislation.govt.nz/act/public/2020/0031/latest/LMS23342.html
 ```
 
-The other three are this project's own attribution links, printed in report footers and CLI output rather than fetched:
+The rest are attribution and reference links, printed in report footers, CLI output and SARIF rather than fetched, including:
 
 ```
 https://cloudcounsel.co.nz                      # report footer / branding default
 https://github.com/cclabsnz/sf-audit-plugin     # report footer
 https://softwareinsights.dev                    # further-reading pointer in CLI output
+https://securecontrolsframework.com             # attribution for the NZ compliance crosswalk (CC BY-ND 4.0)
 ```
 
 No CDN, telemetry, or analytics endpoints — and the network-egress invariant above fails the build if one is ever added.
