@@ -262,7 +262,7 @@ export const HML_REQUIREMENTS: Record<string, { area: string; statement: string 
   },
   "HML58": {
     "area": "Separate production and non-production environments",
-    "statement": "Organisations developing inhouse systems, applications or services are to maintain separate"
+    "statement": "Organisations developing inhouse systems, applications or services are to maintain separate production and non-production environments."
   },
   "HML59": {
     "area": "Patch and vulnerabilities remediation",
@@ -581,7 +581,7 @@ export const HSUP_REQUIREMENTS: Record<string, { area: string; statement: string
   },
   "HSUP62": {
     "area": "Clock synchronisation",
-    "statement": "The information processing systems, applications, devices, and services"
+    "statement": "The information processing systems, applications, devices, and services are synchronised to an approved time source."
   },
   "HSUP63": {
     "area": "Terms and conditions of employment",
@@ -685,36 +685,7 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
     "title": "Authorisations, Security Clearances And Briefings",
     "controls": [
       {
-        "id": "9.2.11.C.01",
-        "level": "Must"
-      },
-      {
         "id": "9.2.11.C.02",
-        "level": "Should"
-      }
-    ]
-  },
-  "12.3": {
-    "title": "Product Classifying and Labelling",
-    "controls": [
-      {
-        "id": "12.3.4.C.01",
-        "level": "Must"
-      },
-      {
-        "id": "12.3.5.C.01",
-        "level": "Must"
-      },
-      {
-        "id": "12.3.5.C.02",
-        "level": "Must"
-      },
-      {
-        "id": "12.3.6.C.01",
-        "level": "Must Not"
-      },
-      {
-        "id": "12.3.7.C.01",
         "level": "Should"
       }
     ]
@@ -804,31 +775,6 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
       }
     ]
   },
-  "14.1": {
-    "title": "Standard Operating Environments",
-    "controls": [
-      {
-        "id": "14.1.8.C.01",
-        "level": "Should"
-      },
-      {
-        "id": "14.1.9.C.01",
-        "level": "Must"
-      },
-      {
-        "id": "14.1.9.C.02",
-        "level": "Should"
-      },
-      {
-        "id": "14.1.10.C.01",
-        "level": "Must"
-      },
-      {
-        "id": "14.1.10.C.02",
-        "level": "Should"
-      }
-    ]
-  },
   "14.3": {
     "title": "Web Applications",
     "controls": [
@@ -854,21 +800,54 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
     "title": "Software Application Development",
     "controls": [
       {
+        "id": "14.4.4.C.01",
+        "level": "Should"
+      },
+      {
         "id": "14.4.5.C.01",
+        "level": "Should"
+      },
+      {
+        "id": "14.4.6.C.01",
         "level": "Should"
       }
     ]
   },
   "14.5": {
     "title": "Web Application Development",
-    "controls": []
+    "controls": [
+      {
+        "id": "14.5.8.C.01",
+        "level": "Should"
+      }
+    ]
   },
   "15.2": {
     "title": "Email Infrastructure",
     "controls": [
       {
-        "id": "15.2.36.C.01",
+        "id": "15.2.36.C.02",
         "level": "Must"
+      },
+      {
+        "id": "15.2.36.C.03",
+        "level": "Must"
+      },
+      {
+        "id": "15.2.36.C.04",
+        "level": "Must"
+      },
+      {
+        "id": "15.2.36.C.05",
+        "level": "Should"
+      },
+      {
+        "id": "15.2.50.C.01",
+        "level": "Must"
+      },
+      {
+        "id": "15.2.50.C.03",
+        "level": "Should"
       }
     ]
   },
@@ -932,14 +911,6 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
         "level": "Must"
       },
       {
-        "id": "16.1.35.C.01",
-        "level": "Must"
-      },
-      {
-        "id": "16.1.35.C.02",
-        "level": "Should"
-      },
-      {
         "id": "16.1.36.C.01",
         "level": "Must"
       },
@@ -974,14 +945,6 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
       {
         "id": "16.1.42.C.01",
         "level": "Must"
-      },
-      {
-        "id": "16.1.43.C.01",
-        "level": "Should"
-      },
-      {
-        "id": "16.1.44.C.01",
-        "level": "Should"
       }
     ]
   },
@@ -1082,10 +1045,6 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
       {
         "id": "16.5.11.C.02",
         "level": "Should Not"
-      },
-      {
-        "id": "16.5.12.C.01",
-        "level": "Should"
       }
     ]
   },
@@ -1109,18 +1068,6 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
         "level": "Should"
       },
       {
-        "id": "16.6.11.C.01",
-        "level": "Must"
-      },
-      {
-        "id": "16.6.11.C.02",
-        "level": "Should"
-      },
-      {
-        "id": "16.6.11.C.03",
-        "level": "Should"
-      },
-      {
         "id": "16.6.12.C.01",
         "level": "Must"
       },
@@ -1135,18 +1082,6 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
       {
         "id": "16.6.13.C.01",
         "level": "Must"
-      },
-      {
-        "id": "16.6.13.C.02",
-        "level": "Must"
-      },
-      {
-        "id": "16.6.13.C.03",
-        "level": "Should"
-      },
-      {
-        "id": "16.6.13.C.04",
-        "level": "Should"
       },
       {
         "id": "16.6.13.C.05",
@@ -1188,18 +1123,6 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
       {
         "id": "16.7.42.C.06",
         "level": "Should"
-      },
-      {
-        "id": "16.7.42.C.07",
-        "level": "Should"
-      },
-      {
-        "id": "16.7.43.C.01",
-        "level": "Should"
-      },
-      {
-        "id": "16.7.44.C.01",
-        "level": "Must"
       }
     ]
   },
@@ -1207,11 +1130,7 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
     "title": "Cryptographic Fundamentals",
     "controls": [
       {
-        "id": "17.1.54.C.01",
-        "level": "Must"
-      },
-      {
-        "id": "17.1.57.C.01",
+        "id": "17.1.55.C.03",
         "level": "Must"
       },
       {
@@ -1221,29 +1140,12 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
       {
         "id": "17.1.58.C.02",
         "level": "Should"
-      },
-      {
-        "id": "17.1.58.C.03",
-        "level": "Must"
       }
     ]
   },
   "21.1": {
     "title": "Data Transfers",
     "controls": []
-  },
-  "23.2": {
-    "title": "Governance, Risk Assessment &amp; Assurance",
-    "controls": [
-      {
-        "id": "23.2.19.C.01",
-        "level": "Must"
-      },
-      {
-        "id": "23.2.21.C.01",
-        "level": "Should"
-      }
-    ]
   },
   "23.3": {
     "title": "Identity Management and Access Control",
@@ -1255,28 +1157,12 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
       {
         "id": "23.3.19.C.02",
         "level": "Should"
-      },
-      {
-        "id": "23.3.21.C.01",
-        "level": "Must"
-      },
-      {
-        "id": "23.3.22.C.01",
-        "level": "Should"
       }
     ]
   },
   "23.4": {
     "title": "Data Protection in Public Cloud",
     "controls": [
-      {
-        "id": "23.4.9.C.02",
-        "level": "Must"
-      },
-      {
-        "id": "23.4.9.C.03",
-        "level": "Must"
-      },
       {
         "id": "23.4.10.C.01",
         "level": "Must"
@@ -1289,57 +1175,15 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
   }
 };
 
-export const NZISM_DROPPED_SCF_IDS = [
-  "15.2.36.C.02",
-  "15.2.36.C.03",
-  "15.2.36.C.04",
-  "15.2.36.C.05",
-  "15.2.41.C.01",
-  "15.2.41.C.02",
-  "15.2.42.C.01",
-  "15.2.43.C.01",
-  "15.2.44.C.01",
-  "15.2.46.C.01",
-  "15.2.46.C.03",
-  "15.2.47.C.01",
-  "15.2.47.C.02",
-  "15.2.49.C.03",
-  "15.2.50.C.01",
-  "15.2.50.C.02",
-  "15.2.50.C.03",
-  "15.2.50.C.04"
-] as const;
-
 export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
   "agent-action-surface": {
     "scf": [
       "AAT-39.2",
       "AAT-39.3"
     ],
-    "hsup": [
-      {
-        "id": "HSUP14",
-        "basis": "direct",
-        "reason": "Exposing write-capable Apex/Flow actions an agent does not need shows the agent was not 'securely designed' with controls limiting its functions."
-      },
-      {
-        "id": "HSUP35",
-        "basis": "direct",
-        "reason": "Write-capable create, update and delete actions and an oversized action surface give the agent service access beyond its task, contrary to least privilege in the access rights guidance."
-      }
-    ],
-    "hml": [
-      "HML16",
-      "HML40"
-    ],
-    "nzism": [
-      {
-        "section": "16.2",
-        "basis": "direct",
-        "reason": "Write and delete actions beyond the task are a system access least-privilege gap, the same basis SCF gives agent-user-privilege."
-      }
-    ],
-    "scfDerivedHsup": []
+    "hsup": [],
+    "hml": [],
+    "nzism": []
   },
   "agent-channel-exposure": {
     "scf": [
@@ -1348,28 +1192,18 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [
       {
-        "id": "HSUP34",
-        "basis": "direct",
-        "reason": "A guest or public channel lets unauthenticated users drive agent actions, so the statement 'user accounts are authenticated and circumventing the authentication process is prevented' is not met for that path."
-      },
-      {
         "id": "HSUP42",
         "basis": "direct",
-        "reason": "The guest-reachable channel is an Experience Cloud site or embedded web deployment; the web application guidance requires 'only authorised personnel have access to information stored on the website'."
+        "reason": "Applies to an active agent bound to a guest-reachable site, embedded deployment or web messaging channel; the web application guidance requires 'only authorised personnel have access to information stored on the website', and the agent acts on org data for any visitor.",
+        "findings": [
+          "agent-channel-exposure-guest-"
+        ]
       }
     ],
     "hml": [
-      "HML39",
       "HML50"
     ],
-    "nzism": [
-      {
-        "section": "16.1",
-        "basis": "direct",
-        "reason": "Unauthenticated guest users reaching an agent that acts on org data is a direct identification and authentication gap."
-      }
-    ],
-    "scfDerivedHsup": []
+    "nzism": []
   },
   "agent-inventory": {
     "scf": [
@@ -1386,8 +1220,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     "hml": [
       "HML38"
     ],
-    "nzism": [],
-    "scfDerivedHsup": []
+    "nzism": []
   },
   "agent-monitoring-coverage": {
     "scf": [
@@ -1397,33 +1230,35 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [
       {
-        "id": "HSUP55",
-        "basis": "direct",
-        "reason": "With no Transaction Security policy and no event capture there is no mechanism to 'detect and prevent data leakage' by a service such as a prompt-injected agent."
-      },
-      {
         "id": "HSUP61",
         "basis": "direct",
-        "reason": "Active agents with no Event Monitoring capture mean agent activity is not 'logged and stored as per the organisation's logging and auditing requirements'."
+        "reason": "Applies when the Event Monitoring log is readable and holds no files while agents are active, so agent activity is not 'logged and stored as per the organisation's logging and auditing requirements'. Where the log was not accessible to the audit, logging is unconfirmed rather than absent.",
+        "findings": [
+          "agent-monitoring-coverage-none"
+        ]
       }
     ],
     "hml": [
-      "HML69",
       "HML70"
     ],
     "nzism": [
       {
         "section": "16.6",
         "basis": "direct",
-        "reason": "The finding is the absence of event logging for agent activity."
+        "reason": "Event logging: the readable event log holds no files while agents are active, so agent activity is not logged.",
+        "findings": [
+          "agent-monitoring-coverage-none"
+        ]
       },
       {
         "section": "23.5",
         "basis": "direct",
-        "reason": "Event Monitoring is the logging and alerting capability of this public cloud service and is not in use."
+        "reason": "The readable event log of this public cloud service holds no files while agents are active, so its logging capability is not in use.",
+        "findings": [
+          "agent-monitoring-coverage-none"
+        ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "agent-outbound-actions": {
     "scf": [
@@ -1435,7 +1270,10 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP55",
         "basis": "direct",
-        "reason": "Agent actions sending data out by email, Slack, external services or MCP with no user confirmation breach the data leakage guidance that sharing outside the organisation needs 'approval ... sought and documented'."
+        "reason": "Agent actions sending data out by email, Slack, external services or MCP with no user confirmation breach the data leakage guidance that sharing outside the organisation needs 'approval ... sought and documented'.",
+        "findings": [
+          "agent-outbound-actions-unconfirmed"
+        ]
       }
     ],
     "hml": [
@@ -1445,10 +1283,12 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "section": "21.1",
         "basis": "direct",
-        "reason": "Unconfirmed agent sends are data transfers out of the system with no approval step."
+        "reason": "Unconfirmed agent sends are data transfers out of the system with no approval step.",
+        "findings": [
+          "agent-outbound-actions-unconfirmed"
+        ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "agent-query-reach": {
     "scf": [
@@ -1458,18 +1298,12 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [
       {
-        "id": "HSUP14",
-        "basis": "direct",
-        "reason": "An open-ended query path an injected prompt can steer shows the agent was not 'securely designed' with controls restricting its data access."
-      },
-      {
         "id": "HSUP35",
         "basis": "direct",
         "reason": "The General CRM topic or Query Records action lets the agent query any object the run-as user can read rather than what the task needs, contrary to least privilege in the access rights guidance."
       }
     ],
     "hml": [
-      "HML16",
       "HML40"
     ],
     "nzism": [
@@ -1478,8 +1312,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "direct",
         "reason": "Open-ended query reach over everything the run-as user can read is a system access least-privilege gap, the same basis SCF gives agent-user-privilege."
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "agent-user-privilege": {
     "scf": [
@@ -1518,8 +1351,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "anonymous-apex-audit": {
     "scf": [
@@ -1530,12 +1362,18 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP36",
         "basis": "direct",
-        "reason": "HSUP36: \"only authorised users, software components and services are provided with privileged access rights\"; non-admin users running anonymous Apex hold a privileged, sharing-bypassing capability."
+        "reason": "HSUP36: \"only authorised users, software components and services are provided with privileged access rights\"; non-admin users who executed anonymous Apex hold the ability to run arbitrary code in production outside change control.",
+        "findings": [
+          "anonymous-apex-executed"
+        ]
       },
       {
         "id": "HSUP37",
         "basis": "direct",
-        "reason": "HSUP37: \"Access to source code, development tools, and software libraries are restricted\"; Execute Anonymous is a developer tool executing arbitrary code in production."
+        "reason": "HSUP37: \"Access to source code, development tools, and software libraries are restricted\"; Execute Anonymous is a developer tool executing arbitrary code in production.",
+        "findings": [
+          "anonymous-apex-executed"
+        ]
       }
     ],
     "hml": [
@@ -1565,8 +1403,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "apex-crud-fls": {
     "scf": [
@@ -1610,10 +1447,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP09",
-      "HSUP42"
     ]
   },
   "apex-logging": {
@@ -1625,26 +1458,16 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP55",
         "basis": "direct",
-        "reason": "HSUP55: \"detect and prevent data leakage through the unauthorised disclosure ... of information by individuals, systems, or services\"; Apex writing sensitive values into logs discloses them to anyone who can read those logs."
-      },
-      {
-        "id": "HSUP61",
-        "basis": "direct",
-        "reason": "HSUP61: activities \"are logged and stored as per the organisation's (and the customer's) logging and auditing requirements\"; System.debug-only classes produce transient output that is not stored as an application log."
+        "reason": "HSUP55: \"detect and prevent data leakage through the unauthorised disclosure ... of information by individuals, systems, or services\"; Apex writing sensitive values into logs discloses them to anyone who can read those logs.",
+        "findings": [
+          "apex-logging-sensitive-data"
+        ]
       }
     ],
     "hml": [
-      "HML69",
-      "HML70"
+      "HML69"
     ],
-    "nzism": [
-      {
-        "section": "16.6",
-        "basis": "direct",
-        "reason": "Event Monitoring, Logging and Auditing: the check tests whether application events are persistently logged."
-      }
-    ],
-    "scfDerivedHsup": []
+    "nzism": []
   },
   "apex-rest-endpoint": {
     "scf": [
@@ -1659,7 +1482,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP44",
         "basis": "direct",
-        "reason": "HSUP44 guidance lists 'request-level authorisation' and appropriate IAM permissions for APIs; REST endpoints running without sharing do not authorise per caller."
+        "reason": "HSUP44 guidance lists 'request-level authorisation' for APIs; custom REST endpoints running without sharing do not authorise each request against the caller's access."
       }
     ],
     "hml": [
@@ -1688,9 +1511,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP42"
     ]
   },
   "apex-sharing": {
@@ -1702,7 +1522,10 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP09",
         "basis": "direct",
-        "reason": "HSUP09 guidance: 'only authenticated and authorised personnel to access the information', on need-to-know and least privilege; the finding shows access rules not implemented that way. Externally exposed Apex bypasses the caller's record access."
+        "reason": "HSUP09 guidance: 'only authenticated and authorised personnel to access the information', on need-to-know. Applies to Apex without sharing that is exposed to portal or guest users and ignores the caller's sharing.",
+        "findings": [
+          "portal-exposed-apex-without-sharing"
+        ]
       },
       {
         "id": "HSUP42",
@@ -1735,9 +1558,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP42"
     ]
   },
   "api-client-permission": {
@@ -1749,7 +1569,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP09",
         "basis": "direct",
-        "reason": "HSUP09 statement: rules to control logical access are implemented; holders bypass the API Access Control rule the org set."
+        "reason": "HSUP09 statement: rules to control logical access are implemented. Use Any API Client lets its holders use connected apps outside API Access Control where that control is enabled; it applies only in orgs that enable it."
       },
       {
         "id": "HSUP35",
@@ -1776,8 +1596,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "api-limits": {
     "scf": [
@@ -1792,10 +1611,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     "hml": [
       "HML61"
     ],
-    "nzism": [],
-    "scfDerivedHsup": [
-      "HSUP53"
-    ]
+    "nzism": []
   },
   "audit-trail": {
     "scf": [
@@ -1805,42 +1621,29 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [
       {
-        "id": "HSUP36",
-        "basis": "direct",
-        "reason": "HSUP36 guidance: privileged access is to \"have all their activities logged and stored for audit\" and be \"reviewed at least every month\"; the finding surfaces permission changes and Login-As sessions that need that review."
-      },
-      {
         "id": "HSUP61",
         "basis": "direct",
-        "reason": "HSUP61 guidance: stored audit logs must be such \"that they cannot be altered in any way\" and viewing is limited \"to specific roles\"; many active users holding Manage Event Log Files can delete Event Monitoring data."
+        "reason": "HSUP61 guidance: stored audit logs must be such \"that they cannot be altered in any way\" and viewing is limited \"to specific roles\"; many active users holding Manage Event Log Files can delete Event Monitoring data.",
+        "findings": [
+          "event-log-delete-permission"
+        ]
       }
     ],
     "hml": [
-      "HML41",
       "HML70"
     ],
     "nzism": [
       {
-        "section": "16.4",
-        "basis": "scf",
-        "controls": [
-          "16.4.41.C.01",
-          "16.4.41.C.02"
-        ]
-      },
-      {
         "section": "16.6",
         "basis": "scf",
         "controls": [
-          "16.6.12.C.01",
-          "16.6.13.C.01",
-          "16.6.13.C.02",
-          "16.6.13.C.03",
-          "16.6.13.C.04"
+          "16.6.12.C.01"
+        ],
+        "findings": [
+          "event-log-delete-permission"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "auth-provider-registration-handler": {
     "scf": [
@@ -1865,21 +1668,13 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "nzism": [
       {
-        "section": "16.2",
-        "basis": "scf",
-        "controls": [
-          "16.2.4.C.01"
-        ]
-      },
-      {
         "section": "23.4",
         "basis": "scf",
         "controls": [
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "auth-providers": {
     "scf": [
@@ -1887,27 +1682,9 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       "IAC-45",
       "IAC-03.3"
     ],
-    "hsup": [
-      {
-        "id": "HSUP34",
-        "basis": "scf"
-      }
-    ],
-    "hml": [
-      "HML39"
-    ],
-    "nzism": [
-      {
-        "section": "16.1",
-        "basis": "scf",
-        "controls": [
-          "16.1.26.C.01"
-        ]
-      }
-    ],
-    "scfDerivedHsup": [
-      "HSUP34"
-    ]
+    "hsup": [],
+    "hml": [],
+    "nzism": []
   },
   "certificate-expiry": {
     "scf": [
@@ -1918,64 +1695,25 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP32",
         "basis": "direct",
-        "reason": "HSUP32 statement: 'key management are defined and implemented'; certificates at or near expiry show the key/certificate lifecycle is not being managed"
+        "reason": "HSUP32 statement: 'key management are defined and implemented'; a certificate already past its expiry date shows the certificate lifecycle is not being managed",
+        "findings": [
+          "certificate-expiring-critical"
+        ]
       }
     ],
     "hml": [
       "HML37"
     ],
-    "nzism": [
-      {
-        "section": "17.1",
-        "basis": "scf",
-        "controls": [
-          "17.1.58.C.01",
-          "17.1.58.C.02",
-          "17.1.58.C.03"
-        ]
-      },
-      {
-        "section": "23.3",
-        "basis": "scf",
-        "controls": [
-          "23.3.21.C.01",
-          "23.3.22.C.01"
-        ]
-      },
-      {
-        "section": "23.4",
-        "basis": "scf",
-        "controls": [
-          "23.4.9.C.02",
-          "23.4.9.C.03"
-        ]
-      }
-    ],
-    "scfDerivedHsup": []
+    "nzism": []
   },
   "classic-sites": {
     "scf": [
       "IAC-31",
       "DCH-24"
     ],
-    "hsup": [
-      {
-        "id": "HSUP42",
-        "basis": "direct",
-        "reason": "HSUP42 guidance: 'only authorised personnel have access to information stored on the website'; active classic Visualforce sites serve the org's web application to unauthenticated visitors."
-      }
-    ],
-    "hml": [
-      "HML50"
-    ],
-    "nzism": [
-      {
-        "section": "16.1",
-        "basis": "direct",
-        "reason": "16.1 Identification, Authentication and Authorisation: the finding is access granted to unidentified, unauthenticated users; SCF derived no section."
-      }
-    ],
-    "scfDerivedHsup": []
+    "hsup": [],
+    "hml": [],
+    "nzism": []
   },
   "code-security": {
     "scf": [
@@ -1987,12 +1725,18 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP14",
         "basis": "direct",
-        "reason": "HSUP14: \"Information systems are securely designed, and appropriate controls are implemented\"; guidance: \"identify and assess potential threats because of the introduced code\". Deployed Apex concatenating input into dynamic SOQL lacks that control."
+        "reason": "HSUP14: \"Information systems are securely designed, and appropriate controls are implemented\"; guidance: \"identify and assess potential threats because of the introduced code\". Deployed Apex concatenating input into dynamic SOQL lacks that control.",
+        "findings": [
+          "soql-injection-risk"
+        ]
       },
       {
         "id": "HSUP42",
         "basis": "direct",
-        "reason": "HSUP42 guidance: \"security controls and mechanisms are in place to protect against the OWASP top ten\" and \"reduce or limit exploitations and injection of malicious code\"; SOQL injection is an OWASP top ten injection flaw."
+        "reason": "HSUP42 guidance: \"security controls and mechanisms are in place to protect against the OWASP top ten\" and \"reduce or limit exploitations and injection of malicious code\"; SOQL injection is an OWASP top ten injection flaw.",
+        "findings": [
+          "soql-injection-risk"
+        ]
       }
     ],
     "hml": [
@@ -2001,12 +1745,26 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "nzism": [
       {
+        "section": "14.4",
+        "basis": "direct",
+        "reason": "14.4.5.C.01: secure programming practices including validating all inputs; 14.4.6.C.01: software reviewed or tested for vulnerabilities before production use. Apex concatenating input into dynamic SOQL fails both.",
+        "controls": [
+          "14.4.5.C.01",
+          "14.4.6.C.01"
+        ],
+        "findings": [
+          "soql-injection-risk"
+        ]
+      },
+      {
         "section": "14.5",
         "basis": "direct",
-        "reason": "14.5.8.C.01: follow OWASP guidance for building secure web applications; Apex SOQL injection is the injection class that guidance addresses."
+        "reason": "14.5.8.C.01: follow OWASP guidance for building secure web applications; Apex SOQL injection is the injection class that guidance addresses.",
+        "findings": [
+          "soql-injection-risk"
+        ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "connected-app-inactivity": {
     "scf": [
@@ -2035,8 +1793,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "direct",
         "reason": "23.4.10.C.01: least privilege and restricting service endpoints to authorised parties; dormant apps retain endpoint access nobody still needs."
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "connected-app-scope": {
     "scf": [
@@ -2064,12 +1821,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "16.1",
         "basis": "scf",
         "controls": [
-          "16.1.36.C.02",
-          "16.1.36.C.03",
-          "16.1.40.C.01",
-          "16.1.41.C.01",
-          "16.1.41.C.02",
-          "16.1.42.C.01"
+          "16.1.40.C.01"
         ]
       },
       {
@@ -2086,8 +1838,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "connected-apps": {
     "scf": [
@@ -2097,12 +1848,18 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     "hsup": [
       {
         "id": "HSUP09",
-        "basis": "scf"
+        "basis": "scf",
+        "findings": [
+          "unrestricted-connected-apps"
+        ]
       },
       {
         "id": "HSUP35",
         "basis": "direct",
-        "reason": "HSUP35 guidance: access \"is activated only after authorisation by the right personnel\"; apps any user can self-authorise grant OAuth access with no admin approval step."
+        "reason": "HSUP35 guidance: access \"is activated only after authorisation by the right personnel\"; apps any user can self-authorise grant OAuth access with no admin approval step.",
+        "findings": [
+          "unrestricted-connected-apps"
+        ]
       }
     ],
     "hml": [
@@ -2111,14 +1868,24 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "nzism": [
       {
+        "section": "16.1",
+        "basis": "direct",
+        "reason": "16.1.40.C.01: automatic logout after inactivity, \"including invalidating any session tokens\"; connected apps without a short session timeout leave OAuth sessions live.",
+        "controls": [
+          "16.1.40.C.01"
+        ],
+        "findings": [
+          "connected-apps-long-session-timeout"
+        ]
+      },
+      {
         "section": "23.4",
         "basis": "direct",
-        "reason": "23.4.10.C.01: apply least privilege and configure service endpoints to restrict access to authorised parties; unrestricted connected apps leave the endpoint open to any user."
+        "reason": "23.4.10.C.01: apply least privilege and configure service endpoints to restrict access to authorised parties; unrestricted connected apps leave the endpoint open to any user.",
+        "findings": [
+          "unrestricted-connected-apps"
+        ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP09",
-      "HSUP41"
     ]
   },
   "content-links": {
@@ -2128,18 +1895,12 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [
       {
-        "id": "HSUP34",
-        "basis": "direct",
-        "reason": "HSUP34 guidance: systems are protected 'by permitting only authenticated users or processes to gain access to their protected resources'; the finding shows unauthenticated guests reaching org data. Anchored on the MEDIUM/HIGH no-expiry and stale findings: every live public link is a file retrievable without authentication, indefinitely."
-      },
-      {
         "id": "HSUP55",
         "basis": "direct",
         "reason": "HSUP55 statement: detect and prevent data leakage through unauthorised disclosure and siphoning of information by individuals, systems, or services; the finding is an open extraction or disclosure path. Links without expiry stay live indefinitely."
       }
     ],
     "hml": [
-      "HML39",
       "HML69"
     ],
     "nzism": [
@@ -2148,8 +1909,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "direct",
         "reason": "23.4 Data Protection in Public Cloud: files are publicly retrievable from the SaaS platform without authentication; SCF derived no section."
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "cors-allowlist": {
     "scf": [
@@ -2177,9 +1937,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "direct",
         "reason": "14.5.8.C.01: follow OWASP guidance for building secure web applications; overly broad CORS origins are an OWASP security misconfiguration."
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP44"
     ]
   },
   "csp-trusted-sites": {
@@ -2203,8 +1960,19 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       "HML37",
       "HML50"
     ],
-    "nzism": [],
-    "scfDerivedHsup": []
+    "nzism": [
+      {
+        "section": "17.1",
+        "basis": "direct",
+        "reason": "17.1.55.C.03 (all classifications): agencies MUST encrypt aggregated agency data over insecure or unprotected networks such as the Internet. The finding is a CSP trusted site reached over plain HTTP.",
+        "controls": [
+          "17.1.55.C.03"
+        ],
+        "findings": [
+          "csp-trusted-sites-insecure"
+        ]
+      }
+    ]
   },
   "custom-labels-credential": {
     "scf": [
@@ -2213,48 +1981,25 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [
       {
-        "id": "HSUP14",
-        "basis": "direct",
-        "reason": "HSUP14 statement: 'Information systems are securely designed, and appropriate controls are implemented'; storing secrets in plain-text org metadata is a design choice in what the org built"
-      },
-      {
         "id": "HSUP34",
         "basis": "direct",
-        "reason": "HSUP34 guidance: where authentication information cannot be changed, 'the information is kept securely to maintain its confidentiality'; a plain-text credential readable in org metadata is not (API keys, tokens and credentials in Custom Labels)"
+        "reason": "HSUP34 guidance: 'For service and emergency accounts, passwords are to be stored and shared in a protected form'; API keys, tokens and credentials in Custom Labels are stored in plain text readable in org metadata"
       }
     ],
     "hml": [
-      "HML16",
       "HML39"
     ],
     "nzism": [
       {
-        "section": "14.3",
-        "basis": "scf",
-        "controls": [
-          "14.3.13.C.01",
-          "14.3.13.C.02",
-          "14.3.13.C.03"
-        ]
-      },
-      {
         "section": "16.1",
-        "basis": "scf",
+        "basis": "direct",
+        "reason": "16.1.31.C.04: agencies MUST 'ensure authentication secrets (including passwords) are securely stored'; 16.1.32.C.01: agencies 'MUST NOT allow storage of unprotected authentication information'; API keys, tokens and credentials in Custom Labels are stored unprotected",
         "controls": [
-          "16.1.34.C.02",
-          "16.1.36.C.01",
-          "16.1.36.C.02",
-          "16.1.36.C.03",
-          "16.1.37.C.01",
-          "16.1.38.C.01",
-          "16.1.40.C.01",
-          "16.1.41.C.01",
-          "16.1.41.C.02",
-          "16.1.42.C.01"
+          "16.1.31.C.04",
+          "16.1.32.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "custom-settings": {
     "scf": [
@@ -2263,48 +2008,25 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [
       {
-        "id": "HSUP14",
-        "basis": "direct",
-        "reason": "HSUP14 statement: 'Information systems are securely designed, and appropriate controls are implemented'; storing secrets in plain-text org metadata is a design choice in what the org built"
-      },
-      {
         "id": "HSUP34",
         "basis": "direct",
-        "reason": "HSUP34 guidance: where authentication information cannot be changed, 'the information is kept securely to maintain its confidentiality'; a plain-text credential readable in org metadata is not (secret-named plain-text fields on custom settings / custom metadata)"
+        "reason": "HSUP34 guidance: 'For service and emergency accounts, passwords are to be stored and shared in a protected form'; secret-named plain-text fields on custom settings or custom metadata are stored in plain text readable in org metadata"
       }
     ],
     "hml": [
-      "HML16",
       "HML39"
     ],
     "nzism": [
       {
-        "section": "14.3",
-        "basis": "scf",
-        "controls": [
-          "14.3.13.C.01",
-          "14.3.13.C.02",
-          "14.3.13.C.03"
-        ]
-      },
-      {
         "section": "16.1",
-        "basis": "scf",
+        "basis": "direct",
+        "reason": "16.1.31.C.04: agencies MUST 'ensure authentication secrets (including passwords) are securely stored'; 16.1.32.C.01: agencies 'MUST NOT allow storage of unprotected authentication information'; secret-named plain-text fields on custom settings or custom metadata are stored unprotected",
         "controls": [
-          "16.1.34.C.02",
-          "16.1.36.C.01",
-          "16.1.36.C.02",
-          "16.1.36.C.03",
-          "16.1.37.C.01",
-          "16.1.38.C.01",
-          "16.1.40.C.01",
-          "16.1.41.C.01",
-          "16.1.41.C.02",
-          "16.1.42.C.01"
+          "16.1.31.C.04",
+          "16.1.32.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "data-classification": {
     "scf": [
@@ -2313,29 +2035,18 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [
       {
-        "id": "HSUP30",
-        "basis": "scf"
-      }
-    ],
-    "hml": [
-      "HML34"
-    ],
-    "nzism": [
-      {
-        "section": "12.3",
-        "basis": "scf",
-        "controls": [
-          "12.3.4.C.01",
-          "12.3.5.C.01",
-          "12.3.5.C.02",
-          "12.3.6.C.01",
-          "12.3.7.C.01"
+        "id": "HSUP05",
+        "basis": "direct",
+        "reason": "HSUP05 guidance: 'classifying all identified assets and identify their protection requirement'. Applies to key objects whose fields carry no data classification.",
+        "findings": [
+          "data-classification-missing"
         ]
       }
     ],
-    "scfDerivedHsup": [
-      "HSUP30"
-    ]
+    "hml": [
+      "HML05"
+    ],
+    "nzism": []
   },
   "data-cloud-data-space-isolation": {
     "scf": [
@@ -2345,28 +2056,16 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     "hsup": [
       {
         "id": "HSUP09",
-        "basis": "scf"
-      },
-      {
-        "id": "HSUP55",
-        "basis": "direct",
-        "reason": "HSUP55 statement: detect and prevent data leakage through unauthorised disclosure and siphoning of information by individuals, systems, or services; the finding is an open extraction or disclosure path. Active Data Share Targets have no IP or authentication constraint."
+        "basis": "scf",
+        "findings": [
+          "data-cloud-data-space-default-overshared"
+        ]
       }
     ],
     "hml": [
-      "HML10",
-      "HML69"
+      "HML10"
     ],
-    "nzism": [
-      {
-        "section": "23.4",
-        "basis": "direct",
-        "reason": "23.4 Data Protection in Public Cloud: unsegmented Data Spaces and unconstrained Data Share Targets are data protection failures in a SaaS platform; SCF derived no section."
-      }
-    ],
-    "scfDerivedHsup": [
-      "HSUP09"
-    ]
+    "nzism": []
   },
   "data-export-access": {
     "scf": [
@@ -2381,7 +2080,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP36",
         "basis": "direct",
-        "reason": "HSUP36 guidance: privileged access rights cover 'accounts that have capabilities beyond the standard user'; View/Modify All Data and Weekly Data Export are such capabilities granted broadly."
+        "reason": "HSUP36 guidance: privileged access rights cover 'accounts that have capabilities beyond the standard user'; each holder of Weekly Data Export, or API access with Modify or View All Data, holds such a capability and should be justified."
       },
       {
         "id": "HSUP55",
@@ -2409,9 +2108,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP09"
     ]
   },
   "debug-log-access": {
@@ -2428,8 +2124,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     "hml": [
       "HML69"
     ],
-    "nzism": [],
-    "scfDerivedHsup": []
+    "nzism": []
   },
   "delegated-administration-groups": {
     "scf": [
@@ -2439,7 +2134,8 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     "hsup": [
       {
         "id": "HSUP36",
-        "basis": "scf"
+        "basis": "scf",
+        "reason": "HSUP36: only authorised users are given privileged access rights. Applies to the named members of delegated administration groups who can manage users; each should be justified."
       }
     ],
     "hml": [
@@ -2450,28 +2146,19 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "16.3",
         "basis": "scf",
         "controls": [
-          "16.3.5.C.01",
-          "16.3.6.C.01",
-          "16.3.6.C.02",
-          "16.3.7.C.01"
+          "16.3.5.C.01"
         ]
       },
       {
         "section": "16.4",
         "basis": "scf",
         "controls": [
-          "16.4.36.C.01",
-          "16.4.36.C.02",
-          "16.4.36.C.03",
           "16.4.37.C.01",
           "16.4.37.C.03",
           "16.4.38.C.01",
           "16.4.40.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP36"
     ]
   },
   "delegated-authentication-exposure": {
@@ -2484,22 +2171,23 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP32",
         "basis": "direct",
-        "reason": "HSUP32 guidance: data in transit secured using 'transport layer security (TLS)'; the delegated authentication gateway is unencrypted or lacks mutual TLS"
+        "reason": "HSUP32 guidance: data in transit secured using 'transport layer security (TLS)'; a delegated authentication gateway URL that starts with http:// sends credentials unencrypted",
+        "findings": [
+          "delegated-authentication-insecure-gateway"
+        ]
       },
       {
         "id": "HSUP34",
         "basis": "direct",
-        "reason": "HSUP34 statement: 'User accounts are authenticated and circumventing the authentication process is prevented'; a delegated gateway without mutual TLS can be spoofed, letting an attacker pass authentication"
-      },
-      {
-        "id": "HSUP36",
-        "basis": "scf"
+        "reason": "HSUP34 statement: 'User accounts are authenticated and circumventing the authentication process is prevented'; a delegated authentication gateway over http:// sends credentials in clear text and accepts an unsigned boolean response that can be spoofed in transit",
+        "findings": [
+          "delegated-authentication-insecure-gateway"
+        ]
       }
     ],
     "hml": [
       "HML37",
-      "HML39",
-      "HML41"
+      "HML39"
     ],
     "nzism": [
       {
@@ -2513,34 +2201,28 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "16.3",
         "basis": "scf",
         "controls": [
-          "16.3.5.C.01",
-          "16.3.6.C.01",
-          "16.3.6.C.02",
-          "16.3.7.C.01"
+          "16.3.5.C.01"
         ]
       },
       {
         "section": "16.4",
         "basis": "scf",
         "controls": [
-          "16.4.36.C.01",
-          "16.4.36.C.02",
-          "16.4.36.C.03",
           "16.4.37.C.01",
-          "16.4.37.C.03",
-          "16.4.38.C.01"
+          "16.4.37.C.03"
         ]
       },
       {
         "section": "17.1",
-        "basis": "scf",
+        "basis": "direct",
+        "reason": "17.1.55.C.03: agencies 'MUST encrypt aggregated agency data using an approved algorithm and protocol over insecure or unprotected networks'; a gateway over http:// sends credentials unencrypted",
         "controls": [
-          "17.1.57.C.01"
+          "17.1.55.C.03"
+        ],
+        "findings": [
+          "delegated-authentication-insecure-gateway"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP36"
     ]
   },
   "deployment-identity": {
@@ -2552,7 +2234,11 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     "hsup": [
       {
         "id": "HSUP36",
-        "basis": "scf"
+        "basis": "scf",
+        "reason": "Applies to deployments run by administrator-profile users rather than a designated deployment account.",
+        "findings": [
+          "deployment-admin-accounts"
+        ]
       }
     ],
     "hml": [
@@ -2567,6 +2253,9 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "16.3.6.C.01",
           "16.3.6.C.02",
           "16.3.7.C.01"
+        ],
+        "findings": [
+          "deployment-admin-accounts"
         ]
       },
       {
@@ -2579,11 +2268,11 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "16.4.37.C.01",
           "16.4.37.C.03",
           "16.4.38.C.01"
+        ],
+        "findings": [
+          "deployment-admin-accounts"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP36"
     ]
   },
   "email-security": {
@@ -2606,11 +2295,24 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "15.2",
         "basis": "scf",
         "controls": [
-          "15.2.36.C.01"
+          "15.2.36.C.02",
+          "15.2.36.C.03",
+          "15.2.36.C.04",
+          "15.2.36.C.05"
+        ]
+      },
+      {
+        "section": "15.2",
+        "basis": "direct",
+        "reason": "15.2.50.C.03: agencies SHOULD verify DKIM signatures on emails received; the finding is inbound email processed without sender authentication.",
+        "controls": [
+          "15.2.50.C.03"
+        ],
+        "findings": [
+          "email-security-services-no-auth"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "encryption-coverage": {
     "scf": [
@@ -2627,33 +2329,15 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     "hml": [
       "HML37"
     ],
-    "nzism": [
-      {
-        "section": "17.1",
-        "basis": "scf",
-        "controls": [
-          "17.1.54.C.01"
-        ]
-      }
-    ],
-    "scfDerivedHsup": []
+    "nzism": []
   },
   "enhanced-domains": {
     "scf": [
       "NET-29"
     ],
-    "hsup": [
-      {
-        "id": "HSUP45",
-        "basis": "direct",
-        "reason": "HSUP45 statement: 'appropriate controls are implemented to protect information in a multi-tenant cloud environment'; without My Domain/Enhanced Domains, cookies and sessions are not isolated from other tenants on shared Salesforce infrastructure"
-      }
-    ],
-    "hml": [
-      "HML53"
-    ],
-    "nzism": [],
-    "scfDerivedHsup": []
+    "hsup": [],
+    "hml": [],
+    "nzism": []
   },
   "escalation-perms": {
     "scf": [
@@ -2687,19 +2371,13 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "16.3",
         "basis": "scf",
         "controls": [
-          "16.3.5.C.01",
-          "16.3.6.C.01",
-          "16.3.6.C.02",
-          "16.3.7.C.01"
+          "16.3.5.C.01"
         ]
       },
       {
         "section": "16.4",
         "basis": "scf",
         "controls": [
-          "16.4.36.C.01",
-          "16.4.36.C.02",
-          "16.4.36.C.03",
           "16.4.37.C.01",
           "16.4.37.C.03",
           "16.4.38.C.01"
@@ -2712,9 +2390,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP36"
     ]
   },
   "event-monitoring": {
@@ -2726,7 +2401,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP61",
         "basis": "direct",
-        "reason": "HSUP61: activities \"are logged and stored\"; guidance: \"Audit logs are to be stored as per organisation's (and customer's) data retention policy\". Event Monitoring off, or under 30 days of logs, fails both."
+        "reason": "HSUP61: activities \"are logged and stored\"; guidance: \"Audit logs are to be stored as per organisation's (and customer's) data retention policy\". Event Monitoring off, or under 30 days of event log files, leaves the event types it captures unlogged or short-lived; SetupAuditTrail and LoginHistory keep logging without it."
       }
     ],
     "hml": [
@@ -2739,10 +2414,20 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "controls": [
           "16.6.13.C.05"
         ]
+      },
+      {
+        "section": "16.6",
+        "basis": "direct",
+        "reason": "16.6.13.C.01: event logs MUST be archived and retained for an appropriate period; 16.6.10.C.02: log minimum events for all software components. Applies where Event Monitoring is off or keeps logs for too short a period.",
+        "controls": [
+          "16.6.10.C.02",
+          "16.6.13.C.01"
+        ],
+        "findings": [
+          "event-monitoring-disabled",
+          "event-monitoring-retention-short"
+        ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP60"
     ]
   },
   "experience-cloud-site": {
@@ -2752,52 +2437,24 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [
       {
-        "id": "HSUP33",
-        "basis": "direct",
-        "reason": "HSUP33 guidance: 'Implement a formal user access creation process'; live self-registration lets anyone create an account outside that process."
-      },
-      {
         "id": "HSUP42",
         "basis": "direct",
         "reason": "HSUP42 guidance: 'only authorised personnel have access to information stored on the website'; live sites with self-registration or open guest access breach that."
       }
     ],
     "hml": [
-      "HML38",
       "HML50"
     ],
-    "nzism": [
-      {
-        "section": "16.1",
-        "basis": "direct",
-        "reason": "16.1 Identification, Authentication and Authorisation: the finding is access granted to unidentified, unauthenticated users; SCF derived no section."
-      }
-    ],
-    "scfDerivedHsup": []
+    "nzism": []
   },
   "experience-csp": {
     "scf": [
       "WEB-11",
       "WEB-05"
     ],
-    "hsup": [
-      {
-        "id": "HSUP42",
-        "basis": "direct",
-        "reason": "HSUP42 guidance: \"security controls and mechanisms are in place to protect against the OWASP top ten\" and \"reduce or limit exploitations and injection of malicious code\"; a live Experience Cloud site on Relaxed CSP or without Lightning Web Security lets inline and third-party script run on guest-reachable pages."
-      }
-    ],
-    "hml": [
-      "HML50"
-    ],
-    "nzism": [
-      {
-        "section": "14.5",
-        "basis": "direct",
-        "reason": "Web Application Development: 14.5.8.C.01 points to OWASP guidance for building secure web applications, which is what Strict CSP and LWS enforce on an Experience Cloud site."
-      }
-    ],
-    "scfDerivedHsup": []
+    "hsup": [],
+    "hml": [],
+    "nzism": []
   },
   "external-account-hierarchy-exposure": {
     "scf": [
@@ -2812,7 +2469,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP35",
         "basis": "direct",
-        "reason": "HSUP35 statement and guidance: access is defined and authorised per business and security requirements and 'provided using the principle of least privilege'; the finding shows access granted beyond need. Partner Super User and External Account Hierarchies widen portal visibility."
+        "reason": "HSUP35: access 'provided using the principle of least privilege'. Partner Super User and external account hierarchy access widen record visibility across a partner's users; each grant should be justified against need."
       }
     ],
     "hml": [
@@ -2834,9 +2491,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP09"
     ]
   },
   "external-credentials": {
@@ -2847,16 +2501,13 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP44",
         "basis": "direct",
-        "reason": "HSUP44 guidance: 'enabling secure or robust authentication and authorisation i.e., OAuth2'; External Credentials with no authentication or a custom non-standard scheme"
+        "reason": "HSUP44 guidance: 'enabling secure or robust authentication and authorisation'; External Credentials using No Authentication send callouts with no authentication"
       }
     ],
     "hml": [
       "HML52"
     ],
-    "nzism": [],
-    "scfDerivedHsup": [
-      "HSUP41"
-    ]
+    "nzism": []
   },
   "failed-login-detection": {
     "scf": [
@@ -2866,36 +2517,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [],
     "hml": [],
-    "nzism": [
-      {
-        "section": "14.3",
-        "basis": "scf",
-        "controls": [
-          "14.3.7.C.01"
-        ]
-      },
-      {
-        "section": "16.1",
-        "basis": "scf",
-        "controls": [
-          "16.1.31.C.03",
-          "16.1.31.C.04",
-          "16.1.31.C.05"
-        ]
-      },
-      {
-        "section": "16.7",
-        "basis": "scf",
-        "controls": [
-          "16.7.42.C.01"
-        ]
-      }
-    ],
-    "scfDerivedHsup": [
-      "HSUP14",
-      "HSUP46",
-      "HSUP52"
-    ]
+    "nzism": []
   },
   "field-history-tracking": {
     "scf": [
@@ -2922,10 +2544,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "16.6.9.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP60",
-      "HSUP61"
     ]
   },
   "field-level-security": {
@@ -2963,9 +2581,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP09"
     ]
   },
   "flow-http-callout-credential-bypass": {
@@ -2995,19 +2610,12 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "scf",
         "controls": [
           "16.1.34.C.02",
-          "16.1.36.C.01",
-          "16.1.36.C.02",
-          "16.1.36.C.03",
           "16.1.37.C.01",
           "16.1.38.C.01",
-          "16.1.40.C.01",
-          "16.1.41.C.01",
-          "16.1.41.C.02",
-          "16.1.42.C.01"
+          "16.1.40.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "flows-without-sharing": {
     "scf": [
@@ -3025,6 +2633,14 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "nzism": [
       {
+        "section": "14.4",
+        "basis": "direct",
+        "reason": "14.4.5.C.01: software runs at the lowest privilege level needed to achieve its task; flows running in system context without sharing do not.",
+        "controls": [
+          "14.4.5.C.01"
+        ]
+      },
+      {
         "section": "16.2",
         "basis": "scf",
         "controls": [
@@ -3038,8 +2654,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "genai-prompt-template-grounding": {
     "scf": [
@@ -3050,25 +2665,13 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [
       {
-        "id": "HSUP14",
-        "basis": "direct",
-        "reason": "Interpolating untrusted external fields beside sensitive CRM data in an active template shows the system was not 'securely designed' with appropriate controls against injected input."
-      },
-      {
         "id": "HSUP35",
         "basis": "direct",
         "reason": "Grounding on System-Mode Flows or without-sharing Apex returns records above the invoking user's access, so access is not provided 'using the principle of least privilege' as the guidance requires."
-      },
-      {
-        "id": "HSUP36",
-        "basis": "direct",
-        "reason": "A template grounded on System-Mode Flows or without-sharing Apex runs a software component with elevated rights on behalf of any invoking user; the statement limits privileged access to 'authorised users, software components and services'."
       }
     ],
     "hml": [
-      "HML16",
-      "HML40",
-      "HML41"
+      "HML40"
     ],
     "nzism": [
       {
@@ -3085,8 +2688,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "guest-api-access": {
     "scf": [
@@ -3124,8 +2726,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "guest-executable-apex": {
     "scf": [
@@ -3170,9 +2771,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP42"
     ]
   },
   "guest-object-exposure": {
@@ -3208,28 +2806,25 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "16.1",
         "basis": "direct",
         "reason": "16.1 Identification, Authentication and Authorisation: the finding is access granted to unidentified, unauthenticated users; SCF derived no section."
+      },
+      {
+        "section": "23.4",
+        "basis": "direct",
+        "reason": "23.4.10.C.01: configure service endpoints to restrict access to authorised parties; the finding is guest access to org data through the site.",
+        "controls": [
+          "23.4.10.C.01"
+        ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "guest-record-access-policy": {
     "scf": [
       "IAC-31",
       "IAC-25"
     ],
-    "hsup": [
-      {
-        "id": "HSUP09",
-        "basis": "scf"
-      }
-    ],
-    "hml": [
-      "HML10"
-    ],
-    "nzism": [],
-    "scfDerivedHsup": [
-      "HSUP09"
-    ]
+    "hsup": [],
+    "hml": [],
+    "nzism": []
   },
   "guest-site-options": {
     "scf": [
@@ -3257,9 +2852,16 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "16.1",
         "basis": "direct",
         "reason": "16.1 Identification, Authentication and Authorisation: the finding is access granted to unidentified, unauthenticated users; SCF derived no section."
+      },
+      {
+        "section": "23.4",
+        "basis": "direct",
+        "reason": "23.4.10.C.01: configure service endpoints to restrict access to authorised parties; the finding is guest access to org data through the site.",
+        "controls": [
+          "23.4.10.C.01"
+        ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "guest-traffic-anomaly": {
     "scf": [
@@ -3270,17 +2872,16 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP42",
         "basis": "direct",
-        "reason": "HSUP42 guidance: \"continually monitor for malware, phishing, and other kinds of cyber-attacks\"; GraphQL totalCount sweeps, anonymizer sources and bursts against the guest site are reconnaissance attacks."
-      },
-      {
-        "id": "HSUP61",
-        "basis": "direct",
-        "reason": "HSUP61 guidance: logs are analysed \"to confirm the occurrence of an unusual activity or an anomalous behaviour\"; the BLIND findings (Event Monitoring off, no View Event Log Files) show guest activity is not logged or analysable."
+        "reason": "HSUP42 guidance: \"continually monitor for malware, phishing, and other kinds of cyber-attacks\"; GraphQL totalCount sweeps, anonymizer sources and bursts against the guest site are attack traffic to investigate. The check detected them in the logs, so this is evidence of an incident to respond to, not of missing monitoring.",
+        "findings": [
+          "guest-traffic-anomaly-recon",
+          "guest-traffic-anomaly-anonymizer",
+          "guest-traffic-anomaly-burst"
+        ]
       }
     ],
     "hml": [
-      "HML50",
-      "HML70"
+      "HML50"
     ],
     "nzism": [
       {
@@ -3288,8 +2889,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "direct",
         "reason": "Event Monitoring, Logging and Auditing: the check analyses EventLogFile guest request logs."
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "guest-user-access": {
     "scf": [
@@ -3302,16 +2902,10 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "id": "HSUP09",
         "basis": "direct",
         "reason": "HSUP09 guidance: 'only authenticated and authorised personnel to access the information', on need-to-know and least privilege; the finding shows access rules not implemented that way."
-      },
-      {
-        "id": "HSUP34",
-        "basis": "direct",
-        "reason": "HSUP34 guidance: systems are protected 'by permitting only authenticated users or processes to gain access to their protected resources'; the finding shows unauthenticated guests reaching org data."
       }
     ],
     "hml": [
-      "HML10",
-      "HML39"
+      "HML10"
     ],
     "nzism": [
       {
@@ -3328,8 +2922,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "guest-user-visibility": {
     "scf": [
@@ -3356,10 +2949,15 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "16.1",
         "basis": "direct",
         "reason": "16.1 Identification, Authentication and Authorisation: the finding is access granted to unidentified, unauthenticated users; SCF derived no section."
+      },
+      {
+        "section": "23.4",
+        "basis": "direct",
+        "reason": "23.4.10.C.01: configure service endpoints to restrict access to authorised parties; the finding is guest access to org data through the site.",
+        "controls": [
+          "23.4.10.C.01"
+        ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP09"
     ]
   },
   "hardcoded-credentials": {
@@ -3376,7 +2974,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP34",
         "basis": "direct",
-        "reason": "HSUP34 guidance: where authentication information cannot be changed, 'the information is kept securely to maintain its confidentiality'; a plain-text credential readable in org metadata is not (Bearer tokens, Basic auth, API keys in Apex source)"
+        "reason": "HSUP34 guidance: 'For service and emergency accounts, passwords are to be stored and shared in a protected form'; Bearer tokens, Basic auth strings and API keys in Apex source are stored in plain text readable in org metadata"
       }
     ],
     "hml": [
@@ -3385,32 +2983,15 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "nzism": [
       {
-        "section": "14.3",
-        "basis": "scf",
-        "controls": [
-          "14.3.13.C.01",
-          "14.3.13.C.02",
-          "14.3.13.C.03"
-        ]
-      },
-      {
         "section": "16.1",
-        "basis": "scf",
+        "basis": "direct",
+        "reason": "16.1.31.C.04: agencies MUST 'ensure authentication secrets (including passwords) are securely stored'; 16.1.32.C.01: agencies 'MUST NOT allow storage of unprotected authentication information'; Bearer tokens, Basic auth strings and API keys in Apex source are stored unprotected",
         "controls": [
-          "16.1.34.C.02",
-          "16.1.36.C.01",
-          "16.1.36.C.02",
-          "16.1.36.C.03",
-          "16.1.37.C.01",
-          "16.1.38.C.01",
-          "16.1.40.C.01",
-          "16.1.41.C.01",
-          "16.1.41.C.02",
-          "16.1.42.C.01"
+          "16.1.31.C.04",
+          "16.1.32.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "health-check": {
     "scf": [
@@ -3426,17 +3007,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       "HML60"
     ],
     "nzism": [
-      {
-        "section": "14.1",
-        "basis": "scf",
-        "controls": [
-          "14.1.10.C.01",
-          "14.1.10.C.02",
-          "14.1.8.C.01",
-          "14.1.9.C.01",
-          "14.1.9.C.02"
-        ]
-      },
       {
         "section": "14.3",
         "basis": "scf",
@@ -3459,19 +3029,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "controls": [
           "16.7.42.C.01"
         ]
-      },
-      {
-        "section": "23.2",
-        "basis": "scf",
-        "controls": [
-          "23.2.21.C.01"
-        ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP14",
-      "HSUP46",
-      "HSUP52"
     ]
   },
   "high-assurance-session": {
@@ -3479,47 +3037,9 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       "CFG-04.5",
       "IAC-43"
     ],
-    "hsup": [
-      {
-        "id": "HSUP44",
-        "basis": "direct",
-        "reason": "HSUP44 guidance: 're-authentication for all API calls i.e., not permitting session persistence'; connected apps (OAuth/API clients) with no session timeout or one over 8 hours keep sessions alive indefinitely"
-      }
-    ],
-    "hml": [
-      "HML52"
-    ],
-    "nzism": [
-      {
-        "section": "14.3",
-        "basis": "scf",
-        "controls": [
-          "14.3.7.C.01"
-        ]
-      },
-      {
-        "section": "16.1",
-        "basis": "scf",
-        "controls": [
-          "16.1.31.C.03",
-          "16.1.31.C.04",
-          "16.1.31.C.05",
-          "16.1.44.C.01"
-        ]
-      },
-      {
-        "section": "16.7",
-        "basis": "scf",
-        "controls": [
-          "16.7.42.C.01"
-        ]
-      }
-    ],
-    "scfDerivedHsup": [
-      "HSUP14",
-      "HSUP46",
-      "HSUP52"
-    ]
+    "hsup": [],
+    "hml": [],
+    "nzism": []
   },
   "inactive-users": {
     "scf": [
@@ -3543,12 +3063,14 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "section": "16.1",
         "basis": "direct",
-        "reason": "Identification, authentication and authorisation includes suspending accounts that are no longer used."
+        "reason": "16.1.42.C.01: 'remove or suspend inactive accounts after a specified number of days'; active licensed users have not logged in for 90+ days.",
+        "controls": [
+          "16.1.42.C.01"
+        ],
+        "findings": [
+          "inactive-users-90d"
+        ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP33",
-      "HSUP35"
     ]
   },
   "inbound-email-handler-exposure": {
@@ -3578,7 +3100,21 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "15.2",
         "basis": "scf",
         "controls": [
-          "15.2.36.C.01"
+          "15.2.36.C.02",
+          "15.2.36.C.03",
+          "15.2.36.C.04",
+          "15.2.36.C.05"
+        ]
+      },
+      {
+        "section": "15.2",
+        "basis": "direct",
+        "reason": "15.2.50.C.03: agencies SHOULD verify DKIM signatures on emails received; the finding is inbound email processed without sender authentication.",
+        "controls": [
+          "15.2.50.C.03"
+        ],
+        "findings": [
+          "inbound-email-handler-unauthenticated-execution"
         ]
       },
       {
@@ -3595,8 +3131,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "installed-packages": {
     "scf": [
@@ -3605,28 +3140,27 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [
       {
-        "id": "HSUP50",
-        "basis": "direct",
-        "reason": "A beta package version in production breaches the separate-environments guidance that 'testing is to be limited to the non-production environments'."
-      },
-      {
         "id": "HSUP67",
         "basis": "direct",
-        "reason": "Unmanaged packages are editable and bypass AppExchange security review, so third-party code is in production without being 'systematically evaluated' as the third-party management statement requires."
+        "reason": "Unmanaged packages are editable and bypass AppExchange security review, so third-party code is in production without being 'systematically evaluated' as the third-party management statement requires.",
+        "findings": [
+          "installed-packages-unmanaged"
+        ]
       }
     ],
     "hml": [
-      "HML58",
       "HML25"
     ],
     "nzism": [
       {
         "section": "12.7",
         "basis": "direct",
-        "reason": "Unmanaged third-party code that skipped AppExchange review is a supply chain gap, as SCF derives for package-post-install-supply-chain."
+        "reason": "Unmanaged third-party code that skipped AppExchange review is a supply chain gap, as SCF derives for package-post-install-supply-chain.",
+        "findings": [
+          "installed-packages-unmanaged"
+        ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "integration-least-privilege": {
     "scf": [
@@ -3669,10 +3203,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP33",
-      "HSUP35"
     ]
   },
   "integration-users": {
@@ -3701,10 +3231,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "direct",
         "reason": "16.2 System Access: service accounts hold org-wide data access beyond need; SCF derived no section."
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP33",
-      "HSUP35"
     ]
   },
   "internal-user-mfa": {
@@ -3714,57 +3240,17 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       "IAC-37.5",
       "IAC-32"
     ],
-    "hsup": [
-      {
-        "id": "HSUP34",
-        "basis": "direct",
-        "reason": "HSUP34 guidance: strong authentication 'combines two or more different authentication factors'; users able to sign in without a second factor show this is not met; here the evidence is that users lack the explicit MFA-for-UI-logins permission, so MFA rests solely on org-level enforcement"
-      }
-    ],
-    "hml": [
-      "HML39"
-    ],
+    "hsup": [],
+    "hml": [],
     "nzism": [
       {
         "section": "16.1",
         "basis": "scf",
         "controls": [
-          "16.1.29.C.02",
-          "16.1.32.C.01"
-        ]
-      },
-      {
-        "section": "16.4",
-        "basis": "scf",
-        "controls": [
-          "16.4.37.C.02"
-        ]
-      },
-      {
-        "section": "16.7",
-        "basis": "scf",
-        "controls": [
-          "16.7.42.C.01",
-          "16.7.42.C.02",
-          "16.7.42.C.03",
-          "16.7.42.C.04",
-          "16.7.42.C.05",
-          "16.7.42.C.06",
-          "16.7.42.C.07",
-          "16.7.43.C.01",
-          "16.7.44.C.01"
-        ]
-      },
-      {
-        "section": "23.3",
-        "basis": "scf",
-        "controls": [
-          "23.3.19.C.01",
-          "23.3.19.C.02"
+          "16.1.29.C.02"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "ip-restrictions": {
     "scf": [
@@ -3783,21 +3269,13 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "nzism": [
       {
-        "section": "16.2",
-        "basis": "scf",
-        "controls": [
-          "16.2.4.C.01"
-        ]
-      },
-      {
         "section": "16.5",
         "basis": "scf",
         "controls": [
           "16.5.10.C.01",
           "16.5.10.C.02",
           "16.5.11.C.01",
-          "16.5.11.C.02",
-          "16.5.12.C.01"
+          "16.5.11.C.02"
         ]
       },
       {
@@ -3807,8 +3285,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "legacy-api-version": {
     "scf": [
@@ -3816,8 +3293,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [],
     "hml": [],
-    "nzism": [],
-    "scfDerivedHsup": []
+    "nzism": []
   },
   "lightning-message-channel": {
     "scf": [
@@ -3840,9 +3316,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "direct",
         "reason": "14.5.7.C.01: minimise connectivity and access between each web application component; a channel open to every namespace does the opposite."
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP09"
     ]
   },
   "login-access-policy": {
@@ -3852,17 +3325,11 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [
       {
-        "id": "HSUP34",
-        "basis": "direct",
-        "reason": "HSUP34 statement: 'circumventing the authentication process is prevented'; Administrators Can Log In as Any User lets an admin enter any user's session without that user authenticating."
-      },
-      {
         "id": "HSUP36",
         "basis": "scf"
       }
     ],
     "hml": [
-      "HML39",
       "HML41"
     ],
     "nzism": [
@@ -3877,19 +3344,13 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "16.3",
         "basis": "scf",
         "controls": [
-          "16.3.5.C.01",
-          "16.3.6.C.01",
-          "16.3.6.C.02",
-          "16.3.7.C.01"
+          "16.3.5.C.01"
         ]
       },
       {
         "section": "16.4",
         "basis": "scf",
         "controls": [
-          "16.4.36.C.01",
-          "16.4.36.C.02",
-          "16.4.36.C.03",
           "16.4.37.C.01",
           "16.4.37.C.03",
           "16.4.38.C.01"
@@ -3902,9 +3363,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP36"
     ]
   },
   "login-anomaly": {
@@ -3938,8 +3396,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "16.1.27.C.03"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "login-session": {
     "scf": [
@@ -3948,14 +3405,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [],
     "hml": [],
-    "nzism": [
-      {
-        "section": "16.6",
-        "basis": "direct",
-        "reason": "Event monitoring, logging and auditing; the check is a review of LoginHistory events"
-      }
-    ],
-    "scfDerivedHsup": []
+    "nzism": []
   },
   "mfa-enforcement": {
     "scf": [
@@ -3967,7 +3417,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP34",
         "basis": "direct",
-        "reason": "HSUP34 guidance: strong authentication 'combines two or more different authentication factors'; users able to sign in without a second factor show this is not met (external/portal users with data access)"
+        "reason": "HSUP34 guidance: SSO is recommended 'along with the use of multi-factor authentication (MFA) for all user accounts'; external or portal users with data access are not required to use MFA"
       }
     ],
     "hml": [
@@ -3987,12 +3437,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "controls": [
           "16.7.42.C.01",
           "16.7.42.C.03",
-          "16.7.42.C.04",
-          "16.7.42.C.05",
-          "16.7.42.C.06",
-          "16.7.42.C.07",
-          "16.7.43.C.01",
-          "16.7.44.C.01"
+          "16.7.42.C.04"
         ]
       },
       {
@@ -4003,8 +3448,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.3.19.C.02"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "mfa-method-strength": {
     "scf": [
@@ -4067,10 +3511,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "16.7.42.C.03",
           "16.7.42.C.04",
           "16.7.42.C.05",
-          "16.7.42.C.06",
-          "16.7.42.C.07",
-          "16.7.43.C.01",
-          "16.7.44.C.01"
+          "16.7.42.C.06"
         ]
       },
       {
@@ -4081,8 +3522,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.3.19.C.02"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "mfa-registration": {
     "scf": [
@@ -4134,12 +3574,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "scf",
         "controls": [
           "16.7.42.C.01",
-          "16.7.42.C.04",
-          "16.7.42.C.05",
-          "16.7.42.C.06",
-          "16.7.42.C.07",
-          "16.7.43.C.01",
-          "16.7.44.C.01"
+          "16.7.42.C.04"
         ]
       },
       {
@@ -4150,8 +3585,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.3.19.C.02"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "my-domain-login-policy": {
     "scf": [
@@ -4168,16 +3602,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     "hml": [
       "HML39"
     ],
-    "nzism": [
-      {
-        "section": "16.1",
-        "basis": "scf",
-        "controls": [
-          "16.1.32.C.01"
-        ]
-      }
-    ],
-    "scfDerivedHsup": []
+    "nzism": []
   },
   "named-credentials": {
     "scf": [
@@ -4194,7 +3619,10 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP44",
         "basis": "direct",
-        "reason": "HSUP44 guidance: 'enabling secure or robust authentication and authorisation' and 'encrypting all requests and responses'; anonymous-principal and plain HTTP named credentials fail these for integrations"
+        "reason": "HSUP44 guidance: 'encrypting all requests and responses'; named credentials pointing at http:// endpoints send requests and responses unencrypted",
+        "findings": [
+          "named-credentials-http-endpoint"
+        ]
       }
     ],
     "hml": [
@@ -4226,14 +3654,15 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       },
       {
         "section": "17.1",
-        "basis": "scf",
+        "basis": "direct",
+        "reason": "17.1.55.C.03: agencies 'MUST encrypt aggregated agency data using an approved algorithm and protocol over insecure or unprotected networks'; named credentials point at http:// endpoints",
         "controls": [
-          "17.1.57.C.01"
+          "17.1.55.C.03"
+        ],
+        "findings": [
+          "named-credentials-http-endpoint"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP41"
     ]
   },
   "oauth-device-and-asset-token-flows": {
@@ -4296,12 +3725,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "scf",
         "controls": [
           "16.7.42.C.01",
-          "16.7.42.C.04",
-          "16.7.42.C.05",
-          "16.7.42.C.06",
-          "16.7.42.C.07",
-          "16.7.43.C.01",
-          "16.7.44.C.01"
+          "16.7.42.C.04"
         ]
       },
       {
@@ -4312,8 +3736,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.3.19.C.02"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "oauth-token-inventory": {
     "scf": [
@@ -4342,16 +3765,10 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "16.1",
         "basis": "scf",
         "controls": [
-          "16.1.36.C.02",
-          "16.1.36.C.03",
-          "16.1.40.C.01",
-          "16.1.41.C.01",
-          "16.1.41.C.02",
-          "16.1.42.C.01"
+          "16.1.40.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "org-wide-email-spoofing": {
     "scf": [
@@ -4378,11 +3795,14 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "section": "15.2",
         "basis": "direct",
-        "reason": "15.2.36.C.01 requires reviewing SPF and DKIM configuration for all active sending domains; missing DKIM keys is that gap."
+        "reason": "15.2.50.C.01: agencies \"MUST enable DKIM signing on all email originating from their domain\"; org-wide addresses with zero active DKIM keys send unsigned mail.",
+        "controls": [
+          "15.2.50.C.01"
+        ],
+        "findings": [
+          "org-wide-email-spoofing-no-dkim"
+        ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP09"
     ]
   },
   "outbound-messages": {
@@ -4408,40 +3828,28 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "nzism": [
       {
-        "section": "14.3",
-        "basis": "scf",
-        "controls": [
-          "14.3.13.C.01",
-          "14.3.13.C.02",
-          "14.3.13.C.03"
-        ]
-      },
-      {
         "section": "16.1",
         "basis": "scf",
         "controls": [
           "16.1.33.C.01",
           "16.1.34.C.02",
-          "16.1.36.C.01",
-          "16.1.36.C.02",
-          "16.1.36.C.03",
           "16.1.37.C.01",
           "16.1.38.C.01",
-          "16.1.40.C.01",
-          "16.1.41.C.01",
-          "16.1.41.C.02",
-          "16.1.42.C.01"
+          "16.1.40.C.01"
         ]
       },
       {
         "section": "17.1",
-        "basis": "scf",
+        "basis": "direct",
+        "reason": "17.1.55.C.03 (all classifications): agencies MUST encrypt aggregated agency data over insecure or unprotected networks such as the Internet. The finding is an outbound message sent over plain HTTP.",
         "controls": [
-          "17.1.57.C.01"
+          "17.1.55.C.03"
+        ],
+        "findings": [
+          "outbound-messages-cleartext"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "package-post-install-supply-chain": {
     "scf": [
@@ -4450,18 +3858,12 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "hsup": [
       {
-        "id": "HSUP36",
-        "basis": "direct",
-        "reason": "An InstallHandler runs in system context, a privileged right held by a third-party software component; the statement limits privileged access to 'authorised users, software components and services'."
-      },
-      {
         "id": "HSUP67",
         "basis": "direct",
         "reason": "InstallHandler code from a package runs on every install and push upgrade; third-party management guidance requires assessing 'the level of access the supplier has to the organisation's systems' before and after onboarding."
       }
     ],
     "hml": [
-      "HML41",
       "HML25"
     ],
     "nzism": [
@@ -4490,8 +3892,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "12.7.21.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "password-session-policy": {
     "scf": [
@@ -4504,25 +3905,16 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP34",
         "basis": "direct",
-        "reason": "HSUP34 guidance: strong authentication 'combines two or more different authentication factors'; users able to sign in without a second factor show this is not met; the mfa-gaps finding (Health Check MFA settings not enforced), plus weak password policy settings"
-      },
-      {
-        "id": "HSUP52",
-        "basis": "scf"
+        "reason": "HSUP34 guidance: 'Organisations are to ensure that a robust password policy enforces secure authentication mechanisms'; Health Check reports password length, complexity, expiry or lockout settings below the recommended values",
+        "findings": [
+          "password-policy-failures"
+        ]
       }
     ],
     "hml": [
-      "HML39",
-      "HML60"
+      "HML39"
     ],
     "nzism": [
-      {
-        "section": "14.3",
-        "basis": "scf",
-        "controls": [
-          "14.3.7.C.01"
-        ]
-      },
       {
         "section": "16.1",
         "basis": "scf",
@@ -4534,11 +3926,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "16.1.31.C.04",
           "16.1.31.C.05",
           "16.1.31.C.07",
-          "16.1.35.C.01",
-          "16.1.35.C.02",
-          "16.1.42.C.01",
-          "16.1.43.C.01",
-          "16.1.44.C.01"
+          "16.1.42.C.01"
         ]
       },
       {
@@ -4553,12 +3941,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "scf",
         "controls": [
           "16.7.42.C.01",
-          "16.7.42.C.04",
-          "16.7.42.C.05",
-          "16.7.42.C.06",
-          "16.7.42.C.07",
-          "16.7.43.C.01",
-          "16.7.44.C.01"
+          "16.7.42.C.04"
         ]
       },
       {
@@ -4569,11 +3952,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.3.19.C.02"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP14",
-      "HSUP46",
-      "HSUP52"
     ]
   },
   "permissions": {
@@ -4585,7 +3963,10 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP35",
         "basis": "direct",
-        "reason": "HSUP35 statement and guidance: access is defined and authorised per business and security requirements and 'provided using the principle of least privilege'; the finding shows access granted beyond need. Custom profiles/permission sets broadly grant API Enabled; unassigned sets show access rights not reviewed."
+        "reason": "HSUP35: access 'provided using the principle of least privilege'. Applies to profiles and permission sets granting API Enabled beyond need; unassigned permission sets grant nothing and are hygiene, not evidence.",
+        "findings": [
+          "permissions-api-enabled"
+        ]
       }
     ],
     "hml": [
@@ -4596,7 +3977,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "9.2",
         "basis": "scf",
         "controls": [
-          "9.2.11.C.01",
           "9.2.11.C.02"
         ]
       },
@@ -4608,10 +3988,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "16.2.5.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP04",
-      "HSUP37"
     ]
   },
   "platform-event-subscriber-context": {
@@ -4650,8 +4026,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "privileged-access": {
     "scf": [
@@ -4672,28 +4047,19 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "16.3",
         "basis": "scf",
         "controls": [
-          "16.3.5.C.01",
-          "16.3.6.C.01",
-          "16.3.6.C.02",
-          "16.3.7.C.01"
+          "16.3.5.C.01"
         ]
       },
       {
         "section": "16.4",
         "basis": "scf",
         "controls": [
-          "16.4.36.C.01",
-          "16.4.36.C.02",
-          "16.4.36.C.03",
           "16.4.37.C.01",
           "16.4.37.C.03",
           "16.4.38.C.01",
           "16.4.40.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP36"
     ]
   },
   "public-content-exposure": {
@@ -4710,7 +4076,10 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP55",
         "basis": "direct",
-        "reason": "HSUP55 statement: detect and prevent data leakage through unauthorised disclosure and siphoning of information by individuals, systems, or services; the finding is an open extraction or disclosure path."
+        "reason": "HSUP55 statement: detect and prevent data leakage through unauthorised disclosure. Applies to Documents marked externally available, which anyone with the link can retrieve.",
+        "findings": [
+          "public-content-public-documents"
+        ]
       }
     ],
     "hml": [
@@ -4723,8 +4092,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "direct",
         "reason": "23.4 Data Protection in Public Cloud: documents are publicly retrievable from the SaaS platform; SCF derived no section."
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "public-group-sharing": {
     "scf": [
@@ -4761,9 +4129,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP09"
     ]
   },
   "release-updates": {
@@ -4774,7 +4139,10 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP51",
         "basis": "direct",
-        "reason": "Vendor release updates left unactivated, some past auto-activation, are pending vendor fixes not 'tracked, and remediated' as the patch and vulnerability remediation statement requires."
+        "reason": "Applies to release updates past their auto-activation date and still not enabled: vendor-issued fixes not yet 'tracked, and remediated' as the patch and vulnerability remediation statement requires. Updates still inside their window are not overdue.",
+        "findings": [
+          "release-updates-overdue"
+        ]
       }
     ],
     "hml": [
@@ -4784,18 +4152,11 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "section": "12.4",
         "basis": "direct",
-        "reason": "Product patching and updating is the direct NZISM home for applying vendor-issued updates."
-      },
-      {
-        "section": "23.2",
-        "basis": "scf",
-        "controls": [
-          "23.2.19.C.01"
+        "reason": "Product patching and updating is the direct NZISM home for applying vendor-issued updates.",
+        "findings": [
+          "release-updates-overdue"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP17"
     ]
   },
   "remote-sites": {
@@ -4829,13 +4190,16 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       },
       {
         "section": "17.1",
-        "basis": "scf",
+        "basis": "direct",
+        "reason": "17.1.55.C.03 (all classifications): agencies MUST encrypt aggregated agency data over insecure or unprotected networks such as the Internet. The finding is a remote site reached over plain HTTP.",
         "controls": [
-          "17.1.57.C.01"
+          "17.1.55.C.03"
+        ],
+        "findings": [
+          "remote-sites-protocol-security-disabled"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "report-folder-access": {
     "scf": [
@@ -4872,9 +4236,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP09"
     ]
   },
   "restriction-rules-integrity": {
@@ -4884,22 +4245,16 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     "hsup": [
       {
         "id": "HSUP09",
-        "basis": "scf"
+        "basis": "scf",
+        "findings": [
+          "restriction-rules-inactive"
+        ]
       }
     ],
     "hml": [
       "HML10"
     ],
-    "nzism": [
-      {
-        "section": "16.2",
-        "basis": "direct",
-        "reason": "16.2 System Access: inactive or conflicting Restriction Rules mean intended record-access limits are not enforced; SCF derived no section."
-      }
-    ],
-    "scfDerivedHsup": [
-      "HSUP09"
-    ]
+    "nzism": []
   },
   "sandbox-data-masking": {
     "scf": [
@@ -4910,7 +4265,10 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP50",
         "basis": "direct",
-        "reason": "Populated PII in a sandbox breaches the separate-environments guidance that 'information (if personally identifiable) is to be anonymised when being used in the test environments'."
+        "reason": "The separate-environments guidance says personally identifiable information 'is to be anonymised when being used in the test environments'. The check finds Email and Phone populated in a sandbox, which a masked sandbox also shows, so this flags the anonymisation requirement for confirmation rather than evidencing a breach.",
+        "findings": [
+          "sandbox-data-masking-pii-present"
+        ]
       }
     ],
     "hml": [
@@ -4920,10 +4278,15 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "section": "14.4",
         "basis": "direct",
-        "reason": "Software application development covers separation of development and test environments and use of production data in them."
+        "reason": "14.4.4.C.01: 'information flow between the environments is strictly limited'. Populated contact fields in a sandbox indicate production data may have been copied into a non-production environment; the check cannot confirm whether it was masked.",
+        "controls": [
+          "14.4.4.C.01"
+        ],
+        "findings": [
+          "sandbox-data-masking-pii-present"
+        ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "scheduled-apex": {
     "scf": [
@@ -4934,7 +4297,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP33",
         "basis": "direct",
-        "reason": "HSUP33 guidance defines a \"Service Account\" as a \"non-human privileged account used to execute applications and run automated services\"; jobs owned by personal admin accounts, which persist after the user is deactivated, show automation identities not lifecycle-managed."
+        "reason": "HSUP33 guidance defines a \"Service Account\" as a \"non-human privileged account used to execute applications and run automated services\"; active scheduled or batch jobs created by personal admin-profile accounts show automation not run under a dedicated service identity."
       },
       {
         "id": "HSUP36",
@@ -4961,8 +4324,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "separation-of-duties": {
     "scf": [
@@ -4984,8 +4346,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       "HML10",
       "HML40"
     ],
-    "nzism": [],
-    "scfDerivedHsup": []
+    "nzism": []
   },
   "session-hardening": {
     "scf": [
@@ -5009,37 +4370,16 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "nzism": [
       {
-        "section": "14.1",
-        "basis": "scf",
+        "section": "14.5",
+        "basis": "direct",
+        "reason": "14.5.8.C.01: 'follow the documentation provided in the Open Web Application Security Project guide to building secure Web applications'; disabled clickjack, CSRF or XSS protections depart from it.",
         "controls": [
-          "14.1.10.C.01",
-          "14.1.10.C.02",
-          "14.1.8.C.01",
-          "14.1.9.C.01",
-          "14.1.9.C.02"
-        ]
-      },
-      {
-        "section": "14.3",
-        "basis": "scf",
-        "controls": [
-          "14.3.7.C.01"
-        ]
-      },
-      {
-        "section": "16.1",
-        "basis": "scf",
-        "controls": [
-          "16.1.31.C.03",
-          "16.1.31.C.04",
-          "16.1.31.C.05"
+          "14.5.8.C.01"
+        ],
+        "findings": [
+          "session-hardening-risks"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP14",
-      "HSUP46",
-      "HSUP52"
     ]
   },
   "sharing-model": {
@@ -5077,9 +4417,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP09"
     ]
   },
   "shield-tenant-secret-lifecycle": {
@@ -5092,7 +4429,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP32",
         "basis": "direct",
-        "reason": "HSUP32 guidance: 'how encryption keys ... are managed, along with information recovery (if the keys are compromised or lost or damaged)'; unrotated (>365 days) or destroyed tenant secrets show key management is not implemented"
+        "reason": "HSUP32 guidance: 'how encryption keys ... are managed'; Active tenant secrets created more than 365 days ago show keys are not being rotated"
       }
     ],
     "hml": [
@@ -5104,20 +4441,10 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "scf",
         "controls": [
           "17.1.58.C.01",
-          "17.1.58.C.02",
-          "17.1.58.C.03"
-        ]
-      },
-      {
-        "section": "23.4",
-        "basis": "scf",
-        "controls": [
-          "23.4.9.C.02",
-          "23.4.9.C.03"
+          "17.1.58.C.02"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "siem-integration": {
     "scf": [
@@ -5145,9 +4472,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "16.6",
         "basis": "scf",
         "controls": [
-          "16.6.11.C.01",
-          "16.6.11.C.02",
-          "16.6.11.C.03",
           "16.6.12.C.01",
           "16.6.12.C.02",
           "16.6.12.C.03",
@@ -5155,8 +4479,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "16.6.15.C.02"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "soap-login-api-auth": {
     "scf": [
@@ -5188,8 +4511,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "sso-enforcement": {
     "scf": [
@@ -5200,7 +4522,8 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     "hsup": [
       {
         "id": "HSUP34",
-        "basis": "scf"
+        "basis": "scf",
+        "reason": "HSUP34 guidance: 'Single-Sign-On (SSO) is recommended at an organisational level'; recommended, not required. Username-password logins show the IdP path is bypassed only where an IdP is configured"
       }
     ],
     "hml": [
@@ -5211,13 +4534,9 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "16.1",
         "basis": "scf",
         "controls": [
-          "16.1.26.C.01",
-          "16.1.32.C.01"
+          "16.1.26.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP34"
     ]
   },
   "standard-profiles": {
@@ -5229,7 +4548,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP35",
         "basis": "direct",
-        "reason": "HSUP35 statement and guidance: access is defined and authorised per business and security requirements and 'provided using the principle of least privilege'; the finding shows access granted beyond need. Users sit on uneditable standard profiles whose access cannot be tailored to role."
+        "reason": "HSUP35: access 'provided using the principle of least privilege'. Applies to users on broad standard profiles (Standard User, System Administrator), which cannot be narrowed; Minimum Access - Salesforce is the least-privilege baseline and is not evidence."
       }
     ],
     "hml": [
@@ -5240,7 +4559,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "9.2",
         "basis": "scf",
         "controls": [
-          "9.2.11.C.01",
           "9.2.11.C.02"
         ]
       },
@@ -5259,10 +4577,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP04",
-      "HSUP37"
     ]
   },
   "threat-detection": {
@@ -5274,12 +4588,20 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP09",
         "basis": "direct",
-        "reason": "HSUP09 guidance: \"configuring system alerts for abnormal activities with registered accounts\"; Threat Detection events are those alerts."
+        "reason": "HSUP09 guidance: \"configuring system alerts for abnormal activities with registered accounts\"; Threat Detection events are those alerts.",
+        "findings": [
+          "threat-detection-unavailable",
+          "threat-detection-guest-anomaly-missing"
+        ]
       },
       {
         "id": "HSUP61",
         "basis": "direct",
-        "reason": "HSUP61 guidance: logs \"are to be analysed to confirm the occurrence of an unusual activity or an anomalous behaviour\" with \"user and entity behaviour\" considered; Threat Detection storage unavailable or empty means that analysis is not happening."
+        "reason": "HSUP61 guidance: logs \"are to be analysed to confirm the occurrence of an unusual activity or an anomalous behaviour\" with \"user and entity behaviour\" considered; Threat Detection storage that is unavailable, or the guest anomaly store missing, means that analysis cannot happen. An empty store is what a healthy org looks like and is not cited.",
+        "findings": [
+          "threat-detection-unavailable",
+          "threat-detection-guest-anomaly-missing"
+        ]
       }
     ],
     "hml": [
@@ -5292,8 +4614,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "direct",
         "reason": "Event Monitoring, Logging and Auditing: Threat Detection event stores are event monitoring for anomalous activity."
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "transaction-security-policy": {
     "scf": [
@@ -5322,8 +4643,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "direct",
         "reason": "Event Monitoring, Logging and Auditing: Transaction Security Policies act on real-time event monitoring streams."
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "trusted-ip-ranges": {
     "scf": [
@@ -5334,51 +4654,16 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP34",
         "basis": "direct",
-        "reason": "HSUP34 statement: 'circumventing the authentication process is prevented'; trusted IP ranges, some overly broad, let logins skip identity verification/MFA entirely"
+        "reason": "HSUP34 statement: 'circumventing the authentication process is prevented'; trusted IP ranges broader than /16 let logins from a very large address space skip the identity verification challenge",
+        "findings": [
+          "trusted-ip-broad-ranges"
+        ]
       }
     ],
     "hml": [
       "HML39"
     ],
-    "nzism": [
-      {
-        "section": "16.1",
-        "basis": "scf",
-        "controls": [
-          "16.1.29.C.02"
-        ]
-      },
-      {
-        "section": "16.4",
-        "basis": "scf",
-        "controls": [
-          "16.4.37.C.02"
-        ]
-      },
-      {
-        "section": "16.7",
-        "basis": "scf",
-        "controls": [
-          "16.7.42.C.01",
-          "16.7.42.C.03",
-          "16.7.42.C.04",
-          "16.7.42.C.05",
-          "16.7.42.C.06",
-          "16.7.42.C.07",
-          "16.7.43.C.01",
-          "16.7.44.C.01"
-        ]
-      },
-      {
-        "section": "23.3",
-        "basis": "scf",
-        "controls": [
-          "23.3.19.C.01",
-          "23.3.19.C.02"
-        ]
-      }
-    ],
-    "scfDerivedHsup": []
+    "nzism": []
   },
   "trusted-url-hygiene": {
     "scf": [
@@ -5395,7 +4680,11 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP55",
         "basis": "direct",
-        "reason": "Non-Salesforce, unresolvable or parked domains on the CSP trusted-sites list are open egress channels for 'siphoning of information', which the data leakage requirement says must be prevented."
+        "reason": "Applies to allowlisted domains that do not resolve or resolve to parking nameservers: anyone can register them and gain an allowlisted channel for the 'siphoning of information' the data leakage requirement says must be prevented. A non-Salesforce domain that resolves normally is not shown to leak anything.",
+        "findings": [
+          "trusted-url-hygiene-unresolvable-",
+          "trusted-url-hygiene-parked-"
+        ]
       }
     ],
     "hml": [
@@ -5408,8 +4697,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "basis": "direct",
         "reason": "The CSP trusted-sites list governs which external web destinations the org pages may contact."
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   },
   "users-and-admins": {
     "scf": [
@@ -5444,19 +4732,13 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "section": "16.3",
         "basis": "scf",
         "controls": [
-          "16.3.5.C.01",
-          "16.3.6.C.01",
-          "16.3.6.C.02",
-          "16.3.7.C.01"
+          "16.3.5.C.01"
         ]
       },
       {
         "section": "16.4",
         "basis": "scf",
         "controls": [
-          "16.4.36.C.01",
-          "16.4.36.C.02",
-          "16.4.36.C.03",
           "16.4.37.C.01",
           "16.4.37.C.03",
           "16.4.38.C.01",
@@ -5470,9 +4752,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
           "23.4.10.C.01"
         ]
       }
-    ],
-    "scfDerivedHsup": [
-      "HSUP36"
     ]
   },
   "visualforce-xss": {
@@ -5492,11 +4771,24 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
     ],
     "nzism": [
       {
+        "section": "14.4",
+        "basis": "direct",
+        "reason": "14.4.5.C.01: secure programming practices including validating all inputs; 14.4.6.C.01: software reviewed or tested for vulnerabilities before production use. Unescaped merge fields in Visualforce fail both.",
+        "controls": [
+          "14.4.5.C.01",
+          "14.4.6.C.01"
+        ],
+        "findings": [
+          "visualforce-xss-escape-false",
+          "visualforce-xss-attr-merge-field",
+          "visualforce-xss-js-merge-field"
+        ]
+      },
+      {
         "section": "14.5",
         "basis": "direct",
         "reason": "14.5.8.C.01: follow OWASP guidance for building secure web applications; escape=\"false\" and unencoded merge fields break its output-encoding rules."
       }
-    ],
-    "scfDerivedHsup": []
+    ]
   }
 };

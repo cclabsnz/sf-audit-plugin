@@ -59,3 +59,8 @@ cites: INT-015, MN-065
 cites: INT-015, MN-066
 - When a report renders a HISO or NZISM citation
 - then it presents it as a requirement the finding bears on, never as compliance or non-compliance of the org as a whole
+
+## RULE-127 HISO and NZISM citations attach per finding
+cites: INT-015, MN-066
+- When a check emits a finding
+- then the finding carries the check's HISO and NZISM citations only if it is not INFO, and a citation scoped to named findings (`findings`: id prefixes) attaches only to those; every scope prefix matches a finding id the check can emit, and every other framework still maps at check level

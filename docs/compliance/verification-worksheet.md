@@ -2,7 +2,7 @@
 
 Controls marked verified have been checked against an authoritative source. Unverified controls stay excluded from rendered reports (provenance gate).
 
-Total controls: 183 · Verified: 183
+Total controls: 180 · Verified: 180
 
 ## OWASP — OWASP Top 10:2021 (9/9 verified)
 
@@ -118,10 +118,10 @@ Requirement ids and statements checked against the published PDFs by `test/unit/
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
+| [x] | HISO-HML05 | HML05 Information and associated assets | HISO 10029.3:2023, HML05 |
 | [x] | HISO-HML10 | HML10 Access control | HISO 10029.3:2023, HML10 |
 | [x] | HISO-HML16 | HML16 Security while developing applications, products or services | HISO 10029.3:2023, HML16 |
 | [x] | HISO-HML25 | HML25 Supply chain risks | HISO 10029.3:2023, HML25 |
-| [x] | HISO-HML34 | HML34 Information and associated assets | HISO 10029.3:2023, HML34 |
 | [x] | HISO-HML37 | HML37 Use of cryptography | HISO 10029.3:2023, HML37 |
 | [x] | HISO-HML38 | HML38 Identity management | HISO 10029.3:2023, HML38 |
 | [x] | HISO-HML39 | HML39 Information authentication | HISO 10029.3:2023, HML39 |
@@ -144,9 +144,9 @@ Requirement ids and statements checked against the published PDFs by `test/unit/
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
+| [x] | HISO-HSUP05 | HSUP05 Information and associated assets | HISO 10029.4:2025, HSUP05 |
 | [x] | HISO-HSUP09 | HSUP09 Access control | HISO 10029.4:2025, HSUP09 |
 | [x] | HISO-HSUP14 | HSUP14 Security while developing applications, products or services | HISO 10029.4:2025, HSUP14 |
-| [x] | HISO-HSUP30 | HSUP30 Information and associated assets | HISO 10029.4:2025, HSUP30 |
 | [x] | HISO-HSUP32 | HSUP32 Use of cryptography | HISO 10029.4:2025, HSUP32 |
 | [x] | HISO-HSUP33 | HSUP33 Identity Management | HISO 10029.4:2025, HSUP33 |
 | [x] | HISO-HSUP34 | HSUP34 Information Authentication | HISO 10029.4:2025, HSUP34 |
@@ -164,17 +164,15 @@ Requirement ids and statements checked against the published PDFs by `test/unit/
 | [x] | HISO-HSUP61 | HSUP61 Logging and monitoring | HISO 10029.4:2025, HSUP61 |
 | [x] | HISO-HSUP67 | HSUP67 Third-Party Management | HISO 10029.4:2025, HSUP67 |
 
-## NZISM — NZISM v3.9 (22/22 verified)
+## NZISM — NZISM v3.9 (19/19 verified)
 
 Requirement ids and statements checked against the published PDFs by `test/unit/compliance/nzCrosswalk.test.ts`; which checks cite each one is in [nz-crosswalk.md](nz-crosswalk.md).
 
 | ✓ | id | title | sourceRef |
 |---|---|---|---|
 | [x] | NZISM-9.2 | 9.2 Authorisations, Security Clearances And Briefings | NZISM v3.9, 9.2 |
-| [x] | NZISM-12.3 | 12.3 Product Classifying and Labelling | NZISM v3.9, 12.3 |
 | [x] | NZISM-12.4 | 12.4 Product Patching and Updating | NZISM v3.9, 12.4 |
 | [x] | NZISM-12.7 | 12.7 Supply Chain | NZISM v3.9, 12.7 |
-| [x] | NZISM-14.1 | 14.1 Standard Operating Environments | NZISM v3.9, 14.1 |
 | [x] | NZISM-14.3 | 14.3 Web Applications | NZISM v3.9, 14.3 |
 | [x] | NZISM-14.4 | 14.4 Software Application Development | NZISM v3.9, 14.4 |
 | [x] | NZISM-14.5 | 14.5 Web Application Development | NZISM v3.9, 14.5 |
@@ -188,7 +186,6 @@ Requirement ids and statements checked against the published PDFs by `test/unit/
 | [x] | NZISM-16.7 | 16.7 Multi-Factor Authentication | NZISM v3.9, 16.7 |
 | [x] | NZISM-17.1 | 17.1 Cryptographic Fundamentals | NZISM v3.9, 17.1 |
 | [x] | NZISM-21.1 | 21.1 Data Transfers | NZISM v3.9, 21.1 |
-| [x] | NZISM-23.2 | 23.2 Governance, Risk Assessment &amp; Assurance | NZISM v3.9, 23.2 |
 | [x] | NZISM-23.3 | 23.3 Identity Management and Access Control | NZISM v3.9, 23.3 |
 | [x] | NZISM-23.4 | 23.4 Data Protection in Public Cloud | NZISM v3.9, 23.4 |
 | [x] | NZISM-23.5 | 23.5 Logging and Alerting in Public Cloud | NZISM v3.9, 23.5 |

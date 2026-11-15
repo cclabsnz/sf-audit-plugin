@@ -4,7 +4,8 @@ import { CHECK_NZ_CITATIONS } from './nz/citations.generated.js';
 // Migrated from the former ComplianceMapping. A08/A10 are mapped precisely:
 //   A10 (SSRF) → egress controls (remote-sites, csp-trusted-sites, named-credentials)
 //   A08 (Software & Data Integrity) → installed-packages, deployment-identity
-// NZ pack control ids (HISO/NZISM/Privacy Act) are layered on by domain via NZ_CROSSWALK below.
+// NZ Privacy Act ids are layered on by domain via NZ_CROSSWALK below; HISO 10029 and NZISM ids come
+// per check from the generated crosswalk, and attach per finding (see complianceTagsForFinding).
 const BASE_CHECK_CONTROL_MAP: Record<string, string[]> = {
   'users-and-admins':        ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.5.18', 'SBS-ACS-004'],
   'permissions':             ['OWASP-A01', 'SOC2-CC6.1', 'ISO-A.5.18', 'SBS-ACS-002', 'SBS-ACS-005'],
@@ -165,9 +166,10 @@ const DOMAIN = {
   configGovernance: ['health-check', 'api-limits', 'release-updates', 'legacy-api-version', 'installed-packages', 'deployment-identity', 'session-hardening',
                     'package-post-install-supply-chain'],
   accountLifecycle: ['inactive-users'],
-  // Agentforce / GenAI. The NZ pack does not map these (HISO/NZISM predate agentic platforms and
-  // have no chapter that fits); HIPAA and GDPR do, because an over-privileged agent user reading
-  // PHI or personal data is squarely an access-control and security-of-processing question.
+  // Agentforce / GenAI. The Privacy Act domain crosswalk does not cover these; HIPAA and GDPR do, because
+  // an over-privileged agent user reading PHI or personal data is squarely an access-control and
+  // security-of-processing question. HISO 10029 and NZISM cite them per check from the generated
+  // crosswalk, applying the general access, logging and development requirements to the agent user.
   aiAgents: ['agent-inventory', 'agent-user-privilege', 'agent-action-surface', 'agent-channel-exposure',
              'agent-monitoring-coverage', 'trusted-url-hygiene', 'agent-query-reach', 'agent-outbound-actions',
              'genai-prompt-template-grounding'],
@@ -184,13 +186,25 @@ const NZ_CROSSWALK: Array<{ controls: string[]; checks: readonly string[] }> = [
 // HISO 10029 and NZISM are cited per check, at requirement and section level, from the generated
 // crosswalk (scripts/compliance/derive_nz_citations.py). Each HSUP citation also cites its
 // HISO 10029.3 HML equivalent, so a provider and a supplier each see the part that applies to them.
-function nzCitationIds(check: string): string[] {
+// A citation may be scoped to some of the check's findings; `finding` filters to the ones that apply.
+interface FindingRef { id: string; riskLevel: string }
+
+const isNzId = (id: string): boolean => id.startsWith('HISO-') || id.startsWith('NZISM-');
+
+function appliesTo(findings: readonly string[] | undefined, finding: FindingRef | undefined): boolean {
+  if (!finding) return true;
+  if (finding.riskLevel === 'INFO') return false;
+  return !findings || findings.some((p) => finding.id === p || finding.id.startsWith(p));
+}
+
+function nzCitationIds(check: string, finding?: FindingRef): string[] {
   const c = CHECK_NZ_CITATIONS[check];
   if (!c) return [];
+  const hsup = c.hsup.map((h, i) => ({ h, hml: c.hml[i] })).filter(({ h }) => appliesTo(h.findings, finding));
   return [
-    ...c.hsup.map((h) => `HISO-${h.id}`),
-    ...c.hml.map((h) => `HISO-${h}`),
-    ...c.nzism.map((n) => `NZISM-${n.section}`),
+    ...hsup.map(({ h }) => `HISO-${h.id}`),
+    ...hsup.map(({ hml }) => `HISO-${hml}`),
+    ...c.nzism.filter((n) => appliesTo(n.findings, finding)).map((n) => `NZISM-${n.section}`),
   ];
 }
 
@@ -275,3 +289,13 @@ function buildCheckControlMap(): Record<string, string[]> {
 }
 
 export const CHECK_CONTROL_MAP: Record<string, string[]> = buildCheckControlMap();
+
+/**
+ * The control ids one finding carries. Every framework but HISO 10029 and NZISM maps at check level,
+ * so those ids are the check's. HISO and NZISM citations attach only to non-INFO findings, and only to
+ * the findings a scoped citation names (spec/nz-compliance-crosswalk.md, RULE-127).
+ */
+export function complianceTagsForFinding(checkId: string, finding: FindingRef): string[] {
+  const base = (CHECK_CONTROL_MAP[checkId] ?? []).filter((id) => !isNzId(id));
+  return [...new Set([...base, ...nzCitationIds(checkId, finding)])];
+}

@@ -4,28 +4,12 @@
    "AAT-39.2",
    "AAT-39.3"
   ],
-  "scfReason": "Active agents expose write-capable Apex/Flow actions and a large action surface, showing agent functionality is not limited to what the task needs and tool invocations are not tightly authorized.",
-  "hsup": [
-   {
-    "id": "HSUP35",
-    "basis": "direct",
-    "reason": "Write-capable create, update and delete actions and an oversized action surface give the agent service access beyond its task, contrary to least privilege in the access rights guidance."
-   },
-   {
-    "id": "HSUP14",
-    "basis": "direct",
-    "reason": "Exposing write-capable Apex/Flow actions an agent does not need shows the agent was not 'securely designed' with controls limiting its functions."
-   }
-  ],
+  "scfReason": "Active agents expose write-capable Apex and Flow actions; the check counts them but does not measure what each task needs, so this is attack surface to review.",
+  "hsup": [],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": [
-   {
-    "section": "16.2",
-    "reason": "Write and delete actions beyond the task are a system access least-privilege gap, the same basis SCF gives agent-user-privilege."
-   }
-  ],
-  "note": "HISO 10029.4:2025 predates agentic AI and has no agent-specific requirement; the cited ids are the general access, design or logging requirements the finding evidences, applied to the agent as a non-human service identity. The fit is indirect: HISO addresses access rights, not tool or action invocation."
+  "nzismDirect": [],
+  "note": "No HISO or NZISM citation: the check counts and classifies agent actions but does not measure what the agent task needs, and HISO 10029.4:2025 predates agentic AI."
  },
  "agent-channel-exposure": {
   "scf": [
@@ -35,24 +19,17 @@
   "scfReason": "An active agent is reachable through a guest or public channel, so unauthenticated users can trigger agent actions that are not mapped to an authenticated identity, and the agent is not restricted to the channels it needs.",
   "hsup": [
    {
-    "id": "HSUP34",
-    "basis": "direct",
-    "reason": "A guest or public channel lets unauthenticated users drive agent actions, so the statement 'user accounts are authenticated and circumventing the authentication process is prevented' is not met for that path."
-   },
-   {
     "id": "HSUP42",
     "basis": "direct",
-    "reason": "The guest-reachable channel is an Experience Cloud site or embedded web deployment; the web application guidance requires 'only authorised personnel have access to information stored on the website'."
+    "reason": "Applies to an active agent bound to a guest-reachable site, embedded deployment or web messaging channel; the web application guidance requires 'only authorised personnel have access to information stored on the website', and the agent acts on org data for any visitor.",
+    "findings": [
+     "agent-channel-exposure-guest-"
+    ]
    }
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": [
-   {
-    "section": "16.1",
-    "reason": "Unauthenticated guest users reaching an agent that acts on org data is a direct identification and authentication gap."
-   }
-  ],
+  "nzismDirect": [],
   "note": "HISO 10029.4:2025 predates agentic AI and has no agent-specific requirement; the cited ids are the general access, design or logging requirements the finding evidences, applied to the agent as a non-human service identity."
  },
  "agent-inventory": {
@@ -79,17 +56,15 @@
    "AAT-39.20",
    "AAT-36.11"
   ],
-  "scfReason": "Active agents run with no Event Monitoring capture and no Transaction Security policy, so agent actions are not logged or auditable and anomalous agent behavior has no real-time detection or intervention.",
+  "scfReason": "Active agents with no confirmed Event Monitoring capture and no Transaction Security policy: agent activity may not be logged (unconfirmed where the event log is not readable) and has no real-time intervention.",
   "hsup": [
    {
     "id": "HSUP61",
     "basis": "direct",
-    "reason": "Active agents with no Event Monitoring capture mean agent activity is not 'logged and stored as per the organisation's logging and auditing requirements'."
-   },
-   {
-    "id": "HSUP55",
-    "basis": "direct",
-    "reason": "With no Transaction Security policy and no event capture there is no mechanism to 'detect and prevent data leakage' by a service such as a prompt-injected agent."
+    "reason": "Applies when the Event Monitoring log is readable and holds no files while agents are active, so agent activity is not 'logged and stored as per the organisation's logging and auditing requirements'. Where the log was not accessible to the audit, logging is unconfirmed rather than absent.",
+    "findings": [
+     "agent-monitoring-coverage-none"
+    ]
    }
   ],
   "hsupExcluded": [],
@@ -97,14 +72,20 @@
   "nzismDirect": [
    {
     "section": "16.6",
-    "reason": "The finding is the absence of event logging for agent activity."
+    "reason": "Event logging: the readable event log holds no files while agents are active, so agent activity is not logged.",
+    "findings": [
+     "agent-monitoring-coverage-none"
+    ]
    },
    {
     "section": "23.5",
-    "reason": "Event Monitoring is the logging and alerting capability of this public cloud service and is not in use."
+    "reason": "The readable event log of this public cloud service holds no files while agents are active, so its logging capability is not in use.",
+    "findings": [
+     "agent-monitoring-coverage-none"
+    ]
    }
   ],
-  "note": "HISO 10029.4:2025 predates agentic AI and has no agent-specific requirement; the cited ids are the general access, design or logging requirements the finding evidences, applied to the agent as a non-human service identity."
+  "note": "HISO 10029.4:2025 predates agentic AI and has no agent-specific requirement; the cited ids are the general access, design or logging requirements the finding evidences, applied to the agent as a non-human service identity. The none finding also fires when the event log is not accessible to the audit user (accessible === false); the finding id cannot separate that case, so the HSUP61, 16.6 and 23.5 citations are unconfirmed when the detail says the log was not accessible."
  },
  "agent-outbound-actions": {
   "scf": [
@@ -117,7 +98,10 @@
    {
     "id": "HSUP55",
     "basis": "direct",
-    "reason": "Agent actions sending data out by email, Slack, external services or MCP with no user confirmation breach the data leakage guidance that sharing outside the organisation needs 'approval ... sought and documented'."
+    "reason": "Agent actions sending data out by email, Slack, external services or MCP with no user confirmation breach the data leakage guidance that sharing outside the organisation needs 'approval ... sought and documented'.",
+    "findings": [
+     "agent-outbound-actions-unconfirmed"
+    ]
    }
   ],
   "hsupExcluded": [],
@@ -125,7 +109,10 @@
   "nzismDirect": [
    {
     "section": "21.1",
-    "reason": "Unconfirmed agent sends are data transfers out of the system with no approval step."
+    "reason": "Unconfirmed agent sends are data transfers out of the system with no approval step.",
+    "findings": [
+     "agent-outbound-actions-unconfirmed"
+    ]
    }
   ],
   "note": "HISO 10029.4:2025 predates agentic AI and has no agent-specific requirement; the cited ids are the general access, design or logging requirements the finding evidences, applied to the agent as a non-human service identity. The HSUP55 statement covers leakage 'by individuals, systems, or services', so it applies to an agent directly; only the guidance's approval wording assumes a human sender."
@@ -142,11 +129,6 @@
     "id": "HSUP35",
     "basis": "direct",
     "reason": "The General CRM topic or Query Records action lets the agent query any object the run-as user can read rather than what the task needs, contrary to least privilege in the access rights guidance."
-   },
-   {
-    "id": "HSUP14",
-    "basis": "direct",
-    "reason": "An open-ended query path an injected prompt can steer shows the agent was not 'securely designed' with controls restricting its data access."
    }
   ],
   "hsupExcluded": [],
@@ -157,7 +139,7 @@
     "reason": "Open-ended query reach over everything the run-as user can read is a system access least-privilege gap, the same basis SCF gives agent-user-privilege."
    }
   ],
-  "note": "HISO 10029.4:2025 predates agentic AI and has no agent-specific requirement; the cited ids are the general access, design or logging requirements the finding evidences, applied to the agent as a non-human service identity."
+  "note": "HISO 10029.4:2025 predates agentic AI and has no agent-specific requirement; the cited ids are the general access, design or logging requirements the finding evidences, applied to the agent as a non-human service identity. The agent-query-reach-unmapped finding reports Query Records on topics not tied to any agent and asserts no exposure; HSUP35 and 16.2 apply only to the per-agent HIGH finding, but the scope prefix cannot separate the two ids."
  },
  "agent-user-privilege": {
   "scf": [
@@ -193,12 +175,18 @@
    {
     "id": "HSUP36",
     "basis": "direct",
-    "reason": "HSUP36: \"only authorised users, software components and services are provided with privileged access rights\"; non-admin users running anonymous Apex hold a privileged, sharing-bypassing capability."
+    "reason": "HSUP36: \"only authorised users, software components and services are provided with privileged access rights\"; non-admin users who executed anonymous Apex hold the ability to run arbitrary code in production outside change control.",
+    "findings": [
+     "anonymous-apex-executed"
+    ]
    },
    {
     "id": "HSUP37",
     "basis": "direct",
-    "reason": "HSUP37: \"Access to source code, development tools, and software libraries are restricted\"; Execute Anonymous is a developer tool executing arbitrary code in production."
+    "reason": "HSUP37: \"Access to source code, development tools, and software libraries are restricted\"; Execute Anonymous is a developer tool executing arbitrary code in production.",
+    "findings": [
+     "anonymous-apex-executed"
+    ]
    }
   ],
   "hsupExcluded": [],
@@ -235,24 +223,18 @@
   "scfReason": "Apex that logs sensitive values exposes regulated data in logs, and System.debug-only code shows no persistent, structured application logging was built in.",
   "hsup": [
    {
-    "id": "HSUP61",
-    "basis": "direct",
-    "reason": "HSUP61: activities \"are logged and stored as per the organisation's (and the customer's) logging and auditing requirements\"; System.debug-only classes produce transient output that is not stored as an application log."
-   },
-   {
     "id": "HSUP55",
     "basis": "direct",
-    "reason": "HSUP55: \"detect and prevent data leakage through the unauthorised disclosure ... of information by individuals, systems, or services\"; Apex writing sensitive values into logs discloses them to anyone who can read those logs."
+    "reason": "HSUP55: \"detect and prevent data leakage through the unauthorised disclosure ... of information by individuals, systems, or services\"; Apex writing sensitive values into logs discloses them to anyone who can read those logs.",
+    "findings": [
+     "apex-logging-sensitive-data"
+    ]
    }
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": [
-   {
-    "section": "16.6",
-    "reason": "Event Monitoring, Logging and Auditing: the check tests whether application events are persistently logged."
-   }
-  ]
+  "nzismDirect": [],
+  "note": "Review C: the PII regex also matches strings such as 'Token refreshed' and doBulk, so the HSUP55 citation needs manual confirmation of each match."
  },
  "apex-rest-endpoint": {
   "scf": [
@@ -268,7 +250,7 @@
    {
     "id": "HSUP44",
     "basis": "direct",
-    "reason": "HSUP44 guidance lists 'request-level authorisation' and appropriate IAM permissions for APIs; REST endpoints running without sharing do not authorise per caller."
+    "reason": "HSUP44 guidance lists 'request-level authorisation' for APIs; custom REST endpoints running without sharing do not authorise each request against the caller's access."
    }
   ],
   "hsupExcluded": [],
@@ -289,7 +271,10 @@
    {
     "id": "HSUP09",
     "basis": "direct",
-    "reason": "HSUP09 guidance: 'only authenticated and authorised personnel to access the information', on need-to-know and least privilege; the finding shows access rules not implemented that way. Externally exposed Apex bypasses the caller's record access."
+    "reason": "HSUP09 guidance: 'only authenticated and authorised personnel to access the information', on need-to-know. Applies to Apex without sharing that is exposed to portal or guest users and ignores the caller's sharing.",
+    "findings": [
+     "portal-exposed-apex-without-sharing"
+    ]
    }
   ],
   "hsupExcluded": [],
@@ -311,7 +296,7 @@
    {
     "id": "HSUP09",
     "basis": "direct",
-    "reason": "HSUP09 statement: rules to control logical access are implemented; holders bypass the API Access Control rule the org set."
+    "reason": "HSUP09 statement: rules to control logical access are implemented. Use Any API Client lets its holders use connected apps outside API Access Control where that control is enabled; it applies only in orgs that enable it."
    }
   ],
   "hsupExcluded": [],
@@ -344,18 +329,44 @@
    {
     "id": "HSUP61",
     "basis": "direct",
-    "reason": "HSUP61 guidance: stored audit logs must be such \"that they cannot be altered in any way\" and viewing is limited \"to specific roles\"; many active users holding Manage Event Log Files can delete Event Monitoring data."
-   },
-   {
-    "id": "HSUP36",
-    "basis": "direct",
-    "reason": "HSUP36 guidance: privileged access is to \"have all their activities logged and stored for audit\" and be \"reviewed at least every month\"; the finding surfaces permission changes and Login-As sessions that need that review."
+    "reason": "HSUP61 guidance: stored audit logs must be such \"that they cannot be altered in any way\" and viewing is limited \"to specific roles\"; many active users holding Manage Event Log Files can delete Event Monitoring data.",
+    "findings": [
+     "event-log-delete-permission"
+    ]
    }
   ],
   "hsupExcluded": [],
-  "nzismExcluded": [],
+  "nzismExcluded": [
+   {
+    "section": "16.4",
+    "reason": "Change counts and Login-As events are activity from a working audit trail, not a privileged-access failure."
+   }
+  ],
   "nzismDirect": [],
-  "note": "Permission-change and Login-As findings are review prompts, so HSUP36 is weaker evidence than HSUP61 is for the log-deletion finding."
+  "note": "Permission-change counts and Login-As events come from a working audit trail, so they are activity to review, not evidence a requirement is unmet. Only HSUP61 and 16.6.12.C.01 are cited, for the finding that many users can delete event logs.",
+  "nzismControlsExcluded": [
+   {
+    "id": "16.6.13.C.01",
+    "reason": "Retention controls do not concern who can delete event logs."
+   },
+   {
+    "id": "16.6.13.C.02",
+    "reason": "Retention controls do not concern who can delete event logs."
+   },
+   {
+    "id": "16.6.13.C.03",
+    "reason": "Retention controls do not concern who can delete event logs."
+   },
+   {
+    "id": "16.6.13.C.04",
+    "reason": "Retention controls do not concern who can delete event logs."
+   }
+  ],
+  "nzismScope": {
+   "16.6": [
+    "event-log-delete-permission"
+   ]
+  }
  },
  "auth-provider-registration-handler": {
   "scf": [
@@ -376,7 +387,12 @@
    }
   ],
   "hsupExcluded": [],
-  "nzismExcluded": [],
+  "nzismExcluded": [
+   {
+    "section": "16.2",
+    "reason": "16.2.4.C.01 covers the ACL-building process, not a Registration Handler."
+   }
+  ],
   "nzismDirect": []
  },
  "auth-providers": {
@@ -386,16 +402,21 @@
    "IAC-03.3"
   ],
   "scfReason": "Social/consumer Auth Providers and external SAML IdPs that are not reviewed show external authenticators and federated identity sources are not restricted to an approved list.",
-  "hsup": [
+  "hsup": [],
+  "hsupExcluded": [
    {
     "id": "HSUP34",
-    "basis": "scf"
+    "reason": "A social login provider is still authentication, not a way round it."
    }
   ],
-  "hsupExcluded": [],
-  "nzismExcluded": [],
+  "nzismExcluded": [
+   {
+    "section": "16.1",
+    "reason": "Topic-only: a social or consumer Auth Provider does not show 16.1.26.C.01 is unmet."
+   }
+  ],
   "nzismDirect": [],
-  "note": "Only the MEDIUM social/consumer provider finding counts (the SAML/enterprise inventory is INFO). It is evidence that external consumer identities are accepted as authenticators; moderate strength."
+  "note": "A social or consumer login provider is still an authentication mechanism, not a way around one, so no HISO or NZISM citation applies."
  },
  "certificate-expiry": {
   "scf": [
@@ -407,13 +428,29 @@
    {
     "id": "HSUP32",
     "basis": "direct",
-    "reason": "HSUP32 statement: 'key management are defined and implemented'; certificates at or near expiry show the key/certificate lifecycle is not being managed"
+    "reason": "HSUP32 statement: 'key management are defined and implemented'; a certificate already past its expiry date shows the certificate lifecycle is not being managed",
+    "findings": [
+     "certificate-expiring-critical"
+    ]
    }
   ],
   "hsupExcluded": [],
-  "nzismExcluded": [],
+  "nzismExcluded": [
+   {
+    "section": "23.3",
+    "reason": "23.3.21 and 23.3.22 cover IdP response signing and cloud key-management plans, not certificate expiry."
+   },
+   {
+    "section": "23.4",
+    "reason": "23.4.9 covers cloud key-management plans, not certificate expiry."
+   },
+   {
+    "section": "17.1",
+    "reason": "17.1.58 covers setting cryptoperiods and HACE, not certificate expiry."
+   }
+  ],
   "nzismDirect": [],
-  "note": "Weak: the check itself treats expiry as an outage risk, and the 180-day band is normal lifecycle. Only the 30/90-day findings are real evidence for HSUP32."
+  "note": "Weak: the check itself treats expiry as an outage risk, and the 180-day band is normal lifecycle. Only the 30/90-day findings are real evidence for HSUP32. HSUP32 holds for already-expired certificates only. The critical finding also lists certificates still valid but expiring within 30 days, which is normal lifecycle, not evidence."
  },
  "classic-sites": {
   "scf": [
@@ -421,22 +458,11 @@
    "DCH-24"
   ],
   "scfReason": "Active classic Force.com sites serve Visualforce to unauthenticated visitors, an uncontrolled public access surface.",
-  "hsup": [
-   {
-    "id": "HSUP42",
-    "basis": "direct",
-    "reason": "HSUP42 guidance: 'only authorised personnel have access to information stored on the website'; active classic Visualforce sites serve the org's web application to unauthenticated visitors."
-   }
-  ],
+  "hsup": [],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": [
-   {
-    "section": "16.1",
-    "reason": "16.1 Identification, Authentication and Authorisation: the finding is access granted to unidentified, unauthenticated users; SCF derived no section."
-   }
-  ],
-  "note": "Finding is the existence of an active public site with a guest user (HIGH), which is surface rather than proven data exposure."
+  "nzismDirect": [],
+  "note": "Finding is the existence of an active public site with a guest user (HIGH), which is surface rather than proven data exposure. An active public site is attack surface, not proven exposure; NZISM 16.1.28.R.01 accepts guest accounts with a business reason, so no HISO or NZISM citation applies to the site existing."
  },
  "code-security": {
   "scf": [
@@ -449,12 +475,18 @@
    {
     "id": "HSUP42",
     "basis": "direct",
-    "reason": "HSUP42 guidance: \"security controls and mechanisms are in place to protect against the OWASP top ten\" and \"reduce or limit exploitations and injection of malicious code\"; SOQL injection is an OWASP top ten injection flaw."
+    "reason": "HSUP42 guidance: \"security controls and mechanisms are in place to protect against the OWASP top ten\" and \"reduce or limit exploitations and injection of malicious code\"; SOQL injection is an OWASP top ten injection flaw.",
+    "findings": [
+     "soql-injection-risk"
+    ]
    },
    {
     "id": "HSUP14",
     "basis": "direct",
-    "reason": "HSUP14: \"Information systems are securely designed, and appropriate controls are implemented\"; guidance: \"identify and assess potential threats because of the introduced code\". Deployed Apex concatenating input into dynamic SOQL lacks that control."
+    "reason": "HSUP14: \"Information systems are securely designed, and appropriate controls are implemented\"; guidance: \"identify and assess potential threats because of the introduced code\". Deployed Apex concatenating input into dynamic SOQL lacks that control.",
+    "findings": [
+     "soql-injection-risk"
+    ]
    }
   ],
   "hsupExcluded": [],
@@ -462,10 +494,24 @@
   "nzismDirect": [
    {
     "section": "14.5",
-    "reason": "14.5.8.C.01: follow OWASP guidance for building secure web applications; Apex SOQL injection is the injection class that guidance addresses."
+    "reason": "14.5.8.C.01: follow OWASP guidance for building secure web applications; Apex SOQL injection is the injection class that guidance addresses.",
+    "findings": [
+     "soql-injection-risk"
+    ]
+   },
+   {
+    "section": "14.4",
+    "reason": "14.4.5.C.01: secure programming practices including validating all inputs; 14.4.6.C.01: software reviewed or tested for vulnerabilities before production use. Apex concatenating input into dynamic SOQL fails both.",
+    "controls": [
+     "14.4.5.C.01",
+     "14.4.6.C.01"
+    ],
+    "findings": [
+     "soql-injection-risk"
+    ]
    }
   ],
-  "note": "Coverage and class-count findings are informational; citations apply to the SOQL injection finding."
+  "note": "Org-wide code coverage reflects test-run history rather than code security, so HSUP14, HSUP42, 14.4 and 14.5 apply to the SOQL injection finding only."
  },
  "connected-app-inactivity": {
   "scf": [
@@ -524,7 +570,29 @@
     "reason": "Derived controls 14.3.13.C.01 to C.03 bar users from reusing agency logins on external websites or storing website passwords on workstations; they do not address OAuth scope breadth or refresh-token lifetime."
    }
   ],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "16.1.36.C.02",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.36.C.03",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.41.C.01",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.41.C.02",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.42.C.01",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   }
+  ]
  },
  "connected-apps": {
   "scf": [
@@ -535,12 +603,18 @@
   "hsup": [
    {
     "id": "HSUP09",
-    "basis": "scf"
+    "basis": "scf",
+    "findings": [
+     "unrestricted-connected-apps"
+    ]
    },
    {
     "id": "HSUP35",
     "basis": "direct",
-    "reason": "HSUP35 guidance: access \"is activated only after authorisation by the right personnel\"; apps any user can self-authorise grant OAuth access with no admin approval step."
+    "reason": "HSUP35 guidance: access \"is activated only after authorisation by the right personnel\"; apps any user can self-authorise grant OAuth access with no admin approval step.",
+    "findings": [
+     "unrestricted-connected-apps"
+    ]
    }
   ],
   "hsupExcluded": [
@@ -553,7 +627,20 @@
   "nzismDirect": [
    {
     "section": "23.4",
-    "reason": "23.4.10.C.01: apply least privilege and configure service endpoints to restrict access to authorised parties; unrestricted connected apps leave the endpoint open to any user."
+    "reason": "23.4.10.C.01: apply least privilege and configure service endpoints to restrict access to authorised parties; unrestricted connected apps leave the endpoint open to any user.",
+    "findings": [
+     "unrestricted-connected-apps"
+    ]
+   },
+   {
+    "section": "16.1",
+    "reason": "16.1.40.C.01: automatic logout after inactivity, \"including invalidating any session tokens\"; connected apps without a short session timeout leave OAuth sessions live.",
+    "controls": [
+     "16.1.40.C.01"
+    ],
+    "findings": [
+     "connected-apps-long-session-timeout"
+    ]
    }
   ],
   "note": "HSUP09 kept: its guidance lists the \"principle of least privilege\" and \"process of authorising access requests\"; self-authorisable apps grant OAuth access outside any approved access rule."
@@ -565,11 +652,6 @@
   ],
   "scfReason": "Live public content distribution links make files retrievable by anyone holding the URL, without authentication.",
   "hsup": [
-   {
-    "id": "HSUP34",
-    "basis": "direct",
-    "reason": "HSUP34 guidance: systems are protected 'by permitting only authenticated users or processes to gain access to their protected resources'; the finding shows unauthenticated guests reaching org data. Anchored on the MEDIUM/HIGH no-expiry and stale findings: every live public link is a file retrievable without authentication, indefinitely."
-   },
    {
     "id": "HSUP55",
     "basis": "direct",
@@ -631,8 +713,19 @@
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": [],
-  "note": "No NZISM section added: 17.1.57.C.01 is NZEO-specific and 14.5 does not address transport encryption, so no fit is obvious."
+  "nzismDirect": [
+   {
+    "section": "17.1",
+    "reason": "17.1.55.C.03 (all classifications): agencies MUST encrypt aggregated agency data over insecure or unprotected networks such as the Internet. The finding is a CSP trusted site reached over plain HTTP.",
+    "controls": [
+     "17.1.55.C.03"
+    ],
+    "findings": [
+     "csp-trusted-sites-insecure"
+    ]
+   }
+  ],
+  "note": "17.1.57.C.01 is not cited because it is scoped to NZEO information; 17.1.55.C.03 applies to all classifications and is cited for the plain-HTTP finding only."
  },
  "custom-labels-credential": {
   "scf": [
@@ -644,17 +737,30 @@
    {
     "id": "HSUP34",
     "basis": "direct",
-    "reason": "HSUP34 guidance: where authentication information cannot be changed, 'the information is kept securely to maintain its confidentiality'; a plain-text credential readable in org metadata is not (API keys, tokens and credentials in Custom Labels)"
-   },
-   {
-    "id": "HSUP14",
-    "basis": "direct",
-    "reason": "HSUP14 statement: 'Information systems are securely designed, and appropriate controls are implemented'; storing secrets in plain-text org metadata is a design choice in what the org built"
+    "reason": "HSUP34 guidance: 'For service and emergency accounts, passwords are to be stored and shared in a protected form'; API keys, tokens and credentials in Custom Labels are stored in plain text readable in org metadata"
    }
   ],
   "hsupExcluded": [],
-  "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismExcluded": [
+   {
+    "section": "14.3",
+    "reason": "14.3.13 covers user web browsing, not stored credentials."
+   },
+   {
+    "section": "16.1",
+    "reason": "The derived controls cover password hashing, resets and screen lock; 16.1.31.C.04 and 16.1.32.C.01 are cited directly instead."
+   }
+  ],
+  "nzismDirect": [
+   {
+    "section": "16.1",
+    "reason": "16.1.31.C.04: agencies MUST 'ensure authentication secrets (including passwords) are securely stored'; 16.1.32.C.01: agencies 'MUST NOT allow storage of unprotected authentication information'; API keys, tokens and credentials in Custom Labels are stored unprotected",
+    "controls": [
+     "16.1.31.C.04",
+     "16.1.32.C.01"
+    ]
+   }
+  ]
  },
  "custom-settings": {
   "scf": [
@@ -666,17 +772,30 @@
    {
     "id": "HSUP34",
     "basis": "direct",
-    "reason": "HSUP34 guidance: where authentication information cannot be changed, 'the information is kept securely to maintain its confidentiality'; a plain-text credential readable in org metadata is not (secret-named plain-text fields on custom settings / custom metadata)"
-   },
-   {
-    "id": "HSUP14",
-    "basis": "direct",
-    "reason": "HSUP14 statement: 'Information systems are securely designed, and appropriate controls are implemented'; storing secrets in plain-text org metadata is a design choice in what the org built"
+    "reason": "HSUP34 guidance: 'For service and emergency accounts, passwords are to be stored and shared in a protected form'; secret-named plain-text fields on custom settings or custom metadata are stored in plain text readable in org metadata"
    }
   ],
   "hsupExcluded": [],
-  "nzismExcluded": [],
-  "nzismDirect": [],
+  "nzismExcluded": [
+   {
+    "section": "14.3",
+    "reason": "14.3.13 covers user web browsing, not stored credentials."
+   },
+   {
+    "section": "16.1",
+    "reason": "The derived controls cover password hashing, resets and screen lock; 16.1.31.C.04 and 16.1.32.C.01 are cited directly instead."
+   }
+  ],
+  "nzismDirect": [
+   {
+    "section": "16.1",
+    "reason": "16.1.31.C.04: agencies MUST 'ensure authentication secrets (including passwords) are securely stored'; 16.1.32.C.01: agencies 'MUST NOT allow storage of unprotected authentication information'; secret-named plain-text fields on custom settings or custom metadata are stored unprotected",
+    "controls": [
+     "16.1.31.C.04",
+     "16.1.32.C.01"
+    ]
+   }
+  ],
   "note": "Evidence is field names, not values; the check excludes encrypted types but cannot see managed-package type visibility."
  },
  "data-classification": {
@@ -687,11 +806,20 @@
   "scfReason": "Key objects have no field data classification and Shield Platform Encryption is not in use, showing data is not categorized and sensitive fields are not rendered unreadable at rest.",
   "hsup": [
    {
-    "id": "HSUP30",
-    "basis": "scf"
+    "id": "HSUP05",
+    "basis": "direct",
+    "reason": "HSUP05 guidance: 'classifying all identified assets and identify their protection requirement'. Applies to key objects whose fields carry no data classification.",
+    "findings": [
+     "data-classification-missing"
+    ]
    }
   ],
-  "hsupExcluded": [],
+  "hsupExcluded": [
+   {
+    "id": "HSUP30",
+    "reason": "HSUP30 guidance covers equipment siting and lightning protection, not data classification."
+   }
+  ],
   "nzismExcluded": [
    {
     "section": "8.4",
@@ -700,10 +828,14 @@
    {
     "section": "18.6",
     "reason": "Covers KVM peripheral switches; unrelated to org data classification or encryption."
+   },
+   {
+    "section": "12.3",
+    "reason": "12.3.4 to 12.3.7 are 'classify IT equipment' and 'label all IT equipment', not field data classification."
    }
   ],
   "nzismDirect": [],
-  "note": "HSUP32 (cryptography) was not added: Shield Platform Encryption being absent does not prove the organisation's cryptography rules are unmet, since the platform encrypts at rest at the infrastructure layer. 12.3 is kept as the closest NZISM classification-labelling section, though it is written for products and media."
+  "note": "HSUP05 applies to the unclassified-fields finding. No cryptography requirement is cited for missing Shield Platform Encryption, because the platform encrypts at rest at the infrastructure layer. NZISM 12.3 is not cited: it covers classifying and labelling IT equipment."
  },
  "data-cloud-data-space-isolation": {
   "scf": [
@@ -714,22 +846,16 @@
   "hsup": [
    {
     "id": "HSUP09",
-    "basis": "scf"
-   },
-   {
-    "id": "HSUP55",
-    "basis": "direct",
-    "reason": "HSUP55 statement: detect and prevent data leakage through unauthorised disclosure and siphoning of information by individuals, systems, or services; the finding is an open extraction or disclosure path. Active Data Share Targets have no IP or authentication constraint."
+    "basis": "scf",
+    "findings": [
+     "data-cloud-data-space-default-overshared"
+    ]
    }
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": [
-   {
-    "section": "23.4",
-    "reason": "23.4 Data Protection in Public Cloud: unsegmented Data Spaces and unconstrained Data Share Targets are data protection failures in a SaaS platform; SCF derived no section."
-   }
-  ]
+  "nzismDirect": [],
+  "note": "The share-target finding flags every active Data Share Target without reading its constraints, so it carries no HISO citation. HSUP09 applies to the default-space finding only, which is itself a name heuristic and should be confirmed."
  },
  "data-export-access": {
   "scf": [
@@ -750,7 +876,7 @@
    {
     "id": "HSUP36",
     "basis": "direct",
-    "reason": "HSUP36 guidance: privileged access rights cover 'accounts that have capabilities beyond the standard user'; View/Modify All Data and Weekly Data Export are such capabilities granted broadly."
+    "reason": "HSUP36 guidance: privileged access rights cover 'accounts that have capabilities beyond the standard user'; each holder of Weekly Data Export, or API access with Modify or View All Data, holds such a capability and should be justified."
    }
   ],
   "hsupExcluded": [],
@@ -783,12 +909,39 @@
   "hsup": [
    {
     "id": "HSUP36",
-    "basis": "scf"
+    "basis": "scf",
+    "reason": "HSUP36: only authorised users are given privileged access rights. Applies to the named members of delegated administration groups who can manage users; each should be justified."
    }
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "16.3.6.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.3.6.C.02",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.3.7.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.02",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.03",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   }
+  ]
  },
  "delegated-authentication-exposure": {
   "scf": [
@@ -796,26 +949,80 @@
    "CRY-05",
    "IAC-10"
   ],
-  "scfReason": "Delegated Authentication over endpoints without mutual TLS or encryption, or applied to System Administrator profiles, shows the auth channel lacks mutual authentication and privileged access depends on an unprotected external check.",
+  "scfReason": "Delegated Authentication over a plain-HTTP gateway, or applied to System Administrator profiles, shows the authentication channel is not encrypted and privileged sign-in depends on an external check.",
   "hsup": [
-   {
-    "id": "HSUP36",
-    "basis": "scf"
-   },
    {
     "id": "HSUP34",
     "basis": "direct",
-    "reason": "HSUP34 statement: 'User accounts are authenticated and circumventing the authentication process is prevented'; a delegated gateway without mutual TLS can be spoofed, letting an attacker pass authentication"
+    "reason": "HSUP34 statement: 'User accounts are authenticated and circumventing the authentication process is prevented'; a delegated authentication gateway over http:// sends credentials in clear text and accepts an unsigned boolean response that can be spoofed in transit",
+    "findings": [
+     "delegated-authentication-insecure-gateway"
+    ]
    },
    {
     "id": "HSUP32",
     "basis": "direct",
-    "reason": "HSUP32 guidance: data in transit secured using 'transport layer security (TLS)'; the delegated authentication gateway is unencrypted or lacks mutual TLS"
+    "reason": "HSUP32 guidance: data in transit secured using 'transport layer security (TLS)'; a delegated authentication gateway URL that starts with http:// sends credentials unencrypted",
+    "findings": [
+     "delegated-authentication-insecure-gateway"
+    ]
    }
   ],
-  "hsupExcluded": [],
-  "nzismExcluded": [],
-  "nzismDirect": []
+  "hsupExcluded": [
+   {
+    "id": "HSUP36",
+    "reason": "Admins authenticating through a delegated gateway is not unauthorised privileged access."
+   }
+  ],
+  "nzismExcluded": [
+   {
+    "section": "17.1",
+    "reason": "17.1.57.C.01 is scoped to NZEO information; 17.1.55.C.03 is cited directly instead."
+   }
+  ],
+  "nzismDirect": [
+   {
+    "section": "17.1",
+    "reason": "17.1.55.C.03: agencies 'MUST encrypt aggregated agency data using an approved algorithm and protocol over insecure or unprotected networks'; a gateway over http:// sends credentials unencrypted",
+    "controls": [
+     "17.1.55.C.03"
+    ],
+    "findings": [
+     "delegated-authentication-insecure-gateway"
+    ]
+   }
+  ],
+  "nzismControlsExcluded": [
+   {
+    "id": "16.3.6.C.01",
+    "reason": "These cover foreign nationals and clearances, not the delegated authentication gateway."
+   },
+   {
+    "id": "16.3.6.C.02",
+    "reason": "These cover foreign nationals and clearances, not the delegated authentication gateway."
+   },
+   {
+    "id": "16.3.7.C.01",
+    "reason": "These cover foreign nationals and clearances, not the delegated authentication gateway."
+   },
+   {
+    "id": "16.4.36.C.01",
+    "reason": "These need a privileged access management policy to exist; the check does not read one."
+   },
+   {
+    "id": "16.4.36.C.02",
+    "reason": "These need a privileged access management policy to exist; the check does not read one."
+   },
+   {
+    "id": "16.4.36.C.03",
+    "reason": "These need a privileged access management policy to exist; the check does not read one."
+   },
+   {
+    "id": "16.4.38.C.01",
+    "reason": "These need a privileged access management policy to exist; the check does not read one."
+   }
+  ],
+  "note": "The check never tests mutual TLS. The insecure-gateway finding also fires on a blank gateway URL, which is not shown to be unencrypted; the HSUP32, HSUP34 and 17.1 citations hold only where the URL starts with http://."
  },
  "deployment-identity": {
   "scf": [
@@ -827,7 +1034,11 @@
   "hsup": [
    {
     "id": "HSUP36",
-    "basis": "scf"
+    "basis": "scf",
+    "findings": [
+     "deployment-admin-accounts"
+    ],
+    "reason": "Applies to deployments run by administrator-profile users rather than a designated deployment account."
    }
   ],
   "hsupExcluded": [],
@@ -841,7 +1052,16 @@
     "reason": "Virtualisation controls; unrelated to the Salesforce deployment identity."
    }
   ],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismScope": {
+   "16.3": [
+    "deployment-admin-accounts"
+   ],
+   "16.4": [
+    "deployment-admin-accounts"
+   ]
+  },
+  "note": "Several deployers does not show anyone holds unauthorised privilege, so HSUP36, 16.3 and 16.4 apply to the admin-profile deployer finding only."
  },
  "email-security": {
   "scf": [
@@ -858,7 +1078,25 @@
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [
+   {
+    "section": "15.2",
+    "reason": "15.2.50.C.03: agencies SHOULD verify DKIM signatures on emails received; the finding is inbound email processed without sender authentication.",
+    "controls": [
+     "15.2.50.C.03"
+    ],
+    "findings": [
+     "email-security-services-no-auth"
+    ]
+   }
+  ],
+  "nzismControlsExcluded": [
+   {
+    "id": "15.2.36.C.01",
+    "reason": "15.2.36.C.01 is the before-implementing-DMARC prerequisite list, not verification of inbound mail."
+   }
+  ],
+  "note": "Review C: 15.2.50.C.03 (verify DKIM signatures on emails received) is the fitting control, but SCF does not derive it into 15.2 for this check, so it cannot be cited."
  },
  "encryption-coverage": {
   "scf": [
@@ -878,6 +1116,10 @@
    {
     "section": "8.4",
     "reason": "IT equipment (physical); field-level encryption in a SaaS database is not equipment"
+   },
+   {
+    "section": "17.1",
+    "reason": "17.1.54.C.01 is scoped to NZEO information; NZISM has no general at-rest equivalent."
    }
   ],
   "nzismDirect": []
@@ -887,17 +1129,11 @@
    "NET-29"
   ],
   "scfReason": "Without Enhanced Domains, content is not served from isolated org-specific subdomains, weakening protection of session cookies against cross-domain leakage (session integrity).",
-  "hsup": [
-   {
-    "id": "HSUP45",
-    "basis": "direct",
-    "reason": "HSUP45 statement: 'appropriate controls are implemented to protect information in a multi-tenant cloud environment'; without My Domain/Enhanced Domains, cookies and sessions are not isolated from other tenants on shared Salesforce infrastructure"
-   }
-  ],
+  "hsup": [],
   "hsupExcluded": [],
   "nzismExcluded": [],
   "nzismDirect": [],
-  "note": "No NZISM section added: none has an obvious fit to tenant cookie isolation (23.1 or 23.4 would be a stretch)."
+  "note": "No NZISM section added: none has an obvious fit to tenant cookie isolation (23.1 or 23.4 would be a stretch). HSUP45 removed: no HISO or NZISM citation applies."
  },
  "escalation-perms": {
   "scf": [
@@ -918,7 +1154,33 @@
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "16.3.6.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.3.6.C.02",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.3.7.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.02",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.03",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   }
+  ]
  },
  "event-monitoring": {
   "scf": [
@@ -930,7 +1192,7 @@
    {
     "id": "HSUP61",
     "basis": "direct",
-    "reason": "HSUP61: activities \"are logged and stored\"; guidance: \"Audit logs are to be stored as per organisation's (and customer's) data retention policy\". Event Monitoring off, or under 30 days of logs, fails both."
+    "reason": "HSUP61: activities \"are logged and stored\"; guidance: \"Audit logs are to be stored as per organisation's (and customer's) data retention policy\". Event Monitoring off, or under 30 days of event log files, leaves the event types it captures unlogged or short-lived; SetupAuditTrail and LoginHistory keep logging without it."
    }
   ],
   "hsupExcluded": [
@@ -940,7 +1202,21 @@
    }
   ],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [
+   {
+    "section": "16.6",
+    "reason": "16.6.13.C.01: event logs MUST be archived and retained for an appropriate period; 16.6.10.C.02: log minimum events for all software components. Applies where Event Monitoring is off or keeps logs for too short a period.",
+    "controls": [
+     "16.6.10.C.02",
+     "16.6.13.C.01"
+    ],
+    "findings": [
+     "event-monitoring-disabled",
+     "event-monitoring-retention-short"
+    ]
+   }
+  ],
+  "note": "Review C: 16.6.13.C.01 (archive and retain event logs) and 16.6.10.C.02 (minimum events to log) fit, but SCF derives only 16.6.13.C.05 into 16.6 for this check, so they cannot be cited. 16.6.13.C.04 asks for 12 months, so a 30-day PASS is not evidence NZISM retention is met."
  },
  "experience-cloud-site": {
   "scf": [
@@ -950,11 +1226,6 @@
   "scfReason": "Live Experience Cloud sites expose guest (unauthenticated) access, showing publicly accessible surface is not controlled.",
   "hsup": [
    {
-    "id": "HSUP33",
-    "basis": "direct",
-    "reason": "HSUP33 guidance: 'Implement a formal user access creation process'; live self-registration lets anyone create an account outside that process."
-   },
-   {
     "id": "HSUP42",
     "basis": "direct",
     "reason": "HSUP42 guidance: 'only authorised personnel have access to information stored on the website'; live sites with self-registration or open guest access breach that."
@@ -962,12 +1233,7 @@
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": [
-   {
-    "section": "16.1",
-    "reason": "16.1 Identification, Authentication and Authorisation: the finding is access granted to unidentified, unauthenticated users; SCF derived no section."
-   }
-  ]
+  "nzismDirect": []
  },
  "experience-csp": {
   "scf": [
@@ -975,22 +1241,11 @@
    "WEB-05"
   ],
   "scfReason": "A live Experience Cloud site without Strict CSP and Lightning Web Security lacks the browser-enforced content policy that keeps unauthorized script out of rendered pages.",
-  "hsup": [
-   {
-    "id": "HSUP42",
-    "basis": "direct",
-    "reason": "HSUP42 guidance: \"security controls and mechanisms are in place to protect against the OWASP top ten\" and \"reduce or limit exploitations and injection of malicious code\"; a live Experience Cloud site on Relaxed CSP or without Lightning Web Security lets inline and third-party script run on guest-reachable pages."
-   }
-  ],
+  "hsup": [],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": [
-   {
-    "section": "14.5",
-    "reason": "Web Application Development: 14.5.8.C.01 points to OWASP guidance for building secure web applications, which is what Strict CSP and LWS enforce on an Experience Cloud site."
-   }
-  ],
-  "note": "The check only emits an INFO manual-verification prompt (CSP level and LWS are not API-readable). The citation holds only when that manual check finds Relaxed CSP or LWS disabled."
+  "nzismDirect": [],
+  "note": "The check can only prompt for manual verification (CSP level and Lightning Web Security are not readable through the API), so it carries no HISO or NZISM citation."
  },
  "external-account-hierarchy-exposure": {
   "scf": [
@@ -1006,7 +1261,7 @@
    {
     "id": "HSUP35",
     "basis": "direct",
-    "reason": "HSUP35 statement and guidance: access is defined and authorised per business and security requirements and 'provided using the principle of least privilege'; the finding shows access granted beyond need. Partner Super User and External Account Hierarchies widen portal visibility."
+    "reason": "HSUP35: access 'provided using the principle of least privilege'. Partner Super User and external account hierarchy access widen record visibility across a partner's users; each grant should be justified against need."
    }
   ],
   "hsupExcluded": [],
@@ -1022,7 +1277,7 @@
    {
     "id": "HSUP44",
     "basis": "direct",
-    "reason": "HSUP44 guidance: 'enabling secure or robust authentication and authorisation i.e., OAuth2'; External Credentials with no authentication or a custom non-standard scheme"
+    "reason": "HSUP44 guidance: 'enabling secure or robust authentication and authorisation'; External Credentials using No Authentication send callouts with no authentication"
    }
   ],
   "hsupExcluded": [
@@ -1033,7 +1288,7 @@
   ],
   "nzismExcluded": [],
   "nzismDirect": [],
-  "note": "No NZISM section added: 16.1 is user identification and authentication to agency systems, not outbound service authentication, so the fit is not obvious."
+  "note": "No NZISM section added: 16.1 is user identification and authentication to agency systems, not outbound service authentication, so the fit is not obvious. HSUP44 holds for No Authentication only. The weak-auth finding also lists Custom, the normal API-key header scheme, which carries no citation; the check emits both in one finding."
  },
  "failed-login-detection": {
   "scf": [
@@ -1089,10 +1344,22 @@
    {
     "section": "23.2",
     "reason": "Cloud governance and risk assessment process; not evidenced by login failure counts"
+   },
+   {
+    "section": "14.3",
+    "reason": "14.3.7.C.01 is file auto-launch; failure counts do not bear on it."
+   },
+   {
+    "section": "16.1",
+    "reason": "Password length and clear-text storage are not shown by login failure counts."
+   },
+   {
+    "section": "16.7",
+    "reason": "MFA is not shown by login failure counts."
    }
   ],
   "nzismDirect": [],
-  "note": "Zero HSUP: 20 to 50+ failures per account in 7 days is attack activity, not proof a control is missing; Salesforce lockout can be working and still log that many attempts across lockout windows. It warrants incident triage, not a requirement-not-met citation. No NZISM direct add (unlike login-session's 16.6) because SCF already gave relevant 16.1/16.7."
+  "note": "Zero HSUP: 20 to 50+ failures per account in 7 days is attack activity, not proof a control is missing; Salesforce lockout can be working and still log that many attempts across lockout windows. It warrants incident triage, not a requirement-not-met citation. No NZISM direct add (unlike login-session's 16.6) because SCF already gave relevant 16.1/16.7. No NZISM citation remains: failure counts show none of the SCF-derived controls. Zero HSUP is correct: HSUP34 contains no lockout requirement, and attack volume does not prove a missing control."
  },
  "field-history-tracking": {
   "scf": [
@@ -1161,7 +1428,33 @@
     "reason": "Derived controls 14.3.13.C.01 to C.03 cover users reusing agency logins on external websites and storing website passwords on workstations; third-party API keys embedded in Flow metadata are a different exposure, covered here by 16.1."
    }
   ],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "16.1.36.C.01",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.36.C.02",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.36.C.03",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.41.C.01",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.41.C.02",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.42.C.01",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   }
+  ]
  },
  "flows-without-sharing": {
   "scf": [
@@ -1177,7 +1470,15 @@
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": [],
+  "nzismDirect": [
+   {
+    "section": "14.4",
+    "reason": "14.4.5.C.01: software runs at the lowest privilege level needed to achieve its task; flows running in system context without sharing do not.",
+    "controls": [
+     "14.4.5.C.01"
+    ]
+   }
+  ],
   "note": "HSUP42 not added: the HIGH finding is autolaunched (mostly internal) flows, not a web application."
  },
  "genai-prompt-template-grounding": {
@@ -1193,16 +1494,6 @@
     "id": "HSUP35",
     "basis": "direct",
     "reason": "Grounding on System-Mode Flows or without-sharing Apex returns records above the invoking user's access, so access is not provided 'using the principle of least privilege' as the guidance requires."
-   },
-   {
-    "id": "HSUP36",
-    "basis": "direct",
-    "reason": "A template grounded on System-Mode Flows or without-sharing Apex runs a software component with elevated rights on behalf of any invoking user; the statement limits privileged access to 'authorised users, software components and services'."
-   },
-   {
-    "id": "HSUP14",
-    "basis": "direct",
-    "reason": "Interpolating untrusted external fields beside sensitive CRM data in an active template shows the system was not 'securely designed' with appropriate controls against injected input."
    }
   ],
   "hsupExcluded": [],
@@ -1284,6 +1575,13 @@
    {
     "section": "16.1",
     "reason": "16.1 Identification, Authentication and Authorisation: the finding is access granted to unidentified, unauthenticated users; SCF derived no section."
+   },
+   {
+    "section": "23.4",
+    "reason": "23.4.10.C.01: configure service endpoints to restrict access to authorised parties; the finding is guest access to org data through the site.",
+    "controls": [
+     "23.4.10.C.01"
+    ]
    }
   ]
  },
@@ -1293,13 +1591,13 @@
    "IAC-25"
   ],
   "scfReason": "Secure guest user record access is not enforced, so record-level access enforcement for unauthenticated users is weakened.",
-  "hsup": [
+  "hsup": [],
+  "hsupExcluded": [
    {
     "id": "HSUP09",
-    "basis": "scf"
+    "reason": "The check can only report LOW (policy enforced) or INFO; it never produces a failing finding, so it is evidence of nothing."
    }
   ],
-  "hsupExcluded": [],
   "nzismExcluded": [],
   "nzismDirect": [],
   "note": "Platform always enforces this since API 50.0; the check only emits LOW (enforced) or INFO (unknown), so a failing finding is not reachable. SCF HSUP09 kept for completeness; no direct adds."
@@ -1328,6 +1626,13 @@
    {
     "section": "16.1",
     "reason": "16.1 Identification, Authentication and Authorisation: the finding is access granted to unidentified, unauthenticated users; SCF derived no section."
+   },
+   {
+    "section": "23.4",
+    "reason": "23.4.10.C.01: configure service endpoints to restrict access to authorised parties; the finding is guest access to org data through the site.",
+    "controls": [
+     "23.4.10.C.01"
+    ]
    }
   ]
  },
@@ -1341,12 +1646,12 @@
    {
     "id": "HSUP42",
     "basis": "direct",
-    "reason": "HSUP42 guidance: \"continually monitor for malware, phishing, and other kinds of cyber-attacks\"; GraphQL totalCount sweeps, anonymizer sources and bursts against the guest site are reconnaissance attacks."
-   },
-   {
-    "id": "HSUP61",
-    "basis": "direct",
-    "reason": "HSUP61 guidance: logs are analysed \"to confirm the occurrence of an unusual activity or an anomalous behaviour\"; the BLIND findings (Event Monitoring off, no View Event Log Files) show guest activity is not logged or analysable."
+    "reason": "HSUP42 guidance: \"continually monitor for malware, phishing, and other kinds of cyber-attacks\"; GraphQL totalCount sweeps, anonymizer sources and bursts against the guest site are attack traffic to investigate. The check detected them in the logs, so this is evidence of an incident to respond to, not of missing monitoring.",
+    "findings": [
+     "guest-traffic-anomaly-recon",
+     "guest-traffic-anomaly-anonymizer",
+     "guest-traffic-anomaly-burst"
+    ]
    }
   ],
   "hsupExcluded": [],
@@ -1367,11 +1672,6 @@
   "scfReason": "Unauthenticated guest profiles hold object read/write access, so actions without identification are not restricted to a justified minimum.",
   "hsup": [
    {
-    "id": "HSUP34",
-    "basis": "direct",
-    "reason": "HSUP34 guidance: systems are protected 'by permitting only authenticated users or processes to gain access to their protected resources'; the finding shows unauthenticated guests reaching org data."
-   },
-   {
     "id": "HSUP09",
     "basis": "direct",
     "reason": "HSUP09 guidance: 'only authenticated and authorised personnel to access the information', on need-to-know and least privilege; the finding shows access rules not implemented that way."
@@ -1379,7 +1679,8 @@
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "note": "The check reads guest object permissions, not records; guest-object-exposure is the check that shows unauthenticated data reach."
  },
  "guest-user-visibility": {
   "scf": [
@@ -1404,6 +1705,13 @@
    {
     "section": "16.1",
     "reason": "16.1 Identification, Authentication and Authorisation: the finding is access granted to unidentified, unauthenticated users; SCF derived no section."
+   },
+   {
+    "section": "23.4",
+    "reason": "23.4.10.C.01: configure service endpoints to restrict access to authorised parties; the finding is guest access to org data through the site.",
+    "controls": [
+     "23.4.10.C.01"
+    ]
    }
   ]
  },
@@ -1417,7 +1725,7 @@
    {
     "id": "HSUP34",
     "basis": "direct",
-    "reason": "HSUP34 guidance: where authentication information cannot be changed, 'the information is kept securely to maintain its confidentiality'; a plain-text credential readable in org metadata is not (Bearer tokens, Basic auth, API keys in Apex source)"
+    "reason": "HSUP34 guidance: 'For service and emergency accounts, passwords are to be stored and shared in a protected form'; Bearer tokens, Basic auth strings and API keys in Apex source are stored in plain text readable in org metadata"
    },
    {
     "id": "HSUP14",
@@ -1426,8 +1734,26 @@
    }
   ],
   "hsupExcluded": [],
-  "nzismExcluded": [],
-  "nzismDirect": [],
+  "nzismExcluded": [
+   {
+    "section": "14.3",
+    "reason": "14.3.13 covers user web browsing, not stored credentials."
+   },
+   {
+    "section": "16.1",
+    "reason": "The derived controls cover password hashing, resets and screen lock; 16.1.31.C.04 and 16.1.32.C.01 are cited directly instead."
+   }
+  ],
+  "nzismDirect": [
+   {
+    "section": "16.1",
+    "reason": "16.1.31.C.04: agencies MUST 'ensure authentication secrets (including passwords) are securely stored'; 16.1.32.C.01: agencies 'MUST NOT allow storage of unprotected authentication information'; Bearer tokens, Basic auth strings and API keys in Apex source are stored unprotected",
+    "controls": [
+     "16.1.31.C.04",
+     "16.1.32.C.01"
+    ]
+   }
+  ],
   "note": "The raw-callout-URL sub-finding alone is not cited; only embedded credentials."
  },
  "health-check": {
@@ -1475,6 +1801,14 @@
    {
     "section": "22.1",
     "reason": "Agency-owned mobile devices; not an org setting."
+   },
+   {
+    "section": "14.1",
+    "reason": "Standard operating environments for workstations; Health Check scores org settings."
+   },
+   {
+    "section": "23.2",
+    "reason": "23.2.21.C.01 concerns 'GCSB endorsed baseline templates'; Health Check measures drift from the Salesforce baseline."
    }
   ],
   "nzismDirect": []
@@ -1485,13 +1819,7 @@
    "IAC-43"
   ],
   "scfReason": "Admin-capable connected apps with no or very long session timeouts and no high-assurance requirement show sessions are not terminated or re-authenticated for privileged use.",
-  "hsup": [
-   {
-    "id": "HSUP44",
-    "basis": "direct",
-    "reason": "HSUP44 guidance: 're-authentication for all API calls i.e., not permitting session persistence'; connected apps (OAuth/API clients) with no session timeout or one over 8 hours keep sessions alive indefinitely"
-   }
-  ],
+  "hsup": [],
   "hsupExcluded": [
    {
     "id": "HSUP14",
@@ -1538,10 +1866,22 @@
    {
     "section": "23.2",
     "reason": "Cloud governance and risk assessment process; the check reads a configuration value"
+   },
+   {
+    "section": "14.3",
+    "reason": "14.3.7.C.01 is file auto-launch; a connected-app timeout does not bear on it."
+   },
+   {
+    "section": "16.1",
+    "reason": "The derived controls are password length and logon banner; a connected-app timeout does not bear on them."
+   },
+   {
+    "section": "16.7",
+    "reason": "16.7.42.C.01 is MFA; the check reads only SessionTimeout, not the session security level."
    }
   ],
   "nzismDirect": [],
-  "note": "The check reads only SessionTimeout (not the session security level), so a high-assurance/MFA requirement is not evidenced and HSUP36 is not cited; admin-app detection is a name-pattern heuristic. Only the timeout is measured, so the citation is HSUP44 session persistence."
+  "note": "The check reads only SessionTimeout (not the session security level), so a high-assurance/MFA requirement is not evidenced and HSUP36 is not cited; admin-app detection is a name-pattern heuristic. Only the timeout is measured, so the citation is HSUP44 session persistence. No citation remains. 16.1.40.C.01 (invalidating any session tokens) would apply only once it is settled whether a null connected-app SessionTimeout inherits the org session timeout; it is not added. HSUP52 rule shared with password-session-policy: neither check reads the org baseline configuration, so a deviation from Health Check or a long timeout does not show no baseline exists."
  },
  "inactive-users": {
   "scf": [
@@ -1563,7 +1903,13 @@
   "nzismDirect": [
    {
     "section": "16.1",
-    "reason": "Identification, authentication and authorisation includes suspending accounts that are no longer used."
+    "reason": "16.1.42.C.01: 'remove or suspend inactive accounts after a specified number of days'; active licensed users have not logged in for 90+ days.",
+    "controls": [
+     "16.1.42.C.01"
+    ],
+    "findings": [
+     "inactive-users-90d"
+    ]
    }
   ]
  },
@@ -1588,24 +1934,40 @@
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [
+   {
+    "section": "15.2",
+    "reason": "15.2.50.C.03: agencies SHOULD verify DKIM signatures on emails received; the finding is inbound email processed without sender authentication.",
+    "controls": [
+     "15.2.50.C.03"
+    ],
+    "findings": [
+     "inbound-email-handler-unauthenticated-execution"
+    ]
+   }
+  ],
+  "nzismControlsExcluded": [
+   {
+    "id": "15.2.36.C.01",
+    "reason": "15.2.36.C.01 is the before-implementing-DMARC prerequisite list, not verification of inbound mail."
+   }
+  ],
+  "note": "Review C: 15.2.50.C.03 (verify DKIM signatures on emails received) is the fitting control, but SCF does not derive it into 15.2 for this check, so it cannot be cited."
  },
  "installed-packages": {
   "scf": [
    "TDA-16.2",
    "CFG-17.1"
   ],
-  "scfReason": "Unmanaged or beta packages are installed in production, showing code reaches production without approval and third-party components are not limited to reviewed, trustworthy sources.",
+  "scfReason": "Unmanaged packages are installed, showing third-party code reaches the org without version control or vendor support. (Beta packages only install in non-production orgs, so they are not evidence.)",
   "hsup": [
    {
     "id": "HSUP67",
     "basis": "direct",
-    "reason": "Unmanaged packages are editable and bypass AppExchange security review, so third-party code is in production without being 'systematically evaluated' as the third-party management statement requires."
-   },
-   {
-    "id": "HSUP50",
-    "basis": "direct",
-    "reason": "A beta package version in production breaches the separate-environments guidance that 'testing is to be limited to the non-production environments'."
+    "reason": "Unmanaged packages are editable and bypass AppExchange security review, so third-party code is in production without being 'systematically evaluated' as the third-party management statement requires.",
+    "findings": [
+     "installed-packages-unmanaged"
+    ]
    }
   ],
   "hsupExcluded": [],
@@ -1613,10 +1975,13 @@
   "nzismDirect": [
    {
     "section": "12.7",
-    "reason": "Unmanaged third-party code that skipped AppExchange review is a supply chain gap, as SCF derives for package-post-install-supply-chain."
+    "reason": "Unmanaged third-party code that skipped AppExchange review is a supply chain gap, as SCF derives for package-post-install-supply-chain.",
+    "findings": [
+     "installed-packages-unmanaged"
+    ]
    }
   ],
-  "note": "HSUP67 applies to unmanaged packages from a third party (the finding lists the publisher); in-house code deployed as an unmanaged package does not evidence HSUP67."
+  "note": "HSUP67 applies to unmanaged packages from a third party (the finding lists the publisher); in-house code deployed as an unmanaged package does not evidence HSUP67. The beta finding fires only in non-production orgs (beta versions cannot install in production), so it carries no HISO or NZISM citation. The scfReason still says beta packages are in production and needs correcting at source."
  },
  "integration-least-privilege": {
   "scf": [
@@ -1683,21 +2048,34 @@
    "IAC-32"
   ],
   "scfReason": "Active internal users without MFA enforcement show MFA is not applied to organizational user access, privileged or not.",
-  "hsup": [
-   {
-    "id": "HSUP34",
-    "basis": "direct",
-    "reason": "HSUP34 guidance: strong authentication 'combines two or more different authentication factors'; users able to sign in without a second factor show this is not met; here the evidence is that users lack the explicit MFA-for-UI-logins permission, so MFA rests solely on org-level enforcement"
-   }
-  ],
+  "hsup": [],
   "hsupExcluded": [],
   "nzismExcluded": [
    {
     "section": "19.1",
     "reason": "Gateways; per-user MFA permission is not a gateway control"
+   },
+   {
+    "section": "16.7",
+    "reason": "A missing MFA-for-UI-logins permission does not show MFA is absent; the check never reads the org-level MFA requirement or excludes SSO users."
+   },
+   {
+    "section": "16.4",
+    "reason": "No privileged user is shown signing in without MFA; the finding is a missing permission only."
+   },
+   {
+    "section": "23.3",
+    "reason": "A missing per-user permission is not evidence about cloud service authentication."
    }
   ],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "16.1.32.C.01",
+    "reason": "16.1.32.C.01 covers stored authentication data, not MFA or SSO."
+   }
+  ],
+  "note": "The finding title calls the permission a second layer over org-level MFA, and the check does not read Session Settings MFA or exclude SSO users, so no HISO requirement is evidenced as unmet."
  },
  "ip-restrictions": {
   "scf": [
@@ -1717,10 +2095,20 @@
    {
     "section": "17.5",
     "reason": "Secure Shell; no SSH involved in Salesforce login IP restrictions"
+   },
+   {
+    "section": "16.2",
+    "reason": "16.2.4.C.01 covers the ACL-building process, not configured IP ranges."
    }
   ],
   "nzismDirect": [],
-  "note": "HSUP34 rests on the connected-app bypass/relax findings and overly broad ranges. Admin profiles without login IP ranges are not cited: no HSUP requires IP restriction for privileged users (HSUP36's restriction bullet is about privileged accounts not browsing or using webmail)."
+  "note": "HSUP34 rests on the connected-app bypass/relax findings and overly broad ranges. Admin profiles without login IP ranges are not cited: no HSUP requires IP restriction for privileged users (HSUP36's restriction bullet is about privileged accounts not browsing or using webmail).",
+  "nzismControlsExcluded": [
+   {
+    "id": "16.5.12.C.01",
+    "reason": "Covers VPNs, not Salesforce login IP ranges."
+   }
+  ]
  },
  "legacy-api-version": {
   "scf": [
@@ -1770,16 +2158,37 @@
    {
     "id": "HSUP36",
     "basis": "scf"
-   },
-   {
-    "id": "HSUP34",
-    "basis": "direct",
-    "reason": "HSUP34 statement: 'circumventing the authentication process is prevented'; Administrators Can Log In as Any User lets an admin enter any user's session without that user authenticating."
    }
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "16.3.6.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.3.6.C.02",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.3.7.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.02",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.03",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   }
+  ]
  },
  "login-anomaly": {
   "scf": [
@@ -1813,13 +2222,8 @@
   "hsup": [],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": [
-   {
-    "section": "16.6",
-    "reason": "Event monitoring, logging and auditing; the check is a review of LoginHistory events"
-   }
-  ],
-  "note": "Zero HSUP: findings report activity (failed-login volume, API logins from many IPs), not control state. HSUP61 requires logs be kept, and the check proves they are by reading LoginHistory; the audit cannot show the org is not reviewing them. No HSUP requirement is evidenced as unmet."
+  "nzismDirect": [],
+  "note": "Zero HSUP: findings report activity (failed-login volume, API logins from many IPs), not control state. HSUP61 requires logs be kept, and the check proves they are by reading LoginHistory; the audit cannot show the org is not reviewing them. No HSUP requirement is evidenced as unmet. NZISM 16.6 removed: reading LoginHistory proves 16.6.9.C.01 is met, not unmet. Zero HSUP and zero NZISM is correct."
  },
  "mfa-enforcement": {
   "scf": [
@@ -1832,7 +2236,7 @@
    {
     "id": "HSUP34",
     "basis": "direct",
-    "reason": "HSUP34 guidance: strong authentication 'combines two or more different authentication factors'; users able to sign in without a second factor show this is not met (external/portal users with data access)"
+    "reason": "HSUP34 guidance: SSO is recommended 'along with the use of multi-factor authentication (MFA) for all user accounts'; external or portal users with data access are not required to use MFA"
    }
   ],
   "hsupExcluded": [],
@@ -1846,7 +2250,29 @@
     "reason": "Gateways; MFA on portal users is not a gateway control"
    }
   ],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "16.7.42.C.07",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.43.C.01",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.44.C.01",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.42.C.05",
+    "reason": "Phishing-resistant MFA is measured only by mfa-method-strength."
+   },
+   {
+    "id": "16.7.42.C.06",
+    "reason": "Phishing-resistant MFA is measured only by mfa-method-strength."
+   }
+  ]
  },
  "mfa-method-strength": {
   "scf": [
@@ -1869,7 +2295,21 @@
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "16.7.42.C.07",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.43.C.01",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.44.C.01",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   }
+  ]
  },
  "mfa-registration": {
   "scf": [
@@ -1886,7 +2326,29 @@
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "16.7.42.C.07",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.43.C.01",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.44.C.01",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.42.C.05",
+    "reason": "Phishing-resistant MFA is measured only by mfa-method-strength."
+   },
+   {
+    "id": "16.7.42.C.06",
+    "reason": "Phishing-resistant MFA is measured only by mfa-method-strength."
+   }
+  ]
  },
  "my-domain-login-policy": {
   "scf": [
@@ -1902,7 +2364,12 @@
    }
   ],
   "hsupExcluded": [],
-  "nzismExcluded": [],
+  "nzismExcluded": [
+   {
+    "section": "16.1",
+    "reason": "16.1.32.C.01, the only derived control, covers stored authentication data, not SSO."
+   }
+  ],
   "nzismDirect": []
  },
  "named-credentials": {
@@ -1916,7 +2383,10 @@
    {
     "id": "HSUP44",
     "basis": "direct",
-    "reason": "HSUP44 guidance: 'enabling secure or robust authentication and authorisation' and 'encrypting all requests and responses'; anonymous-principal and plain HTTP named credentials fail these for integrations"
+    "reason": "HSUP44 guidance: 'encrypting all requests and responses'; named credentials pointing at http:// endpoints send requests and responses unencrypted",
+    "findings": [
+     "named-credentials-http-endpoint"
+    ]
    },
    {
     "id": "HSUP32",
@@ -1930,9 +2400,25 @@
     "reason": "Remote working: personnel connecting to the organisation's network under a documented policy; named credentials are outbound system integrations"
    }
   ],
-  "nzismExcluded": [],
-  "nzismDirect": [],
-  "note": "Mapping by finding: plaintext HTTP -> HSUP32 + HSUP44; anonymous principal -> HSUP44; unreferenced named credentials -> no citation (hygiene, not evidence of a requirement being unmet)."
+  "nzismExcluded": [
+   {
+    "section": "17.1",
+    "reason": "17.1.57.C.01 is scoped to NZEO information; 17.1.55.C.03 is cited directly instead."
+   }
+  ],
+  "nzismDirect": [
+   {
+    "section": "17.1",
+    "reason": "17.1.55.C.03: agencies 'MUST encrypt aggregated agency data using an approved algorithm and protocol over insecure or unprotected networks'; named credentials point at http:// endpoints",
+    "controls": [
+     "17.1.55.C.03"
+    ],
+    "findings": [
+     "named-credentials-http-endpoint"
+    ]
+   }
+  ],
+  "note": "HSUP32, HSUP44 and 17.1 apply to plain-HTTP endpoints. Anonymous principals carry no citation, since the check itself calls them acceptable for public APIs, and unreferenced named credentials are hygiene."
  },
  "oauth-device-and-asset-token-flows": {
   "scf": [
@@ -1954,7 +2440,29 @@
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "16.7.42.C.07",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.43.C.01",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.44.C.01",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.42.C.05",
+    "reason": "Phishing-resistant MFA is measured only by mfa-method-strength."
+   },
+   {
+    "id": "16.7.42.C.06",
+    "reason": "Phishing-resistant MFA is measured only by mfa-method-strength."
+   }
+  ]
  },
  "oauth-token-inventory": {
   "scf": [
@@ -1987,7 +2495,29 @@
    }
   ],
   "nzismDirect": [],
-  "note": "The summary inventory finding is INFO; citations apply to the stale-token and not-in-inventory findings."
+  "note": "The summary inventory finding is INFO; citations apply to the stale-token and not-in-inventory findings.",
+  "nzismControlsExcluded": [
+   {
+    "id": "16.1.36.C.02",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.36.C.03",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.41.C.01",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.41.C.02",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.42.C.01",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   }
+  ]
  },
  "org-wide-email-spoofing": {
   "scf": [
@@ -2012,7 +2542,13 @@
   "nzismDirect": [
    {
     "section": "15.2",
-    "reason": "15.2.36.C.01 requires reviewing SPF and DKIM configuration for all active sending domains; missing DKIM keys is that gap."
+    "reason": "15.2.50.C.01: agencies \"MUST enable DKIM signing on all email originating from their domain\"; org-wide addresses with zero active DKIM keys send unsigned mail.",
+    "controls": [
+     "15.2.50.C.01"
+    ],
+    "findings": [
+     "org-wide-email-spoofing-no-dkim"
+    ]
    }
   ],
   "note": "HSUP09 kept for the All Profiles finding: any user can send as a shared organisational identity, so logical access to that sender identity is not controlled by role."
@@ -2036,8 +2572,55 @@
    }
   ],
   "hsupExcluded": [],
-  "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismExcluded": [
+   {
+    "section": "14.3",
+    "reason": "Derived controls 14.3.13.C.01 to C.03 bar users from reusing agency logins on external websites or storing website passwords on workstations; they do not address outbound message session IDs or cleartext endpoints."
+   }
+  ],
+  "nzismDirect": [
+   {
+    "section": "17.1",
+    "reason": "17.1.55.C.03 (all classifications): agencies MUST encrypt aggregated agency data over insecure or unprotected networks such as the Internet. The finding is an outbound message sent over plain HTTP.",
+    "controls": [
+     "17.1.55.C.03"
+    ],
+    "findings": [
+     "outbound-messages-cleartext"
+    ]
+   }
+  ],
+  "nzismControlsExcluded": [
+   {
+    "id": "17.1.57.C.01",
+    "reason": "17.1.57.C.01 protects NZEO information in transit, which this check does not concern."
+   },
+   {
+    "id": "16.1.36.C.01",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.36.C.02",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.36.C.03",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.41.C.01",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.41.C.02",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   },
+   {
+    "id": "16.1.42.C.01",
+    "reason": "Password reset, screen lock and three-strike lockout controls do not concern OAuth tokens, session IDs or callout credentials."
+   }
+  ],
+  "note": "Review C: 17.1.55.C.02 (RESTRICTED or SENSITIVE encrypted over insecure networks) and 17.1.55.C.03 (encrypt aggregated agency data over the Internet) fit http:// endpoints, but SCF does not derive them into 17.1 for this check, so they cannot be cited."
  },
  "package-post-install-supply-chain": {
   "scf": [
@@ -2050,11 +2633,6 @@
     "id": "HSUP67",
     "basis": "direct",
     "reason": "InstallHandler code from a package runs on every install and push upgrade; third-party management guidance requires assessing 'the level of access the supplier has to the organisation's systems' before and after onboarding."
-   },
-   {
-    "id": "HSUP36",
-    "basis": "direct",
-    "reason": "An InstallHandler runs in system context, a privileged right held by a third-party software component; the statement limits privileged access to 'authorised users, software components and services'."
    }
   ],
   "hsupExcluded": [],
@@ -2071,13 +2649,12 @@
   "scfReason": "Health Check risks on password length/complexity/expiry, invalid-login lockout, session timeout and MFA settings show these authentication and session controls are configured below baseline.",
   "hsup": [
    {
-    "id": "HSUP52",
-    "basis": "scf"
-   },
-   {
     "id": "HSUP34",
     "basis": "direct",
-    "reason": "HSUP34 guidance: strong authentication 'combines two or more different authentication factors'; users able to sign in without a second factor show this is not met; the mfa-gaps finding (Health Check MFA settings not enforced), plus weak password policy settings"
+    "reason": "HSUP34 guidance: 'Organisations are to ensure that a robust password policy enforces secure authentication mechanisms'; Health Check reports password length, complexity, expiry or lockout settings below the recommended values",
+    "findings": [
+     "password-policy-failures"
+    ]
    }
   ],
   "hsupExcluded": [
@@ -2088,6 +2665,10 @@
    {
     "id": "HSUP46",
     "reason": "Network security covers networks and network devices; a Salesforce org setting is not a network device"
+   },
+   {
+    "id": "HSUP52",
+    "reason": "The check compares settings with Health Check recommendations, not with the org baseline configuration, so it does not show no baseline exists; same rule as high-assurance-session."
    }
   ],
   "nzismExcluded": [
@@ -2122,10 +2703,52 @@
    {
     "section": "23.2",
     "reason": "Cloud governance and risk assessment process; the check reads configuration values"
+   },
+   {
+    "section": "14.3",
+    "reason": "14.3.7.C.01 is file auto-launch; Health Check password and session settings do not bear on it."
    }
   ],
   "nzismDirect": [],
-  "note": "HSUP52 kept because this check does measure deviation from a baseline: it reports each Health Check setting that 'deviates from CIS Salesforce Benchmark recommendations' or recommended values."
+  "note": "HSUP52 is not cited on this check or high-assurance-session: Health Check compares against Salesforce's baseline, not the organisation's own documented baseline. 16.1.40.C.01 (invalidating session tokens after inactivity) fits the session-timeout finding but SCF does not map it here, so it is not cited.",
+  "nzismControlsExcluded": [
+   {
+    "id": "16.7.42.C.07",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.43.C.01",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.44.C.01",
+    "reason": "These cover MFA design, policy integration and user training; no org setting evidences them."
+   },
+   {
+    "id": "16.7.42.C.05",
+    "reason": "Phishing-resistant MFA is measured only by mfa-method-strength."
+   },
+   {
+    "id": "16.7.42.C.06",
+    "reason": "Phishing-resistant MFA is measured only by mfa-method-strength."
+   },
+   {
+    "id": "16.1.35.C.01",
+    "reason": "These cover foreign nationals; the check reads password and session settings."
+   },
+   {
+    "id": "16.1.35.C.02",
+    "reason": "These cover foreign nationals; the check reads password and session settings."
+   },
+   {
+    "id": "16.1.43.C.01",
+    "reason": "Applies to Confidential and above only."
+   },
+   {
+    "id": "16.1.44.C.01",
+    "reason": "Logon banner; not measured by the Health Check settings this check reads."
+   }
+  ]
  },
  "permissions": {
   "scf": [
@@ -2137,7 +2760,10 @@
    {
     "id": "HSUP35",
     "basis": "direct",
-    "reason": "HSUP35 statement and guidance: access is defined and authorised per business and security requirements and 'provided using the principle of least privilege'; the finding shows access granted beyond need. Custom profiles/permission sets broadly grant API Enabled; unassigned sets show access rights not reviewed."
+    "reason": "HSUP35: access 'provided using the principle of least privilege'. Applies to profiles and permission sets granting API Enabled beyond need; unassigned permission sets grant nothing and are hygiene, not evidence.",
+    "findings": [
+     "permissions-api-enabled"
+    ]
    }
   ],
   "hsupExcluded": [
@@ -2151,7 +2777,13 @@
    }
   ],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "9.2.11.C.01",
+    "reason": "9.2.11.C.01 applies to Top Secret systems only."
+   }
+  ]
  },
  "platform-event-subscriber-context": {
   "scf": [
@@ -2189,7 +2821,33 @@
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "16.3.6.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.3.6.C.02",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.3.7.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.02",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.03",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   }
+  ]
  },
  "public-content-exposure": {
   "scf": [
@@ -2206,7 +2864,10 @@
    {
     "id": "HSUP55",
     "basis": "direct",
-    "reason": "HSUP55 statement: detect and prevent data leakage through unauthorised disclosure and siphoning of information by individuals, systems, or services; the finding is an open extraction or disclosure path."
+    "reason": "HSUP55 statement: detect and prevent data leakage through unauthorised disclosure. Applies to Documents marked externally available, which anyone with the link can retrieve.",
+    "findings": [
+     "public-content-public-documents"
+    ]
    }
   ],
   "hsupExcluded": [],
@@ -2248,7 +2909,10 @@
    {
     "id": "HSUP51",
     "basis": "direct",
-    "reason": "Vendor release updates left unactivated, some past auto-activation, are pending vendor fixes not 'tracked, and remediated' as the patch and vulnerability remediation statement requires."
+    "reason": "Applies to release updates past their auto-activation date and still not enabled: vendor-issued fixes not yet 'tracked, and remediated' as the patch and vulnerability remediation statement requires. Updates still inside their window are not overdue.",
+    "findings": [
+     "release-updates-overdue"
+    ]
    }
   ],
   "hsupExcluded": [
@@ -2261,12 +2925,19 @@
    {
     "section": "22.1",
     "reason": "Agency-owned mobile devices; release updates are an org platform setting."
+   },
+   {
+    "section": "23.2",
+    "reason": "23.2.19.C.01 is assurance that the cloud provider patches; a tenant leaving release updates off says nothing about the provider."
    }
   ],
   "nzismDirect": [
    {
     "section": "12.4",
-    "reason": "Product patching and updating is the direct NZISM home for applying vendor-issued updates."
+    "reason": "Product patching and updating is the direct NZISM home for applying vendor-issued updates.",
+    "findings": [
+     "release-updates-overdue"
+    ]
    }
   ],
   "note": "Not every release update is a security fix, so HSUP51 fits best for security-related updates."
@@ -2291,7 +2962,25 @@
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [
+   {
+    "section": "17.1",
+    "reason": "17.1.55.C.03 (all classifications): agencies MUST encrypt aggregated agency data over insecure or unprotected networks such as the Internet. The finding is a remote site reached over plain HTTP.",
+    "controls": [
+     "17.1.55.C.03"
+    ],
+    "findings": [
+     "remote-sites-protocol-security-disabled"
+    ]
+   }
+  ],
+  "nzismControlsExcluded": [
+   {
+    "id": "17.1.57.C.01",
+    "reason": "17.1.57.C.01 protects NZEO information in transit, which this check does not concern."
+   }
+  ],
+  "note": "Review C: 17.1.55.C.02 (RESTRICTED or SENSITIVE encrypted over insecure networks) and 17.1.55.C.03 (encrypt aggregated agency data over the Internet) fit cleartext callouts, but SCF does not derive them into 17.1 for this check, so they cannot be cited."
  },
  "report-folder-access": {
   "scf": [
@@ -2322,29 +3011,31 @@
   "hsup": [
    {
     "id": "HSUP09",
-    "basis": "scf"
+    "basis": "scf",
+    "findings": [
+     "restriction-rules-inactive"
+    ]
    }
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": [
-   {
-    "section": "16.2",
-    "reason": "16.2 System Access: inactive or conflicting Restriction Rules mean intended record-access limits are not enforced; SCF derived no section."
-   }
-  ]
+  "nzismDirect": [],
+  "note": "More than one active rule per object is supported by Salesforce, so the conflicting-rules finding is not evidence on its own."
  },
  "sandbox-data-masking": {
   "scf": [
    "DCH-28",
    "DCH-36.3"
   ],
-  "scfReason": "A sandbox holds populated PII fields, indicating unmasked production data is used for testing and direct identifiers were not removed or masked.",
+  "scfReason": "A sandbox holds populated PII fields. The check cannot tell masked from real values, so this flags the need to confirm masking rather than showing unmasked production data.",
   "hsup": [
    {
     "id": "HSUP50",
     "basis": "direct",
-    "reason": "Populated PII in a sandbox breaches the separate-environments guidance that 'information (if personally identifiable) is to be anonymised when being used in the test environments'."
+    "reason": "The separate-environments guidance says personally identifiable information 'is to be anonymised when being used in the test environments'. The check finds Email and Phone populated in a sandbox, which a masked sandbox also shows, so this flags the anonymisation requirement for confirmation rather than evidencing a breach.",
+    "findings": [
+     "sandbox-data-masking-pii-present"
+    ]
    }
   ],
   "hsupExcluded": [],
@@ -2352,9 +3043,16 @@
   "nzismDirect": [
    {
     "section": "14.4",
-    "reason": "Software application development covers separation of development and test environments and use of production data in them."
+    "reason": "14.4.4.C.01: 'information flow between the environments is strictly limited'. Populated contact fields in a sandbox indicate production data may have been copied into a non-production environment; the check cannot confirm whether it was masked.",
+    "controls": [
+     "14.4.4.C.01"
+    ],
+    "findings": [
+     "sandbox-data-masking-pii-present"
+    ]
    }
-  ]
+  ],
+  "note": "HSUP50 is weak here: the probes are Email != null and Phone != null, so a masked sandbox fails too, and the finding says it cannot confirm whether masking was applied."
  },
  "scheduled-apex": {
   "scf": [
@@ -2371,7 +3069,7 @@
    {
     "id": "HSUP33",
     "basis": "direct",
-    "reason": "HSUP33 guidance defines a \"Service Account\" as a \"non-human privileged account used to execute applications and run automated services\"; jobs owned by personal admin accounts, which persist after the user is deactivated, show automation identities not lifecycle-managed."
+    "reason": "HSUP33 guidance defines a \"Service Account\" as a \"non-human privileged account used to execute applications and run automated services\"; active scheduled or batch jobs created by personal admin-profile accounts show automation not run under a dedicated service identity."
    }
   ],
   "hsupExcluded": [],
@@ -2460,9 +3158,33 @@
    {
     "section": "23.2",
     "reason": "Public cloud governance and risk assessment; the check reads specific browser security settings, not governance."
+   },
+   {
+    "section": "14.3",
+    "reason": "14.3.7.C.01 is 'disable the automatic launching of files downloaded'; the check reads clickjack, CSRF and XSS settings."
+   },
+   {
+    "section": "14.1",
+    "reason": "Standard operating environments for workstations; not org browser security settings."
+   },
+   {
+    "section": "16.1",
+    "reason": "The SCF-derived 16.1.31.C.03 to C.05 are password policy; the check does not read password settings."
    }
   ],
-  "nzismDirect": []
+  "nzismDirect": [
+   {
+    "section": "14.5",
+    "reason": "14.5.8.C.01: 'follow the documentation provided in the Open Web Application Security Project guide to building secure Web applications'; disabled clickjack, CSRF or XSS protections depart from it.",
+    "controls": [
+     "14.5.8.C.01"
+    ],
+    "findings": [
+     "session-hardening-risks"
+    ]
+   }
+  ],
+  "note": "16.1.40.C.01 ('invalidating any session tokens') is the fitting 16.1 control for the session settings, but SCF does not derive it for this check and the derived 16.1 controls are password policy, so 16.1 is excluded rather than rebased."
  },
  "sharing-model": {
   "scf": [
@@ -2491,12 +3213,12 @@
    "CRY-10.1",
    "CRY-10.3"
   ],
-  "scfReason": "Tenant secrets unrotated for over 365 days, or destroyed keys, show encryption key lifecycle management (rotation, availability of data after key loss) is not effective.",
+  "scfReason": "Active tenant secrets older than 365 days show encryption keys are not rotated on a defined lifecycle.",
   "hsup": [
    {
     "id": "HSUP32",
     "basis": "direct",
-    "reason": "HSUP32 guidance: 'how encryption keys ... are managed, along with information recovery (if the keys are compromised or lost or damaged)'; unrotated (>365 days) or destroyed tenant secrets show key management is not implemented"
+    "reason": "HSUP32 guidance: 'how encryption keys ... are managed'; Active tenant secrets created more than 365 days ago show keys are not being rotated"
    }
   ],
   "hsupExcluded": [],
@@ -2508,9 +3230,20 @@
    {
     "section": "23.3",
     "reason": "Identity management and access control; tenant secret rotation is key management"
+   },
+   {
+    "section": "23.4",
+    "reason": "23.4.9 covers cloud key-management plans; the check reads only tenant secret age."
    }
   ],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "17.1.58.C.03",
+    "reason": "Not shown by tenant secret age."
+   }
+  ],
+  "note": "The check never detects destroyed secrets; it checks only Active secrets created more than 365 days ago."
  },
  "siem-integration": {
   "scf": [
@@ -2533,7 +3266,21 @@
   "hsupExcluded": [],
   "nzismExcluded": [],
   "nzismDirect": [],
-  "note": "The check infers SIEM presence from heuristic signals (integration users, apps, named credentials); an absent signal is weaker evidence than a direct configuration read."
+  "note": "The check infers SIEM presence from heuristic signals (integration users, apps, named credentials); an absent signal is weaker evidence than a direct configuration read. Review C: the HIGH not-detected finding comes from vendor-name regexes, so a SIEM that uses a generic integration user produces a false HIGH under HSUP61; confirm manually before relying on it.",
+  "nzismControlsExcluded": [
+   {
+    "id": "16.6.11.C.01",
+    "reason": "Log fields and time source do not concern whether a SIEM is present."
+   },
+   {
+    "id": "16.6.11.C.02",
+    "reason": "Log fields and time source do not concern whether a SIEM is present."
+   },
+   {
+    "id": "16.6.11.C.03",
+    "reason": "Log fields and time source do not concern whether a SIEM is present."
+   }
+  ]
  },
  "soap-login-api-auth": {
   "scf": [
@@ -2563,13 +3310,20 @@
   "hsup": [
    {
     "id": "HSUP34",
-    "basis": "scf"
+    "basis": "scf",
+    "reason": "HSUP34 guidance: 'Single-Sign-On (SSO) is recommended at an organisational level'; recommended, not required. Username-password logins show the IdP path is bypassed only where an IdP is configured"
    }
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
   "nzismDirect": [],
-  "note": "Username-password logins alongside SSO show the IdP path can be bypassed; HSUP34 guidance also recommends SSO at an organisational level."
+  "note": "HSUP34 recommends SSO at an organisational level but does not require it. The check does not read whether an identity provider is configured, so the citation holds only in orgs that have one; without SSO, password logins show no circumvention.",
+  "nzismControlsExcluded": [
+   {
+    "id": "16.1.32.C.01",
+    "reason": "16.1.32.C.01 covers stored authentication data, not SSO."
+   }
+  ]
  },
  "standard-profiles": {
   "scf": [
@@ -2581,7 +3335,7 @@
    {
     "id": "HSUP35",
     "basis": "direct",
-    "reason": "HSUP35 statement and guidance: access is defined and authorised per business and security requirements and 'provided using the principle of least privilege'; the finding shows access granted beyond need. Users sit on uneditable standard profiles whose access cannot be tailored to role."
+    "reason": "HSUP35: access 'provided using the principle of least privilege'. Applies to users on broad standard profiles (Standard User, System Administrator), which cannot be narrowed; Minimum Access - Salesforce is the least-privilege baseline and is not evidence."
    }
   ],
   "hsupExcluded": [
@@ -2595,7 +3349,13 @@
    }
   ],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "9.2.11.C.01",
+    "reason": "9.2.11.C.01 applies to Top Secret systems only."
+   }
+  ]
  },
  "threat-detection": {
   "scf": [
@@ -2607,12 +3367,20 @@
    {
     "id": "HSUP61",
     "basis": "direct",
-    "reason": "HSUP61 guidance: logs \"are to be analysed to confirm the occurrence of an unusual activity or an anomalous behaviour\" with \"user and entity behaviour\" considered; Threat Detection storage unavailable or empty means that analysis is not happening."
+    "reason": "HSUP61 guidance: logs \"are to be analysed to confirm the occurrence of an unusual activity or an anomalous behaviour\" with \"user and entity behaviour\" considered; Threat Detection storage that is unavailable, or the guest anomaly store missing, means that analysis cannot happen. An empty store is what a healthy org looks like and is not cited.",
+    "findings": [
+     "threat-detection-unavailable",
+     "threat-detection-guest-anomaly-missing"
+    ]
    },
    {
     "id": "HSUP09",
     "basis": "direct",
-    "reason": "HSUP09 guidance: \"configuring system alerts for abnormal activities with registered accounts\"; Threat Detection events are those alerts."
+    "reason": "HSUP09 guidance: \"configuring system alerts for abnormal activities with registered accounts\"; Threat Detection events are those alerts.",
+    "findings": [
+     "threat-detection-unavailable",
+     "threat-detection-guest-anomaly-missing"
+    ]
    }
   ],
   "hsupExcluded": [],
@@ -2656,12 +3424,15 @@
    "IAC-37",
    "IAC-37.6"
   ],
-  "scfReason": "Trusted IP ranges, some overly broad, exempt logins from MFA identity verification, so MFA is not enforced for network access from those addresses.",
+  "scfReason": "Trusted IP ranges, some overly broad, let logins from those addresses skip the identity-verification challenge. Salesforce documents this as skipping verification; whether MFA is also skipped is not tested by the check.",
   "hsup": [
    {
     "id": "HSUP34",
     "basis": "direct",
-    "reason": "HSUP34 statement: 'circumventing the authentication process is prevented'; trusted IP ranges, some overly broad, let logins skip identity verification/MFA entirely"
+    "reason": "HSUP34 statement: 'circumventing the authentication process is prevented'; trusted IP ranges broader than /16 let logins from a very large address space skip the identity verification challenge",
+    "findings": [
+     "trusted-ip-broad-ranges"
+    ]
    }
   ],
   "hsupExcluded": [],
@@ -2669,9 +3440,26 @@
    {
     "section": "19.1",
     "reason": "Gateways; org trusted IP ranges are a login policy, not a gateway"
+   },
+   {
+    "section": "16.7",
+    "reason": "Trusted IP ranges skip the login identity verification challenge; the check does not test that they bypass MFA."
+   },
+   {
+    "section": "16.4",
+    "reason": "No privileged user is identified, so privileged-account MFA is not evidenced."
+   },
+   {
+    "section": "23.3",
+    "reason": "Skipping the identity verification challenge is not shown to bypass MFA for cloud service access."
+   },
+   {
+    "section": "16.1",
+    "reason": "16.1.29.C.02 is about using MFA; trusted ranges skip identity verification, which is not MFA."
    }
   ],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "note": "Salesforce documents trusted IP ranges as skipping the login challenge for identity verification, not MFA; the check asserts an MFA bypass without testing it. HSUP34 rests on the broader-than-/16 finding only."
  },
  "trusted-url-hygiene": {
   "scf": [
@@ -2684,7 +3472,11 @@
    {
     "id": "HSUP55",
     "basis": "direct",
-    "reason": "Non-Salesforce, unresolvable or parked domains on the CSP trusted-sites list are open egress channels for 'siphoning of information', which the data leakage requirement says must be prevented."
+    "reason": "Applies to allowlisted domains that do not resolve or resolve to parking nameservers: anyone can register them and gain an allowlisted channel for the 'siphoning of information' the data leakage requirement says must be prevented. A non-Salesforce domain that resolves normally is not shown to leak anything.",
+    "findings": [
+     "trusted-url-hygiene-unresolvable-",
+     "trusted-url-hygiene-parked-"
+    ]
    },
    {
     "id": "HSUP42",
@@ -2722,7 +3514,33 @@
   ],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "nzismControlsExcluded": [
+   {
+    "id": "16.3.6.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.3.6.C.02",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.3.7.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.01",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.02",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   },
+   {
+    "id": "16.4.36.C.03",
+    "reason": "16.3.6 bars foreign nationals from privileged access, 16.3.7 covers clearances for cross-classification transfers and 16.4.36 requires a PAM policy; no org configuration finding is evidence on these."
+   }
+  ]
  },
  "visualforce-xss": {
   "scf": [
@@ -2743,6 +3561,19 @@
    {
     "section": "14.5",
     "reason": "14.5.8.C.01: follow OWASP guidance for building secure web applications; escape=\"false\" and unencoded merge fields break its output-encoding rules."
+   },
+   {
+    "section": "14.4",
+    "reason": "14.4.5.C.01: secure programming practices including validating all inputs; 14.4.6.C.01: software reviewed or tested for vulnerabilities before production use. Unescaped merge fields in Visualforce fail both.",
+    "controls": [
+     "14.4.5.C.01",
+     "14.4.6.C.01"
+    ],
+    "findings": [
+     "visualforce-xss-escape-false",
+     "visualforce-xss-attr-merge-field",
+     "visualforce-xss-js-merge-field"
+    ]
    }
   ]
  }

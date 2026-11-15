@@ -1,10 +1,10 @@
-// Rule tests for spec/nz-compliance-crosswalk.md (RULE-120..125; INT-015, MN-063..065).
+// Rule tests for spec/nz-compliance-crosswalk.md (RULE-120..125, RULE-127; INT-015, MN-063..066).
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   CHECK_NZ_CITATIONS, HML_REQUIREMENTS, HSUP_REQUIREMENTS, HSUP_TO_HML, NZISM_SECTIONS, NZISM_SOURCE,
 } from '../../../src/compliance/nz/citations.generated.js';
-import { CHECK_CONTROL_MAP } from '../../../src/compliance/mapping.js';
+import { CHECK_CONTROL_MAP, complianceTagsForFinding } from '../../../src/compliance/mapping.js';
 import { getControl } from '../../../src/compliance/catalogs/index.js';
 import { HISO10029_3_CONTROLS, HISO10029_4_CONTROLS } from '../../../src/compliance/catalogs/hiso10029.js';
 import { NZISM_CONTROLS } from '../../../src/compliance/catalogs/nzism.js';
@@ -24,6 +24,14 @@ describe('RULE-120 every cited id exists in its pinned source', () => {
       expect({ id, ...r }).toEqual({ id, area: SOURCES.hiso3.requirements[id].area, statement: SOURCES.hiso3.requirements[id].statement });
     }
     expect(Object.keys(HSUP_REQUIREMENTS)).toHaveLength(68);
+    // Copied by hand from the published PDFs, so a parser defect cannot pass by agreeing with itself.
+    expect(HSUP_REQUIREMENTS.HSUP34.statement).toBe('User accounts are authenticated and circumventing the authentication process is prevented.');
+    expect(HML_REQUIREMENTS.HML39.statement).toBe('User accounts are authenticated and circumventing the authentication process is prevented.');
+    expect(HML_REQUIREMENTS.HML58.statement).toBe('Organisations developing inhouse systems, applications or services are to maintain separate production and non-production environments.');
+    expect(HML_REQUIREMENTS.HML05.statement).toBe('Asset management process(es) is in place.');
+    for (const [id, r] of [...Object.entries(HSUP_REQUIREMENTS), ...Object.entries(HML_REQUIREMENTS)]) {
+      expect({ id, complete: /[.)]$/.test(r.statement) }).toEqual({ id, complete: true });
+    }
     expect(Object.keys(HML_REQUIREMENTS)).toHaveLength(75);
   });
 
@@ -48,13 +56,14 @@ describe('RULE-120 every cited id exists in its pinned source', () => {
 });
 
 describe('RULE-121 every citation records its basis', () => {
-  it('scf citations are derived by SCF; direct citations carry a reason', () => {
+  it('direct citations carry a reason; scf NZISM citations list their controls', () => {
     for (const [check, c] of Object.entries(CHECK_NZ_CITATIONS)) {
       for (const h of c.hsup) {
-        if (h.basis === 'scf') expect({ check, id: h.id, derived: c.scfDerivedHsup.includes(h.id) }).toEqual({ check, id: h.id, derived: true });
-        else expect({ check, id: h.id, reason: (h.reason ?? '').length > 10 }).toEqual({ check, id: h.id, reason: true });
+        expect(['scf', 'direct']).toContain(h.basis);
+        if (h.basis === 'direct') expect({ check, id: h.id, reason: (h.reason ?? '').length > 10 }).toEqual({ check, id: h.id, reason: true });
       }
       for (const n of c.nzism) {
+        expect(['scf', 'direct']).toContain(n.basis);
         if (n.basis === 'scf') expect((n.controls ?? []).length).toBeGreaterThan(0);
         else expect({ check, section: n.section, reason: (n.reason ?? '').length > 10 }).toEqual({ check, section: n.section, reason: true });
       }
@@ -62,22 +71,35 @@ describe('RULE-121 every citation records its basis', () => {
   });
 });
 
-describe('RULE-122 SCF derivations are cited or excluded with a reason', () => {
-  it('every SCF-derived HSUP is in exactly one of cited or excluded', () => {
-    for (const [check, c] of Object.entries(CHECK_NZ_CITATIONS)) {
-      const cited = new Set(c.hsup.map((h) => h.id));
-      const excluded = new Map<string, string>((MAPPING[check].hsupExcluded ?? []).map((e: any) => [e.id, e.reason]));
-      for (const id of c.scfDerivedHsup) {
-        expect({ check, id, decided: cited.has(id) !== excluded.has(id) }).toEqual({ check, id, decided: true });
-        if (excluded.has(id)) expect((excluded.get(id) ?? '').length).toBeGreaterThan(10);
-      }
+// RULE-122 (every SCF derivation cited or excluded) is enforced by derive_nz_citations.py, which needs
+// the SCF workbook; SCF data is not committed (CC BY-ND 4.0). These tests check the generated file is
+// the one that the committed decisions produce.
+describe('RULE-122 the generated citations match the committed decisions', () => {
+  const byId = (a: any[]): any[] => [...a].sort((x, y) => Number(x.id.slice(4)) - Number(y.id.slice(4)));
+  it('HSUP citations, with basis, reason and scope, match the mapping data', () => {
+    for (const [check, m] of Object.entries(MAPPING)) {
+      expect({ check, scf: CHECK_NZ_CITATIONS[check]?.scf, hsup: CHECK_NZ_CITATIONS[check]?.hsup })
+        .toEqual({ check, scf: m.scf, hsup: byId(m.hsup).map((h: any) => ({ id: h.id, basis: h.basis, ...(h.reason ? { reason: h.reason } : {}), ...(h.findings ? { findings: h.findings } : {}) })) });
     }
   });
 
-  it('the generated file matches the committed mapping decisions', () => {
+  it('NZISM direct citations match, and excluded sections and controls are absent', () => {
     for (const [check, m] of Object.entries(MAPPING)) {
-      expect({ check, scf: CHECK_NZ_CITATIONS[check]?.scf, hsup: CHECK_NZ_CITATIONS[check]?.hsup.map((h) => h.id) })
-        .toEqual({ check, scf: m.scf, hsup: [...m.hsup].map((h: any) => h.id).sort((a: string, b: string) => Number(a.slice(4)) - Number(b.slice(4))) });
+      const cites = CHECK_NZ_CITATIONS[check].nzism;
+      const direct = cites.filter((n) => n.basis === 'direct').map((n) => n.section).sort();
+      expect({ check, direct }).toEqual({ check, direct: (m.nzismDirect ?? []).map((d: any) => d.section).sort() });
+      for (const e of m.nzismExcluded ?? []) {
+        expect({ check, excluded: e.section, cited: cites.some((n) => n.section === e.section && n.basis === 'scf') }).toEqual({ check, excluded: e.section, cited: false });
+      }
+      for (const e of m.nzismControlsExcluded ?? []) {
+        expect({ check, excluded: e.id, cited: cites.some((n) => n.basis === 'scf' && (n.controls ?? []).includes(e.id)) }).toEqual({ check, excluded: e.id, cited: false });
+      }
+      for (const [section, findings] of Object.entries(m.nzismScope ?? {})) {
+        expect({ check, section, findings: cites.find((n) => n.section === section)?.findings }).toEqual({ check, section, findings });
+      }
+      for (const e of [...(m.hsupExcluded ?? []), ...(m.nzismExcluded ?? []), ...(m.nzismControlsExcluded ?? [])]) {
+        expect({ check, reason: (e.reason ?? '').length > 10 }).toEqual({ check, reason: true });
+      }
     }
   });
 });
@@ -118,5 +140,54 @@ describe('RULE-125 every check has a crosswalk entry', () => {
   it('the mapping data and the control map cover the same checks', () => {
     expect(Object.keys(MAPPING).sort()).toEqual(Object.keys(CHECK_CONTROL_MAP).sort());
     expect(Object.keys(CHECK_NZ_CITATIONS).sort()).toEqual(Object.keys(CHECK_CONTROL_MAP).sort());
+  });
+});
+
+describe('RULE-127 HISO and NZISM citations attach per finding', () => {
+  const FEATURES = readFileSync(join(ROOT, 'docs', 'FEATURES.md'), 'utf8');
+  const implOf = (check: string): string => {
+    const m = FEATURES.match(new RegExp(`^\\| \`${check}\` \\|[^|]+\\|[^|]+\\| ([^|]+)\\|`, 'm'));
+    return m ? m[1].trim() : '';
+  };
+  const emitted = (check: string): { ids: string[]; heads: string[] } => {
+    const src = readFileSync(join(ROOT, implOf(check)), 'utf8');
+    return {
+      ids: [...src.matchAll(/\bid:\s*'([a-z0-9][a-z0-9-]*)'/g)].map((x) => x[1]),
+      heads: [...src.matchAll(/\bid:\s*`([a-z0-9-]*)/g)].map((x) => x[1]).filter(Boolean),
+    };
+  };
+
+  it('every finding scope matches a finding id the check can emit', () => {
+    for (const [check, c] of Object.entries(CHECK_NZ_CITATIONS)) {
+      const scopes = [...c.hsup, ...c.nzism].flatMap((x) => x.findings ?? []);
+      if (scopes.length === 0) continue;
+      const { ids, heads } = emitted(check);
+      for (const p of scopes) {
+        const ok = ids.some((id) => id.startsWith(p)) || heads.some((h) => h.startsWith(p) || p.startsWith(h));
+        expect({ check, scope: p, emitted: ok }).toEqual({ check, scope: p, emitted: true });
+      }
+    }
+  });
+
+  it('an INFO finding carries no HISO or NZISM tag', () => {
+    for (const check of Object.keys(CHECK_NZ_CITATIONS)) {
+      const tags = complianceTagsForFinding(check, { id: `${check}-x`, riskLevel: 'INFO' });
+      expect({ check, nz: tags.filter((t) => /^(HISO|NZISM)-/.test(t)) }).toEqual({ check, nz: [] });
+      // every other framework still maps at check level
+      expect(tags).toEqual((CHECK_CONTROL_MAP[check] ?? []).filter((t) => !/^(HISO|NZISM)-/.test(t)));
+    }
+  });
+
+  it('a scoped citation attaches only to the findings it names', () => {
+    for (const [check, c] of Object.entries(CHECK_NZ_CITATIONS)) {
+      c.hsup.forEach((h, i) => {
+        if (!h.findings) return;
+        const named = complianceTagsForFinding(check, { id: h.findings[0], riskLevel: 'HIGH' });
+        const other = complianceTagsForFinding(check, { id: 'zz-not-a-finding', riskLevel: 'HIGH' });
+        expect({ check, id: h.id, named: named.includes(`HISO-${h.id}`), hml: named.includes(`HISO-${c.hml[i]}`) }).toEqual({ check, id: h.id, named: true, hml: true });
+        const unscopedElsewhere = c.hsup.some((x) => x.id === h.id && !x.findings);
+        if (!unscopedElsewhere) expect({ check, id: h.id, other: other.includes(`HISO-${h.id}`) }).toEqual({ check, id: h.id, other: false });
+      });
+    }
   });
 });

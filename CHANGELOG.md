@@ -34,6 +34,12 @@ HISO and NZISM change, so anything that reads them from JSON or SARIF output nee
   the exclusion and its reason are recorded. Every decision is listed in
   `docs/compliance/nz-crosswalk.md`, the rules are in `spec/nz-compliance-crosswalk.md`, and a test
   checks every cited id against the pinned sources.
+- **HISO and NZISM citations attach per finding.** They never attach to an INFO finding, and a
+  citation that only one of a check's findings supports is scoped to that finding. The compliance
+  matrix now counts each finding against its own tags; for every other framework those are the
+  check's tags, so OWASP, SOC 2, ISO 27001, SBS, Privacy Act, HIPAA and GDPR rows are unchanged.
+- **The Agentforce and GenAI checks now carry HISO and NZISM citations**, applying the general
+  access, privileged-access, logging and development requirements to the agent user. They had none.
 - **HISO citation links** point to the two published PDFs; the old link redirected to the Health NZ
   homepage.
 

@@ -28,7 +28,8 @@ export function buildComplianceMatrix(result: AuditResult, frameworks: Framework
   }
   for (const f of active) {
     if (!f.checkId) continue;
-    for (const id of CHECK_CONTROL_MAP[f.checkId] ?? []) {
+    // Per-finding tags: HISO 10029 and NZISM citations can be scoped to some of a check's findings.
+    for (const id of f.complianceTags ?? CHECK_CONTROL_MAP[f.checkId] ?? []) {
       if (hits.has(id)) hits.get(id)!.push(f);
     }
   }

@@ -6,7 +6,7 @@ import type { Finding } from '../findings/Finding.js';
 import type { AuditResult } from '../findings/AuditResult.js';
 import type { ScoringConfig } from '../findings/ScoringConfig.js';
 import { buildAuditResult } from '../findings/scoring.js';
-import { getComplianceTags } from '../compliance/resolve.js';
+import { complianceTagsForFinding } from '../compliance/mapping.js';
 import { threatsFor, withAttack } from '../threats/resolve.js';
 import { ChainEngine } from '../chains/ChainEngine.js';
 import type { WaiverLoader } from '../waivers/WaiverLoader.js';
@@ -116,9 +116,8 @@ export class CheckEngine {
       onProgress?.(i + 1, total, check.name);
       try {
         const result = await check.run(this.ctx);
-        const tags = getComplianceTags(check.id);
         findings.push(...result.findings.map((f) => ({
-          ...f, checkId: check.id, complianceTags: tags, threats: withAttack(f, threatsFor(check.id, f.threats)),
+          ...f, checkId: check.id, complianceTags: complianceTagsForFinding(check.id, f), threats: withAttack(f, threatsFor(check.id, f.threats)),
         })));
         if (result.metrics) {
           metrics = { ...metrics, ...result.metrics };

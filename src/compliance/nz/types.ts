@@ -6,6 +6,7 @@ export interface HsupCitation {
   id: string;            // e.g. 'HSUP34'
   basis: CitationBasis;
   reason?: string;       // required when basis is 'direct'
+  findings?: string[];   // finding id prefixes it applies to; every non-INFO finding when absent
 }
 
 export interface NzismCitation {
@@ -13,6 +14,7 @@ export interface NzismCitation {
   basis: CitationBasis;
   controls?: string[];   // the v3.9 controls SCF maps, when basis is 'scf'
   reason?: string;       // required when basis is 'direct'
+  findings?: string[];   // finding id prefixes it applies to; every non-INFO finding when absent
 }
 
 export interface CheckNzCitations {
@@ -20,5 +22,4 @@ export interface CheckNzCitations {
   hsup: HsupCitation[];      // HISO 10029.4:2025 supplier requirements
   hml: string[];             // HISO 10029.3:2023 equivalents of hsup, in the same order
   nzism: NzismCitation[];    // NZISM v3.9 sections
-  scfDerivedHsup: string[];  // every HSUP SCF derives; each is cited or excluded in the mapping data
 }
