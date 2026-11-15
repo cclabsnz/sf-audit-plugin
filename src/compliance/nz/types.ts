@@ -6,7 +6,7 @@ export interface HsupCitation {
   id: string;            // e.g. 'HSUP34'
   basis: CitationBasis;
   reason?: string;       // required when basis is 'direct'
-  findings?: string[];   // finding id prefixes it applies to; every non-INFO finding when absent
+  findings?: string[];   // finding ids it applies to (a trailing '-' makes a prefix); every active finding when absent
 }
 
 export interface NzismCitation {
@@ -14,7 +14,7 @@ export interface NzismCitation {
   basis: CitationBasis;
   controls?: string[];   // the v3.9 controls SCF maps, when basis is 'scf'
   reason?: string;       // required when basis is 'direct'
-  findings?: string[];   // finding id prefixes it applies to; every non-INFO finding when absent
+  findings?: string[];   // finding ids it applies to (a trailing '-' makes a prefix); every active finding when absent
 }
 
 export interface CheckNzCitations {

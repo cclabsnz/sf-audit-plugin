@@ -1168,10 +1168,6 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
         "level": "Must"
       }
     ]
-  },
-  "23.5": {
-    "title": "Logging and Alerting in Public Cloud",
-    "controls": []
   }
 };
 
@@ -1228,37 +1224,9 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       "AAT-39.20",
       "AAT-36.11"
     ],
-    "hsup": [
-      {
-        "id": "HSUP61",
-        "basis": "direct",
-        "reason": "Applies when the Event Monitoring log is readable and holds no files while agents are active, so agent activity is not 'logged and stored as per the organisation's logging and auditing requirements'. Where the log was not accessible to the audit, logging is unconfirmed rather than absent.",
-        "findings": [
-          "agent-monitoring-coverage-none"
-        ]
-      }
-    ],
-    "hml": [
-      "HML70"
-    ],
-    "nzism": [
-      {
-        "section": "16.6",
-        "basis": "direct",
-        "reason": "Event logging: the readable event log holds no files while agents are active, so agent activity is not logged.",
-        "findings": [
-          "agent-monitoring-coverage-none"
-        ]
-      },
-      {
-        "section": "23.5",
-        "basis": "direct",
-        "reason": "The readable event log of this public cloud service holds no files while agents are active, so its logging capability is not in use.",
-        "findings": [
-          "agent-monitoring-coverage-none"
-        ]
-      }
-    ]
+    "hsup": [],
+    "hml": [],
+    "nzism": []
   },
   "agent-outbound-actions": {
     "scf": [
@@ -1870,7 +1838,7 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "section": "16.1",
         "basis": "direct",
-        "reason": "16.1.40.C.01: automatic logout after inactivity, \"including invalidating any session tokens\"; connected apps without a short session timeout leave OAuth sessions live.",
+        "reason": "16.1.40.C.01: automatic logout after inactivity, which \"includes invalidating any session tokens\"; connected apps without a short session timeout leave OAuth sessions live.",
         "controls": [
           "16.1.40.C.01"
         ],

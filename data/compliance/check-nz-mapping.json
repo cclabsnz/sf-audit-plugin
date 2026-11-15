@@ -57,35 +57,11 @@
    "AAT-36.11"
   ],
   "scfReason": "Active agents with no confirmed Event Monitoring capture and no Transaction Security policy: agent activity may not be logged (unconfirmed where the event log is not readable) and has no real-time intervention.",
-  "hsup": [
-   {
-    "id": "HSUP61",
-    "basis": "direct",
-    "reason": "Applies when the Event Monitoring log is readable and holds no files while agents are active, so agent activity is not 'logged and stored as per the organisation's logging and auditing requirements'. Where the log was not accessible to the audit, logging is unconfirmed rather than absent.",
-    "findings": [
-     "agent-monitoring-coverage-none"
-    ]
-   }
-  ],
+  "hsup": [],
   "hsupExcluded": [],
   "nzismExcluded": [],
-  "nzismDirect": [
-   {
-    "section": "16.6",
-    "reason": "Event logging: the readable event log holds no files while agents are active, so agent activity is not logged.",
-    "findings": [
-     "agent-monitoring-coverage-none"
-    ]
-   },
-   {
-    "section": "23.5",
-    "reason": "The readable event log of this public cloud service holds no files while agents are active, so its logging capability is not in use.",
-    "findings": [
-     "agent-monitoring-coverage-none"
-    ]
-   }
-  ],
-  "note": "HISO 10029.4:2025 predates agentic AI and has no agent-specific requirement; the cited ids are the general access, design or logging requirements the finding evidences, applied to the agent as a non-human service identity. The none finding also fires when the event log is not accessible to the audit user (accessible === false); the finding id cannot separate that case, so the HSUP61, 16.6 and 23.5 citations are unconfirmed when the detail says the log was not accessible."
+  "nzismDirect": [],
+  "note": "No logging citation: the check reports the same finding when the event log holds no files and when the audit cannot read it, so it cannot show that agent activity is not logged. A separate finding for the unreadable case would let HSUP61 and NZISM 16.6 apply to the empty-log case."
  },
  "agent-outbound-actions": {
   "scf": [
@@ -634,7 +610,7 @@
    },
    {
     "section": "16.1",
-    "reason": "16.1.40.C.01: automatic logout after inactivity, \"including invalidating any session tokens\"; connected apps without a short session timeout leave OAuth sessions live.",
+    "reason": "16.1.40.C.01: automatic logout after inactivity, which \"includes invalidating any session tokens\"; connected apps without a short session timeout leave OAuth sessions live.",
     "controls": [
      "16.1.40.C.01"
     ],

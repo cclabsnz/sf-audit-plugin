@@ -277,8 +277,9 @@ def write_docs(body, mapping, src):
            'Each check\'s SCF 2026.3 controls, the HISO 10029.4 (HSUP) requirements it cites with their HISO 10029.3',
            '(HML) pair, and the NZISM v3.9 sections it cites. `scf` = derived from the Secure Controls Framework',
            'crosswalk; `direct` = sf-audit\'s judgement, with the reason. SCF-derived requirements that were excluded',
-           'are listed with the reason. A citation marked "only on" applies to those findings alone. No HISO or',
-           'NZISM citation attaches to an INFO finding. The rules are in `spec/nz-compliance-crosswalk.md`.', '']
+           'are listed with the reason. A citation marked "only on" applies to those findings alone (an id ending in',
+           '`-` is a prefix). HISO and NZISM citations attach only to active findings, never to INFO, passed or',
+           'inconclusive ones. The rules are in `spec/nz-compliance-crosswalk.md`.', '']
     for check, c in cites.items():
         m = mapping[check]
         out += [f'## `{check}`', '', f"SCF: {', '.join(c['scf']) or 'none'}. {cell(m['scfReason'])}", '']

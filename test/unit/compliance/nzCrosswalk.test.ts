@@ -86,8 +86,12 @@ describe('RULE-122 the generated citations match the committed decisions', () =>
   it('NZISM direct citations match, and excluded sections and controls are absent', () => {
     for (const [check, m] of Object.entries(MAPPING)) {
       const cites = CHECK_NZ_CITATIONS[check].nzism;
-      const direct = cites.filter((n) => n.basis === 'direct').map((n) => n.section).sort();
-      expect({ check, direct }).toEqual({ check, direct: (m.nzismDirect ?? []).map((d: any) => d.section).sort() });
+      const pick = (n: any): any => ({ section: n.section, reason: n.reason, controls: n.controls, findings: n.findings });
+      const bySec = (a: any[]): any[] => [...a].map(pick).sort((x, y) => x.section.localeCompare(y.section) || String(x.controls).localeCompare(String(y.controls)));
+      expect({ check, direct: bySec(cites.filter((n) => n.basis === 'direct')) }).toEqual({ check, direct: bySec(m.nzismDirect ?? []) });
+      for (const n of cites.filter((x) => x.basis === 'scf')) {
+        expect({ check, section: n.section, findings: n.findings }).toEqual({ check, section: n.section, findings: (m.nzismScope ?? {})[n.section] });
+      }
       for (const e of m.nzismExcluded ?? []) {
         expect({ check, excluded: e.section, cited: cites.some((n) => n.section === e.section && n.basis === 'scf') }).toEqual({ check, excluded: e.section, cited: false });
       }
@@ -163,10 +167,23 @@ describe('RULE-127 HISO and NZISM citations attach per finding', () => {
       if (scopes.length === 0) continue;
       const { ids, heads } = emitted(check);
       for (const p of scopes) {
-        const ok = ids.some((id) => id.startsWith(p)) || heads.some((h) => h.startsWith(p) || p.startsWith(h));
+        // exact ids; a scope ending in '-' is a prefix, for ids built from a template
+        const ok = ids.includes(p) || (p.endsWith('-') && (ids.some((id) => id.startsWith(p)) || heads.some((h) => h.startsWith(p) || p.startsWith(h))));
         expect({ check, scope: p, emitted: ok }).toEqual({ check, scope: p, emitted: true });
       }
     }
+  });
+
+  it('passed and inconclusive findings carry no HISO or NZISM tag', () => {
+    for (const check of Object.keys(CHECK_NZ_CITATIONS)) {
+      for (const flag of [{ passed: true }, { inconclusive: true }]) {
+        const tags = complianceTagsForFinding(check, { id: `${check}-x`, riskLevel: 'HIGH', ...flag });
+        expect({ check, flag, nz: tags.filter((t) => /^(HISO|NZISM)-/.test(t)) }).toEqual({ check, flag, nz: [] });
+      }
+    }
+    // an exact scope does not match a longer id that shares its prefix
+    const tags = complianceTagsForFinding('permissions', { id: 'permissions-api-enabled-ok', riskLevel: 'LOW' });
+    expect(tags.filter((t) => t.startsWith('HISO-'))).toEqual([]);
   });
 
   it('an INFO finding carries no HISO or NZISM tag', () => {

@@ -2,7 +2,7 @@
 
 Controls marked verified have been checked against an authoritative source. Unverified controls stay excluded from rendered reports (provenance gate).
 
-Total controls: 180 · Verified: 180
+Total controls: 179 · Verified: 179
 
 ## OWASP — OWASP Top 10:2021 (9/9 verified)
 
@@ -164,7 +164,7 @@ Requirement ids and statements checked against the published PDFs by `test/unit/
 | [x] | HISO-HSUP61 | HSUP61 Logging and monitoring | HISO 10029.4:2025, HSUP61 |
 | [x] | HISO-HSUP67 | HSUP67 Third-Party Management | HISO 10029.4:2025, HSUP67 |
 
-## NZISM — NZISM v3.9 (19/19 verified)
+## NZISM — NZISM v3.9 (18/18 verified)
 
 Requirement ids and statements checked against the published PDFs by `test/unit/compliance/nzCrosswalk.test.ts`; which checks cite each one is in [nz-crosswalk.md](nz-crosswalk.md).
 
@@ -188,7 +188,6 @@ Requirement ids and statements checked against the published PDFs by `test/unit/
 | [x] | NZISM-21.1 | 21.1 Data Transfers | NZISM v3.9, 21.1 |
 | [x] | NZISM-23.3 | 23.3 Identity Management and Access Control | NZISM v3.9, 23.3 |
 | [x] | NZISM-23.4 | 23.4 Data Protection in Public Cloud | NZISM v3.9, 23.4 |
-| [x] | NZISM-23.5 | 23.5 Logging and Alerting in Public Cloud | NZISM v3.9, 23.5 |
 
 ## HIPAA — 45 CFR Part 164 Subpart C (HIPAA Security Rule, 2013 Omnibus) (18/18 verified)
 

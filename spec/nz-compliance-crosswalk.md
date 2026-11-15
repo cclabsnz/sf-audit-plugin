@@ -63,4 +63,4 @@ cites: INT-015, MN-066
 ## RULE-127 HISO and NZISM citations attach per finding
 cites: INT-015, MN-066
 - When a check emits a finding
-- then the finding carries the check's HISO and NZISM citations only if it is not INFO, and a citation scoped to named findings (`findings`: id prefixes) attaches only to those; every scope prefix matches a finding id the check can emit, and every other framework still maps at check level
+- then the finding carries the check's HISO and NZISM citations only if it is active (not INFO, passed or inconclusive), and a citation scoped to named findings (`findings`: exact ids, or a prefix ending in `-` for template ids) attaches only to those; every scope prefix matches a finding id the check can emit, and every other framework still maps at check level

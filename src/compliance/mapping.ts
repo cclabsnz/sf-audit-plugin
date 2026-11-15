@@ -187,14 +187,19 @@ const NZ_CROSSWALK: Array<{ controls: string[]; checks: readonly string[] }> = [
 // crosswalk (scripts/compliance/derive_nz_citations.py). Each HSUP citation also cites its
 // HISO 10029.3 HML equivalent, so a provider and a supplier each see the part that applies to them.
 // A citation may be scoped to some of the check's findings; `finding` filters to the ones that apply.
-interface FindingRef { id: string; riskLevel: string }
+interface FindingRef { id: string; riskLevel: string; passed?: boolean; inconclusive?: boolean }
 
 const isNzId = (id: string): boolean => id.startsWith('HISO-') || id.startsWith('NZISM-');
 
+// A scope entry names one finding id exactly; one ending in '-' names every id it prefixes (for ids
+// built from a template, such as `trusted-url-hygiene-parked-${domain}`). Exact by default, so
+// `permissions-api-enabled` does not also match the passed `permissions-api-enabled-ok`.
+const inScope = (id: string, p: string): boolean => (p.endsWith('-') ? id.startsWith(p) : id === p);
+
 function appliesTo(findings: readonly string[] | undefined, finding: FindingRef | undefined): boolean {
   if (!finding) return true;
-  if (finding.riskLevel === 'INFO') return false;
-  return !findings || findings.some((p) => finding.id === p || finding.id.startsWith(p));
+  if (finding.riskLevel === 'INFO' || finding.passed || finding.inconclusive) return false;
+  return !findings || findings.some((p) => inScope(finding.id, p));
 }
 
 function nzCitationIds(check: string, finding?: FindingRef): string[] {
@@ -292,8 +297,8 @@ export const CHECK_CONTROL_MAP: Record<string, string[]> = buildCheckControlMap(
 
 /**
  * The control ids one finding carries. Every framework but HISO 10029 and NZISM maps at check level,
- * so those ids are the check's. HISO and NZISM citations attach only to non-INFO findings, and only to
- * the findings a scoped citation names (spec/nz-compliance-crosswalk.md, RULE-127).
+ * so those ids are the check's. HISO and NZISM citations attach only to active findings (not INFO, passed
+ * or inconclusive), and only to the findings a scoped citation names (spec/nz-compliance-crosswalk.md, RULE-127).
  */
 export function complianceTagsForFinding(checkId: string, finding: FindingRef): string[] {
   const base = (CHECK_CONTROL_MAP[checkId] ?? []).filter((id) => !isNzId(id));
