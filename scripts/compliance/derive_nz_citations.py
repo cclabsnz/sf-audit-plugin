@@ -43,8 +43,16 @@ KNOWN_SCF_NZISM_ERRORS = {
 }
 
 
+def download_scf():
+    # SCF_URL is a constant https URL pinned to a commit, and the hash check below rejects anything else.
+    if not SCF_URL.startswith('https://raw.githubusercontent.com/'):
+        sys.exit(f'refusing to download SCF from {SCF_URL}')
+    with urllib.request.urlopen(SCF_URL, timeout=120) as r:  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
+        return r.read()
+
+
 def load_scf(path):
-    data = open(path, 'rb').read() if path else urllib.request.urlopen(SCF_URL, timeout=120).read()
+    data = open(path, 'rb').read() if path else download_scf()
     digest = hashlib.sha256(data).hexdigest()
     if digest != SCF_SHA256:
         sys.exit(f'SCF file hash {digest} does not match the pinned {SCF_SHA256}')
