@@ -2037,18 +2037,8 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       "IAC-25",
       "DCH-32"
     ],
-    "hsup": [
-      {
-        "id": "HSUP09",
-        "basis": "scf",
-        "findings": [
-          "data-cloud-data-space-default-overshared"
-        ]
-      }
-    ],
-    "hml": [
-      "HML10"
-    ],
+    "hsup": [],
+    "hml": [],
     "nzism": []
   },
   "data-export-access": {
@@ -2151,28 +2141,8 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       "CRY-05",
       "IAC-10"
     ],
-    "hsup": [
-      {
-        "id": "HSUP32",
-        "basis": "direct",
-        "reason": "HSUP32 guidance: data in transit secured using 'transport layer security (TLS)'; a delegated authentication gateway URL that starts with http:// sends credentials unencrypted",
-        "findings": [
-          "delegated-authentication-insecure-gateway"
-        ]
-      },
-      {
-        "id": "HSUP34",
-        "basis": "direct",
-        "reason": "HSUP34 statement: 'User accounts are authenticated and circumventing the authentication process is prevented'; a delegated authentication gateway over http:// sends credentials in clear text and accepts an unsigned boolean response that can be spoofed in transit",
-        "findings": [
-          "delegated-authentication-insecure-gateway"
-        ]
-      }
-    ],
-    "hml": [
-      "HML37",
-      "HML39"
-    ],
+    "hsup": [],
+    "hml": [],
     "nzism": [
       {
         "section": "16.1",
@@ -2194,17 +2164,6 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "controls": [
           "16.4.37.C.01",
           "16.4.37.C.03"
-        ]
-      },
-      {
-        "section": "17.1",
-        "basis": "direct",
-        "reason": "17.1.55.C.03: agencies 'MUST encrypt aggregated agency data using an approved algorithm and protocol over insecure or unprotected networks'; a gateway over http:// sends credentials unencrypted",
-        "controls": [
-          "17.1.55.C.03"
-        ],
-        "findings": [
-          "delegated-authentication-insecure-gateway"
         ]
       }
     ]
@@ -3580,7 +3539,11 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       {
         "id": "HSUP34",
         "basis": "direct",
-        "reason": "HSUP34 statement: 'circumventing the authentication process is prevented'; allowing login via login.salesforce.com or username-password lets users go around the org's SSO/login policy (guidance recommends SSO at an organisational level)"
+        "reason": "HSUP34 statement: 'circumventing the authentication process is prevented'; allowing login via login.salesforce.com or username-password lets users go around the org's SSO/login policy (guidance recommends SSO at an organisational level)",
+        "findings": [
+          "my-domain-not-configured",
+          "my-domain-password-login-allowed"
+        ]
       }
     ],
     "hml": [
@@ -4413,22 +4376,8 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       "MON-05",
       "MON-05.4"
     ],
-    "hsup": [
-      {
-        "id": "HSUP45",
-        "basis": "direct",
-        "reason": "HSUP45 guidance: \"centralised visibility is to be provided to the security teams via logging and monitoring activities\" for the multi-tenant cloud service."
-      },
-      {
-        "id": "HSUP61",
-        "basis": "direct",
-        "reason": "HSUP61 guidance: \"Logs are to be aggregated, correlated, and reviewed\" and \"transferring logs centrally through encrypted mechanisms separate systems (e.g., SIEM solution)\"; no SIEM signal means Salesforce logs are not centrally collected."
-      }
-    ],
-    "hml": [
-      "HML53",
-      "HML70"
-    ],
+    "hsup": [],
+    "hml": [],
     "nzism": [
       {
         "section": "16.6",

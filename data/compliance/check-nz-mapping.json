@@ -836,19 +836,16 @@
    "DCH-32"
   ],
   "scfReason": "External or agent users may reach the default Data Space (a name-based signal), so data access is not restricted to the intended data spaces.",
-  "hsup": [
+  "hsup": [],
+  "hsupExcluded": [
    {
     "id": "HSUP09",
-    "basis": "scf",
-    "findings": [
-     "data-cloud-data-space-default-overshared"
-    ]
+    "reason": "The default-space finding is a name heuristic that asks for confirmation, so it does not show access rules are unmet."
    }
   ],
-  "hsupExcluded": [],
   "nzismExcluded": [],
   "nzismDirect": [],
-  "note": "The outbound data share finding lists active outbound shares for review; it does not show a missing control, so it carries no HISO citation. HSUP09 applies to the default-space finding only, which is a name heuristic and should be confirmed."
+  "note": "No HISO citation. The default-space finding is a name heuristic that asks the reader to confirm which data spaces the matched permission sets grant, and the outbound data share finding is a review list. Neither shows a missing control."
  },
  "data-export-access": {
   "scf": [
@@ -942,25 +939,8 @@
    "CRY-05",
    "IAC-10"
   ],
-  "scfReason": "Delegated Authentication over a plain-HTTP gateway, or applied to System Administrator profiles, shows the authentication channel is not encrypted and privileged sign-in depends on an external check.",
-  "hsup": [
-   {
-    "id": "HSUP34",
-    "basis": "direct",
-    "reason": "HSUP34 statement: 'User accounts are authenticated and circumventing the authentication process is prevented'; a delegated authentication gateway over http:// sends credentials in clear text and accepts an unsigned boolean response that can be spoofed in transit",
-    "findings": [
-     "delegated-authentication-insecure-gateway"
-    ]
-   },
-   {
-    "id": "HSUP32",
-    "basis": "direct",
-    "reason": "HSUP32 guidance: data in transit secured using 'transport layer security (TLS)'; a delegated authentication gateway URL that starts with http:// sends credentials unencrypted",
-    "findings": [
-     "delegated-authentication-insecure-gateway"
-    ]
-   }
-  ],
+  "scfReason": "Delegated Authentication applied to System Administrator profiles means privileged sign-in depends on an external gateway's unsigned yes or no.",
+  "hsup": [],
   "hsupExcluded": [
    {
     "id": "HSUP36",
@@ -973,18 +953,7 @@
     "reason": "17.1.57.C.01 is scoped to NZEO information; 17.1.55.C.03 is cited directly instead."
    }
   ],
-  "nzismDirect": [
-   {
-    "section": "17.1",
-    "reason": "17.1.55.C.03: agencies 'MUST encrypt aggregated agency data using an approved algorithm and protocol over insecure or unprotected networks'; a gateway over http:// sends credentials unencrypted",
-    "controls": [
-     "17.1.55.C.03"
-    ],
-    "findings": [
-     "delegated-authentication-insecure-gateway"
-    ]
-   }
-  ],
+  "nzismDirect": [],
   "nzismControlsExcluded": [
    {
     "id": "16.3.6.C.01",
@@ -1015,7 +984,7 @@
     "reason": "These need a privileged access management policy to exist; the check does not read one."
    }
   ],
-  "note": "The check does not test mutual TLS. The insecure-gateway finding fires only on a non-HTTPS gateway URL; a blank URL is a separate MEDIUM finding with no citation, because it does not show credentials leave unencrypted."
+  "note": "No citation. The gateway URL is not exposed through a documented API, so the check cannot show credentials travel unencrypted, and admins signing in through a delegated gateway is not unauthorised privileged access (HSUP36 excluded)."
  },
  "deployment-identity": {
   "scf": [
@@ -2353,7 +2322,11 @@
    {
     "id": "HSUP34",
     "basis": "direct",
-    "reason": "HSUP34 statement: 'circumventing the authentication process is prevented'; allowing login via login.salesforce.com or username-password lets users go around the org's SSO/login policy (guidance recommends SSO at an organisational level)"
+    "reason": "HSUP34 statement: 'circumventing the authentication process is prevented'; allowing login via login.salesforce.com or username-password lets users go around the org's SSO/login policy (guidance recommends SSO at an organisational level)",
+    "findings": [
+     "my-domain-not-configured",
+     "my-domain-password-login-allowed"
+    ]
    }
   ],
   "hsupExcluded": [],
@@ -2363,7 +2336,8 @@
     "reason": "16.1.32.C.01, the only derived control, covers stored authentication data, not SSO."
    }
   ],
-  "nzismDirect": []
+  "nzismDirect": [],
+  "note": "HSUP34 applies to a missing My Domain or one that allows password login. An unreadable or empty AuthConfig is inconclusive and carries no citation."
  },
  "named-credentials": {
   "scf": [
@@ -3225,22 +3199,11 @@
    "MON-05.4"
   ],
   "scfReason": "No sign of SIEM or external monitoring integration shows Salesforce event logs are not centrally collected or analysed in near real time.",
-  "hsup": [
-   {
-    "id": "HSUP61",
-    "basis": "direct",
-    "reason": "HSUP61 guidance: \"Logs are to be aggregated, correlated, and reviewed\" and \"transferring logs centrally through encrypted mechanisms separate systems (e.g., SIEM solution)\"; no SIEM signal means Salesforce logs are not centrally collected."
-   },
-   {
-    "id": "HSUP45",
-    "basis": "direct",
-    "reason": "HSUP45 guidance: \"centralised visibility is to be provided to the security teams via logging and monitoring activities\" for the multi-tenant cloud service."
-   }
-  ],
+  "hsup": [],
   "hsupExcluded": [],
   "nzismExcluded": [],
   "nzismDirect": [],
-  "note": "The check infers SIEM presence from vendor and purpose names on integration users, apps and named credentials, so a SIEM that collects through a generic integration user leaves no signal. The not-detected finding is MEDIUM and says to confirm before relying on it, and the HSUP61 and HSUP45 citations carry the same caveat.",
+  "note": "No HISO citation. The check finds a SIEM only by vendor and purpose names, so a SIEM collecting through a generic integration user leaves no signal, and the not-detected finding asks for confirmation rather than showing logs are not collected.",
   "nzismControlsExcluded": [
    {
     "id": "16.6.11.C.01",

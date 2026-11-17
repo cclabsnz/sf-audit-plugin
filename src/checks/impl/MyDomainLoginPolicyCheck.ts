@@ -87,7 +87,9 @@ export class MyDomainLoginPolicyCheck implements SecurityCheck {
         findings.push({
           id: 'my-domain-auth-config-empty',
           category: this.category,
-          riskLevel: 'MEDIUM',
+          // Unread, not a failure: no row says nothing about what the login policy is.
+          riskLevel: 'INFO',
+          inconclusive: true,
           title: 'No active My Domain AuthConfig found: My Domain login policy unverified',
           detail:
             'No active AuthConfig of type Org was returned, so the My Domain login policy (which controls whether users can log in with Salesforce credentials or must use SSO) could not be read. The login policy may allow credential-based login even when SSO is configured.',

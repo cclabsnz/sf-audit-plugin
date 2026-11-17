@@ -24,7 +24,7 @@
     "chain/undetected-compromise": "named:MEDIUM",
     "chain/xss-to-privileged-session": "named:HIGH",
     "classic-sites/classic-sites-active": "open:HIGH",
-    "code-security/code-coverage": "open:HIGH",
+    "code-security/code-coverage": "open:MEDIUM",
     "connected-app-inactivity/connected-app-inactive": "open:LOW",
     "connected-app-scope/connected-app-infinite-refresh-token": "open:MEDIUM",
     "connected-apps/connected-apps-long-session-timeout": "open:MEDIUM",

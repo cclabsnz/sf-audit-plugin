@@ -38,10 +38,10 @@ export class CodeSecurityCheck implements SecurityCheck {
     if (coverageResults.length > 0) {
       const coverage = coverageResults[0].PercentCovered;
 
+      // Coverage is a deployment gate and a code-quality measure, not a security control, and the
+      // org-wide figure reflects the last test run. Below 75% blocks deploying changed Apex.
       let riskLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO' = 'LOW';
       if (coverage < 75) {
-        riskLevel = 'HIGH';
-      } else if (coverage < 85) {
         riskLevel = 'MEDIUM';
       }
 
@@ -50,7 +50,7 @@ export class CodeSecurityCheck implements SecurityCheck {
         category: this.category,
         riskLevel,
         title: `Apex test coverage: ${coverage}%`,
-        detail: `Org-wide Apex test coverage is ${coverage}%. Salesforce requires 75% minimum to deploy but higher coverage indicates better code quality and security.`,
+        detail: `Org-wide Apex test coverage is ${coverage}%, from the most recent test runs. Salesforce requires 75% to deploy Apex to production, so below that a security fix to Apex cannot ship until tests are added. Coverage measures how much code tests run, not whether the code is secure.`,
         remediation: 'Increase test coverage, particularly for security-sensitive Apex classes handling authentication, data access, and external integrations.',
       });
     } else {

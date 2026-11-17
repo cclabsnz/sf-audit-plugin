@@ -198,7 +198,6 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'flow-http-callout-uncredentialed-endpoint':   { grants: ['external-egress'] },
   'oauth-password-flow-enabled':                 { grants: ['credential-theft'], techniques: { 'credential-theft': ['T1110.003'] } },
   'delegated-authentication-admin-assigned':     { grants: ['org-takeover'], techniques: { 'org-takeover': ['T1556.007'] } },
-  'delegated-authentication-insecure-gateway':   { grants: ['org-takeover'], techniques: { 'org-takeover': ['T1556.007'] } },
   'delegated-administration-groups-active':      { grants: ['priv-esc'] },
   'auth-provider-registration-handler-admin-exec': { grants: ['priv-esc', 'org-takeover'], techniques: { 'priv-esc': ['T1546'] } },
   'auth-provider-registration-handler-unverified-email-linking': { grants: ['priv-esc', 'org-takeover'], techniques: { 'priv-esc': ['T1078.004'] } },

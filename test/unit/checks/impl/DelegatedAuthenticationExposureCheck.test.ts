@@ -2,7 +2,7 @@ import { jest } from '@jest/globals';
 import { DelegatedAuthenticationExposureCheck } from '../../../../src/checks/impl/DelegatedAuthenticationExposureCheck.js';
 import type { AuditContext } from '@cclabsnz/sf-core';
 
-function makeCtx(metaSettings: any, profiles: any[] = [], ssoFieldPresent = true): AuditContext {
+function makeCtx(profiles: any[] = [], ssoFieldPresent = true): AuditContext {
   const profileFields = ['Id', 'Name', ...(ssoFieldPresent ? ['PermissionsIsSsoEnabled'] : [])];
   return {
     soql: {
@@ -13,7 +13,7 @@ function makeCtx(metaSettings: any, profiles: any[] = [], ssoFieldPresent = true
       get: (jest.fn() as any).mockResolvedValue({ fields: profileFields.map((name) => ({ name })) }),
     } as any,
     metadata: {
-      read: (jest.fn() as any).mockResolvedValue(metaSettings),
+      read: (jest.fn() as any).mockResolvedValue(null),
     } as any,
     orgInfo: {
       id: '00D000000000001',
@@ -30,117 +30,48 @@ function makeCtx(metaSettings: any, profiles: any[] = [], ssoFieldPresent = true
 describe('DelegatedAuthenticationExposureCheck', () => {
   const check = new DelegatedAuthenticationExposureCheck();
 
-  it('passes when Delegated Authentication is disabled and not assigned', async () => {
-    const ctx = makeCtx({ singleSignOnSettings: { isDelegatedAuthEnabled: false } }, []);
+  it('passes, without querying Profile, when the org has no delegated-auth permission field', async () => {
+    const ctx = makeCtx([], false);
     const r = await check.run(ctx);
+    expect((ctx.soql.queryAll as any).mock.calls).toHaveLength(0);
     expect(r.findings).toHaveLength(1);
-    expect(r.findings[0].id).toBe('delegated-authentication-exposure-ok');
-    expect(r.findings[0].passed).toBe(true);
-  });
-
-  it('flags unencrypted/insecure gateway endpoint', async () => {
-    const ctx = makeCtx(
-      {
-        singleSignOnSettings: {
-          isDelegatedAuthEnabled: true,
-          delegatedGatewayUrl: 'http://auth.corp.local/services/auth',
-        },
-      },
-      []
-    );
-    const r = await check.run(ctx);
-    const f = r.findings.find((x) => x.id === 'delegated-authentication-insecure-gateway');
-    expect(f).toBeDefined();
-    expect(f?.riskLevel).toBe('CRITICAL');
-  });
-
-  it('reports a blank gateway URL as a missing gateway, not as an unencrypted one', async () => {
-    const ctx = makeCtx({ singleSignOnSettings: { isDelegatedAuthEnabled: true, delegatedGatewayUrl: '' } }, []);
-    const r = await check.run(ctx);
-    expect(r.findings.map((f) => f.id)).toEqual(['delegated-authentication-gateway-missing']);
-    expect(r.findings[0].riskLevel).toBe('MEDIUM');
-  });
-
-  it('does not claim to have tested mutual TLS', async () => {
-    const ctx = makeCtx(
-      { singleSignOnSettings: { isDelegatedAuthEnabled: true, delegatedGatewayUrl: 'http://auth.corp.local' } },
-      [],
-    );
-    const f = (await check.run(ctx)).findings.find((x) => x.id === 'delegated-authentication-insecure-gateway')!;
-    expect(`${f.title} ${f.detail}`).not.toMatch(/mutual TLS|mTLS/i);
-  });
-
-  it('passes an HTTPS gateway regardless of scheme case', async () => {
-    const ctx = makeCtx({ singleSignOnSettings: { isDelegatedAuthEnabled: true, delegatedGatewayUrl: 'HTTPS://sso.example.com' } }, []);
-    const r = await check.run(ctx);
-    expect(r.findings.map((f) => f.id)).toEqual(['delegated-authentication-exposure-ok']);
+    expect(r.findings[0]).toMatchObject({ id: 'delegated-authentication-exposure-ok', passed: true });
   });
 
   it('flags Delegated Authentication assigned to Administrator profiles', async () => {
-    const ctx = makeCtx(
-      {
-        singleSignOnSettings: {
-          isDelegatedAuthEnabled: true,
-          delegatedGatewayUrl: 'https://auth.corp.local/services/auth',
-        },
-      },
-      [
-        {
-          Id: '00eAdmin',
-          Name: 'System Administrator',
-          PermissionsIsSingleSignOnEnabled: true,
-        },
-      ]
-    );
+    const ctx = makeCtx([{ Id: '00eAdmin', Name: 'System Administrator', PermissionsIsSsoEnabled: true }]);
     const r = await check.run(ctx);
     const f = r.findings.find((x) => x.id === 'delegated-authentication-admin-assigned');
-    expect(f).toBeDefined();
     expect(f?.riskLevel).toBe('CRITICAL');
   });
 
-  it('gives an advisory, not a pass, when there is no Metadata client', async () => {
-    const ctx = makeCtx(null, []);
-    (ctx as any).metadata = undefined;
+  // The gateway URL is not in any documented API, so the check never claims to have read it.
+  it('asks for the gateway to be verified by hand, and never passes, when the permission exists', async () => {
+    const ctx = makeCtx([{ Id: '00eB', Name: 'Standard User', PermissionsIsSsoEnabled: true }]);
     const r = await check.run(ctx);
+    expect(r.findings.map((f) => f.id)).toEqual(['delegated-authentication-advisory']);
+    expect(r.findings[0].riskLevel).toBe('INFO');
+    expect(r.findings[0].detail).toMatch(/cannot check/);
     expect(r.findings.some((f) => f.passed)).toBe(false);
-    expect(r.findings.map((f) => f.id)).toEqual(['delegated-authentication-advisory']);
   });
 
-  it('gives an advisory, not silence, when the settings read fails and admins hold SSO', async () => {
-    const ctx = makeCtx(null, [{ Id: '00eA', Name: 'System Administrator', PermissionsIsSingleSignOnEnabled: true }]);
-    (ctx.metadata as any).read = (jest.fn() as any).mockRejectedValue(new Error('INSUFFICIENT_ACCESS'));
-    const r = await check.run(ctx);
-    expect(r.findings.map((f) => f.id)).toEqual(['delegated-authentication-advisory']);
-    expect(r.findings[0].detail).toContain('1 administrator profile');
-  });
-
-  it('passes, rather than emitting nothing, when enabled over HTTPS with no admin profiles', async () => {
-    const ctx = makeCtx(
-      { singleSignOnSettings: { isDelegatedAuthEnabled: true, delegatedGatewayUrl: 'https://sso.example.com/auth' } },
-      [{ Id: '00eB', Name: 'Standard User', PermissionsIsSingleSignOnEnabled: true }],
-    );
-    const r = await check.run(ctx);
-    expect(r.findings.map((f) => f.id)).toEqual(['delegated-authentication-exposure-ok']);
+  it('does not read SecuritySettings, which documents no delegated-auth flag or gateway URL', async () => {
+    const ctx = makeCtx([]);
+    await check.run(ctx);
+    expect((ctx.metadata!.read as any).mock.calls).toHaveLength(0);
   });
 
   it('propagates a permission error on Profile instead of passing', async () => {
-    const ctx = makeCtx({ singleSignOnSettings: { isDelegatedAuthEnabled: false } });
+    const ctx = makeCtx();
     (ctx.soql as any).queryAll = (jest.fn() as any).mockRejectedValue(new Error('INSUFFICIENT_ACCESS'));
     await expect(check.run(ctx)).rejects.toThrow('INSUFFICIENT_ACCESS');
   });
 
   it('queries the real permission field name, PermissionsIsSsoEnabled', async () => {
-    const ctx = makeCtx({ singleSignOnSettings: { isDelegatedAuthEnabled: true, delegatedGatewayUrl: 'https://gw' } });
+    const ctx = makeCtx();
     await check.run(ctx);
     const q = (ctx.soql.queryAll as any).mock.calls[0][0] as string;
     expect(q).toContain('PermissionsIsSsoEnabled = true');
     expect(q).not.toContain('PermissionsIsSingleSignOnEnabled');
-  });
-
-  it('does not query Profile when the org has no delegated-auth permission field', async () => {
-    const ctx = makeCtx({ singleSignOnSettings: { isDelegatedAuthEnabled: false } }, [], false);
-    const r = await check.run(ctx);
-    expect((ctx.soql.queryAll as any).mock.calls).toHaveLength(0);
-    expect(r.findings[0].id).toBe('delegated-authentication-exposure-ok');
   });
 });

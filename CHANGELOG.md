@@ -14,9 +14,12 @@ grades can improve without any change in the org. Two finding ids are new and on
 
 ### Fixed
 
-- **delegated-authentication-exposure:** a blank gateway URL no longer raises the CRITICAL
-  unencrypted-gateway finding. It is a new MEDIUM finding, `delegated-authentication-gateway-missing`.
-  The titles no longer claim mutual TLS is missing, which the check never tested.
+- **delegated-authentication-exposure:** the check read two SecuritySettings fields that the Metadata
+  API does not document, so it never knew whether Delegated Authentication was on and its gateway
+  findings could not fire. It now uses the "Is Single Sign-On Enabled" permission, which exists only
+  where Salesforce has enabled Delegated Authentication: it passes when the permission is absent,
+  keeps the CRITICAL finding for administrator profiles that hold it, and otherwise asks for the
+  gateway to be verified by hand (INFO). `delegated-authentication-insecure-gateway` is removed.
 - **trusted-ip-ranges:** trusted IP ranges skip the identity verification (device activation)
   challenge, not MFA, and only for logins that do not use MFA or strong SSO. The findings now say so.
   `trusted-ip-broad-ranges` HIGH to MEDIUM, or LOW when the ranges exceed the 16,777,216 addresses
@@ -54,16 +57,22 @@ grades can improve without any change in the org. Two finding ids are new and on
 - **threat-detection:** empty Threat Detection stores look the same whether the org had no anomalies
   or storage is switched off, which the audit cannot read. `threat-detection-inactive` is now
   inconclusive INFO (was MEDIUM) and no longer feeds detection-gap chains.
-- **agent-outbound-actions** and **deployment-identity:** findings that only say a setting could not be
-  read are INFO and inconclusive (were MEDIUM). The SalesBleed chain no longer fires on the
+- **agent-outbound-actions**, **deployment-identity** and **my-domain-login-policy:** findings that only
+  say a setting could not be read are INFO and inconclusive (were MEDIUM). The SalesBleed chain no longer fires on the
   unverified outbound variant.
 
 ### Changed
 
+- **code-coverage:** coverage below 75% is MEDIUM (was HIGH) and 75 to 84% is LOW (was MEDIUM).
+  Coverage is a deployment gate and a quality measure, not a security control, and the org-wide
+  figure reflects the last test runs. The finding now says so.
 - **NZ Privacy Act:** inactive-users maps to IPP 5 (security safeguards) instead of IPP 9 (retention).
 - **NZ crosswalk:** agent-monitoring-coverage cites HSUP61 and NZISM 16.6 again, on the no-capture
   finding only. restriction-rules-integrity cites HSUP09 on the corrected conflicting finding too.
-  sandbox-data-masking no longer cites HSUP50 or NZISM 14.4. Notes for the fixed checks are updated.
+  A finding that asks the reader to confirm carries no citation: sandbox-data-masking (HSUP50, NZISM
+  14.4), data-cloud-data-space-isolation (HSUP09), siem-integration (HSUP61, HSUP45) and the empty
+  My Domain AuthConfig no longer cite them. delegated-authentication-exposure cites nothing, since the
+  gateway cannot be read. Notes for the fixed checks are updated.
 
 ## [v1.28.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.28.0) — 2026-11-17
 

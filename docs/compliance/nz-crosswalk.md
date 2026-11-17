@@ -349,9 +349,11 @@ SCF: IAC-25, DCH-32. External or agent users may reach the default Data Space (a
 
 | Cites | HML pair | Basis | Reason |
 |---|---|---|---|
-| HSUP09 Access control | HML10 | scf, only on `data-cloud-data-space-default-overshared` |  |
+| none | | | |
 
-Note: The outbound data share finding lists active outbound shares for review; it does not show a missing control, so it carries no HISO citation. HSUP09 applies to the default-space finding only, which is a name heuristic and should be confirmed.
+Excluded from SCF: HSUP09 (The default-space finding is a name heuristic that asks for confirmation, so it does not show access rules are unmet.)
+
+Note: No HISO citation. The default-space finding is a name heuristic that asks the reader to confirm which data spaces the matched permission sets grant, and the outbound data share finding is a review list. Neither shows a missing control.
 
 ## `data-export-access`
 
@@ -389,20 +391,17 @@ Excluded from SCF: NZISM 16.3.6.C.01 (16.3.6 bars foreign nationals from privile
 
 ## `delegated-authentication-exposure`
 
-SCF: IAC-44, CRY-05, IAC-10. Delegated Authentication over a plain-HTTP gateway, or applied to System Administrator profiles, shows the authentication channel is not encrypted and privileged sign-in depends on an external check.
+SCF: IAC-44, CRY-05, IAC-10. Delegated Authentication applied to System Administrator profiles means privileged sign-in depends on an external gateway's unsigned yes or no.
 
 | Cites | HML pair | Basis | Reason |
 |---|---|---|---|
-| HSUP32 Use of cryptography | HML37 | direct, only on `delegated-authentication-insecure-gateway` | HSUP32 guidance: data in transit secured using 'transport layer security (TLS)'; a delegated authentication gateway URL that starts with http:// sends credentials unencrypted |
-| HSUP34 Information Authentication | HML39 | direct, only on `delegated-authentication-insecure-gateway` | HSUP34 statement: 'User accounts are authenticated and circumventing the authentication process is prevented'; a delegated authentication gateway over http:// sends credentials in clear text and accepts an unsigned boolean response that can be spoofed in transit |
 | NZISM 16.1 Identification, Authentication and Authorisation | | scf | 16.1.33.C.01 |
 | NZISM 16.3 Privileged User Access | | scf | 16.3.5.C.01 |
 | NZISM 16.4 Privileged Access Management | | scf | 16.4.37.C.01, 16.4.37.C.03 |
-| NZISM 17.1 Cryptographic Fundamentals | | direct, only on `delegated-authentication-insecure-gateway` | 17.1.55.C.03: agencies 'MUST encrypt aggregated agency data using an approved algorithm and protocol over insecure or unprotected networks'; a gateway over http:// sends credentials unencrypted (17.1.55.C.03) |
 
 Excluded from SCF: HSUP36 (Admins authenticating through a delegated gateway is not unauthorised privileged access.); NZISM 17.1 (17.1.57.C.01 is scoped to NZEO information; 17.1.55.C.03 is cited directly instead.); NZISM 16.3.6.C.01 (These cover foreign nationals and clearances, not the delegated authentication gateway.); NZISM 16.3.6.C.02 (These cover foreign nationals and clearances, not the delegated authentication gateway.); NZISM 16.3.7.C.01 (These cover foreign nationals and clearances, not the delegated authentication gateway.); NZISM 16.4.36.C.01 (These need a privileged access management policy to exist; the check does not read one.); NZISM 16.4.36.C.02 (These need a privileged access management policy to exist; the check does not read one.); NZISM 16.4.36.C.03 (These need a privileged access management policy to exist; the check does not read one.); NZISM 16.4.38.C.01 (These need a privileged access management policy to exist; the check does not read one.)
 
-Note: The check does not test mutual TLS. The insecure-gateway finding fires only on a non-HTTPS gateway URL; a blank URL is a separate MEDIUM finding with no citation, because it does not show credentials leave unencrypted.
+Note: No citation. The gateway URL is not exposed through a documented API, so the check cannot show credentials travel unencrypted, and admins signing in through a delegated gateway is not unauthorised privileged access (HSUP36 excluded).
 
 ## `deployment-identity`
 
@@ -917,9 +916,11 @@ SCF: IAC-40, IAC-32. My Domain missing or still allowing username-password login
 
 | Cites | HML pair | Basis | Reason |
 |---|---|---|---|
-| HSUP34 Information Authentication | HML39 | direct | HSUP34 statement: 'circumventing the authentication process is prevented'; allowing login via login.salesforce.com or username-password lets users go around the org's SSO/login policy (guidance recommends SSO at an organisational level) |
+| HSUP34 Information Authentication | HML39 | direct, only on `my-domain-not-configured`, `my-domain-password-login-allowed` | HSUP34 statement: 'circumventing the authentication process is prevented'; allowing login via login.salesforce.com or username-password lets users go around the org's SSO/login policy (guidance recommends SSO at an organisational level) |
 
 Excluded from SCF: NZISM 16.1 (16.1.32.C.01, the only derived control, covers stored authentication data, not SSO.)
+
+Note: HSUP34 applies to a missing My Domain or one that allows password login. An unreadable or empty AuthConfig is inconclusive and carries no citation.
 
 ## `named-credentials`
 
@@ -1202,13 +1203,11 @@ SCF: MON-05, MON-05.4. No sign of SIEM or external monitoring integration shows 
 
 | Cites | HML pair | Basis | Reason |
 |---|---|---|---|
-| HSUP45 Cloud security controls | HML53 | direct | HSUP45 guidance: "centralised visibility is to be provided to the security teams via logging and monitoring activities" for the multi-tenant cloud service. |
-| HSUP61 Logging and monitoring | HML70 | direct | HSUP61 guidance: "Logs are to be aggregated, correlated, and reviewed" and "transferring logs centrally through encrypted mechanisms separate systems (e.g., SIEM solution)"; no SIEM signal means Salesforce logs are not centrally collected. |
 | NZISM 16.6 Event Monitoring, Logging and Auditing | | scf | 16.6.12.C.01, 16.6.12.C.02, 16.6.12.C.03, 16.6.15.C.01, 16.6.15.C.02 |
 
 Excluded from SCF: NZISM 16.6.11.C.01 (Log fields and time source do not concern whether a SIEM is present.); NZISM 16.6.11.C.02 (Log fields and time source do not concern whether a SIEM is present.); NZISM 16.6.11.C.03 (Log fields and time source do not concern whether a SIEM is present.)
 
-Note: The check infers SIEM presence from vendor and purpose names on integration users, apps and named credentials, so a SIEM that collects through a generic integration user leaves no signal. The not-detected finding is MEDIUM and says to confirm before relying on it, and the HSUP61 and HSUP45 citations carry the same caveat.
+Note: No HISO citation. The check finds a SIEM only by vendor and purpose names, so a SIEM collecting through a generic integration user leaves no signal, and the not-detected finding asks for confirmation rather than showing logs are not collected.
 
 ## `soap-login-api-auth`
 
