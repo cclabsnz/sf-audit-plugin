@@ -22,15 +22,18 @@ import hashlib
 import io
 import json
 import re
+import http.client
+import ssl
 import sys
-import urllib.request
 from collections import defaultdict
 
 import openpyxl
 
 SCF_COMMIT = 'd08211314fc7ccfca8e6c84d2b27a2030339ef9c'
 SCF_FILE = 'secure-controls-framework-scf-2026-3.xlsx'
-SCF_URL = f'https://raw.githubusercontent.com/securecontrolsframework/securecontrolsframework/{SCF_COMMIT}/{SCF_FILE}'
+SCF_HOST = 'raw.githubusercontent.com'
+SCF_PATH = f'/securecontrolsframework/securecontrolsframework/{SCF_COMMIT}/{SCF_FILE}'
+SCF_URL = f'https://{SCF_HOST}{SCF_PATH}'
 SCF_SHA256 = '5a89bf2d3c106a9a87d4b6e3d62dd3e147d0e960d4c07473045a10aa8a7df697'
 SCF_SHEET = 'SCF 2026.3'
 COL_HSUP = 'APAC New Zealand HISF Suppliers 2023'
@@ -44,11 +47,16 @@ KNOWN_SCF_NZISM_ERRORS = {
 
 
 def download_scf():
-    # SCF_URL is a constant https URL pinned to a commit, and the hash check below rejects anything else.
-    if not SCF_URL.startswith('https://raw.githubusercontent.com/'):
-        sys.exit(f'refusing to download SCF from {SCF_URL}')
-    with urllib.request.urlopen(SCF_URL, timeout=120) as r:  # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
+    # HTTPS only, to a fixed host and a path pinned to a commit; the hash check in load_scf rejects anything else.
+    conn = http.client.HTTPSConnection(SCF_HOST, timeout=120, context=ssl.create_default_context())
+    try:
+        conn.request('GET', SCF_PATH)
+        r = conn.getresponse()
+        if r.status != 200:
+            sys.exit(f'SCF download failed: HTTP {r.status} from {SCF_URL}')
         return r.read()
+    finally:
+        conn.close()
 
 
 def load_scf(path):
