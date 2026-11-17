@@ -2,6 +2,8 @@ import type { AuditContext } from '@cclabsnz/sf-core';
 import type { SecurityCheck, CheckResult } from '../SecurityCheck.js';
 import type { Finding } from '../../findings/Finding.js';
 
+type Known = 'yes' | 'no' | 'unknown';
+
 interface TspRecord {
   Id: string;
   State?: string | null;
@@ -29,17 +31,22 @@ export class AgentMonitoringCoverageCheck implements SecurityCheck {
     const activeAgents = inventory.filter((a) => a.type === 'agent' && a.isActive);
     if (activeAgents.length === 0) return { findings };
 
-    // Event capture signal, interpreted the same way SiemIntegrationCheck reads the
-    // EventLogSummary: capture exists only when the log is accessible AND has files.
-    // A blind log (not-enabled / no-permission) counts as "no capture" — there is no
-    // monitoring the agent's activity can be seen through.
+    // Event capture: 'yes' when the log is readable and has files; 'no' only when it is readable and
+    // empty. Any read failure is 'unknown', including the 'not-enabled' class: sf-core assigns it to
+    // INVALID_TYPE, which Salesforce also returns when the audit user cannot see EventLogFile, and to
+    // MALFORMED_QUERY, which says nothing about the org.
     const els = ctx.cache.eventLogSummary;
-    const hasEventCapture = !!els && els.accessible !== false && (els.totalFiles ?? 0) > 0;
+    const capture: Known =
+      !els ? 'unknown'
+      : els.accessible !== false ? ((els.totalFiles ?? 0) > 0 ? 'yes' : 'no')
+      : 'unknown';
 
-    // Transaction Security policies (real-time threat response). Defensive: a missing
-    // object / access failure is treated as "no policy" rather than throwing — the
-    // absence of detectable policy is what matters for this coverage check.
-    const hasTransactionSecurity = await this.hasEnabledTransactionSecurityPolicy(ctx);
+    // Transaction Security policies (real-time threat response).
+    const policy = await this.transactionSecurityPolicyState(ctx);
+
+    // Silent when coverage is adequate on what could be read: capture plus a policy, or a policy
+    // alone (the same as before this check could tell unreadable from empty).
+    if (policy === 'yes') return { findings };
 
     const agentList = activeAgents
       .map((a) => `${a.label} (${a.developerName})`)
@@ -48,7 +55,7 @@ export class AgentMonitoringCoverageCheck implements SecurityCheck {
 
     // High: agents run, nothing captures their activity, and no automated response
     // exists. Point at the events pull command.
-    if (!hasEventCapture && !hasTransactionSecurity) {
+    if (capture === 'no' && policy === 'no') {
       findings.push({
         id: 'agent-monitoring-coverage-none',
         category: this.category,
@@ -56,7 +63,7 @@ export class AgentMonitoringCoverageCheck implements SecurityCheck {
         title: `${activeAgents.length} active agent(s) run with no Event Monitoring capture and no Transaction Security policy`,
         detail:
           `This org has ${activeAgents.length} active Agentforce agent(s) (${agentList}) but ` +
-          `Event Monitoring is not capturing any log files${els && els.accessible === false ? ' (the event log was not accessible to this audit)' : ''} ` +
+          `the event log is readable and holds no log files ` +
           `and no Transaction Security policy is enabled. Agent activity — including prompt injection, mass reads by the run-as user, ` +
           `and data exfiltration — would leave no auditable trail and trigger no automated response. This is the monitoring gap in the ForcedLeak pattern.`,
         remediation:
@@ -79,7 +86,7 @@ export class AgentMonitoringCoverageCheck implements SecurityCheck {
 
     // Low (partial): event logs exist but there is no Transaction Security policy — the
     // activity is recorded but nothing responds in real time.
-    if (hasEventCapture && !hasTransactionSecurity) {
+    if (capture === 'yes' && policy === 'no') {
       findings.push({
         id: 'agent-monitoring-coverage-partial',
         category: this.category,
@@ -102,19 +109,46 @@ export class AgentMonitoringCoverageCheck implements SecurityCheck {
       return { findings };
     }
 
-    // Otherwise monitoring is adequate (capture present, or capture + policy). Silent.
+    // Something that would decide the answer could not be read: the event log (no permission, or
+    // an unclassified failure) or the Transaction Security policies. Report what is unknown
+    // instead of treating it as no monitoring.
+    const unknownParts = [
+      capture === 'unknown' &&
+        (els?.accessError === 'no-permission'
+          ? 'the event log (the audit user lacks View Event Log Files)'
+          : 'the event log'),
+      policy === 'unknown' && 'the Transaction Security policies',
+    ].filter((p): p is string => typeof p === 'string');
+    findings.push({
+      id: 'agent-monitoring-coverage-unreadable',
+      category: this.category,
+      riskLevel: 'INFO',
+      inconclusive: true,
+      title: `Monitoring coverage for ${activeAgents.length} active agent(s) could not be confirmed`,
+      detail:
+        `This org has ${activeAgents.length} active Agentforce agent(s) (${agentList}), but this audit could not read ` +
+        `${unknownParts.join(' or ')}, so it cannot tell whether their activity is captured or responded to.` +
+        (capture === 'yes' ? ' Event Monitoring is capturing log files.' : '') +
+        (capture === 'no' ? ' Event Monitoring is not capturing any log files.' : ''),
+      remediation:
+        'Grant the audit user View Event Log Files and read access to Transaction Security policies (see PERMISSIONS.md), then re-run the audit.',
+      affectedItems: [
+        { label: 'Event Monitoring', url: `${baseUrl}/lightning/setup/EventLogFile/home` },
+        { label: 'Transaction Security Policies', url: `${baseUrl}/lightning/setup/TransactionSecurityPolicies/home` },
+      ],
+    });
     return { findings };
   }
 
-  private async hasEnabledTransactionSecurityPolicy(ctx: AuditContext): Promise<boolean> {
+  private async transactionSecurityPolicyState(ctx: AuditContext): Promise<Known> {
     try {
       const policies = await ctx.tooling.query<TspRecord>(
         `SELECT Id, State FROM TransactionSecurityPolicy WHERE State = 'Enabled'`,
       );
-      return policies.length > 0;
+      return policies.length > 0 ? 'yes' : 'no';
     } catch {
-      // Object missing or inaccessible: no detectable policy.
-      return false;
+      // INVALID_TYPE also means the audit user cannot see the object, so any failure is unknown.
+      return 'unknown';
     }
   }
 }

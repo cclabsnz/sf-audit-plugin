@@ -108,7 +108,10 @@ export class AgentOutboundActionsCheck implements SecurityCheck {
       findings.push({
         id: 'agent-outbound-actions-unverified',
         category: this.category,
-        riskLevel: 'MEDIUM',
+        // Unassessed, not a failure: the platform does not expose the setting, so nothing here shows
+        // that confirmation is off.
+        riskLevel: 'INFO',
+        inconclusive: true,
         title: `${unverified.length} standard outbound action(s) in use; confirmation setting not readable`,
         detail:
           `Topics on active agents use ${unverified.length} standard action(s) that post to Slack or send email ` +

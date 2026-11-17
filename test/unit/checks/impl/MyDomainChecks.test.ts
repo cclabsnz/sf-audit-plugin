@@ -52,6 +52,8 @@ describe('MyDomainLoginPolicyCheck', () => {
     ]);
     const r = await check.run(ctx);
     expect(queryAll.mock.calls[0][0]).toMatch(/WHERE IsActive = true/);
+    // Experience Cloud site and portal login pages are separate AuthConfig rows.
+    expect(queryAll.mock.calls[0][0]).toMatch(/AND Type = 'Org'/);
     expect(ids(r)).toContain('my-domain-password-login-allowed');
   });
 
@@ -65,10 +67,58 @@ describe('MyDomainLoginPolicyCheck', () => {
 
 describe('EnhancedDomainsCheck', () => {
   const check = new EnhancedDomainsCheck();
+  const withSettings = (settings: unknown, url = 'https://acme.my.salesforce.com') => {
+    const { ctx } = makeCtx(url);
+    (ctx as any).metadata = {
+      read: (jest.fn() as any).mockImplementation((type: string, name: string) =>
+        type === 'MyDomainSettings' && name === 'MyDomain'
+          ? settings instanceof Error ? Promise.reject(settings) : Promise.resolve(settings)
+          : Promise.resolve(null),
+      ),
+    };
+    return ctx;
+  };
 
-  it('passes on an enhanced My Domain host', async () => {
+  it('passes when MyDomainSettings reports the enhanced suffix', async () => {
+    const r = await check.run(withSettings({ myDomainSuffix: 'MySalesforce', domainPartition: 'none' }));
+    expect(r.findings.map((f) => f.id)).toEqual(['enhanced-domains-enabled']);
+    expect(r.findings[0].passed).toBe(true);
+  });
+
+  it('passes a partitioned sandbox domain, which requires enhanced domains', async () => {
+    const r = await check.run(withSettings({ domainPartition: 'sandbox' }, 'https://acme--uat.sandbox.my.salesforce.com'));
+    expect(r.findings.map((f) => f.id)).toEqual(['enhanced-domains-enabled']);
+  });
+
+  it('fails when MyDomainSettings reports my.salesforce.com without enhanced domains', async () => {
+    const r = await check.run(withSettings({ myDomainSuffix: 'MySalesforceLimited', domainPartition: 'none' }));
+    expect(r.findings.map((f) => f.id)).toEqual(['enhanced-domains-not-detected']);
+    expect(r.findings[0].riskLevel).toBe('MEDIUM');
+  });
+
+  it('does not pass on the instance URL alone, which is the same with or without enhanced domains', async () => {
     const r = await check.run(makeCtx('https://acme.my.salesforce.com').ctx);
-    expect(r.findings.find((f) => f.id === 'enhanced-domains-enabled')?.passed).toBe(true);
+    expect(r.findings.map((f) => f.id)).toEqual(['enhanced-domains-unverified']);
+    expect(r.findings[0].inconclusive).toBe(true);
+    expect(r.findings[0].passed).toBeFalsy();
+  });
+
+  it('is inconclusive, quoting the error, when MyDomainSettings cannot be read', async () => {
+    const r = await check.run(withSettings(new Error('INSUFFICIENT_ACCESS')));
+    expect(r.findings[0].id).toBe('enhanced-domains-unverified');
+    expect(r.findings[0].detail).toContain('INSUFFICIENT_ACCESS');
+  });
+
+  it('is inconclusive on an unmapped suffix', async () => {
+    const r = await check.run(withSettings({ myDomainSuffix: 'Restricted1', domainPartition: 'none' }));
+    expect(r.findings.map((f) => f.id)).toEqual(['enhanced-domains-unverified']);
+  });
+
+  it('does not fail government or China hosts on their host name', async () => {
+    for (const url of ['https://acme.my.salesforce.mil', 'https://acme.my.sfcrmproducts.cn']) {
+      const r = await check.run(withSettings({ myDomainSuffix: 'MySalesforce' }, url));
+      expect(r.findings.map((f) => f.id)).toEqual(['enhanced-domains-enabled']);
+    }
   });
 
   it('reports no My Domain on a legacy instance host', async () => {

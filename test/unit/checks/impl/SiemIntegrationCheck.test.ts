@@ -27,13 +27,19 @@ describe('SiemIntegrationCheck', () => {
     ]));
   });
 
-  it('reports HIGH when no monitoring integration is detectable', async () => {
+  // Detection is by name only, so a SIEM reached through a generically named integration user,
+  // connected app or credential leaves no signal. No signal is a prompt to confirm, not proof
+  // there is no SIEM, so it is MEDIUM rather than HIGH.
+  it('reports MEDIUM, worded as a name heuristic, when no signal is found', async () => {
     const r = await check.run(makeCtx());
     expect(r.findings).toHaveLength(1);
     const f = r.findings[0];
     expect(f.id).toBe('siem-integration-not-detected');
-    expect(f.riskLevel).toBe('HIGH');
+    expect(f.riskLevel).toBe('MEDIUM');
     expect(f.passed).toBeUndefined();
+    expect(f.title).toMatch(/by name/i);
+    expect(f.detail).toMatch(/generic/i);
+    expect(f.remediation).toMatch(/confirm/i);
   });
 
   it.each([

@@ -26,7 +26,7 @@ export class DelegatedAuthenticationExposureCheck implements SecurityCheck {
   readonly name = 'Delegated Authentication Exposure';
   readonly category = 'Identity & Access';
   readonly description =
-    'Flags Delegated Authentication enabled over non-mTLS endpoints or assigned to System Administrator profiles.';
+    'Flags Delegated Authentication enabled with a non-HTTPS or missing gateway URL, or assigned to System Administrator profiles.';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
@@ -61,26 +61,35 @@ export class DelegatedAuthenticationExposureCheck implements SecurityCheck {
     );
 
     if (isDelegatedAuthEnabled) {
-      // Check 1: Insecure Gateway URL (non-https or cleartext)
-      const isInsecure =
-        !gatewayUrl ||
-        gatewayUrl.startsWith('http://') ||
-        (!gatewayUrl.startsWith('https://') && gatewayUrl.length > 0);
-
-      if (isInsecure) {
+      // Check 1: the gateway URL. Only a non-HTTPS scheme is shown to be unencrypted; a blank URL
+      // means no gateway is configured, which is a broken setup rather than a cleartext one. The
+      // check reads only the URL, so it cannot tell whether the endpoint enforces mutual TLS.
+      if (!gatewayUrl) {
+        findings.push({
+          id: 'delegated-authentication-gateway-missing',
+          category: this.category,
+          riskLevel: 'MEDIUM',
+          title: 'Delegated Authentication is enabled with no gateway URL',
+          detail:
+            'SecuritySettings shows Delegated Authentication enabled, but no delegated gateway URL is configured. Users on profiles with "Is Single Sign-On Enabled" are routed to delegated authentication with nowhere to send the credential check, so either their sign-in fails or the setting is left over from an earlier configuration. Confirm which, and whether the URL is set somewhere this read does not show.',
+          remediation:
+            'In Setup → Single Sign-On Settings, either configure an HTTPS gateway URL (ideally with mutual TLS client certificate verification) or disable Delegated Authentication and remove "Is Single Sign-On Enabled" from profiles that no longer need it. Prefer SAML 2.0 or OpenID Connect for new SSO.',
+          affectedItems: [{ label: 'Delegated Gateway Endpoint', url: ssoUrl, note: 'Gateway URL: none configured' }],
+        });
+      } else if (!gatewayUrl.toLowerCase().startsWith('https://')) {
         findings.push({
           id: 'delegated-authentication-insecure-gateway',
           category: this.category,
           riskLevel: 'CRITICAL',
-          title: 'Delegated Authentication gateway is unencrypted or missing mutual TLS',
-          detail: `Delegated Authentication is enabled with gateway URL "${gatewayUrl || 'empty'}". Unlike SAML or OIDC, Delegated Authentication relies on a simple SOAP boolean response without cryptographic assertion signatures. Transmitting credentials over unencrypted or unauthenticated endpoints allows credential harvesting and spoofed responses.`,
+          title: 'Delegated Authentication gateway does not use HTTPS',
+          detail: `Delegated Authentication is enabled with gateway URL "${gatewayUrl}", which is not an HTTPS URL. Salesforce sends each user's username and password to this endpoint and trusts its yes-or-no SOAP response, which carries no signed assertion. Over a non-HTTPS endpoint the credentials can be read in transit and the response spoofed.`,
           remediation:
-            'Configure a secure HTTPS endpoint with mutual TLS (mTLS) client certificate verification for the Delegated Authentication gateway, or migrate to SAML 2.0 / OpenID Connect.',
+            'Move the Delegated Authentication gateway to an HTTPS endpoint, ideally with mutual TLS client certificate verification, or migrate to SAML 2.0 / OpenID Connect.',
           affectedItems: [
             {
               label: 'Delegated Gateway Endpoint',
               url: ssoUrl,
-              note: `Gateway URL: ${gatewayUrl || 'None configured'}`,
+              note: `Gateway URL: ${gatewayUrl}`,
             },
           ],
         });
@@ -114,7 +123,7 @@ export class DelegatedAuthenticationExposureCheck implements SecurityCheck {
         title: 'Verify Delegated Authentication settings manually',
         detail: `This run could not read SecuritySettings, so whether Delegated Authentication is enabled is unknown. ${adminProfilesWithDelegatedAuth.length} administrator profile(s) hold "Is Single Sign-On Enabled", which routes their sign-in through the delegated gateway if it is on.`,
         remediation:
-          'In Setup → Single Sign-On Settings, check whether Delegated Authentication is enabled. If it is, the gateway must be HTTPS with mutual TLS, and administrator profiles should not hold "Is Single Sign-On Enabled".',
+          'In Setup → Single Sign-On Settings, check whether Delegated Authentication is enabled. If it is, the gateway must be HTTPS (ideally with mutual TLS), and administrator profiles should not hold "Is Single Sign-On Enabled".',
         affectedItems: [{ label: 'Single Sign-On Settings', url: ssoUrl }],
       });
     } else if (findings.length === 0) {

@@ -13,16 +13,18 @@ const PII_PROBES: Array<{ object: string; where: string }> = [
 /**
  * Advisory for sandboxes: production data copied into a sandbox and left unmasked
  * spreads real PII/PHI into a lower-trust environment with weaker controls and
- * broader developer access. This check runs only in sandboxes and looks for
- * populated PII fields as a proxy for "prod data present" — it cannot prove
- * whether Data Mask has run, so it raises an advisory to confirm masking.
+ * broader developer access. This check runs only in sandboxes and counts populated
+ * email and phone fields. Data Mask replaces values with random characters or library
+ * values rather than emptying them, so a masked sandbox also has populated fields: the
+ * count shows the sandbox holds contact data, not that it is unmasked. Hence INFO.
+ * https://trailhead.salesforce.com/content/learn/modules/salesforce-data-mask/get-to-know-salesforce-data-mask
  */
 export class SandboxDataMaskingCheck implements SecurityCheck {
   readonly id = 'sandbox-data-masking';
   readonly name = 'Sandbox Data Masking';
   readonly category = 'Data Security';
   readonly description =
-    'In sandboxes, flags the presence of populated PII fields (likely unmasked production data) and advises running Salesforce Data Mask';
+    'In sandboxes, notes populated contact email and phone fields and advises confirming that Data Mask or another masking tool has run';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
@@ -70,10 +72,13 @@ export class SandboxDataMaskingCheck implements SecurityCheck {
       findings.push({
         id: 'sandbox-data-masking-pii-present',
         category: this.category,
-        riskLevel: 'MEDIUM',
-        title: 'Sandbox contains populated PII fields — confirm Data Mask has run',
+        // Inconclusive: masked and real values look the same to these probes, so the finding
+        // must not feed the sandbox-pii-exposure chain as if the data were unmasked.
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'Sandbox holds contact email or phone data: confirm it was masked',
         detail:
-          'This is a sandbox and PII-bearing fields (e.g. Contact/Lead email or phone) are populated, which is the footprint of a production copy. If Data Mask has not been run, real PII/PHI is sitting in a lower-trust environment with broader developer/admin access and weaker monitoring. This check cannot confirm whether masking was applied — only that sensitive fields hold data.',
+          'This is a sandbox and Contact or Lead email or phone fields are populated. That is what a production copy looks like, but a masked sandbox looks the same, because Data Mask replaces values rather than removing them. The check cannot tell masked data from real data. If this sandbox was refreshed from production and not masked, real personal data sits in an environment with broader developer and admin access.',
         remediation:
           'Run Salesforce Data Mask on this sandbox (Setup → Data Mask) after each refresh, masking PII/PHI fields. Restrict sandbox access and treat sandbox data with the same controls as production until masking is confirmed.',
         affectedItems: [{ label: 'Data Mask', url: `${baseUrl}/lightning/setup/DataMask/home` }],

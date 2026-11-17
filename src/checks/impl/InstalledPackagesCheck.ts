@@ -17,7 +17,7 @@ export class InstalledPackagesCheck implements SecurityCheck {
   readonly id = 'installed-packages';
   readonly name = 'Installed Packages';
   readonly category = 'App Security';
-  readonly description = 'Inventories installed managed and unmanaged packages; flags unmanaged packages and beta releases in production';
+  readonly description = 'Inventories installed managed and unmanaged packages; flags unmanaged packages and beta package versions';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
@@ -93,16 +93,21 @@ export class InstalledPackagesCheck implements SecurityCheck {
       });
     }
 
+    // Salesforce installs beta package versions only in scratch, sandbox and Developer Edition
+    // orgs, or test orgs from the Environment Hub, never production, and an installed beta can't
+    // be upgraded. So this is a development-org hygiene item, not a production exposure.
+    // https://developer.salesforce.com/docs/atlas.en-us.packagingGuide.meta/packagingGuide/packaging_about_beta_packages.htm
     if (betaPackages.length > 0) {
+      const orgKind = ctx.orgInfo.isSandbox ? 'sandbox' : 'non-production org';
       findings.push({
         id: 'installed-packages-beta',
         category: this.category,
-        riskLevel: 'MEDIUM',
-        title: `${betaPackages.length} beta package version(s) installed in production`,
+        riskLevel: 'LOW',
+        title: `${betaPackages.length} beta package version(s) installed in this ${orgKind}`,
         detail:
-          'Beta packages have not completed the Salesforce AppExchange security review and are not supported for production use. Installing beta packages in production introduces untested code, may violate ISV agreements, and could expose the org to unreviewed security vulnerabilities.',
+          `Beta package versions can only be installed in scratch, sandbox and Developer Edition orgs, so this ${orgKind} is not production. A beta version can't be upgraded once installed and may not match the version that is finally released, so code and data built against it here may not carry forward. That matters most in a sandbox used for UAT or staging.`,
         remediation:
-          'Upgrade each beta package to a generally available (GA) release. If no GA version exists, contact the publisher to determine a release timeline. Do not use beta packages in production environments.',
+          'Uninstall each beta version once testing is done, and install the released version for further testing. Keep beta versions out of sandboxes in your release pipeline, such as UAT or staging.',
         affectedItems: betaPackages.map((p) => ({
           label: p.SubscriberPackage.Name,
           url: setupUrl,

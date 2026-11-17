@@ -800,10 +800,6 @@ export const NZISM_SECTIONS: Record<string, { title: string; controls: { id: str
     "title": "Software Application Development",
     "controls": [
       {
-        "id": "14.4.4.C.01",
-        "level": "Should"
-      },
-      {
         "id": "14.4.5.C.01",
         "level": "Should"
       },
@@ -1224,9 +1220,29 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       "AAT-39.20",
       "AAT-36.11"
     ],
-    "hsup": [],
-    "hml": [],
-    "nzism": []
+    "hsup": [
+      {
+        "id": "HSUP61",
+        "basis": "direct",
+        "reason": "HSUP61 guidance: activity is to be \"logged and stored as per the organisation's logging and auditing requirements\"; active agents in an org whose event log is readable and empty, or where Event Monitoring is not enabled, have no logged activity.",
+        "findings": [
+          "agent-monitoring-coverage-none"
+        ]
+      }
+    ],
+    "hml": [
+      "HML70"
+    ],
+    "nzism": [
+      {
+        "section": "16.6",
+        "basis": "direct",
+        "reason": "Event Monitoring, Logging and Auditing: the finding is the absence of event logging for agent activity.",
+        "findings": [
+          "agent-monitoring-coverage-none"
+        ]
+      }
+    ]
   },
   "agent-outbound-actions": {
     "scf": [
@@ -4215,7 +4231,8 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
         "id": "HSUP09",
         "basis": "scf",
         "findings": [
-          "restriction-rules-inactive"
+          "restriction-rules-inactive",
+          "restriction-rules-conflicting"
         ]
       }
     ],
@@ -4229,32 +4246,9 @@ export const CHECK_NZ_CITATIONS: Record<string, CheckNzCitations> = {
       "DCH-28",
       "DCH-36.3"
     ],
-    "hsup": [
-      {
-        "id": "HSUP50",
-        "basis": "direct",
-        "reason": "The separate-environments guidance says personally identifiable information 'is to be anonymised when being used in the test environments'. The check finds Email and Phone populated in a sandbox, which a masked sandbox also shows, so this flags the anonymisation requirement for confirmation rather than evidencing a breach.",
-        "findings": [
-          "sandbox-data-masking-pii-present"
-        ]
-      }
-    ],
-    "hml": [
-      "HML58"
-    ],
-    "nzism": [
-      {
-        "section": "14.4",
-        "basis": "direct",
-        "reason": "14.4.4.C.01: 'information flow between the environments is strictly limited'. Populated contact fields in a sandbox indicate production data may have been copied into a non-production environment; the check cannot confirm whether it was masked.",
-        "controls": [
-          "14.4.4.C.01"
-        ],
-        "findings": [
-          "sandbox-data-masking-pii-present"
-        ]
-      }
-    ]
+    "hsup": [],
+    "hml": [],
+    "nzism": []
   },
   "scheduled-apex": {
     "scf": [

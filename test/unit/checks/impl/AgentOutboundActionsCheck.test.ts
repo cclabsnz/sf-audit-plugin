@@ -147,14 +147,15 @@ describe('AgentOutboundActionsCheck', () => {
     expect((await check.run(ctx)).findings).toHaveLength(0);
   });
 
-  it('reports MEDIUM unverified for standard outbound actions named on a live topic with no definition row', async () => {
+  it('reports an inconclusive INFO for standard outbound actions named on a live topic with no definition row', async () => {
     const ctx = makeCtx({
       agentAccess: 'ok', agentInventory: [agent()],
       tables: live([], { pluginActions: [{ PluginId: '179T2', Function: 'Slack__SendMessageAsAgent' }, { PluginId: '179T2', Function: 'EmployeeCopilot__QueryRecords' }] }),
     });
     const { findings } = await check.run(ctx);
     expect(findings.map((f) => f.id)).toEqual(['agent-outbound-actions-unverified']);
-    expect(findings[0].riskLevel).toBe('MEDIUM');
+    expect(findings[0].riskLevel).toBe('INFO');
+    expect(findings[0].inconclusive).toBe(true);
   });
 
   it('resolves topic action links that hold an action Id rather than a name', async () => {

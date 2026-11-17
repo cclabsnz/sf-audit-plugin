@@ -88,7 +88,7 @@ export class DeploymentIdentityCheck implements SecurityCheck {
       findings.push({
         id: 'deployment-audit-trail-inaccessible',
         category: this.category,
-        riskLevel: 'MEDIUM',
+        riskLevel: 'INFO',
         inconclusive: true,
         title: 'Deployment audit trail could not be read: SBS-DEP-003 unverified',
         detail:

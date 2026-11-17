@@ -2,7 +2,7 @@
 
 Controls marked verified have been checked against an authoritative source. Unverified controls stay excluded from rendered reports (provenance gate).
 
-Total controls: 179 · Verified: 179
+Total controls: 177 · Verified: 177
 
 ## OWASP — OWASP Top 10:2021 (9/9 verified)
 
@@ -112,7 +112,7 @@ Total controls: 179 · Verified: 179
 | [x] | PRIVACY-IPP9 | IPP 9 — Retention of personal information | Privacy Act 2020, IPP 9 |
 | [x] | PRIVACY-IPP12 | IPP 12 — Disclosure of personal information outside New Zealand | Privacy Act 2020, IPP 12 |
 
-## HISO10029_3 — HISO 10029.3:2023 (19/19 verified)
+## HISO10029_3 — HISO 10029.3:2023 (18/18 verified)
 
 Requirement ids and statements checked against the published PDFs by `test/unit/compliance/nzCrosswalk.test.ts`; which checks cite each one is in [nz-crosswalk.md](nz-crosswalk.md).
 
@@ -131,14 +131,13 @@ Requirement ids and statements checked against the published PDFs by `test/unit/
 | [x] | HISO-HML50 | HML50 Security of web applications | HISO 10029.3:2023, HML50 |
 | [x] | HISO-HML52 | HML52 Use of application & programming interface (API) | HISO 10029.3:2023, HML52 |
 | [x] | HISO-HML53 | HML53 Cloud security controls | HISO 10029.3:2023, HML53 |
-| [x] | HISO-HML58 | HML58 Separate production and non-production environments | HISO 10029.3:2023, HML58 |
 | [x] | HISO-HML59 | HML59 Patch and vulnerabilities remediation | HISO 10029.3:2023, HML59 |
 | [x] | HISO-HML60 | HML60 Secure configuration | HISO 10029.3:2023, HML60 |
 | [x] | HISO-HML61 | HML61 Capacity management | HISO 10029.3:2023, HML61 |
 | [x] | HISO-HML69 | HML69 Data leakage prevention | HISO 10029.3:2023, HML69 |
 | [x] | HISO-HML70 | HML70 Logging and monitoring | HISO 10029.3:2023, HML70 |
 
-## HISO10029_4 — HISO 10029.4:2025 (19/19 verified)
+## HISO10029_4 — HISO 10029.4:2025 (18/18 verified)
 
 Requirement ids and statements checked against the published PDFs by `test/unit/compliance/nzCrosswalk.test.ts`; which checks cite each one is in [nz-crosswalk.md](nz-crosswalk.md).
 
@@ -156,7 +155,6 @@ Requirement ids and statements checked against the published PDFs by `test/unit/
 | [x] | HISO-HSUP42 | HSUP42 Security of Web Applications | HISO 10029.4:2025, HSUP42 |
 | [x] | HISO-HSUP44 | HSUP44 Use of application & programming interface (API) | HISO 10029.4:2025, HSUP44 |
 | [x] | HISO-HSUP45 | HSUP45 Cloud security controls | HISO 10029.4:2025, HSUP45 |
-| [x] | HISO-HSUP50 | HSUP50 Separate production and non-production environments | HISO 10029.4:2025, HSUP50 |
 | [x] | HISO-HSUP51 | HSUP51 Patch and vulnerabilities remediation | HISO 10029.4:2025, HSUP51 |
 | [x] | HISO-HSUP52 | HSUP52 Secure configuration | HISO 10029.4:2025, HSUP52 |
 | [x] | HISO-HSUP53 | HSUP53 Capacity management | HISO 10029.4:2025, HSUP53 |

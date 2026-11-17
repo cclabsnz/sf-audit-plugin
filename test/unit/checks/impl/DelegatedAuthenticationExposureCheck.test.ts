@@ -54,6 +54,28 @@ describe('DelegatedAuthenticationExposureCheck', () => {
     expect(f?.riskLevel).toBe('CRITICAL');
   });
 
+  it('reports a blank gateway URL as a missing gateway, not as an unencrypted one', async () => {
+    const ctx = makeCtx({ singleSignOnSettings: { isDelegatedAuthEnabled: true, delegatedGatewayUrl: '' } }, []);
+    const r = await check.run(ctx);
+    expect(r.findings.map((f) => f.id)).toEqual(['delegated-authentication-gateway-missing']);
+    expect(r.findings[0].riskLevel).toBe('MEDIUM');
+  });
+
+  it('does not claim to have tested mutual TLS', async () => {
+    const ctx = makeCtx(
+      { singleSignOnSettings: { isDelegatedAuthEnabled: true, delegatedGatewayUrl: 'http://auth.corp.local' } },
+      [],
+    );
+    const f = (await check.run(ctx)).findings.find((x) => x.id === 'delegated-authentication-insecure-gateway')!;
+    expect(`${f.title} ${f.detail}`).not.toMatch(/mutual TLS|mTLS/i);
+  });
+
+  it('passes an HTTPS gateway regardless of scheme case', async () => {
+    const ctx = makeCtx({ singleSignOnSettings: { isDelegatedAuthEnabled: true, delegatedGatewayUrl: 'HTTPS://sso.example.com' } }, []);
+    const r = await check.run(ctx);
+    expect(r.findings.map((f) => f.id)).toEqual(['delegated-authentication-exposure-ok']);
+  });
+
   it('flags Delegated Authentication assigned to Administrator profiles', async () => {
     const ctx = makeCtx(
       {

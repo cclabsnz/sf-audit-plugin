@@ -193,7 +193,6 @@ export const CAPABILITY_REGISTRY: Record<string, CapabilityEntry> = {
   'genai-prompt-template-grounding-apex':        { grants: ['data-read'] },
   'genai-prompt-template-grounding-untrusted':   { grants: ['data-read'] },
   'data-cloud-data-space-default-overshared':    { grants: ['data-read-bulk'] },
-  'data-cloud-data-share-target-unconstrained':  { grants: ['data-read-bulk'] },
   'platform-event-subscriber-escalation':        { grants: ['priv-esc', 'data-write'], techniques: { 'priv-esc': ['T1546'] } },
   'flow-http-callout-hardcoded-secret':          { grants: ['credential-theft', 'external-egress'] },
   'flow-http-callout-uncredentialed-endpoint':   { grants: ['external-egress'] },

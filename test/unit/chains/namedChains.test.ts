@@ -340,8 +340,8 @@ describe('mfa-bypass-admin needs the weakness to reach a privileged user', () =>
       .toEqual(['internal-user-mfa-gaps', 'users-view-all-data']);
   });
 
-  it('fires on a trusted range, which exempts every user, and on a capped user list', () => {
-    expect(fire([f('trusted-ip-broad-ranges'), admin])).toEqual(['trusted-ip-broad-ranges', 'users-modify-all-data']);
+  it('fires on a capped user list, and not on a trusted range, which skips device activation, not MFA', () => {
+    expect(fire([f('trusted-ip-broad-ranges'), admin])).toBeNull();
     const capped = Array.from({ length: 50 }, (_, i) => ({ label: `u${i}@x.com` }));
     expect(fire([users('internal-user-mfa-gaps', capped), admin])).toEqual(['internal-user-mfa-gaps', 'users-modify-all-data']);
   });
