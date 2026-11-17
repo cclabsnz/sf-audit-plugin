@@ -42,7 +42,7 @@ const TACTIC_SHORT: Record<string, string> = {
 const FRAMEWORK_LABEL: Record<Framework, string> = {
   OWASP: 'OWASP Top 10', OWASP_LLM: 'OWASP LLM Top 10', SOC2: 'SOC 2', ISO27001: 'ISO/IEC 27001',
   SBS: 'Security Benchmark for Salesforce', PRIVACY_ACT: 'NZ Privacy Act',
-  HISO10029: 'HISO 10029', NZISM: 'NZISM', HIPAA: 'HIPAA', GDPR: 'GDPR',
+  HISO10029_3: 'HISO 10029.3 (providers)', HISO10029_4: 'HISO 10029.4 (suppliers)', NZISM: 'NZISM', HIPAA: 'HIPAA', GDPR: 'GDPR',
 };
 
 export interface ClientReportOptions {

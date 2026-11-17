@@ -26,14 +26,15 @@ describe('resolveControls', () => {
 
   it('the nz pack includes HISO, Privacy Act, and NZISM', () => {
     const nz = packFrameworks('nz');
-    expect(nz).toContain('HISO10029');
+    expect(nz).toContain('HISO10029_3');
+    expect(nz).toContain('HISO10029_4');
     expect(nz).toContain('PRIVACY_ACT');
     expect(nz).toContain('NZISM');
   });
 
   it('resolves NZ controls for a check (provenance off, drafts)', () => {
-    const out = resolveControls('guest-user-access', { frameworks: ['HISO10029', 'PRIVACY_ACT'], requireVerified: false });
-    expect(out.some((c) => c.framework === 'HISO10029')).toBe(true);
+    const out = resolveControls('guest-user-access', { frameworks: ['HISO10029_4', 'PRIVACY_ACT'], requireVerified: false });
+    expect(out.some((c) => c.framework === 'HISO10029_4')).toBe(true);
     expect(out.some((c) => c.id === 'PRIVACY-IPP5')).toBe(true);
   });
 });

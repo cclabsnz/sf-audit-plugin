@@ -9,23 +9,42 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
-## [v1.27.1](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.27.1) — 2026-11-16
+HISO 10029 and NZISM citations are now per check, at requirement and section level, and each one
+says where it came from. No check, finding, severity or score changes. Compliance control ids for
+HISO and NZISM change, so anything that reads them from JSON or SARIF output needs updating.
 
-Compliance citations only. HISO 10029 and NZISM references in reports change; no check, finding or
-score changes.
+### Changed
 
-### Fixed
-
-- **HISO 10029 controls cite the right basis.** The catalogue said HISO 10029 is built on
-  ISO/IEC 27002 and labelled every HISO control "AS/NZS ISO/IEC 27002-aligned". HISO 10029:2022
-  is built on the NIST Cybersecurity Framework; ISO 27002 is one of the catalogues it maps to. Each
-  HISO control now cites the HISO 10029.3:2023 requirement IDs it covers (for example HML39 for
-  authentication), checked against the published PDF. Control IDs and finding mappings are
-  unchanged. The citation link, which redirected to the Health NZ homepage, now points to Health
-  NZ's health security frameworks page.
-- **NZISM is pinned to v3.9.** Every cited chapter and section was re-checked against v3.9 and
-  kept its number and title; chapters 14, 18 and 19 are now titled in sentence case.
-  `NZISM-CONFIG` now names sections 12.2 and 12.4 instead of a paraphrase.
+- **HISO 10029 cites published requirements.** The eight HISO "domains" (`HISO-AC`, `HISO-AUTH`
+  and so on), which sf-audit made up and applied to every check in a domain, are replaced by the
+  requirements themselves: HISO 10029.4:2025 supplier requirements (`HISO-HSUP34`) and their
+  HISO 10029.3:2023 equivalents for medium to large health organisations (`HISO-HML39`), each with
+  its statement quoted from the published PDF. The old catalogue also called HISO 10029 ISO
+  27002-based; it is built on the NIST Cybersecurity Framework.
+- **Two HISO frameworks.** `HISO10029` is split into `HISO10029_3` (providers) and `HISO10029_4`
+  (suppliers), because which part applies depends on who owns the org. `--frameworks hiso` and the
+  `nz` pack select both; `hiso-provider` and `hiso-supplier` select one.
+- **NZISM cites sections, with their controls.** The seven chapter-level NZISM controls are
+  replaced by NZISM v3.9 sections (`NZISM-16.7`), each listing the controls it covers and their
+  MUST or SHOULD level.
+- **Every citation records its basis.** A citation tagged `scf` comes from the Secure Controls
+  Framework 2026.3 crosswalk: each check is mapped to the SCF controls a failing finding evidences,
+  and SCF's HISO and NZISM columns give the requirements. A citation tagged `direct` is sf-audit's
+  own judgement and carries its reason. Where SCF derives a requirement that does not fit a check,
+  the exclusion and its reason are recorded. Every decision is listed in
+  `docs/compliance/nz-crosswalk.md`, the rules are in `spec/nz-compliance-crosswalk.md`, and a test
+  checks every cited id against the pinned sources.
+- **HISO and NZISM citations attach per finding.** They attach only to active findings (never to an
+  INFO, passed or inconclusive one), and a
+  citation that only one of a check's findings supports is scoped to that finding. The compliance
+  matrix now counts each finding against its own tags; for every other framework those are the
+  check's tags, so OWASP, SOC 2, ISO 27001, SBS, Privacy Act, HIPAA and GDPR rows are unchanged.
+- **Most Agentforce and GenAI checks now carry HISO and NZISM citations**, applying the general
+  access, privileged-access and development requirements to the agent user. They had none.
+  `agent-action-surface` and `agent-monitoring-coverage` still carry none, because what they
+  measure is not evidence that a requirement is unmet.
+- **HISO citation links** point to the two published PDFs; the old link redirected to the Health NZ
+  homepage.
 
 ## [v1.27.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.27.0) — 2026-11-11
 

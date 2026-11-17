@@ -21,7 +21,7 @@ describe('catalog lookup', () => {
 
   it('contains the universal frameworks, SBS, the NZ pack, and HIPAA/GDPR', () => {
     const frameworks = new Set(ALL_CONTROLS.map((c) => c.framework));
-    for (const fw of ['OWASP', 'OWASP_LLM', 'SOC2', 'ISO27001', 'SBS', 'HISO10029', 'PRIVACY_ACT',
+    for (const fw of ['OWASP', 'OWASP_LLM', 'SOC2', 'ISO27001', 'SBS', 'HISO10029_3', 'HISO10029_4', 'PRIVACY_ACT',
                       'NZISM', 'HIPAA', 'GDPR']) {
       expect(frameworks.has(fw as never)).toBe(true);
     }

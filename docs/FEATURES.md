@@ -409,8 +409,12 @@ Other reusable code:
 | Mapping | What it holds | Where |
 |---|---|---|
 | Compliance control map | Check id to controls across frameworks: `CHECK_CONTROL_MAP` | src/compliance/mapping.ts |
-| Framework catalogs | OWASP, OWASP LLM, SOC 2, ISO 27001, SBS, NZISM, HISO 10029, NZ Privacy Act, HIPAA, GDPR; `ALL_CONTROLS`, `getControl` | src/compliance/catalogs/ |
-| Framework packs | `universal`, `nz`, `all` for `--frameworks`; `resolveFrameworks`, `resolveControls`, `getComplianceTags` | src/compliance/resolve.ts |
+| Framework catalogs | OWASP, OWASP LLM, SOC 2, ISO 27001, SBS, NZISM, HISO 10029.3 and 10029.4, NZ Privacy Act, HIPAA, GDPR; `ALL_CONTROLS`, `getControl` | src/compliance/catalogs/ |
+| Framework packs | `universal`, `nz`, `all` for `--frameworks`, plus `hiso`, `hiso-provider`, `hiso-supplier` aliases; `resolveFrameworks`, `resolveControls`, `getComplianceTags` | src/compliance/resolve.ts |
+| NZ crosswalk | Per-check HISO 10029.3 / 10029.4 and NZISM v3.9 citations with their basis (`scf` or `direct`): `CHECK_NZ_CITATIONS`, generated | src/compliance/nz/citations.generated.ts |
+| NZ crosswalk decisions | Each check's SCF controls, cited and excluded requirements, with reasons | data/compliance/check-nz-mapping.json, docs/compliance/nz-crosswalk.md |
+| NZ sources | HML / HSUP requirements and NZISM v3.9 sections and controls, extracted from the official sources | data/compliance/nz-sources.json, scripts/compliance/extract_nz_sources.py |
+| NZ derivation | Regenerates the crosswalk from the pinned SCF workbook | scripts/compliance/derive_nz_citations.py |
 | STRIDE | `CHECK_STRIDE_MAP` | src/threats/stride.ts |
 | LINDDUN | `CHECK_LINDDUN_MAP` | src/threats/linddun.ts |
 | Threat taxonomy types | `STRIDE_CATEGORIES`, `LINDDUN_CATEGORIES`, names | src/threats/types.ts |

@@ -5,7 +5,7 @@ import { SOC2_CONTROLS } from './soc2.js';
 import { ISO27001_CONTROLS } from './iso27001.js';
 import { SBS_CONTROLS } from './sbs.js';
 import { PRIVACY_ACT_CONTROLS } from './privacyAct.js';
-import { HISO10029_CONTROLS } from './hiso10029.js';
+import { HISO10029_3_CONTROLS, HISO10029_4_CONTROLS } from './hiso10029.js';
 import { NZISM_CONTROLS } from './nzism.js';
 import { HIPAA_CONTROLS } from './hipaa.js';
 import { GDPR_CONTROLS } from './gdpr.js';
@@ -17,7 +17,8 @@ export const ALL_CONTROLS: ControlDef[] = [
   ...ISO27001_CONTROLS,
   ...SBS_CONTROLS,
   ...PRIVACY_ACT_CONTROLS,
-  ...HISO10029_CONTROLS,
+  ...HISO10029_3_CONTROLS,
+  ...HISO10029_4_CONTROLS,
   ...NZISM_CONTROLS,
   ...HIPAA_CONTROLS,
   ...GDPR_CONTROLS,
