@@ -9,6 +9,8 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.28.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.28.0) — 2026-11-17
+
 HISO 10029 and NZISM citations are now per check, at requirement and section level, and each one
 says where it came from. No check, finding, severity or score changes. Compliance control ids for
 HISO and NZISM change, so anything that reads them from JSON or SARIF output needs updating.
