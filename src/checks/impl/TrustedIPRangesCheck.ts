@@ -16,6 +16,27 @@ interface SecuritySettingsMetadata {
   } | null;
 }
 
+// What a trusted IP range does: a login from inside the range skips Device Activation, the
+// identity verification challenge Salesforce shows on an unrecognised browser or device. It does
+// not exempt a user from multi-factor authentication, which is a permanent part of the login
+// experience and is not bypassed from a trusted network; a login that uses MFA or strong SSO
+// authentication skips device activation anyway. Once trusted ranges total more than 16,777,216
+// IPv4 addresses (10.0.0.0/8 not counted), users can be challenged even from a trusted address.
+// Sources:
+//   https://help.salesforce.com/s/articleView?id=xcloud.device_activation_orgs.htm&type=5
+//   https://help.salesforce.com/s/articleView?id=005237070&type=1 (device activation and trusted IP ranges)
+const DEVICE_ACTIVATION_LIMIT = 16_777_216;
+const TEN_START = 0x0a000000;
+const TEN_END = 0x0affffff;
+
+/** Addresses in [start, end] outside 10.0.0.0/8, which Salesforce leaves out of the trusted-range limit. */
+function countedSize(start: string, end: string): number {
+  const s = ipToInt(start);
+  const e = ipToInt(end);
+  const overlap = Math.max(0, Math.min(e, TEN_END) - Math.max(s, TEN_START) + 1);
+  return e - s + 1 - overlap;
+}
+
 function ipToInt(ip: string): number {
   return ip.split('.').reduce((acc, octet) => (acc << 8) | parseInt(octet, 10), 0) >>> 0;
 }
@@ -28,7 +49,7 @@ export class TrustedIPRangesCheck implements SecurityCheck {
   readonly id = 'trusted-ip-ranges';
   readonly name = 'Trusted IP Ranges';
   readonly category = 'Authentication';
-  readonly description = 'Identifies trusted IP ranges that completely bypass MFA, including overly broad ranges';
+  readonly description = 'Identifies trusted IP ranges, which skip the identity verification challenge, including overly broad ranges';
 
   async run(ctx: AuditContext): Promise<CheckResult> {
     const findings: Finding[] = [];
@@ -72,9 +93,9 @@ export class TrustedIPRangesCheck implements SecurityCheck {
         category: this.category,
         riskLevel: 'LOW',
         passed: true,
-        title: 'No trusted IP ranges configured: MFA applies to all login locations',
+        title: 'No trusted IP ranges configured: identity verification applies to all login locations',
         detail:
-          'No NetworkAccess (trusted IP range) records are configured. All users are subject to MFA and login challenge enforcement regardless of their network location.',
+          'No NetworkAccess (trusted IP range) records are configured. Every login from an unrecognised browser or device gets the identity verification (Device Activation) challenge, whatever its network location.',
         remediation:
           'Continue to avoid configuring trusted IP ranges unless there is a documented, justified business requirement with compensating controls.',
       });
@@ -89,16 +110,27 @@ export class TrustedIPRangesCheck implements SecurityCheck {
       }
     });
 
+    let counted = 0;
+    for (const r of ranges) {
+      try {
+        counted += countedSize(r.StartAddress, r.EndAddress);
+      } catch {
+        // unparseable range: leave it out of the total
+      }
+    }
+    const overLimit = counted > DEVICE_ACTIVATION_LIMIT;
+
     if (broadRanges.length > 0) {
       findings.push({
         id: 'trusted-ip-broad-ranges',
         category: this.category,
-        riskLevel: 'HIGH',
+        riskLevel: overLimit ? 'LOW' : 'MEDIUM',
         title: `${broadRanges.length} trusted IP range(s) cover more than 65,536 hosts (broader than /16)`,
-        detail:
-          'Trusted IP ranges completely bypass Salesforce MFA. Any user logging in from a trusted IP is not challenged for a second factor. Ranges broader than /16 cover entire enterprise network blocks or ISP ranges, creating an extremely large MFA bypass surface. If an attacker or insider gains access to any host within that range, they can log in without MFA.',
+        detail: overLimit
+          ? `The trusted ranges total ${counted.toLocaleString()} addresses outside 10.0.0.0/8, more than the 16,777,216 Salesforce allows before it challenges logins from trusted addresses anyway. So device activation still applies, and these ranges mostly add confusion about what is trusted.`
+          : 'A login from a trusted IP range skips the identity verification (Device Activation) challenge that Salesforce shows on an unrecognised browser or device. It does not skip multi-factor authentication, and a login that uses MFA or strong SSO authentication skips device activation anyway. So for logins that do not use MFA or strong SSO, anyone with stolen credentials and a foothold on any host in a range broader than /16 signs in from a new device without being asked to verify it.',
         remediation:
-          'Narrow each trusted IP range to the minimum required set of specific host addresses or subnets. Remove overly broad ranges immediately. If broad ranges are required, document the business justification and ensure compensating controls (network-level MFA, VPN enforcement, EDR) are in place.',
+          'Narrow each trusted IP range to the minimum required set of specific host addresses or subnets. Remove overly broad ranges. If broad ranges are required, document the business justification and ensure compensating controls (VPN enforcement, NAC, EDR) are in place.',
         affectedItems: broadRanges.map((r) => {
           let size: string;
           try {
@@ -118,10 +150,10 @@ export class TrustedIPRangesCheck implements SecurityCheck {
     findings.push({
       id: 'trusted-ip-exists',
       category: this.category,
-      riskLevel: 'MEDIUM',
-      title: `${ranges.length} trusted IP range(s) configured: MFA is bypassed for logins from these addresses`,
+      riskLevel: 'LOW',
+      title: `${ranges.length} trusted IP range(s) configured: identity verification is skipped for logins from these addresses`,
       detail:
-        'Trusted IP ranges in Salesforce completely bypass MFA enforcement. Any user authenticating from a listed IP address is not required to provide a second factor. Each range must have documented justification and be reviewed regularly. Without this review, ranges can accumulate and silently expand the MFA bypass surface over time.',
+        'Logins from a listed IP address skip the identity verification (Device Activation) challenge for unrecognised browsers and devices. They are not exempt from multi-factor authentication. Each range should have a documented justification and be reviewed regularly, because ranges accumulate and widen the set of networks where a new device is trusted without a challenge.',
       remediation:
         'Review each trusted IP range and confirm it has a documented business justification. Remove any ranges that are no longer required or cannot be justified. Ensure compensating network controls (VPN with MFA, NAC, EDR) protect the trusted network segments.',
       affectedItems: ranges.map((r) => {

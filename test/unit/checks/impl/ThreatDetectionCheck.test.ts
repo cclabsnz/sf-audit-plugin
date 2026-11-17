@@ -24,11 +24,13 @@ describe('ThreatDetectionCheck', () => {
     expect(f!.riskLevel).toBe('MEDIUM');
   });
 
-  it('flags MEDIUM when stores are present but empty', async () => {
+  // Empty stores are a healthy org or storage switched off, which the audit cannot tell apart.
+  it('is inconclusive, not a failure, when stores are present but empty', async () => {
     const queryAll = jest.fn() as any;
     queryAll.mockResolvedValue([]); // every store queryable, none has rows
     const r = await check.run(makeCtx(queryAll));
-    expect(r.findings.some((f) => f.id === 'threat-detection-inactive' && f.riskLevel === 'MEDIUM')).toBe(true);
+    expect(r.findings).toHaveLength(1);
+    expect(r.findings[0]).toMatchObject({ id: 'threat-detection-inactive', riskLevel: 'INFO', inconclusive: true });
   });
 
   it('passes when the Guest User Anomaly store has recent events', async () => {

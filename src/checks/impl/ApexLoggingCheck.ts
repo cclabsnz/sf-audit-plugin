@@ -16,11 +16,99 @@ const PERSISTENT_LOGGER_PATTERNS = [
   /\bApplicationLog\s*\.\s*(?:log|add)\b/i,
 ];
 
-// SBS-CODE-004: patterns suggesting sensitive data is passed to System.debug
-const SENSITIVE_LOG_PATTERNS = [
-  /System\.debug\s*\([^)]*(?:password|secret|token|apiKey|api_key|credential|ssn|dob|dateOfBirth|creditCard|cardNumber)/i,
-  /System\.debug\s*\([^)]*(?:UserInfo\.getSessionId|Auth\.AuthToken|getSessionId\(\))/i,
+// SBS-CODE-004: sensitive values passed to System.debug. A term counts only as a whole identifier
+// or as one camelCase / underscore word of an identifier in the call's arguments, with string
+// literals removed first. Substring matching flagged 'Token refreshed' (a literal) and doBulk
+// ("dob" inside a longer word). Each entry is a run of consecutive words.
+const SENSITIVE_WORD_RUNS: readonly (readonly string[])[] = [
+  ['password'], ['passwd'], ['secret'], ['token'], ['credential'], ['credentials'],
+  ['api', 'key'], ['apikey'], ['ssn'], ['dob'], ['date', 'of', 'birth'], ['dateofbirth'],
+  ['credit', 'card'], ['creditcard'], ['card', 'number'], ['cardnumber'],
+  ['session', 'id'], ['sessionid'], ['pwd'], ['birthdate'], ['birth', 'date'], ['social', 'security'],
+  // New Zealand identifiers: National Health Index and IRD numbers.
+  ['nhi'], ['ird', 'number'],
 ];
+// One-word terms also match as the end of a lower-case compound such as accesstoken or getpassword.
+const SUFFIX_TERMS = ['password', 'passwd', 'secret', 'token', 'credential', 'apikey', 'sessionid'];
+
+/** Apex with // and /* *\/ comments removed, leaving string literals intact. */
+function stripComments(body: string): string {
+  let out = '';
+  let quote: string | null = null;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (quote) {
+      out += ch;
+      if (ch === '\\') out += body[++i] ?? '';
+      else if (ch === quote) quote = null;
+    } else if (ch === "'" || ch === '"') {
+      quote = ch;
+      out += ch;
+    } else if (ch === '/' && body[i + 1] === '/') {
+      while (i < body.length && body[i] !== '\n') i++;
+      out += '\n';
+    } else if (ch === '/' && body[i + 1] === '*') {
+      const end = body.indexOf('*/', i + 2);
+      i = end === -1 ? body.length : end + 1;
+      out += ' ';
+    } else out += ch;
+  }
+  return out;
+}
+
+/** The argument text of every System.debug( ... ) call, matching nested parentheses. */
+function debugArguments(body: string): string[] {
+  const out: string[] = [];
+  const re = /\bSystem\.debug\s*\(/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(body)) !== null) {
+    let depth = 1;
+    let i = m.index + m[0].length;
+    let quote: string | null = null;
+    const start = i;
+    for (; i < body.length && depth > 0; i++) {
+      const ch = body[i];
+      if (quote) {
+        if (ch === '\\') i++;
+        else if (ch === quote) quote = null;
+      } else if (ch === "'" || ch === '"') quote = ch;
+      else if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+    }
+    out.push(body.slice(start, i - 1));
+  }
+  return out;
+}
+
+/** Lower-case words of each identifier, split on underscores and camelCase. */
+function identifierWords(args: string): string[][] {
+  const code = args.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g, ' ');
+  return (code.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? []).map((id) =>
+    id
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+      .split(/[\s_]+/)
+      .filter(Boolean)
+      .map((w) => w.toLowerCase()),
+  );
+}
+
+// The last word of a run may be plural (tokens, passwords).
+function containsRun(words: string[], run: readonly string[]): boolean {
+  for (let i = 0; i + run.length <= words.length; i++) {
+    if (run.every((w, j) => words[i + j] === w || (j === run.length - 1 && words[i + j] === `${w}s`))) return true;
+  }
+  return false;
+}
+
+const endsWithTerm = (words: string[]): boolean =>
+  words.some((w) => SUFFIX_TERMS.some((t) => w.length > t.length && (w.endsWith(t) || w.endsWith(`${t}s`))));
+
+function logsSensitiveValue(body: string): boolean {
+  return debugArguments(stripComments(body)).some((args) =>
+    identifierWords(args).some((words) => endsWithTerm(words) || SENSITIVE_WORD_RUNS.some((run) => containsRun(words, run))),
+  );
+}
 
 const SYSTEM_DEBUG_RE = /\bSystem\.debug\s*\(/;
 const IS_TEST_CLASS_RE = /@IsTest\b/i;
@@ -74,7 +162,7 @@ export class ApexLoggingCheck implements SecurityCheck {
     // SBS-CODE-004: flag classes that appear to log sensitive values
     const sensitiveLogClasses: string[] = [];
     for (const { name, body } of productionClasses) {
-      if (SENSITIVE_LOG_PATTERNS.some((p) => p.test(body))) {
+      if (logsSensitiveValue(body)) {
         sensitiveLogClasses.push(name);
       }
     }

@@ -178,9 +178,11 @@ const DOMAIN = {
 // NZ Privacy Act: IPPs are statute-level, so they are layered on by domain. (SCF's Privacy Act
 // column maps Part 6 breach notification sections, not the IPPs, so it is not used here.)
 const NZ_CROSSWALK: Array<{ controls: string[]; checks: readonly string[] }> = [
-  { controls: ['PRIVACY-IPP5'], checks: [...DOMAIN.accessControl, ...DOMAIN.authentication, ...DOMAIN.crypto, ...DOMAIN.dataGovernance] },
+  // An active account nobody uses is an unauthorised-access safeguard (IPP 5), not retention of
+  // personal information (IPP 9), so account lifecycle sits under IPP 5.
+  { controls: ['PRIVACY-IPP5'], checks: [...DOMAIN.accessControl, ...DOMAIN.authentication, ...DOMAIN.crypto, ...DOMAIN.dataGovernance,
+    ...DOMAIN.accountLifecycle] },
   { controls: ['PRIVACY-IPP12'], checks: DOMAIN.network },
-  { controls: ['PRIVACY-IPP9'], checks: DOMAIN.accountLifecycle },
 ];
 
 // HISO 10029 and NZISM are cited per check, at requirement and section level, from the generated

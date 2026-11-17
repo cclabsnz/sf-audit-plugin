@@ -33,6 +33,16 @@ describe('sandbox-pii-exposure', () => {
   it('does not fire on weak controls without the PII', () => {
     expect(match('sandbox-pii-exposure', [f('internal-user-mfa-gaps')])).toBeNull();
   });
+
+  // The check cannot tell masked from real values, so its finding is inconclusive and the engine
+  // must not build a HIGH "unmasked production data" chain on it.
+  it('does not fire through the engine on the inconclusive masking advisory', () => {
+    const chains = new ChainEngine().correlate([
+      f('sandbox-data-masking-pii-present', { riskLevel: 'INFO', inconclusive: true }),
+      f('standard-profiles-in-use'),
+    ]);
+    expect(chains.map((c) => c.id)).not.toContain('sandbox-pii-exposure');
+  });
 });
 
 describe('insider-bulk-exfil', () => {
@@ -64,23 +74,23 @@ describe('undetected-compromise', () => {
   it('fires when a real capability meets two or more detection gaps', () => {
     const steps = match('undetected-compromise', [
       f('guest-user-read-access'), // grants unauth-foothold
-      f('threat-detection-inactive'),
+      f('threat-detection-guest-anomaly-missing'),
       f('siem-integration-not-detected'),
     ]);
     expect(steps?.map((s) => s.id)).toContain('guest-user-read-access');
-    expect(steps?.map((s) => s.id)).toContain('threat-detection-inactive');
+    expect(steps?.map((s) => s.id)).toContain('threat-detection-guest-anomaly-missing');
   });
 
   it('does not fire on a single detection gap', () => {
     expect(match('undetected-compromise', [
       f('guest-user-read-access'),
-      f('threat-detection-inactive'),
+      f('threat-detection-guest-anomaly-missing'),
     ])).toBeNull();
   });
 
   it('does not fire when no exploitable capability is present', () => {
     expect(match('undetected-compromise', [
-      f('threat-detection-inactive'),
+      f('threat-detection-guest-anomaly-missing'),
       f('siem-integration-not-detected'),
     ])).toBeNull();
   });
@@ -88,7 +98,7 @@ describe('undetected-compromise', () => {
   it('ignores passed and inconclusive findings via the engine', () => {
     const chains = new ChainEngine().correlate([
       f('guest-user-read-access', { passed: true }),
-      f('threat-detection-inactive'),
+      f('threat-detection-guest-anomaly-missing'),
       f('siem-integration-not-detected'),
     ]);
     expect(chains.map((c) => c.id)).not.toContain('undetected-compromise');

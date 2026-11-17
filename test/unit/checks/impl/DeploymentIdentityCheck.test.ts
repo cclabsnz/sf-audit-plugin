@@ -58,7 +58,7 @@ describe('DeploymentIdentityCheck', () => {
     const r = await check.run(makeCtx({ trail: new Error('INSUFFICIENT_ACCESS') }));
     const f = find(r, 'deployment-audit-trail-inaccessible')!;
     expect(f.inconclusive).toBe(true);
-    expect(f.riskLevel).toBe('MEDIUM');
+    expect(f.riskLevel).toBe('INFO');
     expect(f.passed).toBeUndefined();
   });
 

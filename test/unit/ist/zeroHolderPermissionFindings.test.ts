@@ -73,7 +73,11 @@ async function runCheck(org: Org) {
 const realFindings = async (rows: unknown[]) => (await runCheck({ rows })).findings;
 
 function f(id: string): Finding {
-  return { id, checkId: id, category: 'x', riskLevel: 'HIGH', title: id, detail: '', remediation: '' };
+  // A capped MFA-gap list (50 users) may include any admin, so it reaches whichever holder the test adds.
+  const affectedItems = id === 'internal-user-mfa-gaps'
+    ? Array.from({ length: 50 }, (_, i) => ({ label: `nomfa${i}@x.com` }))
+    : undefined;
+  return { id, checkId: id, category: 'x', riskLevel: 'HIGH', title: id, detail: '', remediation: '', affectedItems };
 }
 
 const byId = (fs: Finding[], id: string) => fs.find((x) => x.id === id);
@@ -121,8 +125,7 @@ describe('RULE-040: zero holders is reported as inconclusive', () => {
 describe('RULE-041: a zero-holder finding never completes an attack chain', () => {
   const others: Record<string, string[]> = {
     'insider-bulk-exfil': ['data-export-weekly-export', 'event-monitoring-disabled'],
-    // Org-wide, so it reaches whichever holder the test adds.
-    'mfa-bypass-admin': ['trusted-ip-broad-ranges'],
+    'mfa-bypass-admin': ['internal-user-mfa-gaps'],
     'xss-to-privileged-session': ['visualforce-xss-escape-false', 'session-hardening-risks'],
     'soql-injection-read': ['soql-injection-risk'],
     'inbound-email-rce': ['inbound-email-handler-unauthenticated-execution'],
@@ -203,7 +206,7 @@ describe('RULE-042: a partial read gives lower bounds, not passes', () => {
 
   it('a capped read with holders still completes a chain', async () => {
     const { findings } = await runCheck({ rows: both(1), psaTotal: 12000 });
-    const chains = new ChainEngine().correlate([...findings, f('trusted-ip-broad-ranges')]);
+    const chains = new ChainEngine().correlate([...findings, f('internal-user-mfa-gaps')]);
     expect(chains.map((c) => c.id)).toContain('mfa-bypass-admin');
   });
 

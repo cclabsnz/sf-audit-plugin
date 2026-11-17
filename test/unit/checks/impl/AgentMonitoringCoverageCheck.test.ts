@@ -115,8 +115,9 @@ describe('AgentMonitoringCoverageCheck', () => {
     expect(high[0].remediation).toMatch(/sf audit events pull/);
   });
 
-  // Same no-capture signal when the event log is blind (not-enabled / no permission).
-  it('treats an inaccessible event log as no capture (high)', async () => {
+  // 'not-enabled' is assigned to INVALID_TYPE, which Salesforce also returns when the audit user
+  // cannot see EventLogFile, so it is not evidence that nothing is captured.
+  it('treats a not-enabled event log as unknown, not no capture', async () => {
     const ctx = makeCtx({
       agentAccess: 'ok',
       agentInventory: [agent()],
@@ -124,7 +125,51 @@ describe('AgentMonitoringCoverageCheck', () => {
       tooling: () => Promise.resolve([]),
     });
     const r = await check.run(ctx);
-    expect(r.findings.filter((f) => f.riskLevel === 'HIGH')).toHaveLength(1);
+    expect(r.findings.filter((f) => f.riskLevel === 'HIGH')).toHaveLength(0);
+    expect(r.findings.map((f) => f.id)).toEqual(['agent-monitoring-coverage-unreadable']);
+  });
+
+  // A log the audit user cannot read is not evidence that nothing is captured.
+  it.each([
+    ['no permission to read the event log', { ...blindEventLog, accessError: 'no-permission' as const }],
+    ['an unclassified event log failure', { ...blindEventLog, accessError: 'unknown' as const }],
+    ['no event log summary at all', undefined],
+  ])('is inconclusive, not high, with %s', async (_label, eventLogSummary) => {
+    const ctx = makeCtx({
+      agentAccess: 'ok',
+      agentInventory: [agent()],
+      eventLogSummary,
+      tooling: () => Promise.resolve([]),
+    });
+    const r = await check.run(ctx);
+    expect(r.findings).toHaveLength(1);
+    expect(r.findings[0]).toMatchObject({
+      id: 'agent-monitoring-coverage-unreadable',
+      riskLevel: 'INFO',
+      inconclusive: true,
+    });
+  });
+
+  it('is inconclusive when the Transaction Security policies cannot be read', async () => {
+    const ctx = makeCtx({
+      agentAccess: 'ok',
+      agentInventory: [agent()],
+      eventLogSummary: captured,
+      tooling: () => Promise.reject(new Error('INSUFFICIENT_ACCESS_OR_READONLY')),
+    });
+    const r = await check.run(ctx);
+    expect(r.findings.map((f) => f.id)).toEqual(['agent-monitoring-coverage-unreadable']);
+    expect(r.findings[0].detail).toMatch(/Transaction Security policies/);
+  });
+
+  it('stays silent when a policy is enabled even if the event log is unreadable', async () => {
+    const ctx = makeCtx({
+      agentAccess: 'ok',
+      agentInventory: [agent()],
+      eventLogSummary: { ...blindEventLog, accessError: 'no-permission' },
+      tooling: () => Promise.resolve([{ Id: 'TSP1', State: 'Enabled' }]),
+    });
+    expect((await check.run(ctx)).findings).toHaveLength(0);
   });
 
   // Partial: event logs exist but no transaction security policies -> LOW.
@@ -161,8 +206,8 @@ describe('AgentMonitoringCoverageCheck', () => {
     expect(r.findings).toHaveLength(0);
   });
 
-  // Defensive: TransactionSecurityPolicy object missing -> treat as no policy, do not throw.
-  it('does not throw when TransactionSecurityPolicy is unavailable', async () => {
+  // INVALID_TYPE on TransactionSecurityPolicy may mean the audit user cannot see it, so unknown.
+  it('does not throw, and is inconclusive, when TransactionSecurityPolicy is unavailable', async () => {
     const ctx = makeCtx({
       agentAccess: 'ok',
       agentInventory: [agent()],
@@ -170,7 +215,8 @@ describe('AgentMonitoringCoverageCheck', () => {
       tooling: () => Promise.reject(new Error('INVALID_TYPE')),
     });
     const r = await check.run(ctx);
-    // no capture + no resolvable policy -> high
-    expect(r.findings.filter((f) => f.riskLevel === 'HIGH')).toHaveLength(1);
+    // no capture + an unreadable policy -> inconclusive, never high
+    expect(r.findings.filter((f) => f.riskLevel === 'HIGH')).toHaveLength(0);
+    expect(r.findings.map((f) => f.id)).toEqual(['agent-monitoring-coverage-unreadable']);
   });
 });

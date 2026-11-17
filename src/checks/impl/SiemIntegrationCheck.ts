@@ -97,15 +97,19 @@ export class SiemIntegrationCheck implements SecurityCheck {
         })),
       });
     } else {
+      // Every signal above is a vendor or purpose name match. A SIEM that collects through a
+      // generically named integration user, connected app or credential (for example "Integration
+      // User" pulling EventLogFile over the REST API) leaves none of them, so an empty result is a
+      // prompt to confirm, not evidence that nothing collects the logs.
       findings.push({
         id: 'siem-integration-not-detected',
         category: this.category,
-        riskLevel: 'HIGH',
-        title: 'No SIEM or external monitoring integration detected: SBS-MON-003/004',
+        riskLevel: 'MEDIUM',
+        title: 'No SIEM or external monitoring integration found by name: SBS-MON-003/004',
         detail:
-          'SBS-MON-003 requires suspicious login activity to be monitored and alerted on. SBS-MON-004 requires API activity anomalies to be detected. No signals of an external monitoring or SIEM integration were found across Named Credentials, Remote Sites, Connected Apps, or Scheduled Apex jobs. Without external log forwarding, Event Monitoring data remains unanalysed and no automated alerts can be generated.',
+          'SBS-MON-003 requires suspicious login activity to be monitored and alerted on. SBS-MON-004 requires API activity anomalies to be detected. No Named Credential, Remote Site, Connected App or Scheduled Apex job has a name or endpoint that matches a known SIEM or log-forwarding service. This is a name heuristic: a SIEM that collects through a generic integration user or a generically named connected app or credential leaves no signal here, so confirm whether Event Monitoring data is collected before treating this as a gap. If nothing collects it, Event Monitoring data remains unanalysed and no automated alerts are generated.',
         remediation:
-          'Integrate Salesforce Event Monitoring with a SIEM platform (Splunk, Datadog, Sumo Logic, Microsoft Sentinel, etc.) using the EventLogFile API or Salesforce Shield Event Streaming. Configure alerts for: repeated failed logins, off-hours API access, bulk data export events, and unusual login geolocations (SBS-MON-003). Enable API usage anomaly detection (SBS-MON-004).',
+          'Confirm with the security team whether a SIEM collects Salesforce Event Monitoring data, and through which integration user or app. If none does, integrate Event Monitoring with a SIEM platform (Splunk, Datadog, Sumo Logic, Microsoft Sentinel, etc.) using the EventLogFile API or Salesforce Shield Event Streaming. Configure alerts for: repeated failed logins, off-hours API access, bulk data export events, and unusual login geolocations (SBS-MON-003). Enable API usage anomaly detection (SBS-MON-004).',
       });
     }
 

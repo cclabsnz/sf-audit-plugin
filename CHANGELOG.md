@@ -9,6 +9,71 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+Fixes to checks that reported findings their evidence did not support. Several severities drop, so
+grades can improve without any change in the org. Two finding ids are new and one is replaced.
+
+### Fixed
+
+- **delegated-authentication-exposure:** the check read two SecuritySettings fields that the Metadata
+  API does not document, so it never knew whether Delegated Authentication was on and its gateway
+  findings could not fire. It now uses the "Is Single Sign-On Enabled" permission, which exists only
+  where Salesforce has enabled Delegated Authentication: it passes when the permission is absent,
+  keeps the CRITICAL finding for administrator profiles that hold it, and otherwise asks for the
+  gateway to be verified by hand (INFO). `delegated-authentication-insecure-gateway` is removed.
+- **trusted-ip-ranges:** trusted IP ranges skip the identity verification (device activation)
+  challenge, not MFA, and only for logins that do not use MFA or strong SSO. The findings now say so.
+  `trusted-ip-broad-ranges` HIGH to MEDIUM, or LOW when the ranges exceed the 16,777,216 addresses
+  Salesforce allows before it challenges trusted logins anyway (10.0.0.0/8 not counted).
+  `trusted-ip-exists` MEDIUM to LOW. The `mfa-bypass-admin` attack chain no longer treats a trusted
+  range as an MFA bypass.
+- **my-domain-login-policy:** reads only the My Domain login configuration (`AuthConfig` of type
+  `Org`), not Experience Cloud site login pages.
+- **enhanced-domains:** reads `MyDomainSettings` instead of guessing from the instance URL. The old
+  check passed every `*.my.salesforce.com` org and failed only on unusual hosts. Only the documented
+  `MySalesforceLimited` suffix fails. When the setting cannot be read, or the suffix is not documented
+  either way, the result is a new inconclusive `enhanced-domains-unverified`. Reading it needs Metadata
+  API access, so with the recommended permission set expect the inconclusive result.
+- **data-cloud-data-space-isolation:** the share-target finding queried an object that does not exist
+  and claimed constraints it never read. It is replaced by `data-cloud-outbound-data-shares` (INFO),
+  which lists outbound data shares for review. `data-cloud-data-space-default-overshared` HIGH to
+  MEDIUM, and its text says it is a name-based signal.
+- **restriction-rules-integrity:** several active rules on one object are normal. The conflicting
+  finding now fires only when two active restriction rules (not scoping rules) share the same user
+  criteria, compared without merging quoted values or changing case. HIGH to MEDIUM.
+- **installed-packages:** beta versions can only be installed in non-production orgs, so the finding
+  no longer says "in production". MEDIUM to LOW.
+- **sandbox-data-masking:** populated Email and Phone fields look the same in a masked sandbox, so the
+  finding is an inconclusive INFO advisory to confirm masking (was MEDIUM), and the HIGH
+  `sandbox-pii-exposure` chain no longer fires on it.
+- **siem-integration:** "no SIEM detected" comes from matching vendor names, so a SIEM using a generic
+  integration user went undetected. HIGH to MEDIUM, with wording that says to confirm.
+- **apex-logging:** the sensitive-data match uses whole identifier words in `System.debug`
+  arguments and ignores string literals and comments, so 'Token refreshed', `doBulk` and
+  commented-out code no longer match. It now also catches plurals, compounds such as `accesstoken`,
+  `Birthdate`, social security fields and NHI and IRD numbers.
+- **agent-monitoring-coverage:** an event log or Transaction Security policy list the audit cannot
+  read is a new inconclusive `agent-monitoring-coverage-unreadable` instead of HIGH "no capture".
+  HIGH now needs a readable, empty event log and a readable, empty policy list.
+- **threat-detection:** empty Threat Detection stores look the same whether the org had no anomalies
+  or storage is switched off, which the audit cannot read. `threat-detection-inactive` is now
+  inconclusive INFO (was MEDIUM) and no longer feeds detection-gap chains.
+- **agent-outbound-actions**, **deployment-identity** and **my-domain-login-policy:** findings that only
+  say a setting could not be read are INFO and inconclusive (were MEDIUM). The SalesBleed chain no longer fires on the
+  unverified outbound variant.
+
+### Changed
+
+- **code-coverage:** coverage below 75% is MEDIUM (was HIGH) and 75 to 84% is LOW (was MEDIUM).
+  Coverage is a deployment gate and a quality measure, not a security control, and the org-wide
+  figure reflects the last test runs. The finding now says so.
+- **NZ Privacy Act:** inactive-users maps to IPP 5 (security safeguards) instead of IPP 9 (retention).
+- **NZ crosswalk:** agent-monitoring-coverage cites HSUP61 and NZISM 16.6 again, on the no-capture
+  finding only. restriction-rules-integrity cites HSUP09 on the corrected conflicting finding too.
+  A finding that asks the reader to confirm carries no citation: sandbox-data-masking (HSUP50, NZISM
+  14.4), data-cloud-data-space-isolation (HSUP09), siem-integration (HSUP61, HSUP45) and the empty
+  My Domain AuthConfig no longer cite them. delegated-authentication-exposure cites nothing, since the
+  gateway cannot be read. Notes for the fixed checks are updated.
+
 ## [v1.28.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.28.0) — 2026-11-17
 
 HISO 10029 and NZISM citations are now per check, at requirement and section level, and each one

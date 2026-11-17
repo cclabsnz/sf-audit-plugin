@@ -17,8 +17,12 @@ const ORG = { id: 'o', name: 'n', type: 'Enterprise Edition', isSandbox: false, 
 const ctx = (): AuditContext =>
   ({ soql: {} as any, tooling: {} as any, rest: {} as any, orgInfo: ORG, cache: {} as any }) as any;
 
+// mfa-bypass-admin needs an MFA gap that reaches an admin. A capped internal-user list (50 users) may
+// include any admin, so the fixture gives it one; no other finding carries affected items here.
+const MFA_GAP_CAPPED = Array.from({ length: 50 }, (_, i) => ({ label: `nomfa${i}@x.com` }));
 const finding = (id: string, extra: Partial<Finding> = {}): Finding => ({
-  id, checkId: id, category: 'T', riskLevel: 'HIGH', title: `title of ${id}`, detail: 'd', remediation: 'r', ...extra,
+  id, checkId: id, category: 'T', riskLevel: 'HIGH', title: `title of ${id}`, detail: 'd', remediation: 'r',
+  ...(id === 'internal-user-mfa-gaps' ? { affectedItems: MFA_GAP_CAPPED } : {}), ...extra,
 });
 
 /** One finding per id, one per prefix, and one granting each capability, for every precondition group. */

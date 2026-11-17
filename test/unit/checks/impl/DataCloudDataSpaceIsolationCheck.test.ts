@@ -93,9 +93,40 @@ describe('DataCloudDataSpaceIsolationCheck', () => {
     ).rejects.toThrow('INSUFFICIENT_ACCESS');
   });
 
-  it('propagates a permission error on DataShareTarget instead of passing', async () => {
+  it('propagates a permission error on ExtDataShare instead of passing', async () => {
     await expect(
-      check.run(makeCtx({ 'FROM DataSpace': defaultSpace, 'FROM DataShareTarget': new Error('INSUFFICIENT_ACCESS') })),
+      check.run(makeCtx({ 'FROM DataSpace': defaultSpace, 'FROM ExtDataShare': new Error('INSUFFICIENT_ACCESS') })),
     ).rejects.toThrow('INSUFFICIENT_ACCESS');
+  });
+
+  it('treats a missing ExtDataShare object as no shares', async () => {
+    const r = await check.run(
+      makeCtx({ 'FROM DataSpace': defaultSpace, 'FROM ExtDataShare': new Error("sObject type 'ExtDataShare' is not supported.") }),
+    );
+    expect(r.findings.map((f) => f.id)).toEqual(['data-cloud-data-space-ok']);
+  });
+
+  it('lists outbound data shares as a LOW review item, without claiming they are unconstrained', async () => {
+    const ctx = makeCtx({
+      'FROM DataSpace': defaultSpace,
+      'FROM ExtDataShare': [{ Id: '0ds1', Name: 'Orders_to_Snowflake', DataShareType: 'Outbound', ObjectCount: 3, DataSpace: { Name: 'default' } }],
+    });
+    const r = await check.run(ctx);
+    const f = r.findings.find((x) => x.id === 'data-cloud-outbound-data-shares');
+    expect(f?.riskLevel).toBe('INFO');
+    expect(f?.title).not.toMatch(/unconstrained|without/i);
+    expect(f?.affectedItems?.[0].note).toContain('objects: 3');
+    const q = ((ctx.soql.queryAll as any).mock.calls as string[][]).map((c) => c[0]).find((x) => x.includes('ExtDataShare'));
+    expect(q).toContain("DataShareType = 'Outbound'");
+    expect(r.findings.some((x) => x.id === 'data-cloud-data-share-target-unconstrained')).toBe(false);
+  });
+
+  it('says the default-space finding is a name-based signal, at MEDIUM', async () => {
+    const r = await check.run(
+      makeCtx({ 'FROM DataSpace': defaultSpace, 'FROM PermissionSetAssignment': [psa('005E', 'PowerPartner', 'p4@partner.example', 'DataCloudUser')] }),
+    );
+    const f = r.findings.find((x) => x.id === 'data-cloud-data-space-default-overshared');
+    expect(f?.riskLevel).toBe('MEDIUM');
+    expect(f?.detail).toMatch(/name-based/i);
   });
 });

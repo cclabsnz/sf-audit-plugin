@@ -82,16 +82,24 @@ export class ThreatDetectionCheck implements SecurityCheck {
       return { findings };
     }
 
+    // Empty stores are not a failure: Threat Detection writes an event only when it detects an
+    // anomaly. They are not a pass either, because storage is switched on per event in Event
+    // Manager and a store with storage off is queryable and empty too. No API exposes that toggle,
+    // so the result is inconclusive. See ApiAnomalyEventStore:
+    // https://developer.salesforce.com/docs/atlas.en-us.platform_events.meta/platform_events/sforce_api_objects_apianomalyeventstore.htm
+    // and ApiAnomalyEvent:
+    // https://developer.salesforce.com/docs/atlas.en-us.platform_events.meta/platform_events/sforce_api_objects_apianomalyevent.htm
     if (withData.length === 0) {
       findings.push({
         id: 'threat-detection-inactive',
         category: this.category,
-        riskLevel: 'MEDIUM',
-        title: 'Threat Detection stores are present but contain no events',
+        riskLevel: 'INFO',
+        inconclusive: true,
+        title: 'No Threat Detection anomalies stored in 180 days; storage enablement not verified',
         detail:
-          'The Threat Detection anomaly stores are queryable but hold no events in the last 180 days. Storage may have been enabled only recently, or detection is not generating events. Until events accumulate, "no anomalies" is not evidence of safe behaviour, and historical anomalous guest access cannot be reconstructed.',
+          `The Threat Detection anomaly stores, including Guest User Anomaly, are queryable (${queryable.join(', ')}) and hold no events in the last 180 days. That is what an org with no detected anomalies looks like, and also what it looks like when storage is switched off for those events, which this audit cannot read.`,
         remediation:
-          'Confirm storage is enabled for the anomaly events (Setup > Event Manager) and has been for the full retention window. Verify Transaction Security / Threat Detection policies are active and alerting.',
+          'In Setup > Event Manager, confirm Enable Storage is on for each Threat Detection event, and make sure alerting or automation acts on them when they occur.',
         affectedItems: [{ label: 'Event Manager', url: setupUrl }],
       });
       return { findings };

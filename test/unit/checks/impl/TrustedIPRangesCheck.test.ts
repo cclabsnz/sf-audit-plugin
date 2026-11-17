@@ -32,6 +32,30 @@ describe('TrustedIPRangesCheck', () => {
     expect(broad?.affectedItems?.map((i) => i.label)).toEqual(['10.0.0.0–10.255.255.255']);
   });
 
+  it('says trusted ranges skip identity verification, not MFA, at the documented severities', async () => {
+    const r = await check.run(makeCtx({ networkAccess: { ipRanges: [{ start: '10.0.0.0', end: '10.255.255.255' }] } }));
+    const byId = Object.fromEntries(r.findings.map((f) => [f.id, f]));
+    expect(byId['trusted-ip-broad-ranges'].riskLevel).toBe('MEDIUM');
+    expect(byId['trusted-ip-exists'].riskLevel).toBe('LOW');
+    for (const f of r.findings) {
+      expect(f.detail).toMatch(/identity verification/);
+      expect(`${f.title} ${f.detail}`).not.toMatch(/bypass(es)? (Salesforce )?MFA|MFA is bypassed|without MFA/i);
+    }
+  });
+
+  // Past 16,777,216 addresses outside 10/8, Salesforce challenges trusted logins anyway.
+  it('is LOW and says device activation still applies when ranges exceed the Salesforce limit', async () => {
+    const r = await check.run(makeCtx({ networkAccess: { ipRanges: [{ start: '0.0.0.0', end: '0.255.255.255' }, { start: '192.168.0.0', end: '192.168.255.255' }] } }));
+    const broad = r.findings.find((f) => f.id === 'trusted-ip-broad-ranges')!;
+    expect(broad.riskLevel).toBe('LOW');
+    expect(broad.detail).toMatch(/device activation still applies/);
+  });
+
+  it('does not count 10.0.0.0/8 towards the limit', async () => {
+    const r = await check.run(makeCtx({ networkAccess: { ipRanges: [{ start: '10.0.0.0', end: '10.255.255.255' }] } }));
+    expect(r.findings.find((f) => f.id === 'trusted-ip-broad-ranges')!.riskLevel).toBe('MEDIUM');
+  });
+
   it('accepts a single range returned as an object', async () => {
     const r = await check.run(makeCtx({ networkAccess: { ipRanges: { start: '192.0.2.4', end: '192.0.2.5' } } }));
     expect(r.findings.some((f) => f.affectedItems?.some((i) => i.label === '192.0.2.4–192.0.2.5'))).toBe(true);

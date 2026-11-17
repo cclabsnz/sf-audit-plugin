@@ -187,7 +187,9 @@ export const AGENT_NO_CAPTURE = ['agent-monitoring-coverage-none'];
 
 export const AGENT_QUERY_REACH = ['agent-query-reach-'];
 // Egress: an outbound action that needs no confirmation, or a trusted domain anyone can claim.
-export const AGENT_OUTBOUND = ['agent-outbound-actions-unconfirmed', 'agent-outbound-actions-unverified'];
+// Only the unconfirmed variant: agent-outbound-actions-unverified is inconclusive (the platform does not
+// expose the confirmation setting), and a named chain does not rest on a step the audit could not see.
+export const AGENT_OUTBOUND = ['agent-outbound-actions-unconfirmed'];
 // Where outsider text enters, when the org shows it. Evidence only: the chain fires without
 // it, since Web-to-Lead, Web-to-Case and email exist in almost every org.
 export const UNTRUSTED_INPUT = [
@@ -220,15 +222,15 @@ export const INSIDER_BLIND_SPOT = [
 ];
 
 export const DETECTION_BLIND_SPOTS = [
-  'threat-detection-inactive', 'threat-detection-guest-anomaly-missing',
+  'threat-detection-guest-anomaly-missing',
   'event-monitoring-disabled', 'event-monitoring-retention-short',
   'transaction-security-policy-none', 'siem-integration-not-detected', 'siem-retention-gap',
 ];
 export const EXPLOITABLE_ACCESS: readonly Capability[] = ['unauth-foothold', 'priv-esc', 'org-takeover'];
 
-export const MFA_WEAKNESS = ['trusted-ip-broad-ranges', 'internal-user-mfa-gaps', 'mfa-portal-users-without-enforcement'];
-// Org-wide: a trusted range exempts every user signing in from it, admins included.
-const MFA_WEAKNESS_ORG_WIDE = ['trusted-ip-broad-ranges'];
+// Trusted IP ranges are not here: they skip device activation, not MFA
+// (help.salesforce.com, articleView?id=xcloud.device_activation_orgs.htm).
+export const MFA_WEAKNESS = ['internal-user-mfa-gaps', 'mfa-portal-users-without-enforcement'];
 // The internal-user MFA finding lists at most this many users, so a full list may leave a privileged
 // user out. Portal users never qualify this way: a portal user is not one of the admins.
 const MFA_USER_LIST_CAP = 50;
@@ -245,12 +247,11 @@ function userKeys(f: Finding): Set<string> {
   return keys;
 }
 
-/** The MFA weaknesses that reach a privileged user: org-wide, or naming one of those users. */
+/** The MFA weaknesses that reach a privileged user: a capped list, or one naming one of those users. */
 function weaknessReachingPrivileged(weakness: Finding[], targets: Finding[]): Finding[] {
   const privileged = new Set(targets.flatMap((t) => [...userKeys(t)]));
   return weakness.filter((w) =>
-    MFA_WEAKNESS_ORG_WIDE.includes(w.id)
-    || (w.id === MFA_CAPPED_INTERNAL && (w.affectedItems?.length ?? 0) >= MFA_USER_LIST_CAP)
+    (w.id === MFA_CAPPED_INTERNAL && (w.affectedItems?.length ?? 0) >= MFA_USER_LIST_CAP)
     || [...userKeys(w)].some((k) => privileged.has(k)));
 }
 export const PRIVILEGED_ACCOUNTS = [
@@ -305,7 +306,7 @@ export const SESSION_UNCHECKED = [
   'session-hardening-risks', 'session-security-deviations',
   'admin-no-ip-restrictions', 'broad-ip-ranges',
   // Nothing would record the replay.
-  'event-monitoring-disabled', 'siem-integration-not-detected', 'threat-detection-inactive',
+  'event-monitoring-disabled', 'siem-integration-not-detected',
 ];
 
 export const ANONYMOUS_FILES = [
@@ -318,7 +319,7 @@ export const ANONYMOUS_FILES = [
 // would let one check satisfy the conjunction by itself.
 export const FILES_UNACCOUNTED = [
   'data-classification-missing', 'data-encryption-not-detected',
-  'event-monitoring-disabled', 'siem-integration-not-detected', 'threat-detection-inactive',
+  'event-monitoring-disabled', 'siem-integration-not-detected',
 ];
 
 export const VF_XSS = ['visualforce-xss-escape-false', 'visualforce-xss-js-merge-field', 'visualforce-xss-attr-merge-field'];
@@ -699,11 +700,10 @@ export const NAMED_CHAINS: NamedChainDef[] = [
     title: 'MFA bypass to privileged compromise',
     severity: 'HIGH',
     narrative:
-      'A privileged account signs in without a second factor: a trusted IP range exempts it from MFA, or ' +
-      'the account itself lacks MFA enforcement. A credential-stuffing or phishing attacker who has the ' +
-      'password can take over an admin.',
+      'A privileged account signs in without a second factor because MFA is not enforced for it. A ' +
+      'credential-stuffing or phishing attacker who has the password can take over an admin.',
     remediation:
-      'Enforce MFA for all internal users, remove trusted-IP MFA bypass ranges, and minimise privileged accounts.',
+      'Enforce MFA for all internal users and minimise privileged accounts.',
     abuseCase: {
       actor: 'a credential-stuffing or phishing attacker',
       goal: 'take over a privileged account without a second factor',
@@ -711,7 +711,7 @@ export const NAMED_CHAINS: NamedChainDef[] = [
       breakPoint: 0,
       tactics: { entry: 'initial-access', goal: 'privilege-escalation' },
       breakPointText:
-        'Enforce MFA for every user and remove trusted-IP ranges that bypass it.',
+        'Enforce MFA for every user.',
     },
     match(_present, active) {
       // A portal user without MFA is not an admin: the weakness must reach a privileged user.

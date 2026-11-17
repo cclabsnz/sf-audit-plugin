@@ -25,9 +25,12 @@ describe('SandboxDataMaskingCheck', () => {
     expect(r.findings.some((f) => f.id === 'sandbox-data-masking-na' && f.passed)).toBe(true);
   });
 
-  it('flags populated PII in a sandbox as MEDIUM', async () => {
+  it('notes populated PII in a sandbox as INFO, without asserting it is unmasked', async () => {
     const r = await check.run(makeCtx({ isSandbox: true, totalSize: 500 }));
-    expect(r.findings.find((f) => f.id === 'sandbox-data-masking-pii-present')?.riskLevel).toBe('MEDIUM');
+    const f = r.findings.find((x) => x.id === 'sandbox-data-masking-pii-present');
+    expect(f?.riskLevel).toBe('INFO');
+    expect(f?.inconclusive).toBe(true);
+    expect(f?.detail).toMatch(/cannot tell masked data from real data/);
   });
 
   it('passes when a sandbox has no populated PII', async () => {

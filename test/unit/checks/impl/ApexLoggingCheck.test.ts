@@ -100,6 +100,37 @@ describe('ApexLoggingCheck', () => {
     expect(f.riskLevel).toBe('HIGH');
   });
 
+  it.each([
+    ['a field on a record', 'System.debug(contact.Password__c);'],
+    ['a credit card number', 'System.debug(acct.CreditCardNumber__c);'],
+    ['a date of birth', 'System.debug(c.Date_Of_Birth__c);'],
+    ['a value inside a nested call', 'System.debug(String.valueOf(x) + accessToken);'],
+    ['a plural identifier', 'System.debug(tokens);'],
+    ['a lower-case compound', 'System.debug(getpassword());'],
+    ['the standard birthdate field', 'System.debug(con.Birthdate);'],
+    ['a social security field', 'System.debug(p.Social_Security_Number__c);'],
+    ['an NHI number field', 'System.debug(patient.NHI__c);'],
+  ])('flags logging %s as sensitive', async (_label, body) => {
+    const r = await check.run(makeCtx({ apexBodies: [cls('Leaky', `public class Leaky { ${body} }`)] }));
+    expect(find(r, 'apex-logging-sensitive-data')).toBeDefined();
+  });
+
+  // The term has to be an identifier, or a camelCase or underscore word of one, passed to
+  // System.debug. Words inside a string literal and letters inside a longer word do not count.
+  it.each([
+    ['a sensitive word inside a string literal', "System.debug('Token refreshed for ' + userName);"],
+    ['a word that only contains a sensitive term', 'System.debug(doBulk);'],
+    ['a method whose name starts with dob letters', 'System.debug(this.doBulkInsert(rows));'],
+    ['a sentence that mentions passwords', "System.debug('Password policy check complete');"],
+    ['an identifier that only contains the letters', 'System.debug(tokenizer.count + assessment);'],
+    ['a commented-out line', '// System.debug(password);\n System.debug(n);'],
+    ['a block comment', '/* System.debug(token); */ System.debug(n);'],
+    ['a URL in a string literal before a debug', "String u = 'https://x.example/path'; System.debug(n);"],
+  ])('does not flag %s', async (_label, body) => {
+    const r = await check.run(makeCtx({ apexBodies: [cls('Fine', `public class Fine { ${body} }`)] }));
+    expect(find(r, 'apex-logging-sensitive-data')).toBeUndefined();
+  });
+
   it('does not flag ordinary debug output as sensitive', async () => {
     const r = await check.run(makeCtx({
       apexBodies: [cls('Fine', 'public class Fine { System.debug("record count: " + n); }')],

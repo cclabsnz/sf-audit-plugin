@@ -44,9 +44,10 @@ SCF: AAT-40.1, AAT-39.20, AAT-36.11. Active agents with no confirmed Event Monit
 
 | Cites | HML pair | Basis | Reason |
 |---|---|---|---|
-| none | | | |
+| HSUP61 Logging and monitoring | HML70 | direct, only on `agent-monitoring-coverage-none` | HSUP61 guidance: activity is to be "logged and stored as per the organisation's logging and auditing requirements"; active agents in an org whose event log is readable and empty, or where Event Monitoring is not enabled, have no logged activity. |
+| NZISM 16.6 Event Monitoring, Logging and Auditing | | direct, only on `agent-monitoring-coverage-none` | Event Monitoring, Logging and Auditing: the finding is the absence of event logging for agent activity. |
 
-Note: No logging citation: the check reports the same finding when the event log holds no files and when the audit cannot read it, so it cannot show that agent activity is not logged. A separate finding for the unreadable case would let HSUP61 and NZISM 16.6 apply to the empty-log case.
+Note: Logging citations apply to the no-capture finding only. An event log the audit cannot read is reported separately as inconclusive (agent-monitoring-coverage-unreadable) and carries no citation. HISO 10029.4:2025 has no agent-specific requirement, so HSUP61 is the general logging requirement applied to the agent as a service identity.
 
 ## `agent-outbound-actions`
 
@@ -117,7 +118,7 @@ SCF: MON-30, TDA-11.4. Apex that logs sensitive values exposes regulated data in
 |---|---|---|---|
 | HSUP55 Data leakage prevention | HML69 | direct, only on `apex-logging-sensitive-data` | HSUP55: "detect and prevent data leakage through the unauthorised disclosure ... of information by individuals, systems, or services"; Apex writing sensitive values into logs discloses them to anyone who can read those logs. |
 
-Note: Review C: the PII regex also matches strings such as 'Token refreshed' and doBulk, so the HSUP55 citation needs manual confirmation of each match.
+Note: The sensitive-data finding matches whole identifier words (password, token, ssn, date of birth and similar) in System.debug arguments, ignoring string literals. Confirm each match before relying on the HSUP55 citation, since a variable name does not prove its value is sensitive.
 
 ## `apex-rest-endpoint`
 
@@ -344,13 +345,15 @@ Note: HSUP05 applies to the unclassified-fields finding. No cryptography require
 
 ## `data-cloud-data-space-isolation`
 
-SCF: IAC-25, DCH-32. External/agent users reach the default Data Space and Data Share Targets lack IP or auth constraints, so data access and outbound sharing are not restricted.
+SCF: IAC-25, DCH-32. External or agent users may reach the default Data Space (a name-based signal), so data access is not restricted to the intended data spaces.
 
 | Cites | HML pair | Basis | Reason |
 |---|---|---|---|
-| HSUP09 Access control | HML10 | scf, only on `data-cloud-data-space-default-overshared` |  |
+| none | | | |
 
-Note: The share-target finding flags every active Data Share Target without reading its constraints, so it carries no HISO citation. HSUP09 applies to the default-space finding only, which is itself a name heuristic and should be confirmed.
+Excluded from SCF: HSUP09 (The default-space finding is a name heuristic that asks for confirmation, so it does not show access rules are unmet.)
+
+Note: No HISO citation. The default-space finding is a name heuristic that asks the reader to confirm which data spaces the matched permission sets grant, and the outbound data share finding is a review list. Neither shows a missing control.
 
 ## `data-export-access`
 
@@ -388,20 +391,17 @@ Excluded from SCF: NZISM 16.3.6.C.01 (16.3.6 bars foreign nationals from privile
 
 ## `delegated-authentication-exposure`
 
-SCF: IAC-44, CRY-05, IAC-10. Delegated Authentication over a plain-HTTP gateway, or applied to System Administrator profiles, shows the authentication channel is not encrypted and privileged sign-in depends on an external check.
+SCF: IAC-44, CRY-05, IAC-10. Delegated Authentication applied to System Administrator profiles means privileged sign-in depends on an external gateway's unsigned yes or no.
 
 | Cites | HML pair | Basis | Reason |
 |---|---|---|---|
-| HSUP32 Use of cryptography | HML37 | direct, only on `delegated-authentication-insecure-gateway` | HSUP32 guidance: data in transit secured using 'transport layer security (TLS)'; a delegated authentication gateway URL that starts with http:// sends credentials unencrypted |
-| HSUP34 Information Authentication | HML39 | direct, only on `delegated-authentication-insecure-gateway` | HSUP34 statement: 'User accounts are authenticated and circumventing the authentication process is prevented'; a delegated authentication gateway over http:// sends credentials in clear text and accepts an unsigned boolean response that can be spoofed in transit |
 | NZISM 16.1 Identification, Authentication and Authorisation | | scf | 16.1.33.C.01 |
 | NZISM 16.3 Privileged User Access | | scf | 16.3.5.C.01 |
 | NZISM 16.4 Privileged Access Management | | scf | 16.4.37.C.01, 16.4.37.C.03 |
-| NZISM 17.1 Cryptographic Fundamentals | | direct, only on `delegated-authentication-insecure-gateway` | 17.1.55.C.03: agencies 'MUST encrypt aggregated agency data using an approved algorithm and protocol over insecure or unprotected networks'; a gateway over http:// sends credentials unencrypted (17.1.55.C.03) |
 
 Excluded from SCF: HSUP36 (Admins authenticating through a delegated gateway is not unauthorised privileged access.); NZISM 17.1 (17.1.57.C.01 is scoped to NZEO information; 17.1.55.C.03 is cited directly instead.); NZISM 16.3.6.C.01 (These cover foreign nationals and clearances, not the delegated authentication gateway.); NZISM 16.3.6.C.02 (These cover foreign nationals and clearances, not the delegated authentication gateway.); NZISM 16.3.7.C.01 (These cover foreign nationals and clearances, not the delegated authentication gateway.); NZISM 16.4.36.C.01 (These need a privileged access management policy to exist; the check does not read one.); NZISM 16.4.36.C.02 (These need a privileged access management policy to exist; the check does not read one.); NZISM 16.4.36.C.03 (These need a privileged access management policy to exist; the check does not read one.); NZISM 16.4.38.C.01 (These need a privileged access management policy to exist; the check does not read one.)
 
-Note: The check never tests mutual TLS. The insecure-gateway finding also fires on a blank gateway URL, which is not shown to be unencrypted; the HSUP32, HSUP34 and 17.1 citations hold only where the URL starts with http://.
+Note: No citation. The gateway URL is not exposed through a documented API, so the check cannot show credentials travel unencrypted, and admins signing in through a delegated gateway is not unauthorised privileged access (HSUP36 excluded).
 
 ## `deployment-identity`
 
@@ -757,7 +757,7 @@ SCF: TDA-16.2, CFG-17.1. Unmanaged packages are installed, showing third-party c
 | HSUP67 Third-Party Management | HML25 | direct, only on `installed-packages-unmanaged` | Unmanaged packages are editable and bypass AppExchange security review, so third-party code is in production without being 'systematically evaluated' as the third-party management statement requires. |
 | NZISM 12.7 Supply Chain | | direct, only on `installed-packages-unmanaged` | Unmanaged third-party code that skipped AppExchange review is a supply chain gap, as SCF derives for package-post-install-supply-chain. |
 
-Note: HSUP67 applies to unmanaged packages from a third party (the finding lists the publisher); in-house code deployed as an unmanaged package does not evidence HSUP67. The beta finding fires only in non-production orgs (beta versions cannot install in production), so it carries no HISO or NZISM citation. The scfReason still says beta packages are in production and needs correcting at source.
+Note: HSUP67 applies to unmanaged packages from a third party (the finding lists the publisher); in-house code deployed as an unmanaged package does not evidence HSUP67. The beta finding fires only in non-production orgs (beta versions cannot install in production) and says so, so it carries no HISO or NZISM citation.
 
 ## `integration-least-privilege`
 
@@ -916,9 +916,11 @@ SCF: IAC-40, IAC-32. My Domain missing or still allowing username-password login
 
 | Cites | HML pair | Basis | Reason |
 |---|---|---|---|
-| HSUP34 Information Authentication | HML39 | direct | HSUP34 statement: 'circumventing the authentication process is prevented'; allowing login via login.salesforce.com or username-password lets users go around the org's SSO/login policy (guidance recommends SSO at an organisational level) |
+| HSUP34 Information Authentication | HML39 | direct, only on `my-domain-not-configured`, `my-domain-password-login-allowed` | HSUP34 statement: 'circumventing the authentication process is prevented'; allowing login via login.salesforce.com or username-password lets users go around the org's SSO/login policy (guidance recommends SSO at an organisational level) |
 
 Excluded from SCF: NZISM 16.1 (16.1.32.C.01, the only derived control, covers stored authentication data, not SSO.)
+
+Note: HSUP34 applies to a missing My Domain or one that allows password login. An unreadable or empty AuthConfig is inconclusive and carries no citation.
 
 ## `named-credentials`
 
@@ -1119,9 +1121,9 @@ SCF: IAC-25. Restriction Rules are inactive or conflicting, so the intended reco
 
 | Cites | HML pair | Basis | Reason |
 |---|---|---|---|
-| HSUP09 Access control | HML10 | scf, only on `restriction-rules-inactive` |  |
+| HSUP09 Access control | HML10 | scf, only on `restriction-rules-inactive`, `restriction-rules-conflicting` |  |
 
-Note: More than one active rule per object is supported by Salesforce, so the conflicting-rules finding is not evidence on its own.
+Note: Several active rules on one object are normal. The conflicting-rules finding fires only when two active rules on an object have the same user criteria, so Salesforce applies one and ignores the other, and the intended restriction is not reliably enforced.
 
 ## `sandbox-data-masking`
 
@@ -1129,10 +1131,9 @@ SCF: DCH-28, DCH-36.3. A sandbox holds populated PII fields. The check cannot te
 
 | Cites | HML pair | Basis | Reason |
 |---|---|---|---|
-| HSUP50 Separate production and non-production environments | HML58 | direct, only on `sandbox-data-masking-pii-present` | The separate-environments guidance says personally identifiable information 'is to be anonymised when being used in the test environments'. The check finds Email and Phone populated in a sandbox, which a masked sandbox also shows, so this flags the anonymisation requirement for confirmation rather than evidencing a breach. |
-| NZISM 14.4 Software Application Development | | direct, only on `sandbox-data-masking-pii-present` | 14.4.4.C.01: 'information flow between the environments is strictly limited'. Populated contact fields in a sandbox indicate production data may have been copied into a non-production environment; the check cannot confirm whether it was masked. (14.4.4.C.01) |
+| none | | | |
 
-Note: HSUP50 is weak here: the probes are Email != null and Phone != null, so a masked sandbox fails too, and the finding says it cannot confirm whether masking was applied.
+Note: No citation: the check cannot tell masked values from real ones (its probes are Email != null and Phone != null), so its finding is an INFO advisory to confirm masking, not evidence that HSUP50 or NZISM 14.4 is unmet.
 
 ## `scheduled-apex`
 
@@ -1202,13 +1203,11 @@ SCF: MON-05, MON-05.4. No sign of SIEM or external monitoring integration shows 
 
 | Cites | HML pair | Basis | Reason |
 |---|---|---|---|
-| HSUP45 Cloud security controls | HML53 | direct | HSUP45 guidance: "centralised visibility is to be provided to the security teams via logging and monitoring activities" for the multi-tenant cloud service. |
-| HSUP61 Logging and monitoring | HML70 | direct | HSUP61 guidance: "Logs are to be aggregated, correlated, and reviewed" and "transferring logs centrally through encrypted mechanisms separate systems (e.g., SIEM solution)"; no SIEM signal means Salesforce logs are not centrally collected. |
 | NZISM 16.6 Event Monitoring, Logging and Auditing | | scf | 16.6.12.C.01, 16.6.12.C.02, 16.6.12.C.03, 16.6.15.C.01, 16.6.15.C.02 |
 
 Excluded from SCF: NZISM 16.6.11.C.01 (Log fields and time source do not concern whether a SIEM is present.); NZISM 16.6.11.C.02 (Log fields and time source do not concern whether a SIEM is present.); NZISM 16.6.11.C.03 (Log fields and time source do not concern whether a SIEM is present.)
 
-Note: The check infers SIEM presence from heuristic signals (integration users, apps, named credentials); an absent signal is weaker evidence than a direct configuration read. Review C: the HIGH not-detected finding comes from vendor-name regexes, so a SIEM that uses a generic integration user produces a false HIGH under HSUP61; confirm manually before relying on it.
+Note: No HISO citation. The check finds a SIEM only by vendor and purpose names, so a SIEM collecting through a generic integration user leaves no signal, and the not-detected finding asks for confirmation rather than showing logs are not collected.
 
 ## `soap-login-api-auth`
 
@@ -1250,7 +1249,7 @@ Excluded from SCF: HSUP04 (Documented joiner/mover/leaver procedures are a proce
 
 ## `threat-detection`
 
-SCF: MON-16, MON-17. Threat Detection storage that is unavailable or empty shows the org is not detecting anomalous behaviour or indicators of compromise such as guest user and session anomalies.
+SCF: MON-16, MON-17. Threat Detection storage that is unavailable, or a missing Guest User Anomaly store, shows the org cannot detect anomalous behaviour or indicators of compromise such as guest user and session anomalies. Empty stores are not cited, because the audit cannot tell no anomalies from storage switched off.
 
 | Cites | HML pair | Basis | Reason |
 |---|---|---|---|
@@ -1270,7 +1269,7 @@ SCF: MON-17.2, MON-16.1. No enabled Transaction Security Policies shows there is
 
 ## `trusted-ip-ranges`
 
-SCF: IAC-37, IAC-37.6. Trusted IP ranges, some overly broad, let logins from those addresses skip the identity-verification challenge. Salesforce documents this as skipping verification; whether MFA is also skipped is not tested by the check.
+SCF: IAC-37, IAC-37.6. Trusted IP ranges, some overly broad, let logins from those addresses that do not use MFA or strong SSO skip the identity verification (device activation) challenge. They do not skip MFA.
 
 | Cites | HML pair | Basis | Reason |
 |---|---|---|---|
@@ -1278,7 +1277,7 @@ SCF: IAC-37, IAC-37.6. Trusted IP ranges, some overly broad, let logins from tho
 
 Excluded from SCF: NZISM 19.1 (Gateways; org trusted IP ranges are a login policy, not a gateway); NZISM 16.7 (Trusted IP ranges skip the login identity verification challenge; the check does not test that they bypass MFA.); NZISM 16.4 (No privileged user is identified, so privileged-account MFA is not evidenced.); NZISM 23.3 (Skipping the identity verification challenge is not shown to bypass MFA for cloud service access.); NZISM 16.1 (16.1.29.C.02 is about using MFA; trusted ranges skip identity verification, which is not MFA.)
 
-Note: Salesforce documents trusted IP ranges as skipping the login challenge for identity verification, not MFA; the check asserts an MFA bypass without testing it. HSUP34 rests on the broader-than-/16 finding only.
+Note: Salesforce documents trusted IP ranges as skipping the identity verification (device activation) challenge, not MFA, and the check now says so. HSUP34 rests on the broader-than-/16 finding only.
 
 ## `trusted-url-hygiene`
 
