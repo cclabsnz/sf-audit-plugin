@@ -9,6 +9,8 @@ published note and carries the signed provenance attestation and CycloneDX SBOM 
 
 ## [Unreleased]
 
+## [v1.29.0](https://github.com/cclabsnz/sf-audit-plugin/releases/tag/v1.29.0) — 2026-11-19
+
 Fixes to checks that reported findings their evidence did not support. Several severities drop, so
 grades can improve without any change in the org. Two finding ids are new and one is replaced.
 
